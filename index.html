@@ -70,7 +70,7 @@
 
     /* SIDEBAR */
     .sidebar {
-      width: var(--sidebar-w); height: 100vh; max-height: 100vh;
+      width: var(--sidebar-w); height: 100dvh; max-height: 100dvh;
       background: var(--sidebar-bg);
       position: fixed; left: 0; top: 0; z-index: 200;
       display: flex; flex-direction: column; overflow: hidden;
@@ -125,7 +125,7 @@
     .page.active { display: block; }
 
     /* CARDS */
-    .card { border: none; border-radius: 13px; box-shadow: 0 1px 4px rgba(0,0,0,.09); }
+    .card { border: none; border-radius: 13px; box-shadow: 0 1px 6px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.04); }
     .stat-card {
       border-radius: 13px; padding: 20px; color: #fff;
       position: relative; overflow: hidden;
@@ -169,7 +169,7 @@
     .hamburger-btn {
       display: none; position: fixed; top: 10px; left: 10px; z-index: 300;
       background: var(--sidebar-bg); color: #fff; border: none; border-radius: 8px;
-      width: 40px; height: 40px; font-size: 1.3rem; cursor: pointer;
+      width: 44px; height: 44px; font-size: 1.3rem; cursor: pointer;
       align-items: center; justify-content: center;
       box-shadow: 0 2px 8px rgba(0,0,0,.25);
     }
@@ -178,27 +178,48 @@
       z-index: 199; backdrop-filter: blur(2px);
     }
 
+    /* ─── SMOOTH TRANSITIONS & HOVER EFFECTS ─── */
+    .card { transition: box-shadow .2s ease, transform .2s ease; }
+    .card:hover { box-shadow: 0 4px 16px rgba(0,0,0,.12); }
+    .stat-card { transition: transform .2s ease, box-shadow .2s ease; }
+    .stat-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,.15); }
+    .sidebar .nav-link:hover { padding-left: 16px; }
+    .sidebar .nav-link.active { padding-left: 16px; box-shadow: inset 3px 0 0 #60a5fa; }
+    .btn:active { transform: scale(.97); }
+    .table tbody tr { transition: background .15s ease; }
+    .bdg { transition: transform .15s; }
+    .bdg:hover { transform: scale(1.05); }
+    .dash-alert { transition: transform .15s ease; }
+    .dash-alert:hover { transform: translateX(3px); }
+    .socio-card { transition: border-color .2s, box-shadow .2s; }
+    .socio-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,.08); }
+    .gest-stat { transition: box-shadow .2s, transform .15s; }
+    .gest-stat:hover { box-shadow: 0 3px 10px rgba(0,0,0,.1); transform: translateY(-1px); }
+
     /* ─── MOBILE ≤768px ─── */
     @media (max-width: 768px) {
       .hamburger-btn { display: flex; }
       .sidebar {
         transform: translateX(-100%);
         transition: transform .28s ease;
-        width: 260px;
+        width: 270px;
+        height: 100dvh; max-height: 100dvh;
       }
       .sidebar.open { transform: translateX(0); }
       .sidebar-overlay.show { display: block; }
       .main-content {
         margin-left: 0 !important;
-        padding: 60px 12px 20px !important;
+        padding: 60px 14px 24px !important;
       }
-      .stat-card { padding: 14px; }
+      .stat-card { padding: 16px; }
       .stat-card .val { font-size: 1.15rem; }
       .stat-card .bg-icon { font-size: 3rem; }
+      .stat-card:hover { transform: none; box-shadow: none; }
+      .card:hover { box-shadow: 0 1px 4px rgba(0,0,0,.09); transform: none; }
       .page-hdr { flex-direction: column; align-items: flex-start; gap: 8px; }
       .page-hdr h4 { font-size: 1.1rem; }
-      .page-hdr .d-flex { flex-wrap: wrap; gap: 4px !important; }
-      .page-hdr .btn { font-size: .72rem; padding: 3px 8px; }
+      .page-hdr .d-flex { flex-wrap: wrap; gap: 6px !important; }
+      .page-hdr .btn { font-size: .78rem; padding: 6px 12px; min-height: 36px; }
       /* Dashboard logo banner */
       .card-body > div[style*="display:flex"][style*="justify-content:space-between"] {
         flex-direction: column !important; gap: 10px !important; padding: 14px 16px !important;
@@ -214,11 +235,11 @@
       }
       /* TC bar */
       #tc-bar { flex-direction: column; align-items: stretch; gap: 4px; }
-      #tc-bar .btn { width: 100%; }
-      /* Tables */
-      .table { font-size: .75rem; }
-      .table th { font-size: .6rem; padding: 6px 6px; white-space: nowrap; }
-      .table td { padding: 5px 6px; }
+      #tc-bar .btn { width: 100%; min-height: 40px; }
+      /* Tables — mejor legibilidad mobile */
+      .table { font-size: .78rem; }
+      .table th { font-size: .66rem; padding: 8px 6px; white-space: nowrap; }
+      .table td { padding: 7px 6px; }
       /* Modal */
       .modal-dialog { margin: 8px; }
       /* Row cols on small screens */
@@ -235,18 +256,33 @@
       #com-resumen-grid > .col-lg-4 { flex: 0 0 100%; max-width: 100%; }
       /* Charts */
       canvas { max-height: 200px !important; }
+      /* Touch-friendly targets */
+      .btn-a { padding: 6px 12px; font-size: .78rem; min-height: 34px; }
+      .sb-btn { padding: 8px 10px; font-size: .76rem; min-height: 38px; }
+      .sidebar .nav-link { padding: 10px 14px; font-size: .85rem; min-height: 42px; }
+      .sidebar .nav-link:hover, .sidebar .nav-link.active { padding-left: 14px; }
+      /* Filters & inputs */
+      .form-control, .form-select { font-size: .85rem !important; min-height: 38px; }
+      /* Alerts bigger */
+      .dash-alert { padding: 10px 14px; font-size: .8rem; }
+      .dash-alert:hover { transform: none; }
+      /* BCRA rates */
+      .bcra-rate-lbl { font-size: .68rem; }
+      .bcra-rate-val { font-size: .78rem; }
     }
 
     /* ─── SMALL PHONES ≤480px ─── */
     @media (max-width: 480px) {
-      .main-content { padding: 56px 8px 16px !important; }
+      .main-content { padding: 56px 10px 20px !important; }
       .row.g-3 > .col-sm-6 { flex: 0 0 100%; max-width: 100%; }
-      .stat-card .val { font-size: 1rem; }
-      .stat-card .lbl { font-size: .68rem; }
-      .table { font-size: .7rem; }
-      .btn { font-size: .73rem; }
+      .stat-card .val { font-size: 1.05rem; }
+      .stat-card .lbl { font-size: .72rem; }
+      .table { font-size: .74rem; }
+      .table th { font-size: .64rem; }
+      .btn { font-size: .76rem; min-height: 36px; }
       h4 { font-size: 1rem; }
-      h6 { font-size: .85rem; }
+      h6 { font-size: .88rem; }
+      .gest-stat { flex-direction: column; text-align: center; gap: 4px; padding: 10px; }
     }
 
     /* ─── DARK MODE ─── */
@@ -477,6 +513,9 @@
       </button>
       <button class="sb-btn sb-pdf" style="width:36px;flex-shrink:0;padding:5px 0" onclick="generarReportePDF()" title="Generar PDF">
         <i class="bi bi-file-earmark-pdf" style="font-size:.85rem"></i>
+      </button>
+      <button class="sb-btn" style="width:36px;flex-shrink:0;padding:5px 0;color:#86efac;border-color:rgba(16,185,129,.25);background:rgba(16,185,129,.07)" onclick="exportarExcel()" title="Exportar Excel">
+        <i class="bi bi-file-earmark-spreadsheet" style="font-size:.85rem"></i>
       </button>
     </div>
     <!-- Fila 2: Backup + Restaurar -->
@@ -2553,6 +2592,33 @@ function iniciarAutoSync() {
   if (_syncInterval) clearInterval(_syncInterval);
   // Polling cada 5 segundos → cambios casi en tiempo real entre los 3 socios
   _syncInterval = setInterval(() => pullRemoto(true), 5000);
+}
+
+/* ══ EXPORTAR EXCEL (CSV UTF-8 con BOM) ══ */
+function exportarExcel() {
+  const page = document.querySelector('.page.active');
+  if (!page) { toast('Navegá a una sección para exportar', 'warning'); return; }
+  const table = page.querySelector('table');
+  if (!table) { toast('No hay tabla para exportar en esta sección', 'warning'); return; }
+  const pageName = (page.id||'datos').replace('page-','');
+  let csv = '\uFEFF'; // BOM para Excel UTF-8
+  const rows = table.querySelectorAll('tr');
+  rows.forEach(row => {
+    const cells = row.querySelectorAll('th, td');
+    const line = Array.from(cells).map(c => {
+      let txt = c.innerText.replace(/"/g,'""').replace(/\n/g,' ').trim();
+      return '"' + txt + '"';
+    }).join(',');
+    csv += line + '\r\n';
+  });
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'muuk-' + pageName + '-' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('Tabla exportada como CSV (abrí con Excel)', 'success');
 }
 
 /* ══ BACKUP / RESTAURAR ══ */
