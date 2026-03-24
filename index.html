@@ -306,6 +306,10 @@
     body.dark-mode .bg-light { background: #1e293b !important; }
     body.dark-mode .text-muted { color: var(--text-muted) !important; }
     body.dark-mode .page-hdr h4 { color: var(--text); }
+    body.dark-mode #kpi-metas-row .card { background: var(--bg-card); border-color: var(--border); }
+    body.dark-mode #kpi-metas-row [style*="color:#64748b"] { color: var(--text-muted) !important; }
+    body.dark-mode #kpi-metas-row [style*="background:#e2e8f0"] { background: #334155 !important; }
+    body.dark-mode #kpi-liquidez-detail span { opacity: .85; }
     body.dark-mode .alert { border-color: var(--border); }
     body.dark-mode .alert-info { background: rgba(59,130,246,.1); color: #93c5fd; }
     body.dark-mode .alert-success { background: rgba(16,185,129,.1); color: #86efac; }
@@ -605,6 +609,68 @@
       <button class="btn btn-danger btn-sm" onclick="generarReportePDF()" style="font-size:.85rem;padding:6px 16px;border-radius:8px">
         <i class="bi bi-file-earmark-pdf me-1"></i>Generar Reporte PDF
       </button>
+    </div>
+    <!-- LIQUIDEZ NETA — tarjeta resumen -->
+    <div class="row g-3 mb-3">
+      <div class="col-12">
+        <div class="stat-card" style="background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 50%,#0f766e 100%);padding:18px 22px;border-radius:14px">
+          <div style="display:flex;flex-wrap:wrap;align-items:center;gap:12px 28px">
+            <div>
+              <div style="font-size:.68rem;opacity:.7;text-transform:uppercase;letter-spacing:.08em;margin-bottom:2px"><i class="bi bi-shield-check me-1"></i>Liquidez Neta Estimada</div>
+              <div id="kpi-liquidez" style="font-size:1.8rem;font-weight:800;letter-spacing:-.5px">$0</div>
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:6px 18px;font-size:.72rem;opacity:.8" id="kpi-liquidez-detail">
+              <span><i class="bi bi-bank me-1"></i>Bancos: <b id="kpi-liq-bancos">$0</b></span>
+              <span><i class="bi bi-cash me-1"></i>Efectivo: <b id="kpi-liq-efectivo">$0</b></span>
+              <span><i class="bi bi-file-check me-1"></i>Cartera: <b id="kpi-liq-cartera">$0</b></span>
+              <span style="color:#fca5a5"><i class="bi bi-dash-circle me-1"></i>A Pagar: <b id="kpi-liq-pagar">$0</b></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- METAS MENSUALES -->
+    <div class="row g-3 mb-3" id="kpi-metas-row" style="display:none">
+      <div class="col-sm-6 col-lg-3">
+        <div class="card p-2 px-3" style="border-left:3px solid #16a34a">
+          <div style="font-size:.62rem;color:#64748b;font-weight:600;text-transform:uppercase">Meta Comisiones</div>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:3px">
+            <div style="flex:1;height:8px;background:#e2e8f0;border-radius:4px;overflow:hidden"><div id="kpi-meta-com-bar" style="height:100%;background:#16a34a;border-radius:4px;width:0%;transition:width .6s"></div></div>
+            <span id="kpi-meta-com-pct" style="font-size:.78rem;font-weight:700;color:#16a34a">0%</span>
+          </div>
+          <div style="font-size:.62rem;color:#94a3b8;margin-top:2px"><span id="kpi-meta-com-actual">$0</span> / <span id="kpi-meta-com-target">$0</span></div>
+        </div>
+      </div>
+      <div class="col-sm-6 col-lg-3">
+        <div class="card p-2 px-3" style="border-left:3px solid #1d4ed8">
+          <div style="font-size:.62rem;color:#64748b;font-weight:600;text-transform:uppercase">Meta Facturación</div>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:3px">
+            <div style="flex:1;height:8px;background:#e2e8f0;border-radius:4px;overflow:hidden"><div id="kpi-meta-fac-bar" style="height:100%;background:#1d4ed8;border-radius:4px;width:0%;transition:width .6s"></div></div>
+            <span id="kpi-meta-fac-pct" style="font-size:.78rem;font-weight:700;color:#1d4ed8">0%</span>
+          </div>
+          <div style="font-size:.62rem;color:#94a3b8;margin-top:2px"><span id="kpi-meta-fac-actual">$0</span> / <span id="kpi-meta-fac-target">$0</span></div>
+        </div>
+      </div>
+      <div class="col-sm-6 col-lg-3">
+        <div class="card p-2 px-3" style="border-left:3px solid #d97706">
+          <div style="font-size:.62rem;color:#64748b;font-weight:600;text-transform:uppercase">Meta Operaciones</div>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:3px">
+            <div style="flex:1;height:8px;background:#e2e8f0;border-radius:4px;overflow:hidden"><div id="kpi-meta-ops-bar" style="height:100%;background:#d97706;border-radius:4px;width:0%;transition:width .6s"></div></div>
+            <span id="kpi-meta-ops-pct" style="font-size:.78rem;font-weight:700;color:#d97706">0%</span>
+          </div>
+          <div style="font-size:.62rem;color:#94a3b8;margin-top:2px"><span id="kpi-meta-ops-actual">0</span> / <span id="kpi-meta-ops-target">0</span></div>
+        </div>
+      </div>
+      <div class="col-sm-6 col-lg-3">
+        <div class="card p-2 px-3" style="border-left:3px solid #7c3aed">
+          <div style="font-size:.62rem;color:#64748b;font-weight:600;text-transform:uppercase">Meta Clientes</div>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:3px">
+            <div style="flex:1;height:8px;background:#e2e8f0;border-radius:4px;overflow:hidden"><div id="kpi-meta-cli-bar" style="height:100%;background:#7c3aed;border-radius:4px;width:0%;transition:width .6s"></div></div>
+            <span id="kpi-meta-cli-pct" style="font-size:.78rem;font-weight:700;color:#7c3aed">0%</span>
+          </div>
+          <div style="font-size:.62rem;color:#94a3b8;margin-top:2px"><span id="kpi-meta-cli-actual">0</span> / <span id="kpi-meta-cli-target">0</span></div>
+        </div>
+      </div>
     </div>
     <div class="row g-3 mb-4">
       <div class="col-sm-6 col-xl">
@@ -3379,6 +3445,38 @@ function renderDashboard() {
   _setEl('stat-fac-pagar', fmt(facPagPend.reduce((s,f)=>s+ +f.total,0)));
   _setEl('stat-fac-pagar-n', `${facPagPend.length} pendiente${facPagPend.length!==1?'s':''}`);
 
+  // ── LIQUIDEZ NETA ──
+  const totFacPagar = facPagPend.reduce((s,f)=>s+ +f.total,0);
+  const liquidez = sB + sE + totCartera - totPagar - totFacPagar;
+  const elLiq = document.getElementById('kpi-liquidez');
+  if (elLiq) {
+    elLiq.textContent = fmt(liquidez);
+    elLiq.style.color = liquidez >= 0 ? '#4ade80' : '#fca5a5';
+  }
+  _setEl('kpi-liq-bancos', fmt(sB));
+  _setEl('kpi-liq-efectivo', fmt(sE));
+  _setEl('kpi-liq-cartera', fmt(totCartera));
+  _setEl('kpi-liq-pagar', fmt(totPagar + totFacPagar));
+
+  // ── VARIACIÓN MENSUAL (comisiones: mes actual vs anterior) ──
+  const comThisMonth = comMes.reduce((s,c)=>s+ +c.monto,0);
+  const mesAnterior = (function(){
+    const d=new Date(); d.setMonth(d.getMonth()-1);
+    return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+  })();
+  const comPrevMonth = (ST.comisiones||[]).filter(c=>c.fecha&&c.fecha.startsWith(mesAnterior)).reduce((s,c)=>s+ +c.monto,0);
+  if (comPrevMonth > 0) {
+    const deltaPct = ((comThisMonth - comPrevMonth)/comPrevMonth*100);
+    const up = deltaPct >= 0;
+    const arrow = up ? '▲' : '▼';
+    const color = up ? '#4ade80' : '#fca5a5';
+    const el = document.getElementById('stat-comisiones-n');
+    if (el) el.innerHTML = `${comMes.length} registro${comMes.length!==1?'s':''} · <span style="color:${color};font-weight:700">${arrow}${Math.abs(deltaPct).toFixed(1)}% vs mes ant.</span>`;
+  }
+
+  // ── METAS MENSUALES (desde Gestión 2026 + histórico) ──
+  _renderMetas(comThisMonth);
+
   // Próximos 15 días
   const p15 = todosChq
     .filter(c=>{const d=dHasta(c.fechaVenc);return d>=0&&d<=15;})
@@ -4131,6 +4229,62 @@ function aplicarFiltrosCheques(cat, data) {
     filtered = filtered.filter(c => +c.monto >= montoMin);
   }
   return filtered;
+}
+
+/* ══ METAS MENSUALES ══ */
+function _renderMetas(comThisMonth) {
+  // Calcular metas basadas en el promedio del año anterior (2025) o datos de Gestión
+  if (!_HIST_DATA && !GESTION_DATA) return;
+  const metaRow = document.getElementById('kpi-metas-row');
+  if (!metaRow) return;
+
+  // Obtener datos de 2025 para calcular promedio mensual como meta base
+  let metaCom = 0, metaFac = 0, metaOps = 0, metaCli = 0;
+  const h25 = _HIST_DATA && _HIST_DATA[2025];
+  if (h25) {
+    // Meta = promedio mensual de 2025 + 10% crecimiento
+    metaCom = (h25.com / 12) * 1.10;
+    metaFac = (h25.fac / 12) * 1.10;
+    metaOps = Math.ceil((h25.ops / 12) * 1.10);
+    metaCli = h25.clientes && h25.clientes.size ? Math.ceil(h25.clientes.size * 1.05) : 50;
+  } else {
+    // Fallback: usar 80M com, 1.5B fac, 200 ops, 50 cli
+    metaCom = 80000000; metaFac = 1500000000; metaOps = 200; metaCli = 50;
+  }
+
+  // Valores actuales del mes en curso
+  let actualFac = 0, actualOps = 0, actualCli = 0;
+  if (GESTION_DATA && GESTION_DATA.byMes) {
+    const mesIdx = new Date().getMonth(); // 0-indexed
+    const mesData = GESTION_DATA.byMes[mesIdx];
+    if (mesData) {
+      actualFac = mesData[2] || 0;
+      actualOps = mesData[1] || 0;
+    }
+    actualCli = GESTION_DATA.clientes ? GESTION_DATA.clientes.length : 0;
+  }
+
+  // Mostrar fila de metas
+  metaRow.style.display = '';
+
+  function setMeta(prefix, actual, target, isMoney) {
+    const pct = target > 0 ? Math.min((actual/target)*100, 150) : 0;
+    const pctDisplay = target > 0 ? Math.round((actual/target)*100) : 0;
+    const color = pctDisplay >= 100 ? '#16a34a' : pctDisplay >= 70 ? '#d97706' : '#dc2626';
+    _setEl(prefix+'-bar', ''); // just update width
+    const bar = document.getElementById(prefix+'-bar');
+    if (bar) { bar.style.width = Math.min(pct,100)+'%'; bar.style.background = color; }
+    _setEl(prefix+'-pct', pctDisplay+'%');
+    const pctEl = document.getElementById(prefix+'-pct');
+    if (pctEl) pctEl.style.color = color;
+    _setEl(prefix+'-actual', isMoney ? fmt(actual) : String(actual));
+    _setEl(prefix+'-target', isMoney ? fmt(target) : String(target));
+  }
+
+  setMeta('kpi-meta-com', comThisMonth, metaCom, true);
+  setMeta('kpi-meta-fac', actualFac, metaFac, true);
+  setMeta('kpi-meta-ops', actualOps, metaOps, false);
+  setMeta('kpi-meta-cli', actualCli, metaCli, false);
 }
 
 function renderCheques(cat){
