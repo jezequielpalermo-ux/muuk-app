@@ -5328,10 +5328,10 @@ function generarReportePDF() {
     <h1>📊 Reporte General — Flujo de Caja</h1>
     <div class="sub">Generado el ${fFmt} · Palermo · Bodini</div>
   </div>
-  <button class="no-print" onclick="window.print()"
-    style="background:#1d4ed8;color:#fff;border:none;border-radius:7px;padding:8px 18px;font-size:11px;cursor:pointer;font-weight:600">
-    🖨️ Imprimir / Guardar PDF
-  </button>
+  <div class="no-print" style="display:flex;gap:8px">
+    <button onclick="window.print()" style="background:#1d4ed8;color:#fff;border:none;border-radius:7px;padding:8px 18px;font-size:11px;cursor:pointer;font-weight:600">Imprimir / Guardar PDF</button>
+    <button onclick="window.close()" style="background:#64748b;color:#fff;border:none;border-radius:7px;padding:8px 18px;font-size:11px;cursor:pointer;font-weight:600">Volver</button>
+  </div>
 </div>
 
 <h2>Resumen Ejecutivo</h2>
@@ -7717,7 +7717,10 @@ function ectaPdfCliente(idx) {
   <div class="doc-info">
     <div>Fecha: ${hoyStr}</div>
     <div>Vendedor: ${_ectaCurrentVendedor}</div>
-    <button class="no-print" onclick="window.print()" style="margin-top:6px;background:#E31E24;color:#fff;border:none;border-radius:5px;padding:5px 14px;font-size:10px;cursor:pointer;font-weight:600">Imprimir / Guardar PDF</button>
+    <div class="no-print" style="display:flex;gap:6px;margin-top:6px">
+      <button onclick="window.print()" style="background:#E31E24;color:#fff;border:none;border-radius:5px;padding:5px 14px;font-size:10px;cursor:pointer;font-weight:600">Imprimir / Guardar PDF</button>
+      <button onclick="window.close()" style="background:#64748b;color:#fff;border:none;border-radius:5px;padding:5px 14px;font-size:10px;cursor:pointer;font-weight:600">Volver</button>
+    </div>
   </div>
 </div>
 
