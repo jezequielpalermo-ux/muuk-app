@@ -2022,10 +2022,10 @@ CREATE POLICY "acceso total" ON flujo_caja_versions FOR ALL USING (true) WITH CH
         <table class="table table-hover mb-0 gest-table">
           <thead class="table-dark"><tr>
             <th class="ps-2">Año</th><th class="text-end">Clientes</th><th class="text-end">Empresas</th>
-            <th class="text-end">Operaciones</th><th class="text-end">Facturado</th>
-            <th class="text-end">Comisiones</th><th class="text-end pe-2">vs Anterior</th>
+            <th class="text-end">Operaciones</th><th class="text-end">Facturado</th><th class="text-end">Sin IVA</th>
+            <th class="text-end">Comisiones</th><th class="text-end" style="color:#fbbf24">% Rentab.</th><th class="text-end pe-2">vs Anterior</th>
           </tr></thead>
-          <tbody id="estrat-hist-tbody"><tr><td colspan="7" class="text-center text-muted py-3" style="font-size:.78rem"><i class="bi bi-cloud-download me-1"></i>Hacé clic en "Cargar datos" para traer los históricos</td></tr></tbody>
+          <tbody id="estrat-hist-tbody"><tr><td colspan="9" class="text-center text-muted py-3" style="font-size:.78rem"><i class="bi bi-cloud-download me-1"></i>Hacé clic en "Cargar datos" para traer los históricos</td></tr></tbody>
         </table>
       </div>
       <div style="height:180px;position:relative"><canvas id="estrat-chart-anual"></canvas></div>
@@ -3822,12 +3822,20 @@ function renderCuentaSocios() {
    COMISIONES — Google Sheets Live
 ═══════════════════════════════════════════ */
 const COM_SHEET_ID = '1EF12F5CQbB8lzLGLxqIEUPJF03Zk0m-IODwE-OaDlcU';
+// Mapeo: nombre en Resumen → nombre de pestaña en el spreadsheet
 const COM_SHEETS = {
-  'CC - Adecoagro':'Adecoagro','CC - La Nueva':'La Nueva','CC - Vulkan':'Vulkan',
-  'CC - Expoconsumo':'Expoconsumo','CC - Gris del Plata':'Gris del Plata',
-  'HJ NAVAS':'HJ Navas','Dulcypas':'Dulcypas','CartoExpress':'CartoExpress',
+  'Adecoagro':'Adecoagro','CC - Adecoagro':'Adecoagro',
+  'La Nueva':'La Nueva','CC - La Nueva':'La Nueva',
+  'Vulkan':'CC - Vulkan','CC - Vulkan':'CC - Vulkan',
+  'Expoconsumo':'Expoconsumo','CC - Expoconsumo':'Expoconsumo',
+  'Gris del Plata':'Gris del Plata','CC - Gris del Plata':'Gris del Plata',
+  'HJ Navas':'HJ NAVAS','HJ NAVAS':'HJ NAVAS',
+  'Dulcypas':'Dulcypas','CartoExpress':'CartoExpress',
   'Jocelar':'Jocelar','Carnevali':'Carnevali','Goloalfa':'Goloalfa',
-  'CC - Perflimp':'Perflimp','Muuk(Mercaderia)':'Muuk (Mercadería)'
+  'Perflimp':'Perflimp','CC - Perflimp':'Perflimp',
+  'Muuk (Mercadería)':'Muuk(Mercaderia)','Muuk(Mercaderia)':'Muuk(Mercaderia)',
+  'Alimentos Rigrapi':'Alimentos Rigrapi','Rigrapi':'Alimentos Rigrapi',
+  'Innova':'Innova','Tio Carlos':'Tio Carlos','Tío Carlos':'Tio Carlos'
 };
 
 // CSV parser for Google Sheets
@@ -4028,24 +4036,27 @@ function renderComResumen() {
   
   // Build cards grid
   grid.innerHTML = ST.comisionesResumen.map(item => {
-    const sheetKey = Object.keys(COM_SHEETS).find(k => COM_SHEETS[k] === item.empresa);
+    // Buscar pestaña: primero por nombre exacto, luego por match parcial
+    let sheetTab = COM_SHEETS[item.empresa] || COM_SHEETS['CC - ' + item.empresa] || item.empresa;
     const isZero = item.saldo === 0;
     const borderColor = isZero ? '#28a745' : '#dc3545';
     const bgColor = isZero ? '#f0fff4' : '#fff5f5';
-    
+
     return `
       <div class="col-sm-6 col-lg-4">
-        <div class="card p-3 cursor-pointer" style="border-left: 4px solid ${borderColor}; background-color: ${bgColor};" 
-             onclick="cargarComisionDetalle('${sheetKey || ''}', '${item.empresa}')">
+        <div class="card p-3 cursor-pointer" style="border-left: 4px solid ${borderColor}; background-color: ${bgColor}; border-radius:10px; transition: transform .15s, box-shadow .15s;"
+             onmouseenter="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 12px rgba(0,0,0,.1)'"
+             onmouseleave="this.style.transform='';this.style.boxShadow=''"
+             onclick="cargarComisionDetalle('${sheetTab.replace(/'/g,"\\'")}', '${item.empresa.replace(/'/g,"\\'")}')">
           <div class="d-flex justify-content-between align-items-start mb-2">
-            <h6 class="mb-0 fw-bold">${item.empresa}</h6>
-            ${item.obs ? `<span class="badge bg-info" style="font-size:0.7rem">${item.obs}</span>` : ''}
+            <h6 class="mb-0 fw-bold" style="font-size:.88rem">${item.empresa}</h6>
+            ${item.obs ? `<span class="badge bg-info" style="font-size:0.65rem;border-radius:5px">${item.obs}</span>` : ''}
           </div>
           <div class="fs-4 fw-bold" style="color: ${borderColor}">${fmt(item.saldo)}</div>
-          <small class="text-muted">Saldo pendiente</small>
+          <small class="text-muted" style="font-size:.7rem">Saldo pendiente</small>
           <div class="mt-2 pt-2 border-top">
-            <small class="text-muted d-flex align-items-center gap-1">
-              <i class="bi bi-chevron-right"></i>Ver detalle
+            <small class="text-primary d-flex align-items-center gap-1" style="font-size:.72rem">
+              <i class="bi bi-table me-1"></i>Ver detalle de cuenta
             </small>
           </div>
         </div>
@@ -4055,12 +4066,13 @@ function renderComResumen() {
 }
 
 // Load and show detail for a specific empresa
-async function cargarComisionDetalle(sheetName, empresaName) {
+async function cargarComisionDetalle(sheetTab, empresaName) {
   try {
-    if (!sheetName) {
+    if (!sheetTab) {
       toast('Error: No se encontró la hoja', 'danger');
       return;
     }
+    const sheetName = sheetTab;
     
     const loading = document.getElementById('com-loading');
     if (loading) loading.style.display = 'block';
@@ -4130,39 +4142,70 @@ async function cargarComisionDetalle(sheetName, empresaName) {
     const resumenItem = ST.comisionesResumen.find(r => r.empresa === empresaName);
     if (saldoEl) saldoEl.textContent = resumenItem ? `Saldo: ${fmt(resumenItem.saldo)}` : 'Saldo: —';
     
+    // Calculate summary totals
+    const totImporte = details.reduce((s,d) => s + (d.importe||0), 0);
+    const totComision = details.reduce((s,d) => s + (d.comision||0), 0);
+    const totPagos = details.reduce((s,d) => s + (d.pagos||0), 0);
+    const lastSaldo = details.length ? details[details.length-1].saldo : 0;
+    const isFull = details.length > 0 && details[0].type === 'full';
+
+    // Summary cards
+    let summaryHTML = `<div class="row g-2 mb-3" style="padding:12px 14px 0">
+      <div class="col-6 col-md-3"><div class="card p-2 text-center" style="border-radius:8px;background:#fffbeb">
+        <div style="font-size:.62rem;color:#92400e;text-transform:uppercase;font-weight:600">Comisiones</div>
+        <div style="font-size:1rem;font-weight:800;color:#d97706">${fmt(isFull ? totComision : totImporte)}</div>
+      </div></div>
+      <div class="col-6 col-md-3"><div class="card p-2 text-center" style="border-radius:8px;background:#f0fdf4">
+        <div style="font-size:.62rem;color:#166534;text-transform:uppercase;font-weight:600">Pagos/Retiros</div>
+        <div style="font-size:1rem;font-weight:800;color:#16a34a">${fmt(totPagos)}</div>
+      </div></div>
+      <div class="col-6 col-md-3"><div class="card p-2 text-center" style="border-radius:8px;background:${lastSaldo > 0 ? '#fef2f2' : '#f0fdf4'}">
+        <div style="font-size:.62rem;color:#64748b;text-transform:uppercase;font-weight:600">Saldo Actual</div>
+        <div style="font-size:1rem;font-weight:800;color:${lastSaldo > 0 ? '#dc2626' : '#16a34a'}">${fmt(lastSaldo)}</div>
+      </div></div>
+      <div class="col-6 col-md-3"><div class="card p-2 text-center" style="border-radius:8px">
+        <div style="font-size:.62rem;color:#64748b;text-transform:uppercase;font-weight:600">Movimientos</div>
+        <div style="font-size:1rem;font-weight:800;color:#1e293b">${details.length}</div>
+      </div></div>
+    </div>`;
+
     // Build table HTML
-    let tableHTML = '<table class="table table-sm table-hover mb-0"><thead><tr>';
-    
-    if (details.length > 0 && details[0].type === 'full') {
-      tableHTML += '<th class="ps-3">Fecha</th><th>Cliente</th><th>FCA</th><th>Importe</th><th>Comisión</th><th>Pagos</th><th>Saldo</th><th>Obs</th></tr></thead><tbody>';
-      tableHTML += details.map(d => `
-        <tr>
-          <td class="ps-3"><small>${d.fecha}</small></td>
-          <td><small>${d.cliente || '–'}</small></td>
-          <td><small>${d.fca || '–'}</small></td>
-          <td class="text-end"><small>${fmt(d.importe)}</small></td>
-          <td class="text-end text-warning fw-bold"><small>${fmt(d.comision)}</small></td>
-          <td class="text-end ${d.pagos > 0 ? 'text-success fw-bold' : 'text-muted'}"><small>${fmt(d.pagos)}</small></td>
-          <td class="text-end fw-bold"><small>${fmt(d.saldo)}</small></td>
-          <td><small class="text-muted">${d.obs || '–'}</small></td>
-        </tr>
-      `).join('');
+    let tableHTML = summaryHTML + '<div class="table-responsive" style="max-height:500px;overflow-y:auto"><table class="table table-sm table-hover mb-0" style="font-size:.78rem"><thead class="sticky-top" style="z-index:1"><tr style="background:#f1f5f9">';
+
+    if (isFull) {
+      tableHTML += '<th class="ps-3">Fecha</th><th>Cliente</th><th>FCA</th><th class="text-end">Importe</th><th class="text-end">Sin IVA</th><th class="text-end">Comisión</th><th>Estado</th><th class="text-end">Pagos</th><th class="text-end">Saldo</th><th>Obs</th></tr></thead><tbody>';
+      tableHTML += details.map(d => {
+        const saldoColor = d.saldo > 0 ? '#dc2626' : d.saldo < 0 ? '#16a34a' : '#64748b';
+        return `<tr>
+          <td class="ps-3">${d.fecha}</td>
+          <td style="font-weight:600">${d.cliente || '–'}</td>
+          <td>${d.fca || '–'}</td>
+          <td class="text-end">${d.importe ? fmt(d.importe) : '–'}</td>
+          <td class="text-end" style="color:#64748b">${d.importeSinIVA ? fmt(d.importeSinIVA) : '–'}</td>
+          <td class="text-end" style="color:#d97706;font-weight:600">${d.comision ? fmt(d.comision) : '–'}</td>
+          <td><span style="font-size:.65rem">${d.estado || '–'}</span></td>
+          <td class="text-end" style="color:${d.pagos > 0 ? '#16a34a' : '#64748b'};font-weight:${d.pagos > 0 ? '600' : '400'}">${d.pagos ? fmt(d.pagos) : '–'}</td>
+          <td class="text-end" style="color:${saldoColor};font-weight:700">${fmt(d.saldo)}</td>
+          <td style="font-size:.68rem;color:#94a3b8;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${(d.obs||'').replace(/"/g,'&quot;')}">${d.obs || '–'}</td>
+        </tr>`;
+      }).join('');
     } else {
-      tableHTML += '<th class="ps-3">Fecha</th><th>FCA</th><th>Importe (Comisión)</th><th>Pagos</th><th>Saldo</th><th>Obs</th></tr></thead><tbody>';
-      tableHTML += details.map(d => `
-        <tr>
-          <td class="ps-3"><small>${d.fecha}</small></td>
-          <td><small>${d.fca || '–'}</small></td>
-          <td class="text-end text-warning fw-bold"><small>${fmt(d.importe)}</small></td>
-          <td class="text-end ${d.pagos > 0 ? 'text-success fw-bold' : 'text-muted'}"><small>${fmt(d.pagos)}</small></td>
-          <td class="text-end fw-bold"><small>${fmt(d.saldo)}</small></td>
-          <td><small class="text-muted">${d.obs || '–'}</small></td>
-        </tr>
-      `).join('');
+      tableHTML += '<th class="ps-3">Fecha</th><th>FCA</th><th class="text-end">Comisión</th><th class="text-end">Pagos</th><th class="text-end">Saldo</th><th>Obs</th></tr></thead><tbody>';
+      tableHTML += details.map(d => {
+        const saldoColor = d.saldo > 0 ? '#dc2626' : d.saldo < 0 ? '#16a34a' : '#64748b';
+        return `<tr>
+          <td class="ps-3">${d.fecha}</td>
+          <td>${d.fca || '–'}</td>
+          <td class="text-end" style="color:#d97706;font-weight:600">${d.importe ? fmt(d.importe) : '–'}</td>
+          <td class="text-end" style="color:${d.pagos > 0 ? '#16a34a' : '#64748b'};font-weight:${d.pagos > 0 ? '600' : '400'}">${d.pagos ? fmt(d.pagos) : '–'}</td>
+          <td class="text-end" style="color:${saldoColor};font-weight:700">${fmt(d.saldo)}</td>
+          <td style="font-size:.68rem;color:#94a3b8">${d.obs || '–'}</td>
+        </tr>`;
+      }).join('');
     }
-    
-    tableHTML += '</tbody></table>';
-    
+
+    tableHTML += '</tbody></table></div>';
+
     if (tableEl) tableEl.innerHTML = tableHTML;
     
     if (grid) grid.style.display = 'none';
@@ -4182,19 +4225,20 @@ function renderComisiones() {
   const grid = document.getElementById('com-resumen-grid');
   const wrapper = document.getElementById('com-detalle-wrapper');
   const empty = document.getElementById('com-empty-state');
-  
+
   if (!grid) return;
-  
+
   // Hide detail view, show summary
   if (wrapper) wrapper.style.display = 'none';
   if (grid) grid.style.display = '';
-  
-  // If we have cached data, render it
+
+  // If we have cached data, render it; otherwise auto-load
   if (ST.comisionesResumen && ST.comisionesResumen.length > 0) {
     if (empty) empty.style.display = 'none';
     renderComResumen();
   } else {
-    if (empty) empty.style.display = 'block';
+    // Auto-cargar al entrar por primera vez
+    cargarComisionesSheet();
   }
 }
 
@@ -6377,12 +6421,12 @@ function renderEstrategicos() {
   if (kpis) {
     const ticketProm = totFac / (totOps || 1);
     const comProm = totCom / (totOps || 1);
-    const pctCom = totFac ? (totCom / totFac * 100) : 0;
+    const pctCom = totSiv ? (totCom / totSiv * 100) : 0;
     const comMes = totCom / meses;
     const items = [
       { icon:'bi-cash-coin', color:'#16a34a', bg:'#f0fdf4', label:'Comisión/Mes Prom', val: fmt(comMes) },
       { icon:'bi-receipt', color:'#1d4ed8', bg:'#eff6ff', label:'Ticket Promedio', val: fmt(ticketProm) },
-      { icon:'bi-percent', color:'#d97706', bg:'#fffbeb', label:'% Comisión s/Fact', val: pctCom.toFixed(2) + '%' },
+      { icon:'bi-percent', color:'#d97706', bg:'#fffbeb', label:'% Com s/Sin IVA', val: pctCom.toFixed(2) + '%' },
       { icon:'bi-calculator', color:'#7c3aed', bg:'#f5f3ff', label:'Comisión/Op Prom', val: fmt(comProm) }
     ];
     kpis.innerHTML = items.map(s => `
@@ -6424,15 +6468,15 @@ function renderEstrategicos() {
   const ctxT = document.getElementById('estrat-chart-tendencia');
   if (ctxT) {
     if (_chartTendencia) _chartTendencia.destroy();
-    const comPcts = d.byMes.map(m => m[2]?(m[4]/m[2]*100):0);
+    const comPcts = d.byMes.map(m => m[3]?(m[4]/m[3]*100):0);
     _chartTendencia = new Chart(ctxT, {
       type: 'bar',
       data: {
         labels: d.byMes.map(m=>m[0].replace(' 2026','')),
         datasets: [
-          { label:'Facturado', data:d.byMes.map(m=>m[2]), backgroundColor:'rgba(59,130,246,.6)', borderRadius:5, yAxisID:'y' },
+          { label:'Sin IVA', data:d.byMes.map(m=>m[3]), backgroundColor:'rgba(59,130,246,.6)', borderRadius:5, yAxisID:'y' },
           { label:'Comisión', data:d.byMes.map(m=>m[4]), backgroundColor:'rgba(22,163,74,.7)', borderRadius:5, yAxisID:'y' },
-          { label:'% Com', data:comPcts, type:'line', borderColor:'#d97706', backgroundColor:'transparent',
+          { label:'% Com/SinIVA', data:comPcts, type:'line', borderColor:'#d97706', backgroundColor:'transparent',
             borderWidth:2, pointRadius:4, pointBackgroundColor:'#d97706', yAxisID:'y2', tension:.3 }
         ]
       },
@@ -6535,6 +6579,7 @@ let _HIST_DATA = (function(){
     out[parseInt(yr)]={
       ops:yrD.total.operations,
       fac:yrD.total.facturado,
+      siv:yrD.total.sin_iva,
       com:yrD.total.comision,
       clientes:{size:yrD.total.clientes_count},
       empresas:{size:yrD.total.empresas_count},
@@ -6659,18 +6704,22 @@ function _mergeAllSheets(sheets) {
     let iCom = cols.findIndex(h => h.includes('importe') && h.includes('comis'));
     if (iCom < 0) iCom = cols.findIndex(h => h.match(/comisi[oó]n/) && !h.includes('%'));
     if (iCom < 0) iCom = 20;
+    let iSiv = cols.findIndex(h => h.includes('sin iva') || h.includes('sin_iva') || (h.includes('importe') && h.includes('iva')));
+    if (iSiv < 0) iSiv = -1;
 
     rows.forEach(r => {
       const year = _extractYear(r[iFecha]);
       if (!year || year < 2019 || year > 2026) return;
 
-      if (!byYear[year]) byYear[year] = { ops:0, fac:0, com:0, clientes:new Set(), empresas:new Set(), meses:{} };
+      if (!byYear[year]) byYear[year] = { ops:0, fac:0, siv:0, com:0, clientes:new Set(), empresas:new Set(), meses:{} };
       const y = byYear[year];
       y.ops++;
 
       const facVal = _parseNum2(r[iFac]);
       const comVal = _parseNum2(r[iCom]);
+      const sivVal = iSiv >= 0 ? _parseNum2(r[iSiv]) : 0;
       y.fac += facVal;
+      y.siv += sivVal;
       y.com += comVal;
 
       const cli = String(r[iCliente]||'').trim();
@@ -6691,9 +6740,9 @@ function _mergeAllSheets(sheets) {
 
   // Si no encontramos datos multi-year, complementar con GESTION_DATA
   if (!_HIST_DATA[2026] && GESTION_DATA && GESTION_DATA.byMes) {
-    const y = { ops:0, fac:0, com:0, clientes:new Set(), empresas:new Set(), meses:{} };
+    const y = { ops:0, fac:0, siv:0, com:0, clientes:new Set(), empresas:new Set(), meses:{} };
     GESTION_DATA.byMes.forEach((m,i) => {
-      y.ops += m[1]; y.fac += m[2]; y.com += m[4]; y.meses[i+1] = m[4];
+      y.ops += m[1]; y.fac += m[2]; y.siv += (m[3]||0); y.com += m[4]; y.meses[i+1] = m[4];
     });
     if (GESTION_DATA.clientes) GESTION_DATA.clientes.forEach(cl => y.clientes.add(cl[0]));
     if (GESTION_DATA.empresas) GESTION_DATA.empresas.forEach(e => y.empresas.add(e[0]));
@@ -6764,9 +6813,9 @@ function _parseNum2(v) {
 function _buildFromGestionOnly() {
   if (!_HIST_DATA) _HIST_DATA = {};
   if (GESTION_DATA && GESTION_DATA.byMes) {
-    const y = { ops:0, fac:0, com:0, clientes:new Set(), empresas:new Set(), meses:{} };
+    const y = { ops:0, fac:0, siv:0, com:0, clientes:new Set(), empresas:new Set(), meses:{} };
     GESTION_DATA.byMes.forEach((m,i) => {
-      y.ops += m[1]; y.fac += m[2]; y.com += m[4]; y.meses[i+1] = m[4];
+      y.ops += m[1]; y.fac += m[2]; y.siv += (m[3]||0); y.com += m[4]; y.meses[i+1] = m[4];
     });
     if (GESTION_DATA.clientes) GESTION_DATA.clientes.forEach(cl => y.clientes.add(cl[0]));
     if (GESTION_DATA.empresas) GESTION_DATA.empresas.forEach(e => y.empresas.add(e[0]));
@@ -6781,7 +6830,7 @@ function _renderComparativa() {
   const years = Object.keys(_HIST_DATA).map(Number).sort();
   
   if (!years.length) {
-    if (tb) tb.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-3">Sin datos</td></tr>';
+    if (tb) tb.innerHTML = '<tr><td colspan="9" class="text-center text-muted py-3">Sin datos</td></tr>';
     return;
   }
 
@@ -6791,6 +6840,8 @@ function _renderComparativa() {
       const d = _HIST_DATA[yr];
       const cliCount = d.clientes ? d.clientes.size : 0;
       const empCount = d.empresas ? d.empresas.size : 0;
+      const sivVal = d.siv || 0;
+      const pctRentab = sivVal ? (d.com / sivVal * 100) : 0;
       let delta = '';
       if (prevCom > 0) {
         const pct = ((d.com - prevCom)/prevCom*100);
@@ -6801,13 +6852,16 @@ function _renderComparativa() {
       }
       prevCom = d.com;
       const isLast = yr === years[years.length-1];
+      const rentabColor = pctRentab >= 5 ? '#16a34a' : pctRentab >= 3 ? '#d97706' : '#dc2626';
       return `<tr${isLast?' style="background:#f0fdf4"':''}>
         <td class="ps-2 fw-bold"${isLast?' style="color:#16a34a"':''}>${yr}</td>
         <td class="text-end">${cliCount}</td>
         <td class="text-end">${empCount}</td>
         <td class="text-end">${d.ops}</td>
         <td class="text-end">${fmt(d.fac)}</td>
+        <td class="text-end">${sivVal ? fmt(sivVal) : '—'}</td>
         <td class="text-end text-success fw-bold">${fmt(d.com)}</td>
+        <td class="text-end fw-bold" style="color:${rentabColor}">${sivVal ? pctRentab.toFixed(2) + '%' : '—'}</td>
         <td class="text-end pe-2">${delta}</td>
       </tr>`;
     }).join('');
