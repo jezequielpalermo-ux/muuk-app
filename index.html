@@ -3833,7 +3833,7 @@ const COM_SHEETS = {
   'Dulcypas':'Dulcypas','CartoExpress':'CartoExpress',
   'Jocelar':'Jocelar','Carnevali':'Carnevali','Goloalfa':'Goloalfa',
   'Perflimp':'Perflimp','CC - Perflimp':'Perflimp',
-  'Muuk (Mercadería)':'Muuk(Mercaderia)','Muuk(Mercaderia)':'Muuk(Mercaderia)',
+  'Muuk':'Muuk(Mercaderia)','Muuk (Mercadería)':'Muuk(Mercaderia)','Muuk(Mercaderia)':'Muuk(Mercaderia)',
   'Alimentos Rigrapi':'Alimentos Rigrapi','Rigrapi':'Alimentos Rigrapi',
   'Innova':'Innova','Tio Carlos':'Tio Carlos','Tío Carlos':'Tio Carlos'
 };
@@ -4087,43 +4087,58 @@ async function cargarComisionDetalle(sheetTab, empresaName) {
     }
     
     const headers = rows[0].map(h => (h||'').trim().toLowerCase());
-    
-    // Detect format: full sheets have "comisi" or "sin iva" in headers
-    const isFull = headers.some(h => h.includes('comisi') || h.includes('sin iva'));
-    
+
+    // Detect columns by header name (flexible for different sheet layouts)
+    const _findCol = (keywords) => headers.findIndex(h => keywords.some(k => h.includes(k)));
+    const iFecha   = _findCol(['fecha']);
+    const iCliente = _findCol(['cliente']);
+    const iFca     = headers.findIndex(h => h === 'fca');
+    const iImporte = headers.findIndex(h => h.includes('importe') && !h.includes('sin'));
+    const iSinIVA  = _findCol(['sin iva', 'sin imp']);
+    const iComision= _findCol(['comisi']);
+    const iPagos   = headers.findIndex(h => h.includes('pagos') || h.includes('retiro'));
+    const iSaldo   = _findCol(['saldo']);
+    const iObs     = _findCol(['obs', 'observ']);
+    const iEstado  = _findCol(['estado', 'facturado']);
+
+    const isFull = iComision >= 0 || iSinIVA >= 0;
+
     // Parse detail rows
     const details = [];
     for (let i = 1; i < rows.length; i++) {
       const row = rows[i];
-      if (!row[0] || !row[0].trim()) continue;
-      
-      const fecha = row[0] ? comParseFecha(row[0].trim()) : null;
-      if (!fecha) continue;
-      
+      // Skip completely empty rows — need at least a client, FCA, or non-zero amount
+      const clienteVal = iCliente >= 0 ? (row[iCliente]||'').trim() : '';
+      const fcaVal = iFca >= 0 ? (row[iFca]||'').trim() : '';
+      const importeVal = iImporte >= 0 ? comParseMonto(row[iImporte]) : 0;
+      const comVal = iComision >= 0 ? comParseMonto(row[iComision]) : 0;
+      const pagosVal = iPagos >= 0 ? comParseMonto(row[iPagos]) : 0;
+      if (!clienteVal && !fcaVal && !importeVal && !comVal && !pagosVal) continue;
+
+      const fechaRaw = iFecha >= 0 ? (row[iFecha]||'').trim() : '';
+
       if (isFull) {
-        // Full format: Fecha, Cliente, FCA, Importe, Importe sin IVA, Comisión, [Facturado/Estado], Pagos/Retiros, Saldo, [Observaciones]
         details.push({
-          fecha: row[0],
-          cliente: row[1] || '',
-          fca: row[2] || '',
-          importe: comParseMonto(row[3]),
-          importeSinIVA: comParseMonto(row[4]),
-          comision: comParseMonto(row[5]),
-          estado: row[6] || '',
-          pagos: comParseMonto(row[7]),
-          saldo: comParseMonto(row[8]),
-          obs: row[9] || '',
+          fecha: fechaRaw || '–',
+          cliente: iCliente >= 0 ? (row[iCliente]||'') : '',
+          fca: iFca >= 0 ? (row[iFca]||'') : '',
+          importe: iImporte >= 0 ? comParseMonto(row[iImporte]) : 0,
+          importeSinIVA: iSinIVA >= 0 ? comParseMonto(row[iSinIVA]) : 0,
+          comision: iComision >= 0 ? comParseMonto(row[iComision]) : 0,
+          estado: iEstado >= 0 ? (row[iEstado]||'') : '',
+          pagos: iPagos >= 0 ? comParseMonto(row[iPagos]) : 0,
+          saldo: iSaldo >= 0 ? comParseMonto(row[iSaldo]) : 0,
+          obs: iObs >= 0 ? (row[iObs]||'') : '',
           type: 'full'
         });
       } else {
-        // Simple format: Fecha, [FCA], Importe (IS commission), Pagos, Saldo, [Observaciones]
         details.push({
-          fecha: row[0],
-          fca: row[1] || '',
-          importe: comParseMonto(row[2]),
-          pagos: comParseMonto(row[3]),
-          saldo: comParseMonto(row[4]),
-          obs: row[5] || '',
+          fecha: fechaRaw || '–',
+          fca: iFca >= 0 ? (row[iFca]||'') : (row[1]||''),
+          importe: iImporte >= 0 ? comParseMonto(row[iImporte]) : comParseMonto(row[2]),
+          pagos: iPagos >= 0 ? comParseMonto(row[iPagos]) : comParseMonto(row[3]),
+          saldo: iSaldo >= 0 ? comParseMonto(row[iSaldo]) : comParseMonto(row[4]),
+          obs: iObs >= 0 ? (row[iObs]||'') : (row[5]||''),
           type: 'simple'
         });
       }
