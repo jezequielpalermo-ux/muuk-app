@@ -4088,15 +4088,23 @@ async function cargarComisionDetalle(sheetTab, empresaName) {
     
     const headers = rows[0].map(h => (h||'').trim().toLowerCase());
 
+    // Google Sheets merges title row with first header (e.g. "Comisiones: Nutri/Rigrapi Fecha Fact")
+    // Clean it: extract only the actual header keyword after the title prefix
+    if (headers[0] && headers[0].includes('comisiones:')) {
+      const m = headers[0].match(/\b(fecha\b.*)/i);
+      headers[0] = m ? m[1] : '';
+    }
+
     // Detect columns by header name (flexible for different sheet layouts)
-    const _findCol = (keywords) => headers.findIndex(h => keywords.some(k => h.includes(k)));
+    // Only match short headers (< 40 chars) to avoid matching merged title cells
+    const _findCol = (keywords) => headers.findIndex(h => h.length < 40 && keywords.some(k => h.includes(k)));
     const iFecha   = _findCol(['fecha']);
     const iCliente = _findCol(['cliente']);
     const iFca     = headers.findIndex(h => h === 'fca');
-    const iImporte = headers.findIndex(h => h.includes('importe') && !h.includes('sin'));
-    const iSinIVA  = _findCol(['sin iva', 'sin imp']);
+    const iImporte = headers.findIndex(h => h.length < 40 && h.includes('importe') && !h.includes('sin') && !h.includes('s/i'));
+    const iSinIVA  = _findCol(['sin iva', 'sin imp', 's/imp', 's/iva']);
     const iComision= _findCol(['comisi']);
-    const iPagos   = headers.findIndex(h => h.includes('pagos') || h.includes('retiro'));
+    const iPagos   = headers.findIndex(h => h.length < 40 && (h.includes('pagos') || h.includes('retiro')));
     const iSaldo   = _findCol(['saldo']);
     const iObs     = _findCol(['obs', 'observ']);
     const iEstado  = _findCol(['estado', 'facturado']);
