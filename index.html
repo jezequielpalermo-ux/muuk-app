@@ -7513,8 +7513,11 @@ function _ectaParseCsv(csv) {
     const statusL = (row[4] || '').trim();
 
     if (empL && impL && statusL.toUpperCase() === 'COBRADO') {
-      const monto = _ectaParseNum(impL);
-      curCliente.cobradas.push({ empresa: empL, fecha: fechaL, factura: factL, importe: impL, monto });
+      let monto = _ectaParseNum(impL);
+      // NC (Nota de Crédito) → forzar negativo
+      if (/\bNC\b/i.test(factL) && monto > 0) monto = -monto;
+      const importeDisplay = (monto < 0 && !impL.trim().startsWith('-')) ? '-' + impL.trim() : impL;
+      curCliente.cobradas.push({ empresa: empL, fecha: fechaL, factura: factL, importe: importeDisplay, monto });
       curCliente.totalCobrado += monto;
     }
 
@@ -7526,8 +7529,11 @@ function _ectaParseCsv(csv) {
     const fechaPago = (row[9] || '').trim();
 
     if (empR && impR) {
-      const monto = _ectaParseNum(impR);
-      curCliente.pendientes.push({ empresa: empR, fecha: fechaR, factura: factR, importe: impR, fechaPago, monto });
+      let monto = _ectaParseNum(impR);
+      // NC (Nota de Crédito) → forzar negativo
+      if (/\bNC\b/i.test(factR) && monto > 0) monto = -monto;
+      const importeDisplay = (monto < 0 && !impR.trim().startsWith('-')) ? '-' + impR.trim() : impR;
+      curCliente.pendientes.push({ empresa: empR, fecha: fechaR, factura: factR, importe: importeDisplay, fechaPago, monto });
       curCliente.totalPendiente += monto;
     }
   }
@@ -7586,15 +7592,17 @@ function _ectaRenderData(vendedor) {
       ? `<span class="badge" style="background:#fef2f2;color:#dc2626;font-size:.68rem;font-weight:600;border-radius:6px;padding:3px 8px"><i class="bi bi-exclamation-circle me-1"></i>Pendiente: ${_ectaFmt(c.totalPendiente)}</span>`
       : `<span class="badge" style="background:#f0fdf4;color:#16a34a;font-size:.68rem;font-weight:600;border-radius:6px;padding:3px 8px"><i class="bi bi-check-circle me-1"></i>Al día</span>`;
 
-    html += `<div class="card mb-2 ecta-client-card" data-cliente="${c.nombre.toLowerCase()}" style="border-radius:10px;border-left:3px solid ${borderColor};overflow:hidden">
-      <div class="card-header bg-white d-flex justify-content-between align-items-center" style="cursor:pointer;padding:10px 14px" onclick="this.parentElement.querySelector('.ecta-body').classList.toggle('d-none')">
-        <div>
+    html += `<div class="card mb-2 ecta-client-card" data-cliente="${c.nombre.toLowerCase()}" data-idx="${i}" style="border-radius:10px;border-left:3px solid ${borderColor};overflow:hidden">
+      <div class="card-header bg-white d-flex justify-content-between align-items-center" style="cursor:pointer;padding:10px 14px">
+        <div onclick="this.closest('.card').querySelector('.ecta-body').classList.toggle('d-none')" style="flex:1;cursor:pointer">
           <span style="font-weight:700;font-size:.88rem;color:#0f172a">${c.nombre}</span>
           <span style="font-size:.68rem;color:#64748b;margin-left:8px">${c.cobradas.length + c.pendientes.length} facturas</span>
         </div>
-        <div style="display:flex;align-items:center;gap:8px">
+        <div style="display:flex;align-items:center;gap:6px">
           ${badge}
-          <i class="bi bi-chevron-down" style="font-size:.7rem;color:#94a3b8"></i>
+          <button class="btn btn-sm btn-outline-danger" style="font-size:.62rem;padding:2px 7px;border-radius:5px" onclick="ectaPdfCliente(${i})" title="Generar PDF estado de cuenta"><i class="bi bi-file-earmark-pdf"></i></button>
+          <button class="btn btn-sm btn-outline-primary" style="font-size:.62rem;padding:2px 7px;border-radius:5px" onclick="ectaEditCliente(${i})" title="Editar facturas"><i class="bi bi-pencil-square"></i></button>
+          <i class="bi bi-chevron-down" style="font-size:.7rem;color:#94a3b8;cursor:pointer" onclick="this.closest('.card').querySelector('.ecta-body').classList.toggle('d-none')"></i>
         </div>
       </div>
       <div class="ecta-body ${hasPend ? '' : 'd-none'}" style="padding:0">`;
@@ -7605,7 +7613,9 @@ function _ectaRenderData(vendedor) {
         <div class="table-responsive"><table class="table table-sm mb-0" style="font-size:.75rem">
         <thead><tr style="background:#fef2f2"><th>Empresa</th><th>Fecha</th><th>Factura</th><th class="text-end">Importe</th><th>Vto. Pago</th></tr></thead><tbody>`;
       for (const f of c.pendientes) {
-        html += `<tr><td style="font-weight:600">${f.empresa}</td><td>${f.fecha}</td><td>${f.factura}</td><td class="text-end" style="font-weight:600;color:#dc2626">${f.importe}</td><td>${f.fechaPago || '-'}</td></tr>`;
+        const isNC = /\bNC\b/i.test(f.factura);
+        const tdStyle = isNC ? 'font-weight:600;color:#7c3aed' : 'font-weight:600;color:#dc2626';
+        html += `<tr><td style="font-weight:600">${f.empresa}</td><td>${f.fecha}</td><td>${f.factura}${isNC ? ' <span style="font-size:.6rem;background:#f5f3ff;color:#7c3aed;padding:1px 4px;border-radius:3px">NC</span>' : ''}</td><td class="text-end" style="${tdStyle}">${f.importe}</td><td>${f.fechaPago || '-'}</td></tr>`;
       }
       html += `<tr style="background:#fef2f2;font-weight:700"><td colspan="3">Total pendiente</td><td class="text-end" style="color:#dc2626">${_ectaFmt(c.totalPendiente)}</td><td></td></tr>`;
       html += '</tbody></table></div></div>';
@@ -7623,16 +7633,17 @@ function _ectaRenderData(vendedor) {
 
       if (hidden.length > 0) {
         html += `<tr class="ecta-hidden-rows" style="display:none" data-count="${hidden.length}">`;
-        // We'll render hidden rows via a toggle
         html += '</tr>';
         for (const f of hidden) {
-          html += `<tr class="ecta-old-row" style="display:none"><td>${f.empresa}</td><td>${f.fecha}</td><td>${f.factura}</td><td class="text-end">${f.importe}</td></tr>`;
+          const isNC = /\bNC\b/i.test(f.factura);
+          html += `<tr class="ecta-old-row" style="display:none"><td>${f.empresa}</td><td>${f.fecha}</td><td>${f.factura}${isNC ? ' <span style="font-size:.6rem;background:#f5f3ff;color:#7c3aed;padding:1px 4px;border-radius:3px">NC</span>' : ''}</td><td class="text-end">${f.importe}</td></tr>`;
         }
         html += `<tr class="ecta-show-more"><td colspan="4" style="text-align:center"><button class="btn btn-sm btn-link" style="font-size:.7rem" onclick="this.closest('tbody').querySelectorAll('.ecta-old-row').forEach(r=>r.style.display='');this.closest('tr').style.display='none'"><i class="bi bi-three-dots me-1"></i>Ver ${hidden.length} facturas anteriores</button></td></tr>`;
       }
 
       for (const f of visible) {
-        html += `<tr><td>${f.empresa}</td><td>${f.fecha}</td><td>${f.factura}</td><td class="text-end">${f.importe}</td></tr>`;
+        const isNC = /\bNC\b/i.test(f.factura);
+        html += `<tr><td>${f.empresa}</td><td>${f.fecha}</td><td>${f.factura}${isNC ? ' <span style="font-size:.6rem;background:#f5f3ff;color:#7c3aed;padding:1px 4px;border-radius:3px">NC</span>' : ''}</td><td class="text-end">${f.importe}</td></tr>`;
       }
       html += `<tr style="background:#f0fdf4;font-weight:700"><td colspan="3">Total cobrado</td><td class="text-end" style="color:#16a34a">${_ectaFmt(c.totalCobrado)}</td></tr>`;
       html += '</tbody></table></div></div>';
@@ -7648,10 +7659,220 @@ function ectaFilter() {
   const q = (document.getElementById('ecta-search').value || '').toLowerCase().trim();
   document.querySelectorAll('.ecta-client-card').forEach(card => {
     const name = card.dataset.cliente || '';
-    // Also search in the card's text content
     const match = !q || name.includes(q) || card.textContent.toLowerCase().includes(q);
     card.style.display = match ? '' : 'none';
   });
+}
+
+/* ─── PDF Estado de Cuenta por Cliente ─── */
+function ectaPdfCliente(idx) {
+  const clientes = _ectaCache[_ectaCurrentVendedor] || [];
+  const c = clientes[idx];
+  if (!c) return;
+  const hoyStr = new Date().toLocaleDateString('es-AR', { year:'numeric', month:'long', day:'numeric' });
+
+  let pendRows = '';
+  for (const f of c.pendientes) {
+    const isNC = /\bNC\b/i.test(f.factura);
+    pendRows += `<tr><td>${f.empresa}</td><td>${f.fecha}</td><td>${f.factura}${isNC ? ' (NC)' : ''}</td><td style="text-align:right;font-weight:600">${f.importe}</td><td>${f.fechaPago || '-'}</td></tr>`;
+  }
+
+  let cobRows = '';
+  for (const f of c.cobradas) {
+    const isNC = /\bNC\b/i.test(f.factura);
+    cobRows += `<tr><td>${f.empresa}</td><td>${f.fecha}</td><td>${f.factura}${isNC ? ' (NC)' : ''}</td><td style="text-align:right">${f.importe}</td></tr>`;
+  }
+
+  const w = window.open('', '_blank');
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Estado de Cuenta - ${c.nombre}</title>
+<style>
+  @page { size: A4; margin: 15mm 18mm; }
+  @media print { .no-print { display:none!important; } }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; font-size:11px; color:#1e293b; line-height:1.4; }
+  .header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:18px; padding-bottom:12px; border-bottom:2px solid #E31E24; }
+  .logo { font-size:18px; font-weight:900; color:#E31E24; font-family:'Arial Black',Impact,sans-serif; letter-spacing:1px; }
+  .logo-sub { font-size:8px; color:#64748b; text-transform:uppercase; letter-spacing:.5px; }
+  .doc-info { text-align:right; font-size:9px; color:#64748b; }
+  .client-box { background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:10px 14px; margin-bottom:16px; }
+  .client-name { font-size:14px; font-weight:700; color:#0f172a; }
+  .client-meta { font-size:9px; color:#64748b; margin-top:2px; }
+  h2 { font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; margin:14px 0 8px; padding:4px 8px; border-radius:4px; }
+  h2.pend { background:#fef2f2; color:#dc2626; }
+  h2.cob { background:#f0fdf4; color:#16a34a; }
+  table { width:100%; border-collapse:collapse; font-size:10px; margin-bottom:12px; }
+  th { background:#f1f5f9; font-weight:700; text-align:left; padding:5px 8px; border-bottom:1px solid #cbd5e1; font-size:9px; text-transform:uppercase; letter-spacing:.04em; }
+  td { padding:4px 8px; border-bottom:1px solid #f1f5f9; }
+  .total-row { background:#f8fafc; font-weight:700; border-top:2px solid #cbd5e1; }
+  .total-row.pend td { color:#dc2626; }
+  .total-row.cob td { color:#16a34a; }
+  .summary-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-bottom:16px; }
+  .summary-card { background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:8px; text-align:center; }
+  .summary-label { font-size:8px; color:#64748b; text-transform:uppercase; letter-spacing:.04em; }
+  .summary-val { font-size:14px; font-weight:800; margin-top:2px; }
+  .footer { margin-top:20px; padding-top:10px; border-top:1px solid #e2e8f0; font-size:8px; color:#94a3b8; text-align:center; }
+</style></head><body>
+<div class="header">
+  <div><div class="logo">MUUK</div><div class="logo-sub">Estado de Cuenta</div></div>
+  <div class="doc-info">
+    <div>Fecha: ${hoyStr}</div>
+    <div>Vendedor: ${_ectaCurrentVendedor}</div>
+    <button class="no-print" onclick="window.print()" style="margin-top:6px;background:#E31E24;color:#fff;border:none;border-radius:5px;padding:5px 14px;font-size:10px;cursor:pointer;font-weight:600">Imprimir / Guardar PDF</button>
+  </div>
+</div>
+
+<div class="client-box">
+  <div class="client-name">${c.nombre}</div>
+  <div class="client-meta">${c.cobradas.length + c.pendientes.length} facturas registradas &middot; ${c.pendientes.length} pendientes</div>
+</div>
+
+<div class="summary-grid">
+  <div class="summary-card"><div class="summary-label">Total Cobrado</div><div class="summary-val" style="color:#16a34a">${_ectaFmt(c.totalCobrado)}</div></div>
+  <div class="summary-card"><div class="summary-label">Total Pendiente</div><div class="summary-val" style="color:#dc2626">${_ectaFmt(c.totalPendiente)}</div></div>
+  <div class="summary-card"><div class="summary-label">Saldo Neto</div><div class="summary-val" style="color:${c.totalPendiente > 0 ? '#dc2626' : '#16a34a'}">${_ectaFmt(c.totalPendiente)}</div></div>
+</div>
+
+${c.pendientes.length > 0 ? `<h2 class="pend">Facturas Pendientes de Cobro</h2>
+<table>
+  <thead><tr><th>Empresa</th><th>Fecha</th><th>Factura</th><th style="text-align:right">Importe</th><th>Vto. Pago</th></tr></thead>
+  <tbody>${pendRows}
+    <tr class="total-row pend"><td colspan="3"><strong>TOTAL PENDIENTE</strong></td><td style="text-align:right"><strong>${_ectaFmt(c.totalPendiente)}</strong></td><td></td></tr>
+  </tbody>
+</table>` : '<p style="color:#16a34a;font-weight:600;text-align:center;margin:12px 0">Sin facturas pendientes de cobro</p>'}
+
+${c.cobradas.length > 0 ? `<h2 class="cob">Historial de Facturas Cobradas</h2>
+<table>
+  <thead><tr><th>Empresa</th><th>Fecha</th><th>Factura</th><th style="text-align:right">Importe</th></tr></thead>
+  <tbody>${cobRows}
+    <tr class="total-row cob"><td colspan="3"><strong>TOTAL COBRADO</strong></td><td style="text-align:right"><strong>${_ectaFmt(c.totalCobrado)}</strong></td></tr>
+  </tbody>
+</table>` : ''}
+
+<div class="footer">MUUK SRL &middot; Documento generado el ${hoyStr} &middot; Este estado de cuenta es informativo</div>
+</body></html>`);
+  w.document.close();
+}
+
+/* ─── Editar facturas de un cliente ─── */
+function ectaEditCliente(idx) {
+  const clientes = _ectaCache[_ectaCurrentVendedor] || [];
+  const c = clientes[idx];
+  if (!c) return;
+
+  // Build modal
+  let modalEl = document.getElementById('ecta-edit-modal');
+  if (!modalEl) {
+    modalEl = document.createElement('div');
+    modalEl.id = 'ecta-edit-modal';
+    document.body.appendChild(modalEl);
+  }
+
+  let pendHtml = '';
+  c.pendientes.forEach((f, fi) => {
+    pendHtml += `<tr>
+      <td><input type="text" class="form-control form-control-sm" value="${f.empresa}" data-field="empresa" data-type="pendientes" data-fi="${fi}" style="font-size:.75rem"></td>
+      <td><input type="text" class="form-control form-control-sm" value="${f.fecha}" data-field="fecha" data-type="pendientes" data-fi="${fi}" style="font-size:.75rem;width:90px"></td>
+      <td><input type="text" class="form-control form-control-sm" value="${f.factura}" data-field="factura" data-type="pendientes" data-fi="${fi}" style="font-size:.75rem;width:90px"></td>
+      <td><input type="text" class="form-control form-control-sm" value="${f.importe}" data-field="importe" data-type="pendientes" data-fi="${fi}" style="font-size:.75rem;width:120px;text-align:right"></td>
+      <td><input type="text" class="form-control form-control-sm" value="${f.fechaPago || ''}" data-field="fechaPago" data-type="pendientes" data-fi="${fi}" style="font-size:.75rem;width:80px"></td>
+      <td><button class="btn btn-sm btn-outline-danger" style="font-size:.6rem;padding:1px 5px" onclick="ectaDeleteRow(${idx},'pendientes',${fi})"><i class="bi bi-trash"></i></button></td>
+    </tr>`;
+  });
+
+  let cobHtml = '';
+  c.cobradas.forEach((f, fi) => {
+    cobHtml += `<tr>
+      <td><input type="text" class="form-control form-control-sm" value="${f.empresa}" data-field="empresa" data-type="cobradas" data-fi="${fi}" style="font-size:.75rem"></td>
+      <td><input type="text" class="form-control form-control-sm" value="${f.fecha}" data-field="fecha" data-type="cobradas" data-fi="${fi}" style="font-size:.75rem;width:90px"></td>
+      <td><input type="text" class="form-control form-control-sm" value="${f.factura}" data-field="factura" data-type="cobradas" data-fi="${fi}" style="font-size:.75rem;width:90px"></td>
+      <td><input type="text" class="form-control form-control-sm" value="${f.importe}" data-field="importe" data-type="cobradas" data-fi="${fi}" style="font-size:.75rem;width:120px;text-align:right"></td>
+      <td colspan="2"><button class="btn btn-sm btn-outline-danger" style="font-size:.6rem;padding:1px 5px" onclick="ectaDeleteRow(${idx},'cobradas',${fi})"><i class="bi bi-trash"></i></button></td>
+    </tr>`;
+  });
+
+  modalEl.innerHTML = `
+  <div style="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px">
+    <div style="background:#fff;border-radius:12px;width:100%;max-width:850px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3)">
+      <div style="padding:16px 20px;border-bottom:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="font-weight:700;font-size:1rem;color:#0f172a"><i class="bi bi-pencil-square me-2"></i>Editar: ${c.nombre}</div>
+          <div style="font-size:.7rem;color:#64748b">Vendedor: ${_ectaCurrentVendedor}</div>
+        </div>
+        <button class="btn btn-sm btn-outline-secondary" onclick="document.getElementById('ecta-edit-modal').innerHTML=''" style="border-radius:6px"><i class="bi bi-x-lg"></i></button>
+      </div>
+      <div style="padding:16px 20px">
+        <div style="font-size:.78rem;font-weight:700;color:#dc2626;margin-bottom:6px">Pendientes de cobro</div>
+        <div class="table-responsive"><table class="table table-sm" style="font-size:.75rem">
+          <thead><tr style="background:#fef2f2"><th>Empresa</th><th>Fecha</th><th>Factura</th><th>Importe</th><th>Vto. Pago</th><th></th></tr></thead>
+          <tbody id="ecta-edit-pend">${pendHtml}</tbody>
+        </table></div>
+        <button class="btn btn-sm btn-outline-danger mb-3" style="font-size:.7rem" onclick="ectaAddRow(${idx},'pendientes')"><i class="bi bi-plus-lg me-1"></i>Agregar pendiente</button>
+
+        <div style="font-size:.78rem;font-weight:700;color:#16a34a;margin-bottom:6px">Cobradas</div>
+        <div class="table-responsive"><table class="table table-sm" style="font-size:.75rem">
+          <thead><tr style="background:#f0fdf4"><th>Empresa</th><th>Fecha</th><th>Factura</th><th>Importe</th><th colspan="2"></th></tr></thead>
+          <tbody id="ecta-edit-cob">${cobHtml}</tbody>
+        </table></div>
+        <button class="btn btn-sm btn-outline-success mb-3" style="font-size:.7rem" onclick="ectaAddRow(${idx},'cobradas')"><i class="bi bi-plus-lg me-1"></i>Agregar cobrada</button>
+      </div>
+      <div style="padding:12px 20px;border-top:1px solid #e2e8f0;display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn btn-sm btn-outline-secondary" onclick="document.getElementById('ecta-edit-modal').innerHTML=''" style="border-radius:6px;font-size:.78rem">Cancelar</button>
+        <button class="btn btn-sm btn-primary" onclick="ectaSaveEdit(${idx})" style="border-radius:6px;font-size:.78rem"><i class="bi bi-check-lg me-1"></i>Guardar cambios</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function ectaAddRow(idx, tipo) {
+  const clientes = _ectaCache[_ectaCurrentVendedor];
+  const c = clientes[idx];
+  if (tipo === 'pendientes') {
+    c.pendientes.push({ empresa: '', fecha: '', factura: '', importe: '', fechaPago: '', monto: 0 });
+  } else {
+    c.cobradas.push({ empresa: '', fecha: '', factura: '', importe: '', monto: 0 });
+  }
+  ectaEditCliente(idx); // re-render modal
+}
+
+function ectaDeleteRow(idx, tipo, fi) {
+  const clientes = _ectaCache[_ectaCurrentVendedor];
+  const c = clientes[idx];
+  c[tipo].splice(fi, 1);
+  // Recalc totals
+  c.totalPendiente = c.pendientes.reduce((s, f) => s + f.monto, 0);
+  c.totalCobrado = c.cobradas.reduce((s, f) => s + f.monto, 0);
+  ectaEditCliente(idx); // re-render modal
+}
+
+function ectaSaveEdit(idx) {
+  const modal = document.getElementById('ecta-edit-modal');
+  const clientes = _ectaCache[_ectaCurrentVendedor];
+  const c = clientes[idx];
+
+  // Read all inputs
+  modal.querySelectorAll('input[data-field]').forEach(inp => {
+    const tipo = inp.dataset.type;
+    const fi = parseInt(inp.dataset.fi);
+    const field = inp.dataset.field;
+    const val = inp.value.trim();
+    if (c[tipo] && c[tipo][fi]) {
+      c[tipo][fi][field] = val;
+      if (field === 'importe') {
+        let monto = _ectaParseNum(val);
+        if (/\bNC\b/i.test(c[tipo][fi].factura) && monto > 0) monto = -monto;
+        c[tipo][fi].monto = monto;
+      }
+    }
+  });
+
+  // Recalc totals
+  c.totalCobrado = c.cobradas.reduce((s, f) => s + f.monto, 0);
+  c.totalPendiente = c.pendientes.reduce((s, f) => s + f.monto, 0);
+
+  // Close modal and re-render
+  modal.innerHTML = '';
+  _ectaRenderData(_ectaCurrentVendedor);
+  toast('Cambios guardados localmente', 'ok');
 }
 
 
