@@ -2653,7 +2653,9 @@ function toast(msg, tipo='success') {
 ═══════════════════════════════════════════ */
 function save() {
   ST._syncTs = Date.now();
-  localStorage.setItem('flujoCajaV3', JSON.stringify(ST));
+  // Excluir datos live de Google Sheets del localStorage (siempre se cargan frescos)
+  const {comisionesResumen, comisionesTotal, comisionesTimestamp, ...persistData} = ST;
+  localStorage.setItem('flujoCajaV3', JSON.stringify(persistData));
   pushRemoto();
 }
 // Datos iniciales embebidos (se aplican solo en el primer arranque)
@@ -2668,6 +2670,11 @@ function load() {
     localStorage.setItem('flujoCajaV3', JSON.stringify(ST));
   }
   if (!ST.config) ST.config = {};
+
+  // Limpiar datos live de Google Sheets — se cargarán frescos al navegar
+  delete ST.comisionesResumen;
+  delete ST.comisionesTotal;
+  delete ST.comisionesTimestamp;
 
   // Siempre asegurar que los conceptos y socios default estén presentes
   if (!ST.socios || !ST.socios.length) ST.socios = SOCIOS_DEFAULT.map(s=>({...s}));
@@ -3996,12 +4003,15 @@ async function cargarComisionesSheet() {
     ST.comisionesTimestamp = new Date().toLocaleString('es-AR');
     
     renderComResumen();
-    
+
     if (loading) loading.style.display = 'none';
-    toast('Datos cargados', 'success');
+    // Solo mostrar toast si la página de comisiones está visible
+    const comPage = document.getElementById('page-comisiones');
+    if (comPage && comPage.classList.contains('active')) toast('Datos cargados', 'success');
   } catch (err) {
     console.error('cargarComisionesSheet error:', err);
-    toast('Error al cargar datos: ' + err.message, 'danger');
+    const comPage = document.getElementById('page-comisiones');
+    if (comPage && comPage.classList.contains('active')) toast('Error al cargar datos: ' + err.message, 'danger');
     const loading = document.getElementById('com-loading');
     if (loading) loading.style.display = 'none';
   }
@@ -4268,14 +4278,13 @@ function renderComisiones() {
   if (wrapper) wrapper.style.display = 'none';
   if (grid) grid.style.display = '';
 
-  // If we have cached data, render it; otherwise auto-load
+  // Mostrar cache inmediatamente si existe, pero SIEMPRE refrescar desde Google Sheets
   if (ST.comisionesResumen && ST.comisionesResumen.length > 0) {
     if (empty) empty.style.display = 'none';
     renderComResumen();
-  } else {
-    // Auto-cargar al entrar por primera vez
-    cargarComisionesSheet();
   }
+  // Siempre cargar datos frescos del sheet (no depender de cache viejo)
+  cargarComisionesSheet();
 }
 
 function renderSocios() {
@@ -7500,9 +7509,9 @@ let _ectaCache = {};
 let _ectaCurrentVendedor = 'Alberto';
 
 function renderEstadosCuenta() {
+  // Mostrar cache inmediatamente si existe, pero siempre recargar datos frescos
   if (_ectaCache[_ectaCurrentVendedor]) {
     _ectaRenderData(_ectaCurrentVendedor);
-    return;
   }
   _ectaLoadVendedor(_ectaCurrentVendedor);
 }
@@ -7514,9 +7523,8 @@ function ectaTab(vendedor, btn) {
   document.getElementById('ecta-search').value = '';
   if (_ectaCache[vendedor]) {
     _ectaRenderData(vendedor);
-  } else {
-    _ectaLoadVendedor(vendedor);
   }
+  _ectaLoadVendedor(vendedor);
 }
 
 async function _ectaLoadVendedor(vendedor) {
