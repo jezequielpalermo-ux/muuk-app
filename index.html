@@ -4100,6 +4100,8 @@ async function cargarComisionDetalle(sheetTab, empresaName) {
     const iSaldo   = _findCol(['saldo']);
     const iObs     = _findCol(['obs', 'observ']);
     const iEstado  = _findCol(['estado', 'facturado']);
+    // "Pago" column (payment type: E-cheq, Fisico, etc.) — distinct from "Pagos/Retiros" (amounts)
+    const iPagoTipo = headers.findIndex((h,idx) => idx !== iPagos && (h === 'pago' || h === 'tipo pago' || h === 'forma pago'));
 
     const isFull = iComision >= 0 || iSinIVA >= 0;
 
@@ -4128,6 +4130,7 @@ async function cargarComisionDetalle(sheetTab, empresaName) {
           estado: iEstado >= 0 ? (row[iEstado]||'') : '',
           pagos: iPagos >= 0 ? comParseMonto(row[iPagos]) : 0,
           saldo: iSaldo >= 0 ? comParseMonto(row[iSaldo]) : 0,
+          pagoTipo: iPagoTipo >= 0 ? (row[iPagoTipo]||'') : '',
           obs: iObs >= 0 ? (row[iObs]||'') : '',
           type: 'full'
         });
@@ -4187,21 +4190,32 @@ async function cargarComisionDetalle(sheetTab, empresaName) {
     let tableHTML = summaryHTML + '<div class="table-responsive" style="max-height:500px;overflow-y:auto"><table class="table table-sm table-hover mb-0" style="font-size:.78rem"><thead class="sticky-top" style="z-index:1"><tr style="background:#f1f5f9">';
 
     if (isFull) {
-      tableHTML += '<th class="ps-3">Fecha</th><th>Cliente</th><th>FCA</th><th class="text-end">Importe</th><th class="text-end">Sin IVA</th><th class="text-end">Comisión</th><th>Estado</th><th class="text-end">Pagos</th><th class="text-end">Saldo</th><th>Obs</th></tr></thead><tbody>';
+      // Build header dynamically based on detected columns
+      tableHTML += '<th class="ps-3">Fecha</th><th>Cliente</th><th>FCA</th><th class="text-end">Importe</th>';
+      if (iSinIVA >= 0) tableHTML += '<th class="text-end">Sin IVA</th>';
+      tableHTML += '<th class="text-end">Comisión</th>';
+      if (iEstado >= 0) tableHTML += '<th>Estado</th>';
+      if (iPagos >= 0) tableHTML += '<th class="text-end">Pagos/Retiros</th>';
+      tableHTML += '<th class="text-end">Saldo</th>';
+      if (iPagoTipo >= 0) tableHTML += '<th>Pago</th>';
+      if (iObs >= 0) tableHTML += '<th>Obs</th>';
+      tableHTML += '</tr></thead><tbody>';
       tableHTML += details.map(d => {
         const saldoColor = d.saldo > 0 ? '#dc2626' : d.saldo < 0 ? '#16a34a' : '#64748b';
-        return `<tr>
+        let tr = `<tr>
           <td class="ps-3">${d.fecha}</td>
           <td style="font-weight:600">${d.cliente || '–'}</td>
           <td>${d.fca || '–'}</td>
-          <td class="text-end">${d.importe ? fmt(d.importe) : '–'}</td>
-          <td class="text-end" style="color:#64748b">${d.importeSinIVA ? fmt(d.importeSinIVA) : '–'}</td>
-          <td class="text-end" style="color:#d97706;font-weight:600">${d.comision ? fmt(d.comision) : '–'}</td>
-          <td><span style="font-size:.65rem">${d.estado || '–'}</span></td>
-          <td class="text-end" style="color:${d.pagos > 0 ? '#16a34a' : '#64748b'};font-weight:${d.pagos > 0 ? '600' : '400'}">${d.pagos ? fmt(d.pagos) : '–'}</td>
-          <td class="text-end" style="color:${saldoColor};font-weight:700">${fmt(d.saldo)}</td>
-          <td style="font-size:.68rem;color:#94a3b8;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${(d.obs||'').replace(/"/g,'&quot;')}">${d.obs || '–'}</td>
-        </tr>`;
+          <td class="text-end">${d.importe ? fmt(d.importe) : '–'}</td>`;
+        if (iSinIVA >= 0) tr += `<td class="text-end" style="color:#64748b">${d.importeSinIVA ? fmt(d.importeSinIVA) : '–'}</td>`;
+        tr += `<td class="text-end" style="color:#d97706;font-weight:600">${d.comision ? fmt(d.comision) : '–'}</td>`;
+        if (iEstado >= 0) tr += `<td><span style="font-size:.65rem">${d.estado || '–'}</span></td>`;
+        if (iPagos >= 0) tr += `<td class="text-end" style="color:${d.pagos > 0 ? '#16a34a' : '#64748b'};font-weight:${d.pagos > 0 ? '600' : '400'}">${d.pagos ? fmt(d.pagos) : '–'}</td>`;
+        tr += `<td class="text-end" style="color:${saldoColor};font-weight:700">${fmt(d.saldo)}</td>`;
+        if (iPagoTipo >= 0) tr += `<td style="font-size:.72rem">${d.pagoTipo || '–'}</td>`;
+        if (iObs >= 0) tr += `<td style="font-size:.68rem;color:#94a3b8;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${(d.obs||'').replace(/"/g,'&quot;')}">${d.obs || '–'}</td>`;
+        tr += '</tr>';
+        return tr;
       }).join('');
     } else {
       tableHTML += '<th class="ps-3">Fecha</th><th>FCA</th><th class="text-end">Comisión</th><th class="text-end">Pagos</th><th class="text-end">Saldo</th><th>Obs</th></tr></thead><tbody>';
