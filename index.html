@@ -1272,6 +1272,11 @@
           <i class="bi bi-currency-exchange me-1"></i>Cotizaciones
         </button>
       </li>
+      <li class="nav-item">
+        <button class="nav-link" data-bcra-tab="variables" onclick="bcraTab('variables')">
+          <i class="bi bi-graph-up me-1"></i>Variables Monetarias
+        </button>
+      </li>
     </ul>
 
     <!-- TAB: Central de Deudores -->
@@ -1376,6 +1381,33 @@
         <div class="text-muted mt-2 small">Cargando cotizaciones...</div>
       </div>
       <div id="bcra-cotiz-result"></div>
+    </div>
+
+    <!-- TAB: Variables Monetarias -->
+    <div id="bcra-panel-variables" class="bcra-panel" style="display:none">
+      <div class="card mb-3">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h6 class="fw-bold mb-0"><i class="bi bi-graph-up me-1"></i>Principales Variables del BCRA</h6>
+            <button class="btn btn-sm btn-outline-primary" onclick="bcraCargarVariables()">
+              <i class="bi bi-arrow-clockwise me-1"></i>Actualizar
+            </button>
+          </div>
+          <div id="bcra-vars-fecha" class="text-muted small mb-2"></div>
+        </div>
+      </div>
+      <div id="bcra-vars-loading" style="display:none" class="text-center py-4">
+        <div class="spinner-border text-primary" role="status"></div>
+        <div class="text-muted mt-2 small">Cargando variables monetarias...</div>
+      </div>
+      <div id="bcra-vars-result"></div>
+      <!-- Gráfico de evolución -->
+      <div id="bcra-vars-chart-card" class="card mt-3" style="display:none">
+        <div class="card-body">
+          <h6 class="fw-bold mb-2" id="bcra-vars-chart-title"></h6>
+          <div style="height:220px;position:relative"><canvas id="bcra-vars-chart"></canvas></div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -3194,9 +3226,12 @@ function bcraTab(tab) {
   const btn = document.querySelector('[data-bcra-tab="' + tab + '"]');
   if (panel) panel.style.display = 'block';
   if (btn) btn.classList.add('active');
-  // Auto-load cotizaciones on first visit
+  // Auto-load on first visit
   if (tab === 'cotizaciones' && !document.getElementById('bcra-cotiz-result').innerHTML) {
     bcraCargarCotizaciones();
+  }
+  if (tab === 'variables' && !document.getElementById('bcra-vars-result').innerHTML) {
+    bcraCargarVariables();
   }
 }
 
@@ -3393,6 +3428,147 @@ async function bcraCargarCotizaciones() {
     result.innerHTML = '<div class="alert alert-danger"><i class="bi bi-wifi-off me-2"></i>Error al cargar cotizaciones: ' + err.message + '</div>';
   }
   loading.style.display = 'none';
+}
+
+/* ─── Variables Monetarias (API v4.0) ─── */
+const BCRA_VARS_KEY = [
+  { id: 1,  nombre: 'Reservas Internacionales', icon: 'bi-safe2', color: '#2563eb', fmt: 'usd', unidad: 'MM USD' },
+  { id: 15, nombre: 'Base Monetaria', icon: 'bi-cash-stack', color: '#7c3aed', fmt: 'ars', unidad: 'MM $' },
+  { id: 5,  nombre: 'TC Mayorista (Ref.)', icon: 'bi-currency-dollar', color: '#059669', fmt: 'tc', unidad: '$/USD' },
+  { id: 4,  nombre: 'TC Minorista (Venta)', icon: 'bi-shop', color: '#0891b2', fmt: 'tc', unidad: '$/USD' },
+  { id: 7,  nombre: 'Tasa BADLAR Privados', icon: 'bi-percent', color: '#d97706', fmt: 'pct', unidad: '% TNA' },
+  { id: 8,  nombre: 'Tasa TM20 Privados', icon: 'bi-percent', color: '#ea580c', fmt: 'pct', unidad: '% TNA' },
+  { id: 6,  nombre: 'Tasa de Política Monetaria', icon: 'bi-bank', color: '#dc2626', fmt: 'pct', unidad: '% TNA' },
+  { id: 27, nombre: 'Inflación mensual (CER)', icon: 'bi-graph-up-arrow', color: '#e11d48', fmt: 'pct', unidad: '%' },
+  { id: 14, nombre: 'Tasa Préstamos Personales', icon: 'bi-person-badge', color: '#9333ea', fmt: 'pct', unidad: '% TNA' },
+  { id: 12, nombre: 'Tasa Depósitos a 30 días', icon: 'bi-piggy-bank', color: '#0d9488', fmt: 'pct', unidad: '% TNA' },
+];
+let _bcraVarsChart = null;
+
+async function bcraCargarVariables() {
+  const loading = document.getElementById('bcra-vars-loading');
+  const result = document.getElementById('bcra-vars-result');
+  const fechaEl = document.getElementById('bcra-vars-fecha');
+  loading.style.display = 'block';
+  result.innerHTML = '';
+
+  try {
+    const hoy = new Date().toISOString().slice(0,10);
+    const hace60 = new Date(Date.now() - 60*86400000).toISOString().slice(0,10);
+    const base = 'https://api.bcra.gob.ar/estadisticas/v4.0/monetarias/';
+
+    // Fetch all key variables in parallel (last 30 data points each for sparklines)
+    const fetches = BCRA_VARS_KEY.map(v =>
+      _fetchConTimeout(_purl(base + v.id + '?desde=' + hace60 + '&hasta=' + hoy + '&limit=30&offset=0'), 10000)
+        .then(d => ({ ...v, data: d.results?.[0]?.detalle || [] }))
+        .catch(() => ({ ...v, data: [] }))
+    );
+    const vars = await Promise.all(fetches);
+
+    if (fechaEl) fechaEl.textContent = 'Última actualización: ' + new Date().toLocaleString('es-AR');
+
+    // KPI cards
+    let html = '<div class="row g-2 mb-3">';
+    vars.forEach(v => {
+      const last = v.data[0];
+      const prev = v.data[1];
+      const val = last ? last.valor : null;
+      const cambio = (last && prev) ? ((last.valor - prev.valor) / Math.abs(prev.valor || 1) * 100) : null;
+
+      let valStr = '–';
+      if (val !== null) {
+        if (v.fmt === 'usd') valStr = 'USD ' + Math.round(val).toLocaleString('es-AR');
+        else if (v.fmt === 'ars') valStr = '$ ' + Math.round(val/1000).toLocaleString('es-AR') + ' B';
+        else if (v.fmt === 'tc') valStr = '$ ' + val.toLocaleString('es-AR', {minimumFractionDigits:2, maximumFractionDigits:2});
+        else if (v.fmt === 'pct') valStr = val.toLocaleString('es-AR', {minimumFractionDigits:2, maximumFractionDigits:2}) + '%';
+      }
+
+      const cambioStr = cambio !== null ? (cambio >= 0 ? '+' : '') + cambio.toFixed(2) + '%' : '';
+      const cambioColor = cambio === null ? '#94a3b8' : cambio >= 0 ? '#16a34a' : '#dc2626';
+      const cambioIcon = cambio === null ? '' : cambio >= 0 ? 'bi-arrow-up-short' : 'bi-arrow-down-short';
+
+      html += '<div class="col-6 col-md-4 col-lg-3">';
+      html += '<div class="card p-3 h-100" style="cursor:pointer;border-left:3px solid ' + v.color + '" onclick="bcraGraficarVariable(' + v.id + ')">';
+      html += '<div class="d-flex align-items-center gap-2 mb-1">';
+      html += '<i class="bi ' + v.icon + '" style="color:' + v.color + ';font-size:1.1rem"></i>';
+      html += '<span style="font-size:.68rem;color:#64748b;font-weight:600">' + v.nombre + '</span>';
+      html += '</div>';
+      html += '<div class="fw-bold" style="font-size:1.15rem;color:#1e293b">' + valStr + '</div>';
+      html += '<div class="d-flex justify-content-between align-items-center">';
+      html += '<span style="font-size:.6rem;color:#94a3b8">' + v.unidad + '</span>';
+      if (cambioStr) html += '<span style="font-size:.7rem;color:' + cambioColor + ';font-weight:600"><i class="bi ' + cambioIcon + '"></i>' + cambioStr + '</span>';
+      html += '</div>';
+      html += '<div style="font-size:.55rem;color:#94a3b8;margin-top:2px">' + (last ? last.fecha : '') + '</div>';
+      html += '</div></div>';
+    });
+    html += '</div>';
+
+    // Store data for chart
+    window._bcraVarsData = vars;
+
+    result.innerHTML = html;
+    toast('Variables BCRA actualizadas', 'success');
+  } catch(err) {
+    result.innerHTML = '<div class="alert alert-danger"><i class="bi bi-wifi-off me-2"></i>Error al cargar variables: ' + err.message + '</div>';
+  }
+  loading.style.display = 'none';
+}
+
+function bcraGraficarVariable(idVar) {
+  const vars = window._bcraVarsData;
+  if (!vars) return;
+  const v = vars.find(x => x.id === idVar);
+  if (!v || !v.data.length) return;
+
+  const chartCard = document.getElementById('bcra-vars-chart-card');
+  const titleEl = document.getElementById('bcra-vars-chart-title');
+  const ctx = document.getElementById('bcra-vars-chart');
+  if (!chartCard || !ctx) return;
+
+  chartCard.style.display = 'block';
+  titleEl.textContent = v.nombre + ' — Últimos ' + v.data.length + ' días (' + v.unidad + ')';
+  chartCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+  const labels = v.data.slice().reverse().map(d => {
+    const p = d.fecha.split('-');
+    return p[2] + '/' + p[1];
+  });
+  const valores = v.data.slice().reverse().map(d => d.valor);
+
+  if (_bcraVarsChart) _bcraVarsChart.destroy();
+  _bcraVarsChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: v.nombre,
+        data: valores,
+        borderColor: v.color,
+        backgroundColor: v.color + '18',
+        fill: true,
+        tension: 0.3,
+        pointRadius: 2,
+        pointHoverRadius: 5,
+        borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false },
+        tooltip: { callbacks: { label: ctx => {
+          const val = ctx.parsed.y;
+          if (v.fmt === 'usd') return 'USD ' + Math.round(val).toLocaleString('es-AR');
+          if (v.fmt === 'ars') return '$ ' + Math.round(val/1000).toLocaleString('es-AR') + ' B';
+          if (v.fmt === 'tc') return '$ ' + val.toFixed(2);
+          return val.toFixed(2) + '%';
+        }}}
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { size: 9 }, maxTicksLimit: 10 } },
+        y: { grid: { color: '#e2e8f044' }, ticks: { font: { size: 9 } } }
+      }
+    }
+  });
 }
 
 function renderBCRA() {
