@@ -4147,7 +4147,6 @@ async function cargarComisionDetalle(sheetTab, empresaName) {
     const totComision = details.reduce((s,d) => s + (d.comision||0), 0);
     const totPagos = details.reduce((s,d) => s + (d.pagos||0), 0);
     const lastSaldo = details.length ? details[details.length-1].saldo : 0;
-    const isFull = details.length > 0 && details[0].type === 'full';
 
     // Summary cards
     let summaryHTML = `<div class="row g-2 mb-3" style="padding:12px 14px 0">
