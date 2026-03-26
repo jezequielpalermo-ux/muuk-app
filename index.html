@@ -8729,37 +8729,51 @@ function ectaPdfGeneral() {
   const clientes = _ectaCache[vendedor] || [];
   if (!clientes.length) { toast('No hay datos cargados para ' + vendedor, 'warning'); return; }
 
-  // Filtrar solo clientes con pendientes
   const conPendientes = clientes.filter(c => c.pendientes.length > 0);
   if (!conPendientes.length) { toast('No hay facturas pendientes para ' + vendedor, 'info'); return; }
 
   const hoyStr = new Date().toLocaleDateString('es-AR', { year:'numeric', month:'long', day:'numeric' });
   const totalGeneral = conPendientes.reduce((s, c) => s + c.totalPendiente, 0);
 
-  // Build client sections
+  // Same palette as the app
+  const PDF_COLORS = [
+    { bg: '#fffbeb', border: '#f59e0b', accent: '#92400e', headerBg: '#fef3c7' },
+    { bg: '#eff6ff', border: '#3b82f6', accent: '#1e40af', headerBg: '#dbeafe' },
+    { bg: '#fdf2f8', border: '#ec4899', accent: '#9d174d', headerBg: '#fce7f3' },
+    { bg: '#ecfdf5', border: '#10b981', accent: '#065f46', headerBg: '#d1fae5' },
+    { bg: '#f5f3ff', border: '#8b5cf6', accent: '#5b21b6', headerBg: '#ede9fe' },
+    { bg: '#fff7ed', border: '#f97316', accent: '#9a3412', headerBg: '#ffedd5' },
+    { bg: '#f0fdfa', border: '#14b8a6', accent: '#134e4a', headerBg: '#ccfbf1' },
+    { bg: '#fef2f2', border: '#ef4444', accent: '#991b1b', headerBg: '#fee2e2' },
+  ];
+
   let clientesHTML = '';
-  for (const c of conPendientes) {
+  for (let ci = 0; ci < conPendientes.length; ci++) {
+    const c = conPendientes[ci];
+    const pal = PDF_COLORS[ci % PDF_COLORS.length];
     let rows = '';
-    for (const f of c.pendientes) {
+    for (let j = 0; j < c.pendientes.length; j++) {
+      const f = c.pendientes[j];
       const isNC = /\bNC\b/i.test(f.factura);
-      rows += `<tr>
-        <td style="font-weight:600">${f.empresa}</td>
-        <td>${f.fecha || '-'}</td>
-        <td>${f.factura}${isNC ? ' (NC)' : ''}</td>
-        <td style="text-align:right;font-weight:600;color:#dc2626">${f.importe}</td>
-        <td>${f.fechaPago || '-'}</td>
+      const rowBg = j % 2 === 0 ? '#fff' : pal.bg;
+      rows += `<tr style="background:${rowBg}">
+        <td style="font-weight:600;padding:6px 10px">${f.empresa}</td>
+        <td style="padding:6px 10px">${f.fecha || '-'}</td>
+        <td style="padding:6px 10px">${f.factura}${isNC ? ' <span style="background:#ede9fe;color:#6d28d9;font-size:9px;padding:1px 4px;border-radius:3px;font-weight:700">NC</span>' : ''}</td>
+        <td style="text-align:right;font-weight:700;color:#b91c1c;padding:6px 10px">${f.importe}</td>
+        <td style="padding:6px 10px;font-weight:500">${f.fechaPago || '-'}</td>
       </tr>`;
     }
     clientesHTML += `
-      <div class="client-section">
-        <div class="client-header">
-          <span class="client-name">${c.nombre}</span>
-          <span class="client-count">${c.pendientes.length} factura${c.pendientes.length > 1 ? 's' : ''}</span>
+      <div class="client-section" style="border-left:5px solid ${pal.border};margin-bottom:14px;border-radius:8px;overflow:hidden;border:1px solid ${pal.border}40">
+        <div style="background:${pal.headerBg};padding:10px 14px;display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid ${pal.border}30">
+          <span style="font-size:14px;font-weight:700;color:${pal.accent}">${c.nombre}</span>
+          <span style="font-size:10px;color:${pal.accent};background:${pal.bg};padding:3px 8px;border-radius:5px;font-weight:600">${c.pendientes.length} factura${c.pendientes.length > 1 ? 's' : ''}</span>
         </div>
         <table>
-          <thead><tr><th>Empresa</th><th>Fecha</th><th>Factura</th><th style="text-align:right">Monto</th><th>Vto. Pago</th></tr></thead>
+          <thead><tr style="background:#f8fafc"><th style="color:${pal.accent}">Empresa</th><th style="color:${pal.accent}">Fecha</th><th style="color:${pal.accent}">Factura</th><th style="text-align:right;color:${pal.accent}">Monto</th><th style="color:${pal.accent}">Vto. Pago</th></tr></thead>
           <tbody>${rows}
-            <tr class="total-row"><td colspan="3"><strong>Subtotal ${c.nombre}</strong></td><td style="text-align:right;color:#dc2626"><strong>${_ectaFmt(c.totalPendiente)}</strong></td><td></td></tr>
+            <tr style="background:#fecaca;font-weight:800;border-top:2px solid #f87171"><td colspan="3" style="padding:7px 10px;font-size:12px;color:#7f1d1d">SUBTOTAL ${c.nombre.toUpperCase()}</td><td style="text-align:right;color:#7f1d1d;font-size:13px;padding:7px 10px">${_ectaFmt(c.totalPendiente)}</td><td></td></tr>
           </tbody>
         </table>
       </div>`;
@@ -8767,31 +8781,27 @@ function ectaPdfGeneral() {
 
   const w = window.open('', '_blank');
   w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Estado de Cuenta General - ${vendedor}</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 <style>
   @page { size: A4; margin: 12mm 15mm; }
   @media print { .no-print { display:none!important; } .client-section { break-inside:avoid; } }
   * { margin:0; padding:0; box-sizing:border-box; }
-  body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; font-size:10px; color:#1e293b; line-height:1.4; }
-  .header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:14px; padding-bottom:10px; border-bottom:2.5px solid #E31E24; }
-  .logo { font-size:20px; font-weight:900; color:#E31E24; font-family:'Arial Black',Impact,sans-serif; letter-spacing:1px; }
-  .logo-sub { font-size:9px; color:#64748b; text-transform:uppercase; letter-spacing:.5px; margin-top:2px; }
-  .doc-info { text-align:right; font-size:9px; color:#64748b; }
-  .summary-bar { display:flex; justify-content:space-between; align-items:center; background:#fef2f2; border:1px solid #fecaca; border-radius:6px; padding:10px 16px; margin-bottom:14px; }
-  .summary-bar .label { font-size:9px; color:#64748b; text-transform:uppercase; letter-spacing:.04em; }
-  .summary-bar .val { font-size:16px; font-weight:800; color:#dc2626; }
-  .summary-bar .info { font-size:9px; color:#64748b; }
-  .client-section { margin-bottom:12px; border:1px solid #e2e8f0; border-radius:6px; overflow:hidden; }
-  .client-header { background:#f8fafc; padding:7px 12px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #e2e8f0; }
-  .client-name { font-size:11px; font-weight:700; color:#0f172a; }
-  .client-count { font-size:8px; color:#64748b; background:#f1f5f9; padding:2px 6px; border-radius:4px; }
-  table { width:100%; border-collapse:collapse; font-size:9px; }
-  th { background:#f1f5f9; font-weight:700; text-align:left; padding:4px 8px; border-bottom:1px solid #cbd5e1; font-size:8px; text-transform:uppercase; letter-spacing:.04em; color:#475569; }
-  td { padding:3px 8px; border-bottom:1px solid #f1f5f9; }
-  .total-row { background:#fef2f2; font-weight:700; border-top:1.5px solid #fecaca; }
-  .grand-total { background:#dc2626; color:#fff; border-radius:6px; padding:10px 16px; margin-top:14px; display:flex; justify-content:space-between; align-items:center; }
-  .grand-total .label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; }
-  .grand-total .val { font-size:18px; font-weight:900; }
-  .footer { margin-top:16px; padding-top:8px; border-top:1px solid #e2e8f0; font-size:7px; color:#94a3b8; text-align:center; }
+  body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; font-size:12px; color:#1e293b; line-height:1.5; }
+  .header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px; padding-bottom:12px; border-bottom:3px solid #E31E24; }
+  .logo { font-size:26px; font-weight:900; color:#E31E24; font-family:'Arial Black',Impact,sans-serif; letter-spacing:1px; }
+  .logo-sub { font-size:11px; color:#475569; text-transform:uppercase; letter-spacing:.5px; margin-top:2px; font-weight:600; }
+  .doc-info { text-align:right; font-size:11px; color:#475569; }
+  .summary-bar { display:flex; justify-content:space-between; align-items:center; background:#fef2f2; border:2px solid #fecaca; border-radius:8px; padding:14px 20px; margin-bottom:18px; }
+  .summary-bar .label { font-size:11px; color:#991b1b; text-transform:uppercase; letter-spacing:.05em; font-weight:700; }
+  .summary-bar .val { font-size:22px; font-weight:900; color:#b91c1c; }
+  .summary-bar .info { font-size:11px; color:#64748b; font-weight:500; }
+  table { width:100%; border-collapse:collapse; font-size:12px; }
+  th { background:#f1f5f9; font-weight:700; text-align:left; padding:6px 10px; border-bottom:1px solid #cbd5e1; font-size:10px; text-transform:uppercase; letter-spacing:.04em; }
+  td { padding:5px 10px; border-bottom:1px solid #f1f5f9; font-size:12px; }
+  .grand-total { background:linear-gradient(135deg, #dc2626, #b91c1c); color:#fff; border-radius:8px; padding:14px 20px; margin-top:18px; display:flex; justify-content:space-between; align-items:center; }
+  .grand-total .label { font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; }
+  .grand-total .val { font-size:22px; font-weight:900; }
+  .footer { margin-top:18px; padding-top:10px; border-top:1px solid #e2e8f0; font-size:9px; color:#94a3b8; text-align:center; }
 </style></head><body>
 
 <div class="header">
@@ -8800,12 +8810,12 @@ function ectaPdfGeneral() {
     <div class="logo-sub">Estado de Cuenta General &mdash; Pendientes de Cobro</div>
   </div>
   <div class="doc-info">
-    <div style="font-weight:600;color:#0f172a;font-size:10px">Socio: ${vendedor}</div>
+    <div style="font-weight:700;color:#0f172a;font-size:13px">Socio: ${vendedor}</div>
     <div>Fecha: ${hoyStr}</div>
     <div>${conPendientes.length} clientes con saldo pendiente</div>
-    <div class="no-print" style="display:flex;gap:6px;margin-top:6px">
-      <button onclick="window.print()" style="background:#E31E24;color:#fff;border:none;border-radius:5px;padding:5px 14px;font-size:10px;cursor:pointer;font-weight:600"><i class="bi bi-printer me-1"></i>Imprimir / Guardar PDF</button>
-      <button onclick="window.close()" style="background:#64748b;color:#fff;border:none;border-radius:5px;padding:5px 14px;font-size:10px;cursor:pointer;font-weight:600">Volver</button>
+    <div class="no-print" style="display:flex;gap:6px;margin-top:8px;justify-content:flex-end">
+      <button onclick="window.print()" style="background:#E31E24;color:#fff;border:none;border-radius:6px;padding:7px 18px;font-size:12px;cursor:pointer;font-weight:700"><i class="bi bi-printer me-1"></i>Imprimir / Guardar PDF</button>
+      <button onclick="window.close()" style="background:#64748b;color:#fff;border:none;border-radius:6px;padding:7px 18px;font-size:12px;cursor:pointer;font-weight:600">Volver</button>
     </div>
   </div>
 </div>
