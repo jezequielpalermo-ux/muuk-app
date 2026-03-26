@@ -514,6 +514,10 @@
   </div>
 
   <div class="sidebar-footer">
+    <!-- Auto-refresh indicator -->
+    <div id="auto-refresh-indicator" style="font-size:.58rem;color:#64748b;text-align:center;margin-bottom:4px;opacity:.4;transition:opacity .3s" title="Auto-refresh activo">
+      <i class="bi bi-arrow-repeat me-1"></i>Auto-sync cada 3 min
+    </div>
     <!-- Sync status -->
     <div id="sync-status" class="sync-status-none mb-2" style="font-size:.68rem;text-align:center">
       <i class="bi bi-cloud-slash me-1"></i>Sin sincronización
@@ -3679,6 +3683,7 @@ function initApp() {
   document.getElementById('fecha-hoy').textContent =
     new Date().toLocaleDateString('es-AR',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
   iniciarAutoSync();
+  initAutoRefresh(); // Auto-detectar cambios en las bases
   document.querySelectorAll('#sidebar-nav .nav-link[data-page]').forEach(a => {
     a.addEventListener('click', e => {
       e.preventDefault();
@@ -3689,6 +3694,157 @@ function initApp() {
     });
   });
   renderTodo();
+}
+
+/* ═══════════════════════════════════════════
+   AUTO-REFRESH — Detectar cambios en Google Sheets
+   Polling silencioso cada 3 min. Si hay cambios,
+   recarga los datos automáticamente.
+═══════════════════════════════════════════ */
+const AUTO_REFRESH_INTERVAL = 3 * 60 * 1000; // 3 minutos
+let _arLastComHash = null;    // hash de Comisiones Resumen
+let _arLastEctaHash = {};     // hash de ECTA por vendedor
+let _arLastGestionHash = null;
+let _arRefreshing = false;
+
+function _arSimpleHash(data) {
+  // Fast hash from stringified data for change detection
+  const str = JSON.stringify(data);
+  let h = 0;
+  for (let i = 0; i < str.length; i++) {
+    h = ((h << 5) - h + str.charCodeAt(i)) | 0;
+  }
+  return h;
+}
+
+async function _arCheckComisiones() {
+  try {
+    const rows = await comFetchSheet('Resumen');
+    const hash = _arSimpleHash(rows);
+    if (_arLastComHash !== null && hash !== _arLastComHash) {
+      console.log('[AutoRefresh] Cambio detectado en Comisiones');
+      // Re-parse y render
+      await cargarComisionesSheet();
+      return true;
+    }
+    _arLastComHash = hash;
+  } catch(e) { console.warn('[AutoRefresh] Error checking Comisiones:', e.message); }
+  return false;
+}
+
+async function _arCheckEcta() {
+  const vendedor = _ectaCurrentVendedor;
+  try {
+    const url = 'https://docs.google.com/spreadsheets/d/' + ECTA_SHEET_ID +
+      '/gviz/tq?tqx=out:csv&sheet=' + encodeURIComponent(vendedor);
+    const resp = await fetch(url);
+    if (!resp.ok) return false;
+    const csv = await resp.text();
+    const hash = _arSimpleHash(csv);
+    if (_arLastEctaHash[vendedor] !== undefined && hash !== _arLastEctaHash[vendedor]) {
+      console.log('[AutoRefresh] Cambio detectado en ECTA -', vendedor);
+      _ectaCache[vendedor] = _ectaParseCsv(csv);
+      _ectaRenderData(vendedor);
+      return true;
+    }
+    _arLastEctaHash[vendedor] = hash;
+  } catch(e) { console.warn('[AutoRefresh] Error checking ECTA:', e.message); }
+  return false;
+}
+
+async function _arCheckGestion() {
+  try {
+    const sheetId = '1IUNH2u8aqwCW10bYhvrO8yXXY01xgFYmY6IXBeaDcLc';
+    const url = 'https://docs.google.com/spreadsheets/d/' + sheetId +
+      '/gviz/tq?tqx=out:csv&sheet=' + encodeURIComponent('Datos Crudos');
+    const resp = await fetch(url);
+    if (!resp.ok) return false;
+    const csv = await resp.text();
+    const hash = _arSimpleHash(csv);
+    if (_arLastGestionHash !== null && hash !== _arLastGestionHash) {
+      console.log('[AutoRefresh] Cambio detectado en Gestión');
+      await gestionSincronizar();
+      return true;
+    }
+    _arLastGestionHash = hash;
+  } catch(e) { console.warn('[AutoRefresh] Error checking Gestión:', e.message); }
+  return false;
+}
+
+async function _arPollAll() {
+  if (_arRefreshing || !sessionStorage.getItem('muukAuth')) return;
+  _arRefreshing = true;
+  const indicator = document.getElementById('auto-refresh-indicator');
+  try {
+    // Mostrar indicador sutil de chequeo
+    if (indicator) { indicator.style.opacity = '1'; indicator.title = 'Verificando cambios...'; }
+
+    const changes = [];
+    const [comChanged, ectaChanged, gestChanged] = await Promise.allSettled([
+      _arCheckComisiones(),
+      _arCheckEcta(),
+      _arCheckGestion()
+    ]);
+
+    if (comChanged.value) changes.push('Comisiones');
+    if (ectaChanged.value) changes.push('Estados de Cuenta');
+    if (gestChanged.value) changes.push('Gestión');
+
+    if (changes.length > 0) {
+      toast('Datos actualizados: ' + changes.join(', '), 'success');
+      // Refresh the active page
+      const activePage = document.querySelector('.page.active');
+      if (activePage) {
+        const pageId = activePage.id.replace('page-','');
+        if (typeof irA === 'function') irA(pageId);
+      }
+    }
+
+    if (indicator) {
+      indicator.style.opacity = changes.length > 0 ? '1' : '0.4';
+      const now = new Date().toLocaleTimeString('es-AR', {hour:'2-digit',minute:'2-digit'});
+      indicator.title = changes.length > 0
+        ? `Actualizado ${now} — ${changes.join(', ')}`
+        : `Último chequeo: ${now} — Sin cambios`;
+    }
+  } catch(e) {
+    console.warn('[AutoRefresh] Error:', e.message);
+  } finally {
+    _arRefreshing = false;
+  }
+}
+
+function initAutoRefresh() {
+  // Primer chequeo silencioso para establecer hashes base (sin notificar)
+  setTimeout(async () => {
+    try {
+      const rows = await comFetchSheet('Resumen');
+      _arLastComHash = _arSimpleHash(rows);
+    } catch(e) {}
+    try {
+      const v = _ectaCurrentVendedor;
+      const url = 'https://docs.google.com/spreadsheets/d/' + ECTA_SHEET_ID +
+        '/gviz/tq?tqx=out:csv&sheet=' + encodeURIComponent(v);
+      const resp = await fetch(url);
+      if (resp.ok) _arLastEctaHash[v] = _arSimpleHash(await resp.text());
+    } catch(e) {}
+    try {
+      const url = 'https://docs.google.com/spreadsheets/d/1IUNH2u8aqwCW10bYhvrO8yXXY01xgFYmY6IXBeaDcLc/gviz/tq?tqx=out:csv&sheet=' + encodeURIComponent('Datos Crudos');
+      const resp = await fetch(url);
+      if (resp.ok) _arLastGestionHash = _arSimpleHash(await resp.text());
+    } catch(e) {}
+    console.log('[AutoRefresh] Hashes base establecidos. Polling cada 3 min.');
+  }, 10000); // Esperar 10s después de init para no saturar
+
+  // Polling periódico
+  setInterval(_arPollAll, AUTO_REFRESH_INTERVAL);
+
+  // También chequear cuando el usuario vuelve a la pestaña
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) {
+      setTimeout(_arPollAll, 2000); // Chequear 2s después de volver
+    }
+  });
 }
 
 /* ═══════════════════════════════════════════
@@ -7183,15 +7339,20 @@ function _renderComparativa() {
 /* ═══════════════════════════════════════════
    SEGURIDAD REFORZADA
 ═══════════════════════════════════════════ */
-// 1. Session timeout — 30 min inactividad
+// 1. Session timeout — 60 min inactividad
 let _lastActivity = Date.now();
-const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 min
-document.addEventListener('click', () => { _lastActivity = Date.now(); });
-document.addEventListener('keydown', () => { _lastActivity = Date.now(); });
+const SESSION_TIMEOUT = 60 * 60 * 1000; // 60 min
+['click','keydown','scroll','mousemove','touchstart','focus'].forEach(evt => {
+  document.addEventListener(evt, () => { _lastActivity = Date.now(); }, { passive: true });
+});
+// Visibility change también cuenta como actividad
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) _lastActivity = Date.now();
+});
 setInterval(() => {
   if (Date.now() - _lastActivity > SESSION_TIMEOUT && sessionStorage.getItem('muukAuth')) {
     sessionStorage.removeItem('muukAuth');
-    toast('Sesión expirada por inactividad', 'warning');
+    toast('Sesión expirada por inactividad (60 min)', 'warning');
     setTimeout(() => location.reload(), 1500);
   }
 }, 60000);
