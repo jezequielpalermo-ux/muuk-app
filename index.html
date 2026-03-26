@@ -1421,9 +1421,14 @@
   <div id="page-estadosCuenta" class="page">
     <div class="page-hdr">
       <h4><i class="bi bi-person-lines-fill me-2"></i>Estados de Cuenta</h4>
-      <a href="https://docs.google.com/spreadsheets/d/1IUNH2u8aqwCW10bYhvrO8yXXY01xgFYmY6IXBeaDcLc/edit" target="_blank" class="btn btn-sm btn-outline-primary" style="font-size:.78rem;border-radius:8px">
-        <i class="bi bi-box-arrow-up-right me-1"></i>Abrir Spreadsheet
-      </a>
+      <div class="d-flex gap-2">
+        <button class="btn btn-sm btn-outline-danger" style="font-size:.78rem;border-radius:8px" onclick="ectaPdfGeneral()">
+          <i class="bi bi-file-earmark-pdf me-1"></i>Imprimir PDF General
+        </button>
+        <a href="https://docs.google.com/spreadsheets/d/1IUNH2u8aqwCW10bYhvrO8yXXY01xgFYmY6IXBeaDcLc/edit" target="_blank" class="btn btn-sm btn-outline-primary" style="font-size:.78rem;border-radius:8px">
+          <i class="bi bi-box-arrow-up-right me-1"></i>Abrir Spreadsheet
+        </a>
+      </div>
     </div>
     <!-- Vendedor tabs -->
     <ul class="nav nav-pills mb-3" id="ecta-vendedor-tabs" style="gap:6px">
@@ -8063,6 +8068,115 @@ ${c.cobradas.length > 0 ? `<h2 class="cob">Historial de Facturas Cobradas</h2>
 </table>` : ''}
 
 <div class="footer">MUUK SRL &middot; Documento generado el ${hoyStr} &middot; Este estado de cuenta es informativo</div>
+</body></html>`);
+  w.document.close();
+}
+
+/* ─── PDF General Estado de Cuenta por Socio (solo pendientes) ─── */
+function ectaPdfGeneral() {
+  const vendedor = _ectaCurrentVendedor;
+  const clientes = _ectaCache[vendedor] || [];
+  if (!clientes.length) { toast('No hay datos cargados para ' + vendedor, 'warning'); return; }
+
+  // Filtrar solo clientes con pendientes
+  const conPendientes = clientes.filter(c => c.pendientes.length > 0);
+  if (!conPendientes.length) { toast('No hay facturas pendientes para ' + vendedor, 'info'); return; }
+
+  const hoyStr = new Date().toLocaleDateString('es-AR', { year:'numeric', month:'long', day:'numeric' });
+  const totalGeneral = conPendientes.reduce((s, c) => s + c.totalPendiente, 0);
+
+  // Build client sections
+  let clientesHTML = '';
+  for (const c of conPendientes) {
+    let rows = '';
+    for (const f of c.pendientes) {
+      const isNC = /\bNC\b/i.test(f.factura);
+      rows += `<tr>
+        <td style="font-weight:600">${f.empresa}</td>
+        <td>${f.fecha || '-'}</td>
+        <td>${f.factura}${isNC ? ' (NC)' : ''}</td>
+        <td style="text-align:right;font-weight:600;color:#dc2626">${f.importe}</td>
+        <td>${f.fechaPago || '-'}</td>
+      </tr>`;
+    }
+    clientesHTML += `
+      <div class="client-section">
+        <div class="client-header">
+          <span class="client-name">${c.nombre}</span>
+          <span class="client-count">${c.pendientes.length} factura${c.pendientes.length > 1 ? 's' : ''}</span>
+        </div>
+        <table>
+          <thead><tr><th>Empresa</th><th>Fecha</th><th>Factura</th><th style="text-align:right">Monto</th><th>Vto. Pago</th></tr></thead>
+          <tbody>${rows}
+            <tr class="total-row"><td colspan="3"><strong>Subtotal ${c.nombre}</strong></td><td style="text-align:right;color:#dc2626"><strong>${_ectaFmt(c.totalPendiente)}</strong></td><td></td></tr>
+          </tbody>
+        </table>
+      </div>`;
+  }
+
+  const w = window.open('', '_blank');
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Estado de Cuenta General - ${vendedor}</title>
+<style>
+  @page { size: A4; margin: 12mm 15mm; }
+  @media print { .no-print { display:none!important; } .client-section { break-inside:avoid; } }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; font-size:10px; color:#1e293b; line-height:1.4; }
+  .header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:14px; padding-bottom:10px; border-bottom:2.5px solid #E31E24; }
+  .logo { font-size:20px; font-weight:900; color:#E31E24; font-family:'Arial Black',Impact,sans-serif; letter-spacing:1px; }
+  .logo-sub { font-size:9px; color:#64748b; text-transform:uppercase; letter-spacing:.5px; margin-top:2px; }
+  .doc-info { text-align:right; font-size:9px; color:#64748b; }
+  .summary-bar { display:flex; justify-content:space-between; align-items:center; background:#fef2f2; border:1px solid #fecaca; border-radius:6px; padding:10px 16px; margin-bottom:14px; }
+  .summary-bar .label { font-size:9px; color:#64748b; text-transform:uppercase; letter-spacing:.04em; }
+  .summary-bar .val { font-size:16px; font-weight:800; color:#dc2626; }
+  .summary-bar .info { font-size:9px; color:#64748b; }
+  .client-section { margin-bottom:12px; border:1px solid #e2e8f0; border-radius:6px; overflow:hidden; }
+  .client-header { background:#f8fafc; padding:7px 12px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #e2e8f0; }
+  .client-name { font-size:11px; font-weight:700; color:#0f172a; }
+  .client-count { font-size:8px; color:#64748b; background:#f1f5f9; padding:2px 6px; border-radius:4px; }
+  table { width:100%; border-collapse:collapse; font-size:9px; }
+  th { background:#f1f5f9; font-weight:700; text-align:left; padding:4px 8px; border-bottom:1px solid #cbd5e1; font-size:8px; text-transform:uppercase; letter-spacing:.04em; color:#475569; }
+  td { padding:3px 8px; border-bottom:1px solid #f1f5f9; }
+  .total-row { background:#fef2f2; font-weight:700; border-top:1.5px solid #fecaca; }
+  .grand-total { background:#dc2626; color:#fff; border-radius:6px; padding:10px 16px; margin-top:14px; display:flex; justify-content:space-between; align-items:center; }
+  .grand-total .label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; }
+  .grand-total .val { font-size:18px; font-weight:900; }
+  .footer { margin-top:16px; padding-top:8px; border-top:1px solid #e2e8f0; font-size:7px; color:#94a3b8; text-align:center; }
+</style></head><body>
+
+<div class="header">
+  <div>
+    <div class="logo">MUUK</div>
+    <div class="logo-sub">Estado de Cuenta General &mdash; Pendientes de Cobro</div>
+  </div>
+  <div class="doc-info">
+    <div style="font-weight:600;color:#0f172a;font-size:10px">Socio: ${vendedor}</div>
+    <div>Fecha: ${hoyStr}</div>
+    <div>${conPendientes.length} clientes con saldo pendiente</div>
+    <div class="no-print" style="display:flex;gap:6px;margin-top:6px">
+      <button onclick="window.print()" style="background:#E31E24;color:#fff;border:none;border-radius:5px;padding:5px 14px;font-size:10px;cursor:pointer;font-weight:600"><i class="bi bi-printer me-1"></i>Imprimir / Guardar PDF</button>
+      <button onclick="window.close()" style="background:#64748b;color:#fff;border:none;border-radius:5px;padding:5px 14px;font-size:10px;cursor:pointer;font-weight:600">Volver</button>
+    </div>
+  </div>
+</div>
+
+<div class="summary-bar">
+  <div>
+    <div class="label">Total General Pendiente</div>
+    <div class="val">${_ectaFmt(totalGeneral)}</div>
+  </div>
+  <div style="text-align:right">
+    <div class="info">${conPendientes.length} clientes &middot; ${conPendientes.reduce((s,c) => s + c.pendientes.length, 0)} facturas</div>
+  </div>
+</div>
+
+${clientesHTML}
+
+<div class="grand-total">
+  <div class="label">Total General Pendiente de Cobro</div>
+  <div class="val">${_ectaFmt(totalGeneral)}</div>
+</div>
+
+<div class="footer">MUUK SRL &middot; Documento generado el ${hoyStr} &middot; Solo incluye facturas pendientes de cobro &middot; Las facturas cobradas no se incluyen en este reporte</div>
 </body></html>`);
   w.document.close();
 }
