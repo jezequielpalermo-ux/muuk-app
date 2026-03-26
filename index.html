@@ -78,7 +78,7 @@
     .sidebar-logo { padding: 12px 12px 8px; border-bottom: 1px solid rgba(255,255,255,.08); flex-shrink: 0; }
     .sidebar-logo h5 { color: #fff; font-weight: 700; margin: 0; font-size: 1rem; }
     .sidebar-logo small { color: #64748b; font-size: .73rem; }
-    .sl { color: #475569; font-size: .58rem; text-transform: uppercase; letter-spacing: .09em; padding: 7px 14px 2px; font-weight: 700; flex-shrink: 0; }
+    .sl { color: #94a3b8; font-size: .65rem; text-transform: uppercase; letter-spacing: .1em; padding: 10px 14px 3px; font-weight: 700; flex-shrink: 0; border-top: 1px solid rgba(148,163,184,.12); margin-top: 4px; }
     #sidebar-nav {
       overflow-y: auto; flex: 1 1 0; min-height: 0;
       scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.15) transparent;
@@ -254,6 +254,11 @@
       /* Comisiones cards */
       #com-resumen-grid > .col-sm-6,
       #com-resumen-grid > .col-lg-4 { flex: 0 0 100%; max-width: 100%; }
+      /* Comisiones detail — mobile */
+      #com-detalle-tabla .table { font-size: .7rem; }
+      #com-detalle-tabla .table th { font-size: .6rem; padding: 5px 3px; white-space: nowrap; }
+      #com-detalle-tabla .table td { padding: 4px 3px; font-size: .68rem; }
+      #page-comisiones .page-hdr { flex-wrap: wrap; gap: 6px; }
       /* Charts */
       canvas { max-height: 200px !important; }
       /* Touch-friendly targets */
@@ -350,7 +355,7 @@
     body.dark-mode #search-results .sr-item:hover { background:#0f172a; }
     body.dark-mode #search-results .sr-title { color:#e2e8f0; }
 
-    /* ══════════════ GESTIÓN 2026 ══════════════ */
+    /* ══════════════ GESTIÓN ══════════════ */
     #page-gestion { padding-bottom: 12px; }
 
     /* Totales globales — compactos */
@@ -490,7 +495,7 @@
     <li><a class="nav-link" data-page="facturasPagar"><i class="bi bi-file-earmark-arrow-up-fill"></i>Facturas a Pagar</a></li>
 
     <div class="sl">Análisis</div>
-    <li><a class="nav-link" data-page="gestion"><i class="bi bi-graph-up-arrow"></i>Gestión 2026</a></li>
+    <li><a class="nav-link" data-page="gestion"><i class="bi bi-graph-up-arrow"></i>Gestión</a></li>
     <li><a class="nav-link" data-page="reportes"><i class="bi bi-bar-chart-line-fill"></i>Reportes</a></li>
     <li><a class="nav-link" data-page="historial"><i class="bi bi-clock-history"></i>Historial</a></li>
     <li><a class="nav-link" data-page="estrategicos"><i class="bi bi-lightbulb-fill"></i>Estratégicos</a></li>
@@ -1797,13 +1802,13 @@ CREATE POLICY "acceso total" ON flujo_caja_versions FOR ALL USING (true) WITH CH
   </div>
 
 
-  <!-- ══════════════════ GESTIÓN 2026 ══════════════════ -->
+  <!-- ══════════════════ GESTIÓN ══════════════════ -->
   <div id="page-gestion" class="page">
 
     <!-- Header compacto + tabs en la misma línea -->
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-bottom:4px">
       <h4 style="font-weight:700;margin:0;font-size:.88rem;color:#0f172a;white-space:nowrap">
-        <i class="bi bi-graph-up-arrow me-1" style="color:#16a34a"></i>Gestión 2026
+        <i class="bi bi-graph-up-arrow me-1" style="color:#16a34a"></i>Gestión
       </h4>
       <ul class="nav gap-1 flex-nowrap" id="gestion-tabs" style="flex:1;justify-content:center">
         <li class="nav-item"><button class="nav-link active" onclick="gestionTab('mensual',this)"><i class="bi bi-calendar3 me-1"></i>Mensual</button></li>
@@ -2583,9 +2588,11 @@ async function cargarRatesSidebar() {
   el.innerHTML = '<div style="font-size:.65rem;color:#475569"><i class="bi bi-hourglass-split me-1"></i>Cargando...</div>';
   try {
     const data = await _fetchTasas();
-    el.innerHTML = data.rates.map(d =>
+    const sidebarNames = ['Oficial BNA', 'Blue', 'MEP / Bolsa'];
+    const filtered = data.rates.filter(d => sidebarNames.some(n => d.nombre.includes(n.split(' /')[0])));
+    el.innerHTML = filtered.map(d =>
       '<div class="d-flex justify-content-between align-items-center py-1" style="border-bottom:1px solid rgba(255,255,255,.05)">'
-      + '<span style="color:#94a3b8;font-size:.67rem">' + d.nombre + '</span>'
+      + '<span style="color:#94a3b8;font-size:.67rem">' + d.nombre.replace('MEP / Bolsa','MEP') + '</span>'
       + '<span style="color:#e2e8f0;font-weight:600;font-size:.7rem">$' + (d.venta ? d.venta.toLocaleString('es-AR') : '–') + '</span>'
       + '</div>'
     ).join('')
@@ -5528,6 +5535,20 @@ function generarReportePDF() {
       /* Comisiones cards */
       #com-resumen-grid > .col-sm-6,
       #com-resumen-grid > .col-lg-4 { flex: 0 0 100%; max-width: 100%; }
+      /* Comisiones detail — mobile adjustments */
+      #com-detalle-tabla .table { font-size: .7rem; }
+      #com-detalle-tabla .table th { font-size: .6rem; padding: 5px 3px; white-space: nowrap; }
+      #com-detalle-tabla .table td { padding: 4px 3px; font-size: .68rem; }
+      #com-detalle-wrapper .d-flex.align-items-center.mb-3 { flex-wrap: wrap; gap: 6px; }
+      #com-detalle-wrapper h5 { font-size: .9rem; }
+      /* Comisiones summary cards mobile */
+      #com-detalle-tabla .row.g-2 .col-6 { flex: 0 0 50%; max-width: 50%; }
+      #com-detalle-tabla .row.g-2 .card { padding: 6px !important; }
+      #com-detalle-tabla .row.g-2 .card div[style*="font-size:1rem"] { font-size: .85rem !important; }
+      /* Page header mobile */
+      #page-comisiones .page-hdr { flex-wrap: wrap; gap: 6px; }
+      #page-comisiones .page-hdr h4 { font-size: .92rem; }
+      #page-comisiones .card.p-3.mb-3 .fs-4 { font-size: 1.1rem !important; }
       /* Charts */
       canvas { max-height: 200px !important; }
     }
@@ -5542,6 +5563,13 @@ function generarReportePDF() {
       .btn { font-size: .73rem; }
       h4 { font-size: 1rem; }
       h6 { font-size: .85rem; }
+      /* Comisiones extra-small adjustments */
+      #com-resumen-grid .card.p-3 { padding: .6rem !important; }
+      #com-resumen-grid .fs-4 { font-size: 1rem !important; }
+      #com-resumen-grid h6 { font-size: .78rem !important; }
+      #com-detalle-tabla .table th,
+      #com-detalle-tabla .table td { padding: 3px 2px; font-size: .62rem; }
+      #com-detalle-tabla .table-responsive { max-height: 400px; -webkit-overflow-scrolling: touch; }
     }
 
     /* ─── DARK MODE ─── */
@@ -6622,10 +6650,19 @@ function _renderEmpresaChart() {
 let _chartTendencia = null;
 
 function renderEstrategicos() {
+  // Intentar cargar datos de Gestión si aún no están disponibles
+  if (!GESTION_DATA || !GESTION_DATA.rows || !GESTION_DATA.rows.length) {
+    if (!_loadGestionData()) {
+      const st = document.getElementById('estrat-status');
+      if (st) st.innerHTML = '<i class="bi bi-arrow-clockwise me-1 text-primary sync-spin"></i>Cargando datos desde Google Sheets...';
+      gestionSincronizar().then(() => renderEstrategicos()).catch(() => {});
+      return;
+    }
+  }
   const d = GESTION_DATA;
   if (!d || !d.rows || !d.rows.length) {
     const st = document.getElementById('estrat-status');
-    if (st) st.innerHTML = '<i class="bi bi-exclamation-triangle text-warning me-1"></i>Sin datos de Gestión. Sincronizá primero desde Gestión 2026.';
+    if (st) st.innerHTML = '<i class="bi bi-exclamation-triangle text-warning me-1"></i>Sin datos de Gestión. Sincronizá primero desde la pestaña Gestión.';
     return;
   }
   const st = document.getElementById('estrat-status');
@@ -6817,7 +6854,7 @@ let _chartMeses = null;
 // La hoja "Datos Crudos" puede tener cualquier GID
 const HIST_GIDS_TO_TRY = [
   0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
-  358986432,           // Gestión 2026 (conocido)
+  358986432,           // Gestión (conocido)
   100, 200, 300, 400, 500, 600, 700, 800, 900, 1000,
   1234567890, 987654321, 123456789, 234567890,
   111111111, 222222222, 333333333, 444444444,
@@ -7560,7 +7597,7 @@ function _buildResumenDia() {
 }
 
 function _buildResumenGestion() {
-  let txt = '📈 *MUUK — Gestión 2026*\n\n';
+  let txt = '📈 *MUUK — Gestión*\n\n';
   if (GESTION_DATA && GESTION_DATA.byMes) {
     const d = GESTION_DATA;
     const totFac = d.byMes.reduce((s,m)=>s+m[2],0);
@@ -8262,7 +8299,7 @@ function ectaSaveEdit(idx) {
       <select id="wa-type" onchange="waTypeChanged()" style="width:100%;padding:8px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:.82rem;outline:none">
         <option value="custom">Mensaje personalizado</option>
         <option value="resumen">Resumen del día</option>
-        <option value="gestion">Resumen Gestión 2026</option>
+        <option value="gestion">Resumen Gestión</option>
         <option value="vencimientos">Cheques por vencer</option>
       </select>
     </div>
