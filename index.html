@@ -8035,6 +8035,18 @@ function _ectaRenderData(vendedor) {
   const summary = document.getElementById('ecta-summary');
   const container = document.getElementById('ecta-clientes');
 
+  // Colores alternados para diferenciar clientes
+  const CARD_COLORS = [
+    { bg: '#fffbeb', border: '#f59e0b', accent: '#92400e' },  // ámbar
+    { bg: '#eff6ff', border: '#3b82f6', accent: '#1e40af' },  // azul
+    { bg: '#fdf2f8', border: '#ec4899', accent: '#9d174d' },  // rosa
+    { bg: '#ecfdf5', border: '#10b981', accent: '#065f46' },  // esmeralda
+    { bg: '#f5f3ff', border: '#8b5cf6', accent: '#5b21b6' },  // violeta
+    { bg: '#fff7ed', border: '#f97316', accent: '#9a3412' },  // naranja
+    { bg: '#f0fdfa', border: '#14b8a6', accent: '#134e4a' },  // teal
+    { bg: '#fef2f2', border: '#ef4444', accent: '#991b1b' },  // rojo
+  ];
+
   // Summary cards
   const totalClientes = clientes.length;
   const totalCobrado = clientes.reduce((s, c) => s + c.totalCobrado, 0);
@@ -8042,21 +8054,21 @@ function _ectaRenderData(vendedor) {
   const clientesConDeuda = clientes.filter(c => c.totalPendiente > 0).length;
 
   summary.innerHTML = `
-    <div class="col-6 col-md-3"><div class="card p-2 text-center" style="border-radius:10px">
-      <div style="font-size:.68rem;color:#64748b">Clientes</div>
-      <div style="font-size:1.3rem;font-weight:800;color:#1e293b">${totalClientes}</div>
+    <div class="col-6 col-md-3"><div class="card p-3 text-center" style="border-radius:10px">
+      <div style="font-size:.8rem;color:#475569;font-weight:600">Clientes</div>
+      <div style="font-size:1.5rem;font-weight:800;color:#1e293b">${totalClientes}</div>
     </div></div>
-    <div class="col-6 col-md-3"><div class="card p-2 text-center" style="border-radius:10px">
-      <div style="font-size:.68rem;color:#64748b">Con pendiente</div>
-      <div style="font-size:1.3rem;font-weight:800;color:${clientesConDeuda > 0 ? '#dc2626' : '#16a34a'}">${clientesConDeuda}</div>
+    <div class="col-6 col-md-3"><div class="card p-3 text-center" style="border-radius:10px;${clientesConDeuda > 0 ? 'background:#fef2f2;border:1px solid #fecaca' : 'background:#f0fdf4;border:1px solid #bbf7d0'}">
+      <div style="font-size:.8rem;color:#475569;font-weight:600">Con pendiente</div>
+      <div style="font-size:1.5rem;font-weight:800;color:${clientesConDeuda > 0 ? '#b91c1c' : '#15803d'}">${clientesConDeuda}</div>
     </div></div>
-    <div class="col-6 col-md-3"><div class="card p-2 text-center" style="border-radius:10px">
-      <div style="font-size:.68rem;color:#64748b">Total cobrado</div>
-      <div style="font-size:.95rem;font-weight:700;color:#16a34a">${_ectaFmt(totalCobrado)}</div>
+    <div class="col-6 col-md-3"><div class="card p-3 text-center" style="border-radius:10px;background:#f0fdf4;border:1px solid #bbf7d0">
+      <div style="font-size:.8rem;color:#475569;font-weight:600">Total cobrado</div>
+      <div style="font-size:1.05rem;font-weight:700;color:#15803d">${_ectaFmt(totalCobrado)}</div>
     </div></div>
-    <div class="col-6 col-md-3"><div class="card p-2 text-center" style="border-radius:10px">
-      <div style="font-size:.68rem;color:#64748b">Total pendiente</div>
-      <div style="font-size:.95rem;font-weight:700;color:#dc2626">${_ectaFmt(totalPendiente)}</div>
+    <div class="col-6 col-md-3"><div class="card p-3 text-center" style="border-radius:10px;background:#fef2f2;border:1px solid #fecaca">
+      <div style="font-size:.8rem;color:#475569;font-weight:600">Total pendiente</div>
+      <div style="font-size:1.05rem;font-weight:700;color:#b91c1c">${_ectaFmt(totalPendiente)}</div>
     </div></div>`;
 
   // Render client cards
@@ -8064,46 +8076,49 @@ function _ectaRenderData(vendedor) {
   for (let i = 0; i < clientes.length; i++) {
     const c = clientes[i];
     const hasPend = c.totalPendiente > 0;
-    const borderColor = hasPend ? '#fecaca' : '#bbf7d0';
+    const palette = CARD_COLORS[i % CARD_COLORS.length];
+    const borderColor = hasPend ? '#dc2626' : '#16a34a';
+    const cardBg = hasPend ? '#fffbfb' : '#f8fdf9';
     const badge = hasPend
-      ? `<span class="badge" style="background:#fef2f2;color:#dc2626;font-size:.68rem;font-weight:600;border-radius:6px;padding:3px 8px"><i class="bi bi-exclamation-circle me-1"></i>Pendiente: ${_ectaFmt(c.totalPendiente)}</span>`
-      : `<span class="badge" style="background:#f0fdf4;color:#16a34a;font-size:.68rem;font-weight:600;border-radius:6px;padding:3px 8px"><i class="bi bi-check-circle me-1"></i>Al día</span>`;
+      ? `<span class="badge" style="background:#dc2626;color:#fff;font-size:.78rem;font-weight:700;border-radius:6px;padding:4px 10px"><i class="bi bi-exclamation-circle me-1"></i>${_ectaFmt(c.totalPendiente)}</span>`
+      : `<span class="badge" style="background:#16a34a;color:#fff;font-size:.78rem;font-weight:700;border-radius:6px;padding:4px 10px"><i class="bi bi-check-circle me-1"></i>Al día</span>`;
 
-    html += `<div class="card mb-2 ecta-client-card" data-cliente="${c.nombre.toLowerCase()}" data-idx="${i}" style="border-radius:10px;border-left:3px solid ${borderColor};overflow:hidden">
-      <div class="card-header bg-white d-flex justify-content-between align-items-center" style="cursor:pointer;padding:10px 14px">
+    html += `<div class="card mb-3 ecta-client-card" data-cliente="${c.nombre.toLowerCase()}" data-idx="${i}" style="border-radius:12px;border-left:5px solid ${palette.border};overflow:hidden;background:${cardBg}">
+      <div class="card-header d-flex justify-content-between align-items-center" style="cursor:pointer;padding:12px 16px;background:${palette.bg};border-bottom:2px solid ${palette.border}20">
         <div onclick="this.closest('.card').querySelector('.ecta-body').classList.toggle('d-none')" style="flex:1;cursor:pointer">
-          <span style="font-weight:700;font-size:.88rem;color:#0f172a">${c.nombre}</span>
-          <span style="font-size:.68rem;color:#64748b;margin-left:8px">${c.cobradas.length + c.pendientes.length} facturas</span>
+          <span style="font-weight:700;font-size:1rem;color:${palette.accent}">${c.nombre}</span>
+          <span style="font-size:.82rem;color:#64748b;margin-left:10px">${c.cobradas.length + c.pendientes.length} facturas</span>
         </div>
-        <div style="display:flex;align-items:center;gap:6px">
+        <div style="display:flex;align-items:center;gap:8px">
           ${badge}
-          <button class="btn btn-sm btn-outline-danger" style="font-size:.62rem;padding:2px 7px;border-radius:5px" onclick="ectaPdfCliente(${i})" title="Generar PDF estado de cuenta"><i class="bi bi-file-earmark-pdf"></i></button>
-          <button class="btn btn-sm btn-outline-primary" style="font-size:.62rem;padding:2px 7px;border-radius:5px" onclick="ectaEditCliente(${i})" title="Editar facturas"><i class="bi bi-pencil-square"></i></button>
-          <i class="bi bi-chevron-down" style="font-size:.7rem;color:#94a3b8;cursor:pointer" onclick="this.closest('.card').querySelector('.ecta-body').classList.toggle('d-none')"></i>
+          <button class="btn btn-sm btn-outline-danger" style="font-size:.72rem;padding:3px 8px;border-radius:6px" onclick="ectaPdfCliente(${i})" title="Generar PDF estado de cuenta"><i class="bi bi-file-earmark-pdf"></i></button>
+          <button class="btn btn-sm btn-outline-primary" style="font-size:.72rem;padding:3px 8px;border-radius:6px" onclick="ectaEditCliente(${i})" title="Editar facturas"><i class="bi bi-pencil-square"></i></button>
+          <i class="bi bi-chevron-down" style="font-size:.8rem;color:#64748b;cursor:pointer" onclick="this.closest('.card').querySelector('.ecta-body').classList.toggle('d-none')"></i>
         </div>
       </div>
       <div class="ecta-body ${hasPend ? '' : 'd-none'}" style="padding:0">`;
 
-    // Pendientes table (show first if any)
+    // Pendientes table
     if (c.pendientes.length > 0) {
-      html += `<div style="padding:10px 14px 6px"><div style="font-size:.72rem;font-weight:700;color:#dc2626;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px"><i class="bi bi-clock-history me-1"></i>Pendientes de cobro (${c.pendientes.length})</div>
-        <div class="table-responsive"><table class="table table-sm mb-0" style="font-size:.75rem">
-        <thead><tr style="background:#fef2f2"><th>Empresa</th><th>Fecha</th><th>Factura</th><th class="text-end">Importe</th><th>Vto. Pago</th></tr></thead><tbody>`;
-      for (const f of c.pendientes) {
+      html += `<div style="padding:12px 16px 8px"><div style="font-size:.82rem;font-weight:700;color:#b91c1c;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px"><i class="bi bi-clock-history me-1"></i>Pendientes de cobro (${c.pendientes.length})</div>
+        <div class="table-responsive"><table class="table table-sm mb-0" style="font-size:.88rem">
+        <thead><tr style="background:#fef2f2"><th style="font-size:.78rem;color:#991b1b;font-weight:700;padding:8px">Empresa</th><th style="font-size:.78rem;color:#991b1b;font-weight:700;padding:8px">Fecha</th><th style="font-size:.78rem;color:#991b1b;font-weight:700;padding:8px">Factura</th><th class="text-end" style="font-size:.78rem;color:#991b1b;font-weight:700;padding:8px">Importe</th><th style="font-size:.78rem;color:#991b1b;font-weight:700;padding:8px">Vto. Pago</th></tr></thead><tbody>`;
+      for (let j = 0; j < c.pendientes.length; j++) {
+        const f = c.pendientes[j];
         const isNC = /\bNC\b/i.test(f.factura);
-        const tdStyle = isNC ? 'font-weight:600;color:#7c3aed' : 'font-weight:600;color:#dc2626';
-        html += `<tr><td style="font-weight:600">${f.empresa}</td><td>${f.fecha}</td><td>${f.factura}${isNC ? ' <span style="font-size:.6rem;background:#f5f3ff;color:#7c3aed;padding:1px 4px;border-radius:3px">NC</span>' : ''}</td><td class="text-end" style="${tdStyle}">${f.importe}</td><td>${f.fechaPago || '-'}</td></tr>`;
+        const rowBg = j % 2 === 0 ? '#fff' : '#fef8f8';
+        const tdStyle = isNC ? 'font-weight:600;color:#7c3aed' : 'font-weight:700;color:#b91c1c';
+        html += `<tr style="background:${rowBg}"><td style="font-weight:600;padding:7px 8px">${f.empresa}</td><td style="padding:7px 8px">${f.fecha}</td><td style="padding:7px 8px">${f.factura}${isNC ? ' <span style="font-size:.7rem;background:#ede9fe;color:#6d28d9;padding:2px 5px;border-radius:4px;font-weight:700">NC</span>' : ''}</td><td class="text-end" style="${tdStyle};padding:7px 8px">${f.importe}</td><td style="padding:7px 8px;font-weight:500">${f.fechaPago || '-'}</td></tr>`;
       }
-      html += `<tr style="background:#fef2f2;font-weight:700"><td colspan="3">Total pendiente</td><td class="text-end" style="color:#dc2626">${_ectaFmt(c.totalPendiente)}</td><td></td></tr>`;
+      html += `<tr style="background:#fecaca;font-weight:800"><td colspan="3" style="padding:8px;font-size:.9rem;color:#7f1d1d">TOTAL PENDIENTE</td><td class="text-end" style="color:#7f1d1d;font-size:.95rem;padding:8px">${_ectaFmt(c.totalPendiente)}</td><td></td></tr>`;
       html += '</tbody></table></div></div>';
     }
 
     // Cobradas table
     if (c.cobradas.length > 0) {
-      html += `<div style="padding:10px 14px 10px"><div style="font-size:.72rem;font-weight:700;color:#16a34a;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px"><i class="bi bi-check-circle me-1"></i>Cobradas (${c.cobradas.length})</div>
-        <div class="table-responsive"><table class="table table-sm mb-0" style="font-size:.75rem">
-        <thead><tr style="background:#f0fdf4"><th>Empresa</th><th>Fecha</th><th>Factura</th><th class="text-end">Importe</th></tr></thead><tbody>`;
-      // Show last 10 cobradas by default, with toggle
+      html += `<div style="padding:12px 16px 12px"><div style="font-size:.82rem;font-weight:700;color:#15803d;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px"><i class="bi bi-check-circle me-1"></i>Cobradas (${c.cobradas.length})</div>
+        <div class="table-responsive"><table class="table table-sm mb-0" style="font-size:.88rem">
+        <thead><tr style="background:#dcfce7"><th style="font-size:.78rem;color:#14532d;font-weight:700;padding:8px">Empresa</th><th style="font-size:.78rem;color:#14532d;font-weight:700;padding:8px">Fecha</th><th style="font-size:.78rem;color:#14532d;font-weight:700;padding:8px">Factura</th><th class="text-end" style="font-size:.78rem;color:#14532d;font-weight:700;padding:8px">Importe</th></tr></thead><tbody>`;
       const showAll = c.cobradas.length <= 10;
       const visible = showAll ? c.cobradas : c.cobradas.slice(-10);
       const hidden = showAll ? [] : c.cobradas.slice(0, -10);
@@ -8113,23 +8128,25 @@ function _ectaRenderData(vendedor) {
         html += '</tr>';
         for (const f of hidden) {
           const isNC = /\bNC\b/i.test(f.factura);
-          html += `<tr class="ecta-old-row" style="display:none"><td>${f.empresa}</td><td>${f.fecha}</td><td>${f.factura}${isNC ? ' <span style="font-size:.6rem;background:#f5f3ff;color:#7c3aed;padding:1px 4px;border-radius:3px">NC</span>' : ''}</td><td class="text-end">${f.importe}</td></tr>`;
+          html += `<tr class="ecta-old-row" style="display:none"><td style="padding:7px 8px">${f.empresa}</td><td style="padding:7px 8px">${f.fecha}</td><td style="padding:7px 8px">${f.factura}${isNC ? ' <span style="font-size:.7rem;background:#ede9fe;color:#6d28d9;padding:2px 5px;border-radius:4px;font-weight:700">NC</span>' : ''}</td><td class="text-end" style="padding:7px 8px">${f.importe}</td></tr>`;
         }
-        html += `<tr class="ecta-show-more"><td colspan="4" style="text-align:center"><button class="btn btn-sm btn-link" style="font-size:.7rem" onclick="this.closest('tbody').querySelectorAll('.ecta-old-row').forEach(r=>r.style.display='');this.closest('tr').style.display='none'"><i class="bi bi-three-dots me-1"></i>Ver ${hidden.length} facturas anteriores</button></td></tr>`;
+        html += `<tr class="ecta-show-more"><td colspan="4" style="text-align:center;padding:8px"><button class="btn btn-sm btn-link" style="font-size:.82rem" onclick="this.closest('tbody').querySelectorAll('.ecta-old-row').forEach(r=>r.style.display='');this.closest('tr').style.display='none'"><i class="bi bi-three-dots me-1"></i>Ver ${hidden.length} facturas anteriores</button></td></tr>`;
       }
 
-      for (const f of visible) {
+      for (let j = 0; j < visible.length; j++) {
+        const f = visible[j];
         const isNC = /\bNC\b/i.test(f.factura);
-        html += `<tr><td>${f.empresa}</td><td>${f.fecha}</td><td>${f.factura}${isNC ? ' <span style="font-size:.6rem;background:#f5f3ff;color:#7c3aed;padding:1px 4px;border-radius:3px">NC</span>' : ''}</td><td class="text-end">${f.importe}</td></tr>`;
+        const rowBg = j % 2 === 0 ? '#fff' : '#f0fdf4';
+        html += `<tr style="background:${rowBg}"><td style="padding:7px 8px">${f.empresa}</td><td style="padding:7px 8px">${f.fecha}</td><td style="padding:7px 8px">${f.factura}${isNC ? ' <span style="font-size:.7rem;background:#ede9fe;color:#6d28d9;padding:2px 5px;border-radius:4px;font-weight:700">NC</span>' : ''}</td><td class="text-end" style="padding:7px 8px;color:#15803d;font-weight:600">${f.importe}</td></tr>`;
       }
-      html += `<tr style="background:#f0fdf4;font-weight:700"><td colspan="3">Total cobrado</td><td class="text-end" style="color:#16a34a">${_ectaFmt(c.totalCobrado)}</td></tr>`;
+      html += `<tr style="background:#bbf7d0;font-weight:800"><td colspan="3" style="padding:8px;font-size:.9rem;color:#14532d">TOTAL COBRADO</td><td class="text-end" style="color:#14532d;font-size:.95rem;padding:8px">${_ectaFmt(c.totalCobrado)}</td></tr>`;
       html += '</tbody></table></div></div>';
     }
 
     html += '</div></div>';
   }
 
-  container.innerHTML = html || '<div class="text-muted text-center py-4">No se encontraron datos para este vendedor.</div>';
+  container.innerHTML = html || '<div class="text-muted text-center py-4" style="font-size:.95rem">No se encontraron datos para este vendedor.</div>';
 }
 
 function ectaFilter() {
