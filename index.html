@@ -1080,29 +1080,36 @@
 
     <!-- Tarifa vigente + resumen -->
     <div class="row g-2 mb-3">
-      <div class="col-6 col-md-3">
+      <div class="col-6 col-md">
         <div class="card p-3 text-center" style="border-radius:10px;background:#f0f9ff;border:1px solid #bae6fd">
           <div style="font-size:.78rem;color:#0369a1;font-weight:600">Tarifa Vigente</div>
-          <div id="km-tarifa-display" style="font-size:1.3rem;font-weight:800;color:#0c4a6e">$1.200/km</div>
+          <div id="km-tarifa-display" style="font-size:1.2rem;font-weight:800;color:#0c4a6e">$1.200/km</div>
           <div id="km-tarifa-periodo" style="font-size:.68rem;color:#64748b">Desde 01/04/2025</div>
         </div>
       </div>
-      <div class="col-6 col-md-3">
+      <div class="col-6 col-md">
         <div class="card p-3 text-center" style="border-radius:10px">
-          <div style="font-size:.78rem;color:#475569;font-weight:600">KM Mes Actual</div>
-          <div id="km-mes-km" style="font-size:1.3rem;font-weight:800;color:#1e293b">0</div>
+          <div style="font-size:.78rem;color:#475569;font-weight:600">KM Mes</div>
+          <div id="km-mes-km" style="font-size:1.2rem;font-weight:800;color:#1e293b">0</div>
         </div>
       </div>
-      <div class="col-6 col-md-3">
+      <div class="col-6 col-md">
         <div class="card p-3 text-center" style="border-radius:10px;background:#fef2f2;border:1px solid #fecaca">
           <div style="font-size:.78rem;color:#991b1b;font-weight:600">Total Mes ($)</div>
-          <div id="km-mes-total" style="font-size:1.3rem;font-weight:800;color:#b91c1c">$0</div>
+          <div id="km-mes-total" style="font-size:1.2rem;font-weight:800;color:#b91c1c">$0</div>
         </div>
       </div>
-      <div class="col-6 col-md-3">
+      <div class="col-6 col-md">
         <div class="card p-3 text-center" style="border-radius:10px;background:#f0fdf4;border:1px solid #bbf7d0">
           <div style="font-size:.78rem;color:#15803d;font-weight:600">Pagado Mes</div>
-          <div id="km-mes-pagado" style="font-size:1.3rem;font-weight:800;color:#16a34a">$0</div>
+          <div id="km-mes-pagado" style="font-size:1.2rem;font-weight:800;color:#16a34a">$0</div>
+        </div>
+      </div>
+      <div class="col-12 col-md">
+        <div class="card p-3 text-center" style="border-radius:10px;background:#f5f3ff;border:1px solid #ddd6fe">
+          <div style="font-size:.78rem;color:#5b21b6;font-weight:600">KM Año <span id="km-anio-label"></span></div>
+          <div id="km-anio-km" style="font-size:1.2rem;font-weight:800;color:#6d28d9">0</div>
+          <div id="km-anio-total" style="font-size:.72rem;color:#7c3aed;font-weight:600">$0</div>
         </div>
       </div>
     </div>
@@ -1159,10 +1166,14 @@
             <input type="number" class="form-control form-control-sm" id="km-cantidad" min="0" step="1" placeholder="Ej: 85">
           </div>
           <div class="mb-2">
+            <label class="form-label small fw-bold mb-1" style="font-size:.78rem">$/KM personalizado <span style="font-weight:400;color:#64748b">(dejar vacío para usar tarifa vigente)</span></label>
+            <input type="number" class="form-control form-control-sm" id="km-tarifa-custom" min="0" step="50" placeholder="Ej: 1500" oninput="_kmActualizarModalTotal()">
+          </div>
+          <div class="mb-2">
             <label class="form-label small fw-bold mb-1" style="font-size:.78rem">Observaciones</label>
             <input type="text" class="form-control form-control-sm" id="km-obs" placeholder="Zona, cliente, etc.">
           </div>
-          <div class="p-2 bg-light rounded mb-2" style="font-size:.82rem">
+          <div class="p-2 rounded mb-2" id="km-modal-resumen" style="font-size:.82rem;background:#f0f9ff;border:1px solid #bae6fd">
             Tarifa aplicable: <strong id="km-modal-tarifa">$1.200/km</strong><br>
             Monto estimado: <strong id="km-modal-total" style="color:#b91c1c">$0</strong>
           </div>
@@ -7545,6 +7556,18 @@ function kmRender() {
   if (elTotalMes) elTotalMes.textContent = fmt(totalMes);
   if (elPagadoMes) elPagadoMes.textContent = fmt(pagadoMes);
 
+  // Yearly stats
+  const anioActual = hoyDate.substring(0,4);
+  const regAnio = (ST.kilometraje || []).filter(r => r.fecha.substring(0,4) === anioActual);
+  const kmAnio = regAnio.reduce((s,r) => s + r.km, 0);
+  const totalAnio = regAnio.reduce((s,r) => s + r.monto, 0);
+  const elAnioLabel = document.getElementById('km-anio-label');
+  const elAnioKm = document.getElementById('km-anio-km');
+  const elAnioTotal = document.getElementById('km-anio-total');
+  if (elAnioLabel) elAnioLabel.textContent = anioActual;
+  if (elAnioKm) elAnioKm.textContent = kmAnio.toLocaleString('es-AR');
+  if (elAnioTotal) elAnioTotal.textContent = fmt(totalAnio);
+
   // Render table
   const wrap = document.getElementById('km-registros-wrap');
   if (!wrap) return;
@@ -7592,7 +7615,7 @@ function kmRender() {
       html += `<tr style="background:${rowBg}">
         <td style="padding:6px 10px;font-weight:500">${fmtF(r.fecha)}</td>
         <td class="text-end" style="padding:6px 10px;font-weight:700">${r.km.toLocaleString('es-AR')}</td>
-        <td class="text-end" style="padding:6px 10px;color:#64748b">$${r.tarifa.toLocaleString('es-AR')}</td>
+        <td class="text-end" style="padding:6px 10px;color:${r.tarifaCustom ? '#d97706' : '#64748b'};font-weight:${r.tarifaCustom ? '700' : '400'}">$${r.tarifa.toLocaleString('es-AR')}${r.tarifaCustom ? ' <span style="background:#fef3c7;color:#92400e;font-size:.55rem;padding:1px 3px;border-radius:3px" title="Tarifa especial">ESP</span>' : ''}</td>
         <td class="text-end" style="padding:6px 10px;font-weight:700;color:#b91c1c">${fmt(r.monto)}</td>
         <td style="padding:6px 10px">${estadoBadge}</td>
         <td style="padding:6px 10px;color:#64748b;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${(r.obs||'').replace(/"/g,'&quot;')}">${r.obs || '-'}</td>
@@ -7614,6 +7637,7 @@ function kmAbrir(editId) {
   const fechaEl = document.getElementById('km-fecha');
   const cantEl = document.getElementById('km-cantidad');
   const obsEl = document.getElementById('km-obs');
+  const customEl = document.getElementById('km-tarifa-custom');
 
   if (editId) {
     const r = (ST.kilometraje || []).find(x => x.id === editId);
@@ -7621,11 +7645,15 @@ function kmAbrir(editId) {
       fechaEl.value = r.fecha;
       cantEl.value = r.km;
       obsEl.value = r.obs || '';
+      // If the record used a custom tariff (different from the period tariff), show it
+      const tarifaPeriodo = kmTarifaParaFecha(r.fecha);
+      customEl.value = r.tarifaCustom ? r.tarifa : '';
     }
   } else {
     fechaEl.value = hoy();
     cantEl.value = '';
     obsEl.value = '';
+    customEl.value = '';
   }
   _kmActualizarModalTotal();
   cantEl.oninput = _kmActualizarModalTotal;
@@ -7636,9 +7664,20 @@ function kmAbrir(editId) {
 function _kmActualizarModalTotal() {
   const fecha = document.getElementById('km-fecha').value || hoy();
   const km = parseFloat(document.getElementById('km-cantidad').value) || 0;
-  const tarifa = kmTarifaParaFecha(fecha);
-  document.getElementById('km-modal-tarifa').textContent = '$' + tarifa.valor.toLocaleString('es-AR') + '/km';
-  document.getElementById('km-modal-total').textContent = fmt(km * tarifa.valor);
+  const customVal = parseFloat(document.getElementById('km-tarifa-custom').value);
+  const tarifaPeriodo = kmTarifaParaFecha(fecha);
+  const valorFinal = (customVal > 0) ? customVal : tarifaPeriodo.valor;
+  const isCustom = customVal > 0;
+  const resumenEl = document.getElementById('km-modal-resumen');
+
+  document.getElementById('km-modal-tarifa').innerHTML = '$' + valorFinal.toLocaleString('es-AR') + '/km'
+    + (isCustom ? ' <span style="background:#f59e0b;color:#fff;font-size:.65rem;padding:1px 5px;border-radius:3px;margin-left:4px">ESPECIAL</span>' : '');
+  document.getElementById('km-modal-total').textContent = fmt(km * valorFinal);
+
+  if (resumenEl) {
+    resumenEl.style.background = isCustom ? '#fffbeb' : '#f0f9ff';
+    resumenEl.style.borderColor = isCustom ? '#fcd34d' : '#bae6fd';
+  }
 }
 
 function kmGuardar() {
@@ -7646,22 +7685,24 @@ function kmGuardar() {
   const fecha = document.getElementById('km-fecha').value;
   const km = parseFloat(document.getElementById('km-cantidad').value);
   const obs = document.getElementById('km-obs').value;
+  const customVal = parseFloat(document.getElementById('km-tarifa-custom').value);
 
   if (!fecha || isNaN(km) || km <= 0) { alert('Completá fecha y kilómetros.'); return; }
 
-  const tarifa = kmTarifaParaFecha(fecha);
-  const monto = km * tarifa.valor;
+  const tarifaPeriodo = kmTarifaParaFecha(fecha);
+  const tarifaCustom = customVal > 0;
+  const valorKm = tarifaCustom ? customVal : tarifaPeriodo.valor;
+  const monto = km * valorKm;
 
   if (!ST.kilometraje) ST.kilometraje = [];
 
   if (editId) {
     const idx = ST.kilometraje.findIndex(r => r.id === editId);
     if (idx >= 0) {
-      const wasPagado = ST.kilometraje[idx].pagado;
-      ST.kilometraje[idx] = { ...ST.kilometraje[idx], fecha, km, tarifa: tarifa.valor, monto, obs };
+      ST.kilometraje[idx] = { ...ST.kilometraje[idx], fecha, km, tarifa: valorKm, monto, obs, tarifaCustom };
     }
   } else {
-    ST.kilometraje.push({ id: uid(), fecha, km, tarifa: tarifa.valor, monto, obs, pagado: false, pagoId: null });
+    ST.kilometraje.push({ id: uid(), fecha, km, tarifa: valorKm, monto, obs, tarifaCustom, pagado: false, pagoId: null });
   }
 
   save();
