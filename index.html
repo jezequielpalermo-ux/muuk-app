@@ -78,7 +78,8 @@
     .sidebar-logo { padding: 12px 12px 8px; border-bottom: 1px solid rgba(255,255,255,.08); flex-shrink: 0; }
     .sidebar-logo h5 { color: #fff; font-weight: 700; margin: 0; font-size: 1rem; }
     .sidebar-logo small { color: #64748b; font-size: .73rem; }
-    .sl { color: #94a3b8; font-size: .65rem; text-transform: uppercase; letter-spacing: .1em; padding: 10px 14px 3px; font-weight: 700; flex-shrink: 0; border-top: 1px solid rgba(148,163,184,.12); margin-top: 4px; }
+    .sl { color: #cbd5e1; font-size: .67rem; text-transform: uppercase; letter-spacing: .12em; padding: 12px 14px 4px; font-weight: 700; flex-shrink: 0; border-top: 1px solid rgba(148,163,184,.15); margin-top: 6px; position:relative; }
+    .sl::after { content:''; display:block; width:24px; height:2px; background:linear-gradient(90deg,#3b82f6,transparent); border-radius:1px; margin-top:3px; }
     #sidebar-nav {
       overflow-y: auto; flex: 1 1 0; min-height: 0;
       scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.15) transparent;
@@ -179,22 +180,32 @@
     }
 
     /* ─── SMOOTH TRANSITIONS & HOVER EFFECTS ─── */
-    .card { transition: box-shadow .2s ease, transform .2s ease; }
-    .card:hover { box-shadow: 0 4px 16px rgba(0,0,0,.12); }
-    .stat-card { transition: transform .2s ease, box-shadow .2s ease; }
-    .stat-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,.15); }
+    .card { transition: box-shadow .25s ease, transform .25s ease; border: 1px solid rgba(0,0,0,.06); }
+    .card:hover { box-shadow: 0 8px 25px rgba(0,0,0,.1); transform: translateY(-1px); }
+    .stat-card { transition: transform .25s ease, box-shadow .25s ease; }
+    .stat-card:hover { transform: translateY(-3px); box-shadow: 0 12px 32px rgba(0,0,0,.18); }
+    .stat-card::after { content:''; position:absolute; inset:0; border-radius:13px; background:linear-gradient(135deg,rgba(255,255,255,.08) 0%,transparent 60%); pointer-events:none; }
     .sidebar .nav-link:hover { padding-left: 16px; }
     .sidebar .nav-link.active { padding-left: 16px; box-shadow: inset 3px 0 0 #60a5fa; }
     .btn:active { transform: scale(.97); }
     .table tbody tr { transition: background .15s ease; }
+    .table tbody tr:nth-child(even) { background: rgba(241,245,249,.6); }
+    .table tbody tr:hover { background: rgba(219,234,254,.35); }
+    body.dark-mode .table tbody tr:nth-child(even) { background: rgba(255,255,255,.03); }
+    body.dark-mode .table tbody tr:hover { background: rgba(255,255,255,.06); }
     .bdg { transition: transform .15s; }
     .bdg:hover { transform: scale(1.05); }
-    .dash-alert { transition: transform .15s ease; }
-    .dash-alert:hover { transform: translateX(3px); }
-    .socio-card { transition: border-color .2s, box-shadow .2s; }
-    .socio-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,.08); }
+    .dash-alert { transition: transform .15s ease, box-shadow .15s ease; }
+    .dash-alert:hover { transform: translateX(3px); box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+    .socio-card { transition: border-color .2s, box-shadow .2s, transform .2s; }
+    .socio-card:hover { box-shadow: 0 6px 18px rgba(0,0,0,.08); transform: translateY(-1px); }
     .gest-stat { transition: box-shadow .2s, transform .15s; }
-    .gest-stat:hover { box-shadow: 0 3px 10px rgba(0,0,0,.1); transform: translateY(-1px); }
+    .gest-stat:hover { box-shadow: 0 4px 14px rgba(0,0,0,.1); transform: translateY(-2px); }
+
+    /* ─── ENHANCED CARD ACCENTS ─── */
+    .card[style*="border-left"] { border-left-width: 4px !important; }
+    .page-hdr h4 { position:relative; padding-left:12px; }
+    .page-hdr h4::before { content:''; position:absolute; left:0; top:3px; bottom:3px; width:4px; background:linear-gradient(180deg,#E31E24,#F5C400); border-radius:2px; }
 
     /* ─── MOBILE ≤768px ─── */
     @media (max-width: 768px) {
@@ -346,10 +357,11 @@
     #search-results .sr-val { font-size:.78rem;font-weight:700;margin-left:auto;white-space:nowrap; }
     #search-results .sr-empty { text-align:center;padding:24px;color:#94a3b8;font-size:.82rem; }
     /* Alertas */
-    .dash-alert { display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;font-size:.75rem;font-weight:600;margin-bottom:4px; }
-    .dash-alert-danger { background:#fee2e2;color:#991b1b;border:1px solid #fecaca; }
-    .dash-alert-warning { background:#fef3c7;color:#92400e;border:1px solid #fde68a; }
-    .dash-alert-info { background:#dbeafe;color:#1e40af;border:1px solid #bfdbfe; }
+    .dash-alert { display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:10px;font-size:.78rem;font-weight:600;margin-bottom:5px;border-left:4px solid transparent; }
+    .dash-alert i { font-size:1.1rem; flex-shrink:0; }
+    .dash-alert-danger { background:linear-gradient(135deg,#fee2e2 0%,#fecaca 100%);color:#991b1b;border-color:#ef4444; }
+    .dash-alert-warning { background:linear-gradient(135deg,#fef3c7 0%,#fde68a 100%);color:#92400e;border-color:#f59e0b; }
+    .dash-alert-info { background:linear-gradient(135deg,#dbeafe 0%,#bfdbfe 100%);color:#1e40af;border-color:#3b82f6; }
     body.dark-mode #search-modal > div { background:#1e293b; }
     body.dark-mode #search-input { color:#e2e8f0; }
     body.dark-mode #search-results .sr-item:hover { background:#0f172a; }
@@ -1227,8 +1239,9 @@
   <div id="page-comisiones" class="page">
     <div class="page-hdr">
       <h4><i class="bi bi-percent me-2 text-teal" style="color:#0f766e"></i>Comisiones — Cuenta Corriente</h4>
-      <div class="d-flex gap-2">
+      <div class="d-flex gap-2 flex-wrap">
         <button class="btn btn-primary btn-sm" onclick="cargarComisionesSheet()"><i class="bi bi-arrow-clockwise me-1"></i>Refrescar</button>
+        <button class="btn btn-outline-danger btn-sm" onclick="comPdfSaldos()"><i class="bi bi-file-earmark-pdf me-1"></i>PDF Saldos</button>
         <small class="text-muted align-self-center" id="com-ultima-actualizacion"></small>
       </div>
     </div>
@@ -4635,6 +4648,207 @@ function renderComResumen() {
       </div>
     `;
   }).join('');
+}
+
+/* ═══════════════════════════════════════════
+   PDF COMISIONES — Saldos pendientes por empresa
+   Muestra solo facturas NO cobradas agrupadas por empresa
+═══════════════════════════════════════════ */
+async function comPdfSaldos() {
+  if (!ST.comisionesResumen || !ST.comisionesResumen.length) {
+    toast('Primero cargá los datos con "Refrescar"', 'warning'); return;
+  }
+
+  // Filter companies with pending balance
+  const pendientes = ST.comisionesResumen.filter(e => e.saldo > 0);
+  if (!pendientes.length) { toast('No hay empresas con saldo pendiente', 'info'); return; }
+
+  toast('Generando PDF de saldos...', 'info');
+
+  // Color palette matching app
+  const PDF_CLR = [
+    { bg:'#fffbeb', border:'#f59e0b', accent:'#92400e', hdr:'#fef3c7' },
+    { bg:'#eff6ff', border:'#3b82f6', accent:'#1e40af', hdr:'#dbeafe' },
+    { bg:'#fdf2f8', border:'#ec4899', accent:'#9d174d', hdr:'#fce7f3' },
+    { bg:'#ecfdf5', border:'#10b981', accent:'#065f46', hdr:'#d1fae5' },
+    { bg:'#f5f3ff', border:'#8b5cf6', accent:'#5b21b6', hdr:'#ede9fe' },
+    { bg:'#fff7ed', border:'#f97316', accent:'#9a3412', hdr:'#ffedd5' },
+    { bg:'#f0fdfa', border:'#14b8a6', accent:'#134e4a', hdr:'#ccfbf1' },
+    { bg:'#fef2f2', border:'#ef4444', accent:'#991b1b', hdr:'#fee2e2' }
+  ];
+
+  // Fetch detail for each pending company
+  const empresaDetails = [];
+  for (const emp of pendientes) {
+    const sheetTab = COM_SHEETS[emp.empresa] || COM_SHEETS['CC - ' + emp.empresa] || emp.empresa;
+    try {
+      const rows = await comFetchSheet(sheetTab);
+      if (rows.length < 2) { empresaDetails.push({ empresa: emp.empresa, saldo: emp.saldo, rows: [] }); continue; }
+
+      const headers = rows[0].map(h => (h||'').trim().toLowerCase());
+      if (headers[0] && headers[0].includes('comisiones:')) {
+        const m = headers[0].match(/\b(fecha\b.*)/i);
+        headers[0] = m ? m[1] : '';
+      }
+
+      const _fc = (kw) => headers.findIndex(h => h.length < 40 && kw.some(k => h.includes(k)));
+      const iFecha = _fc(['fecha']);
+      const iCliente = _fc(['cliente']);
+      const iFca = headers.findIndex(h => h === 'fca');
+      const iImporte = headers.findIndex(h => h.length < 40 && h.includes('importe') && !h.includes('sin') && !h.includes('s/i'));
+      const iSinIVA = _fc(['sin iva','sin imp','s/imp','s/iva']);
+      const iComision = _fc(['comisi']);
+      const iEstado = _fc(['estado','facturado']);
+      const iPagos = headers.findIndex(h => h.length < 40 && (h.includes('pagos') || h.includes('retiro')));
+      const iSaldo = _fc(['saldo']);
+
+      const detail = [];
+      for (let i = 1; i < rows.length; i++) {
+        const r = rows[i];
+        const cliente = iCliente >= 0 ? (r[iCliente]||'').trim() : '';
+        const fca = iFca >= 0 ? (r[iFca]||'').trim() : '';
+        const importe = iImporte >= 0 ? comParseMonto(r[iImporte]) : 0;
+        const sinIVA = iSinIVA >= 0 ? comParseMonto(r[iSinIVA]) : 0;
+        const comision = iComision >= 0 ? comParseMonto(r[iComision]) : 0;
+        const pagos = iPagos >= 0 ? comParseMonto(r[iPagos]) : 0;
+        const saldo = iSaldo >= 0 ? comParseMonto(r[iSaldo]) : 0;
+        const fecha = iFecha >= 0 ? (r[iFecha]||'').trim() : '';
+        const estado = iEstado >= 0 ? (r[iEstado]||'').trim().toLowerCase() : '';
+
+        if (!cliente && !fca && !importe && !comision) continue;
+
+        // Exclude fully paid rows (saldo 0 or estado contains "pagado"/"cobrado")
+        const isPaid = saldo === 0 || estado.includes('pagad') || estado.includes('cobrad');
+        if (isPaid) continue;
+
+        detail.push({ fecha, cliente, fca, importe, sinIVA, comision, pagos, saldo });
+      }
+      empresaDetails.push({ empresa: emp.empresa, saldo: emp.saldo, rows: detail });
+    } catch(e) {
+      empresaDetails.push({ empresa: emp.empresa, saldo: emp.saldo, rows: [] });
+    }
+  }
+
+  const grandTotal = empresaDetails.reduce((s,e) => s + e.saldo, 0);
+  const totalFacturas = empresaDetails.reduce((s,e) => s + e.rows.length, 0);
+  const hoyStr = new Date().toLocaleDateString('es-AR', { year:'numeric', month:'long', day:'numeric' });
+  const _f = n => n.toLocaleString('es-AR', { minimumFractionDigits:2, maximumFractionDigits:2 });
+
+  let html = `<!DOCTYPE html><html><head><meta charset="utf-8">
+<title>MUUK — Comisiones Pendientes</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<style>
+  @page { size:A4; margin:12mm 15mm; }
+  @media print { .no-print{display:none!important;} .emp-section{break-inside:avoid;} }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:'Segoe UI',system-ui,sans-serif; color:#1e293b; font-size:12px; line-height:1.4; }
+  .header { background:linear-gradient(135deg,#0f172a,#1e3a5f); color:#fff; padding:20px 28px; border-radius:12px; margin-bottom:16px; display:flex; justify-content:space-between; align-items:center; }
+  .logo-grid { display:grid; grid-template-columns:1fr 1fr; gap:3px; width:28px; height:28px; }
+  .logo-grid div { border-radius:2px; }
+  .summary-bar { display:flex; gap:16px; margin-bottom:18px; padding:14px 20px; background:#f8fafc; border-radius:10px; border:1px solid #e2e8f0; }
+  .summary-item { text-align:center; flex:1; }
+  .summary-item .val { font-size:18px; font-weight:800; color:#dc2626; }
+  .summary-item .lbl { font-size:10px; color:#64748b; text-transform:uppercase; letter-spacing:.05em; }
+  .emp-section { margin-bottom:14px; border-radius:10px; overflow:hidden; border:1px solid #e2e8f0; }
+  .emp-header { padding:10px 16px; display:flex; justify-content:space-between; align-items:center; }
+  .emp-header h3 { font-size:14px; font-weight:700; margin:0; }
+  .emp-header .saldo { font-size:14px; font-weight:800; }
+  table { width:100%; border-collapse:collapse; font-size:11px; }
+  th { background:#f8fafc; font-size:9px; text-transform:uppercase; letter-spacing:.06em; color:#64748b; font-weight:700; padding:6px 10px; text-align:left; border-bottom:2px solid #e2e8f0; }
+  th.num { text-align:right; }
+  td { padding:5px 10px; border-bottom:1px solid #f1f5f9; }
+  td.num { text-align:right; font-variant-numeric:tabular-nums; }
+  .row-alt { background:rgba(0,0,0,.015); }
+  .total-row td { font-weight:700; border-top:2px solid; padding:8px 10px; }
+  .grand-total { background:linear-gradient(135deg,#dc2626,#991b1b); color:#fff; padding:14px 20px; border-radius:10px; margin-top:18px; display:flex; justify-content:space-between; align-items:center; }
+  .grand-total .val { font-size:22px; font-weight:800; }
+  .grand-total .lbl { font-size:11px; opacity:.85; }
+  .footer { text-align:center; margin-top:16px; font-size:9px; color:#94a3b8; }
+  .print-btn { position:fixed; top:16px; right:16px; z-index:100; background:#dc2626; color:#fff; border:none; padding:10px 20px; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; box-shadow:0 4px 12px rgba(0,0,0,.2); }
+  .print-btn:hover { background:#b91c1c; }
+  .no-detail { padding:12px 16px; font-size:11px; color:#94a3b8; font-style:italic; }
+</style></head><body>
+<button class="print-btn no-print" onclick="window.print()"><i class="bi bi-printer me-1"></i>Imprimir PDF</button>
+
+<div class="header">
+  <div style="display:flex;align-items:center;gap:12px">
+    <div class="logo-grid"><div style="background:#E31E24"></div><div style="background:#F5C400"></div><div style="background:#F5C400"></div><div style="background:#E31E24"></div></div>
+    <div><div style="font-size:18px;font-weight:800;letter-spacing:-.5px">MUUK</div><div style="font-size:10px;opacity:.7">Comisiones a Cobrar — Saldos Pendientes</div></div>
+  </div>
+  <div style="text-align:right"><div style="font-size:11px;opacity:.8">${hoyStr}</div><div style="font-size:10px;opacity:.6">${empresaDetails.length} empresas · ${totalFacturas} facturas pendientes</div></div>
+</div>
+
+<div class="summary-bar">
+  <div class="summary-item"><div class="val">$${_f(grandTotal)}</div><div class="lbl">Total Pendiente</div></div>
+  <div class="summary-item"><div class="val" style="color:#1e40af">${empresaDetails.length}</div><div class="lbl">Empresas</div></div>
+  <div class="summary-item"><div class="val" style="color:#d97706">${totalFacturas}</div><div class="lbl">Facturas</div></div>
+</div>`;
+
+  empresaDetails.forEach((emp, idx) => {
+    const c = PDF_CLR[idx % PDF_CLR.length];
+    html += `<div class="emp-section" style="border-color:${c.border}">
+      <div class="emp-header" style="background:${c.hdr}">
+        <h3 style="color:${c.accent}"><i class="bi bi-building me-1"></i>${emp.empresa}</h3>
+        <div class="saldo" style="color:#dc2626">$${_f(emp.saldo)}</div>
+      </div>`;
+
+    if (emp.rows.length === 0) {
+      html += `<div class="no-detail">Sin detalle disponible — saldo según resumen general</div>`;
+    } else {
+      const hasCliente = emp.rows.some(r => r.cliente);
+      const hasComision = emp.rows.some(r => r.comision);
+      html += `<table>
+        <thead><tr>
+          <th>Fecha</th>
+          ${hasCliente ? '<th>Cliente</th>' : ''}
+          <th>Factura</th>
+          <th class="num">Importe</th>
+          ${hasComision ? '<th class="num">Comisión</th>' : ''}
+          <th class="num">Pagos</th>
+          <th class="num">Saldo</th>
+        </tr></thead><tbody>`;
+
+      let totImporte=0, totComision=0, totPagos=0, totSaldo=0;
+      emp.rows.forEach((r, ri) => {
+        totImporte += r.importe;
+        totComision += r.comision;
+        totPagos += r.pagos;
+        totSaldo += r.saldo;
+        const isNC = (r.fca||'').toLowerCase().includes('nc');
+        html += `<tr class="${ri%2?'row-alt':''}">
+          <td>${r.fecha}</td>
+          ${hasCliente ? `<td>${r.cliente}</td>` : ''}
+          <td>${r.fca}${isNC?' <span style="background:#dbeafe;color:#1e40af;font-size:8px;padding:1px 4px;border-radius:3px;font-weight:700">NC</span>':''}</td>
+          <td class="num">$${_f(r.importe)}</td>
+          ${hasComision ? `<td class="num" style="color:#d97706;font-weight:600">$${_f(r.comision)}</td>` : ''}
+          <td class="num" style="color:${r.pagos>0?'#16a34a':'#94a3b8'}">$${_f(r.pagos)}</td>
+          <td class="num" style="color:#dc2626;font-weight:700">$${_f(r.saldo)}</td>
+        </tr>`;
+      });
+
+      html += `<tr class="total-row" style="border-color:${c.border};background:${c.bg}">
+        <td colspan="${hasCliente?2:1}" style="color:${c.accent};font-weight:800">Subtotal — ${emp.empresa}</td>
+        <td></td>
+        <td class="num">$${_f(totImporte)}</td>
+        ${hasComision ? `<td class="num" style="color:#d97706">$${_f(totComision)}</td>` : ''}
+        <td class="num" style="color:#16a34a">$${_f(totPagos)}</td>
+        <td class="num" style="color:#dc2626;font-size:12px">$${_f(totSaldo)}</td>
+      </tr></tbody></table>`;
+    }
+    html += `</div>`;
+  });
+
+  html += `<div class="grand-total">
+    <div><div class="lbl">TOTAL PENDIENTE DE COBRO</div><div style="font-size:10px;opacity:.7">${empresaDetails.length} empresas · ${totalFacturas} facturas</div></div>
+    <div class="val">$${_f(grandTotal)}</div>
+  </div>
+  <div class="footer">MUUK SRL — Reporte generado el ${hoyStr} · Solo incluye facturas con saldo pendiente</div>
+</body></html>`;
+
+  const w = window.open('', '_blank');
+  w.document.write(html);
+  w.document.close();
+  toast('PDF de saldos generado', 'success');
 }
 
 // Load and show detail for a specific empresa
