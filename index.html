@@ -1861,6 +1861,95 @@ CREATE POLICY "acceso total" ON flujo_caja_versions FOR ALL USING (true) WITH CH
         <div class="mt-2 text-muted" style="font-size:.78rem"><i class="bi bi-info-circle me-1"></i>El backup se descarga como archivo <code>.json</code> — guardalo en Drive o una carpeta segura.</div>
       </div>
     </div>
+
+    <!-- WHATSAPP BOT -->
+    <div class="card">
+      <div class="card-header bg-white fw-bold"><i class="bi bi-whatsapp me-2" style="color:#25D366"></i>WhatsApp Bot</div>
+      <div class="card-body">
+        <div id="wa-bot-status" class="alert mb-3" style="font-size:.84rem"></div>
+        <script>
+          (() => {
+            const el = document.getElementById('wa-bot-status');
+            const ok = (typeof WA_BOT_CONFIG !== 'undefined') && WA_BOT_CONFIG.phoneId && WA_BOT_CONFIG.accessToken;
+            el.className = 'alert mb-3 ' + (ok ? 'alert-success' : 'alert-info');
+            el.innerHTML = ok
+              ? '<i class="bi bi-check-circle-fill me-2"></i><strong>Bot conectado</strong> — Phone ID: ' + WA_BOT_CONFIG.phoneId.substring(0,8) + '...'
+              : '<i class="bi bi-whatsapp me-2" style="color:#25D366"></i><strong>Bot disponible para configurar</strong> — Seguí los pasos de abajo para activar el bot de WhatsApp';
+          })();
+        </script>
+
+        <div class="accordion mb-3" id="waBotAccordion">
+          <div class="accordion-item border-0">
+            <h6 class="accordion-header">
+              <button class="accordion-button collapsed bg-light fw-bold" style="font-size:.84rem;border-radius:8px" type="button" data-bs-toggle="collapse" data-bs-target="#waBotInstructions">
+                <i class="bi bi-journal-text me-2"></i>Instrucciones de configuración (paso a paso)
+              </button>
+            </h6>
+            <div id="waBotInstructions" class="accordion-collapse collapse" data-bs-parent="#waBotAccordion">
+              <div class="accordion-body" style="font-size:.82rem">
+                <h6 class="fw-bold text-primary mb-2">Paso 1 — Crear app en Meta for Developers</h6>
+                <ol class="mb-3">
+                  <li>Andá a <a href="https://developers.facebook.com" target="_blank"><strong>developers.facebook.com</strong></a></li>
+                  <li>Iniciá sesión con tu cuenta de Facebook</li>
+                  <li>Hacé clic en <strong>"Mis apps"</strong> → <strong>"Crear app"</strong></li>
+                  <li>Seleccioná <strong>"Otro"</strong> como tipo → <strong>"Business"</strong> como categoría</li>
+                  <li>Nombre: <em>MUUK Bot</em> → clic en <strong>"Crear app"</strong></li>
+                </ol>
+
+                <h6 class="fw-bold text-primary mb-2">Paso 2 — Activar WhatsApp</h6>
+                <ol class="mb-3">
+                  <li>En el dashboard de la app, buscá <strong>"WhatsApp"</strong> y hacé clic en <strong>"Configurar"</strong></li>
+                  <li>Seleccioná o creá una cuenta Business</li>
+                  <li>Meta te da un <strong>número de prueba</strong> gratis (o podés vincular uno propio después)</li>
+                  <li>En <strong>WhatsApp → Configuración de la API</strong> copiá:
+                    <br>— <strong>Phone Number ID</strong> (número largo)
+                    <br>— <strong>Token de acceso temporal</strong> (empieza con <code>EAA...</code>)
+                  </li>
+                </ol>
+
+                <h6 class="fw-bold text-primary mb-2">Paso 3 — Deploy del webhook en Supabase</h6>
+                <ol class="mb-3">
+                  <li>Instalá el CLI de Supabase: <code>npm install -g supabase</code></li>
+                  <li>Logueate: <code>supabase login</code></li>
+                  <li>Descargá el archivo del bot (link abajo) y hacé deploy:
+                    <pre class="bg-light p-2 rounded mt-1" style="font-size:.75rem;overflow-x:auto">supabase functions deploy whatsapp-webhook --project-ref qvfmexkcyrvyidugnaoo</pre>
+                  </li>
+                  <li>Configurá las variables de entorno:
+                    <pre class="bg-light p-2 rounded mt-1" style="font-size:.75rem;overflow-x:auto">supabase secrets set WA_ACCESS_TOKEN=EAA... WA_PHONE_ID=123... WA_VERIFY_TOKEN=muuk-bot-verify-2026 --project-ref qvfmexkcyrvyidugnaoo</pre>
+                  </li>
+                </ol>
+
+                <h6 class="fw-bold text-primary mb-2">Paso 4 — Conectar el webhook a Meta</h6>
+                <ol class="mb-3">
+                  <li>La URL del webhook es:
+                    <pre class="bg-light p-2 rounded mt-1" style="font-size:.75rem">https://qvfmexkcyrvyidugnaoo.supabase.co/functions/v1/whatsapp-webhook</pre>
+                  </li>
+                  <li>En Meta → WhatsApp → <strong>Configuración</strong> → <strong>Webhooks</strong></li>
+                  <li>Hacé clic en <strong>"Editar"</strong> y pegá la URL del webhook</li>
+                  <li>Token de verificación: <code>muuk-bot-verify-2026</code></li>
+                  <li>Suscribite al campo: <strong>messages</strong></li>
+                  <li>¡Listo! Mandá "hola" al número del bot para probar</li>
+                </ol>
+
+                <div class="alert alert-success mb-2" style="font-size:.78rem">
+                  <i class="bi bi-lightbulb me-1"></i><strong>Comandos del bot:</strong> resumen, saldos, comisiones, cheques, vencimientos, facturas, km, semanal, debe [empresa]
+                </div>
+                <div class="alert alert-info mb-0" style="font-size:.78rem">
+                  <i class="bi bi-file-earmark-pdf me-1"></i><strong>Cargar facturas por PDF:</strong> Mandá un PDF de factura AFIP al bot. El bot lee el contenido, extrae los datos (tipo, N°, CUIT, importes) y te pregunta si es <em>a cobrar</em> o <em>a pagar</em>. Podés escribir "cobrar" o "pagar" como texto del archivo para saltear la pregunta.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="alert alert-light border" style="font-size:.78rem">
+          <i class="bi bi-info-circle me-1 text-primary"></i>
+          <strong>Gratis:</strong> WhatsApp Cloud API incluye 1.000 conversaciones/mes sin costo. El bot funciona las 24hs desde Supabase Edge Functions.
+        </div>
+
+      </div>
+    </div>
+
   </div>
 
 
@@ -8832,6 +8921,14 @@ const WA_API = {
   endpoint: '',  // URL del webhook (Twilio, Meta Cloud API, etc.)
   token: '',     // Auth token
   phoneNumberId: '' // ID del número Business
+};
+
+// WhatsApp Bot Configuration (completar después del setup en Meta)
+const WA_BOT_CONFIG = {
+  phoneId: '',       // Phone Number ID de Meta
+  accessToken: '',   // Token de acceso EAA...
+  webhookUrl: 'https://qvfmexkcyrvyidugnaoo.supabase.co/functions/v1/whatsapp-webhook',
+  verifyToken: 'muuk-bot-verify-2026'
 };
 
 function toggleWhatsAppPanel() {
