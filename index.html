@@ -1130,6 +1130,16 @@
       </div>
     </div>
 
+    <!-- Banner: lo que le debemos al cobrador -->
+    <div id="km-deuda-card" class="card mb-3 d-flex flex-row align-items-center justify-content-between px-3 py-2" style="border-radius:10px;border:2px solid #dc2626;background:#fef2f2;display:none!important">
+      <div>
+        <div style="font-size:.76rem;color:#991b1b;font-weight:700"><i class="bi bi-exclamation-circle-fill me-1"></i>DEUDA PENDIENTE — Le debemos al cobrador</div>
+        <div id="km-deuda-total" style="font-size:1.5rem;font-weight:900;color:#dc2626;line-height:1.2">$0</div>
+        <div id="km-deuda-desc" style="font-size:.72rem;color:#7f1d1d"></div>
+      </div>
+      <button class="btn btn-danger btn-sm ms-3" style="font-size:.8rem;white-space:nowrap" onclick="kmPagarMes()"><i class="bi bi-cash-coin me-1"></i>Pagar mes a Caja</button>
+    </div>
+
     <!-- Ajuste de tarifas -->
     <div class="card mb-3" style="border-radius:10px">
       <div class="card-header d-flex justify-content-between align-items-center" style="background:#f0f9ff;cursor:pointer;padding:10px 14px" onclick="document.getElementById('km-tarifas-body').classList.toggle('d-none')">
@@ -1153,8 +1163,6 @@
     <div class="d-flex gap-2 mb-3 align-items-center flex-wrap">
       <label style="font-size:.82rem;font-weight:600;color:#475569">Período:</label>
       <input type="month" class="form-control form-control-sm" id="km-filtro-mes" style="max-width:180px;border-radius:8px" onchange="kmRender()">
-      <button class="btn btn-sm btn-outline-secondary" style="font-size:.76rem" onclick="document.getElementById('km-filtro-mes').value='';kmRender()"><i class="bi bi-x-lg me-1"></i>Todos</button>
-      <button class="btn btn-sm btn-outline-success ms-auto" style="font-size:.76rem" onclick="kmPagarMes()"><i class="bi bi-cash-coin me-1"></i>Pagar mes a Caja</button>
     </div>
 
     <!-- Tabla registros -->
@@ -6564,8 +6572,12 @@ function parsearImporteAFIP(s) {
   return parseFloat(s) || 0;
 }
 
+// Cache de líneas e impuestos del último PDF parseado (se usa al guardar)
+let _factLineas = [];
+let _factImpuestos = [];
+
 function parsearFacturaAFIP(text) {
-  const d = { tipo:'', numero:'', fecha:'', cuit:'', razonSocial:'', neto:0, iva:21, ivaImporte:0, total:0 };
+  const d = { tipo:'', numero:'', fecha:'', cuit:'', razonSocial:'', neto:0, iva:21, ivaImporte:0, total:0, lineas:[], impuestos:[] };
 
   const tipoM = text.match(/Factura\s+([ABC])\b/i) || text.match(/FACTURA\s+([ABC])\b/i);
   if (tipoM) d.tipo = tipoM[1].toUpperCase();
@@ -6602,6 +6614,68 @@ function parsearFacturaAFIP(text) {
 
   if (!d.total && d.neto && d.ivaImporte) d.total = d.neto + d.ivaImporte;
   if (!d.neto  && d.total && d.ivaImporte) d.neto = d.total - d.ivaImporte;
+
+  // ── Extraer impuestos adicionales ──────────────────────────
+  const impuestos = [];
+  if (d.ivaImporte > 0) impuestos.push({ concepto: `IVA ${d.iva}%`, importe: d.ivaImporte });
+  // IVA 10.5%
+  const iva105Extra = text.match(/I\.?V\.?A\.?\s+10[.,]5\s*%[^\d]*([\d.,]+)/gi);
+  if (iva105Extra) iva105Extra.forEach(m => {
+    const v = m.match(/([\d.,]+)\s*$/); if(v) { const imp = parsearImporteAFIP(v[1]); if(imp>0 && imp!==d.ivaImporte) impuestos.push({concepto:'IVA 10.5%',importe:imp}); }
+  });
+  // Percepciones
+  const percPatterns = [
+    /Percepci[oó]n\s+(?:IVA|Nacional|AFIP)[^\d]*([\d.,]+)/gi,
+    /Percepci[oó]n\s+Ing\.?\s*Brutos?[^\d]*([\d.,]+)/gi,
+    /Ing\.?\s*Brutos?\s*(?:Percepci[oó]n)?[^\d]*([\d.,]+)/gi,
+    /Percepci[oó]n\s+(?:Prov\.?\s*)?(\w[\w\s]{2,20}?)[^\d]*([\d.,]+)/gi
+  ];
+  const percLabels = ['Percepción IVA/AFIP','Percepción Ing. Brutos','Ing. Brutos','Percepción Provincial'];
+  percPatterns.forEach((pat, i) => {
+    let m;
+    while ((m = pat.exec(text)) !== null) {
+      const imp = parsearImporteAFIP(m[m.length-1]);
+      if (imp > 0) impuestos.push({ concepto: percLabels[i], importe: imp });
+    }
+  });
+  d.impuestos = impuestos;
+
+  // ── Extraer líneas de productos/servicios ──────────────────
+  const lineas = [];
+  // Patrón AFIP: cantidad · descripción · precio unitario · importe
+  // Intentamos encontrar la sección "Detalle" o "Descripción" del PDF
+  const bloqueDetalle = text.match(/(?:Descripci[oó]n|Detalle|Concepto|Producto)[^\n]*\n([\s\S]*?)(?:Subtotal|Importe\s+Neto|Neto\s+Gravado|IVA)/i);
+  if (bloqueDetalle) {
+    const bloque = bloqueDetalle[1];
+    // Línea típica AFIP: descripción ... precio_unit ... importe
+    const reLinea = /^(.{4,60?}?)\s+([\d.,]+)\s+([\d.,]+)\s*$/gm;
+    let lm;
+    while ((lm = reLinea.exec(bloque)) !== null) {
+      const desc = lm[1].trim();
+      const precioUnit = parsearImporteAFIP(lm[2]);
+      const importe = parsearImporteAFIP(lm[3]);
+      if (desc && importe > 0) lineas.push({ desc, precioUnit, importe });
+    }
+  }
+  // Patrón alternativo: buscar filas con número + descripción + montos
+  if (lineas.length === 0) {
+    const reLinea2 = /(\d+(?:[.,]\d+)?)\s+([A-Za-záéíóúñÁÉÍÓÚÑ][^\n]{5,60}?)\s+([\d.,]+)\s+([\d.,]+)/g;
+    let lm2;
+    while ((lm2 = reLinea2.exec(text)) !== null) {
+      const cant = parsearImporteAFIP(lm2[1]);
+      const desc = lm2[2].trim();
+      const precioUnit = parsearImporteAFIP(lm2[3]);
+      const importe = parsearImporteAFIP(lm2[4]);
+      if (cant > 0 && importe > 0 && importe < d.total * 1.5) {
+        lineas.push({ cant, desc, precioUnit, importe });
+      }
+    }
+  }
+  d.lineas = lineas;
+
+  // Guardar en cache global para usarlo al guardar la factura
+  _factLineas = lineas;
+  _factImpuestos = impuestos;
 
   return d;
 }
@@ -6660,6 +6734,8 @@ function abrirModalFactura(cat, id) {
   const arr = cat === 'cobrar' ? (ST.facturasACobrar||[]) : (ST.facturasPagar||[]);
   const f   = id ? arr.find(x=>x.id===id) : null;
 
+  // Reset cache de líneas/impuestos al abrir modal
+  if (!id) { _factLineas = []; _factImpuestos = []; }
   document.getElementById('mf-id').value          = id || '';
   document.getElementById('mf-cat').value         = cat;
   document.getElementById('mf-cat-label').textContent = cat === 'cobrar' ? 'Cliente *' : 'Proveedor *';
@@ -6730,8 +6806,11 @@ function guardarFactura() {
     estado:     document.getElementById('mf-estado').value,
     chequeId:   document.getElementById('mf-chequeId').value,
     desc:       document.getElementById('mf-desc').value.trim(),
-    pdfNombre:  document.getElementById('mf-pdf-nombre').textContent || ''
+    pdfNombre:  document.getElementById('mf-pdf-nombre').textContent || '',
+    lineas:     _factLineas.length > 0 ? _factLineas : (id ? (arr.find(f=>f.id===id)?.lineas || []) : []),
+    impuestos:  _factImpuestos.length > 0 ? _factImpuestos : (id ? (arr.find(f=>f.id===id)?.impuestos || []) : [])
   };
+  _factLineas = []; _factImpuestos = [];
 
   const idx = arr.findIndex(f=>f.id===id);
   if (idx >= 0) arr[idx] = obj; else arr.push(obj);
@@ -6820,39 +6899,91 @@ function _setEl(id, val) { const el=document.getElementById(id); if(el) el.textC
 
 function _tablaFacturas(list, cat) {
   const lbl = cat==='cobrar' ? 'Cliente' : 'Proveedor';
+  const rows = list.map(f=>{
+    const dv = f.fechaVenc ? dHasta(f.fechaVenc) : null;
+    const vTag = dv!==null && f.estado==='pendiente'
+      ? dv<0  ? `<span class="bdg bg-danger text-white ms-1">Vencida</span>`
+      : dv<=3 ? `<span class="bdg bg-warning text-dark ms-1">${dv}d</span>` : '' : '';
+    const badges = {
+      pendiente:`<span class="bdg bg-warning text-dark">Pendiente</span>`,
+      cobrada:`<span class="bdg bg-success text-white">Cobrada</span>`,
+      pagada:`<span class="bdg bg-success text-white">Pagada</span>`,
+      vencida:`<span class="bdg bg-danger text-white">Vencida</span>`
+    };
+    const tieneDetalle = (f.lineas&&f.lineas.length>0) || (f.impuestos&&f.impuestos.length>0);
+    const detId = `fdet-${f.id}`;
+
+    // Fila principal
+    let mainRow = `<tr>
+      <td>${fmtF(f.fecha)}</td>
+      <td><strong>${f.tipo||''} ${f.numero||'—'}</strong></td>
+      <td>${f.cliente||'—'}<br><small class="text-muted">${f.cuit||''}</small></td>
+      <td>${f.fechaVenc?fmtF(f.fechaVenc):'—'}${vTag}</td>
+      <td>${fmt(f.neto)}</td>
+      <td>${fmt(f.ivaImporte)}<small class="text-muted ms-1">${f.iva}%</small></td>
+      <td><strong>${fmt(f.total)}</strong></td>
+      <td>${badges[f.estado]||f.estado}${f.fechaPago?`<br><small class="text-muted">${fmtF(f.fechaPago)}</small>`:''}</td>
+      <td>
+        ${tieneDetalle ? `<button class="btn btn-a btn-outline-info me-1" onclick="_toggleDetFac('${detId}')" title="Ver detalle"><i class="bi bi-list-ul"></i></button>` : ''}
+        <button class="btn btn-a btn-outline-primary me-1" onclick="abrirModalFactura('${cat}','${f.id}')"><i class="bi bi-pencil"></i></button>
+        <button class="btn btn-a btn-outline-danger" onclick="eliminarFactura('${cat}','${f.id}')"><i class="bi bi-trash"></i></button>
+      </td>
+    </tr>`;
+
+    // Fila de detalle (colapsable)
+    if (tieneDetalle) {
+      let detHtml = `<tr id="${detId}" style="display:none;background:#f8fafc"><td colspan="9" style="padding:0">
+        <div style="padding:10px 16px;border-top:2px solid #0ea5e9">`;
+
+      // Líneas de productos
+      if (f.lineas && f.lineas.length > 0) {
+        detHtml += `<div style="font-size:.78rem;font-weight:700;color:#0369a1;margin-bottom:6px"><i class="bi bi-box-seam me-1"></i>Detalle de productos / servicios</div>
+        <table class="table table-sm mb-3" style="font-size:.8rem">
+          <thead style="background:#e0f2fe"><tr><th>Descripción</th>${f.lineas[0]?.cant!==undefined?'<th class="text-end">Cant.</th>':''}<th class="text-end">P. Unit.</th><th class="text-end">Importe</th></tr></thead>
+          <tbody>
+          ${f.lineas.map(l=>`<tr>
+            <td>${l.desc}</td>
+            ${l.cant!==undefined?`<td class="text-end">${l.cant.toLocaleString('es-AR')}</td>`:''}
+            <td class="text-end">${l.precioUnit>0?fmt(l.precioUnit):'—'}</td>
+            <td class="text-end"><strong>${fmt(l.importe)}</strong></td>
+          </tr>`).join('')}
+          </tbody>
+        </table>`;
+      }
+
+      // Impuestos
+      if (f.impuestos && f.impuestos.length > 0) {
+        detHtml += `<div style="font-size:.78rem;font-weight:700;color:#7c3aed;margin-bottom:6px"><i class="bi bi-receipt me-1"></i>Impuestos y alícuotas</div>
+        <table class="table table-sm mb-2" style="font-size:.8rem;max-width:340px">
+          <thead style="background:#ede9fe"><tr><th>Concepto</th><th class="text-end">Importe</th></tr></thead>
+          <tbody>
+          ${f.impuestos.map(i=>`<tr><td>${i.concepto}</td><td class="text-end"><strong>${fmt(i.importe)}</strong></td></tr>`).join('')}
+          <tr style="border-top:2px solid #7c3aed;font-weight:700;background:#f5f3ff">
+            <td>TOTAL</td><td class="text-end">${fmt(f.total)}</td>
+          </tr>
+          </tbody>
+        </table>`;
+      }
+
+      detHtml += `</div></td></tr>`;
+      mainRow += detHtml;
+    }
+    return mainRow;
+  }).join('');
+
   return `<div class="table-responsive"><table class="table table-hover mb-0">
     <thead><tr>
       <th>Fecha</th><th>N° Factura</th><th>${lbl}</th>
       <th>Vencimiento</th><th>Neto</th><th>IVA</th><th>Total</th>
       <th>Estado</th><th></th>
     </tr></thead><tbody>
-    ${list.map(f=>{
-      const dv = f.fechaVenc ? dHasta(f.fechaVenc) : null;
-      const vTag = dv!==null && f.estado==='pendiente'
-        ? dv<0  ? `<span class="bdg bg-danger text-white ms-1">Vencida</span>`
-        : dv<=3 ? `<span class="bdg bg-warning text-dark ms-1">${dv}d</span>` : '' : '';
-      const badges = {
-        pendiente:`<span class="bdg bg-warning text-dark">Pendiente</span>`,
-        cobrada:`<span class="bdg bg-success text-white">Cobrada</span>`,
-        pagada:`<span class="bdg bg-success text-white">Pagada</span>`,
-        vencida:`<span class="bdg bg-danger text-white">Vencida</span>`
-      };
-      return `<tr>
-        <td>${fmtF(f.fecha)}</td>
-        <td><strong>${f.tipo||''} ${f.numero||'—'}</strong></td>
-        <td>${f.cliente||'—'}<br><small class="text-muted">${f.cuit||''}</small></td>
-        <td>${f.fechaVenc?fmtF(f.fechaVenc):'—'}${vTag}</td>
-        <td>${fmt(f.neto)}</td>
-        <td>${fmt(f.ivaImporte)}<small class="text-muted ms-1">${f.iva}%</small></td>
-        <td><strong>${fmt(f.total)}</strong></td>
-        <td>${badges[f.estado]||f.estado}${f.fechaPago?`<br><small class="text-muted">${fmtF(f.fechaPago)}</small>`:''}</td>
-        <td>
-          <button class="btn btn-a btn-outline-primary me-1" onclick="abrirModalFactura('${cat}','${f.id}')"><i class="bi bi-pencil"></i></button>
-          <button class="btn btn-a btn-outline-danger" onclick="eliminarFactura('${cat}','${f.id}')"><i class="bi bi-trash"></i></button>
-        </td>
-      </tr>`;
-    }).join('')}
+    ${rows}
     </tbody></table></div>`;
+}
+
+function _toggleDetFac(id) {
+  const el = document.getElementById(id);
+  if (el) el.style.display = el.style.display === 'none' ? 'table-row' : 'none';
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -7903,13 +8034,25 @@ function kmRender() {
   const hoyDate = hoy();
   const yr = parseInt(hoyDate.substring(0,4));
 
-  // Filter records by month
+  // Filter records by month — default to current month if no filter set
   const filtroMes = document.getElementById('km-filtro-mes');
-  const mesFilter = filtroMes ? filtroMes.value : '';
+  if (filtroMes && !filtroMes.value) filtroMes.value = hoyDate.substring(0, 7);
+  const mesFilter = filtroMes ? filtroMes.value : hoyDate.substring(0, 7);
   let registros = (ST.kilometraje || []).slice().sort((a,b) => b.fecha.localeCompare(a.fecha));
   if (mesFilter) {
     registros = registros.filter(r => r.fecha.substring(0,7) === mesFilter);
   }
+
+  // Deuda total (todos los meses sin pagar)
+  const todoPendiente = (ST.kilometraje || []).filter(r => !r.pagado);
+  const deudaTotal = todoPendiente.reduce((s,r) => s + r.monto, 0);
+  const deudaKm = todoPendiente.reduce((s,r) => s + r.km, 0);
+  const elDeudaCard = document.getElementById('km-deuda-card');
+  const elDeudaTotal = document.getElementById('km-deuda-total');
+  const elDeudaDesc = document.getElementById('km-deuda-desc');
+  if (elDeudaCard) elDeudaCard.style.display = deudaTotal > 0 ? 'flex' : 'none';
+  if (elDeudaTotal) elDeudaTotal.textContent = fmt(deudaTotal);
+  if (elDeudaDesc) elDeudaDesc.textContent = deudaKm.toLocaleString('es-AR') + ' km sin pagar en total';
 
   // Current month stats
   const mesActual = hoyDate.substring(0,7);
@@ -7990,6 +8133,7 @@ function kmRender() {
         <td style="padding:6px 10px;color:#64748b;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${(r.obs||'').replace(/"/g,'&quot;')}">${r.obs || '-'}</td>
         <td style="padding:6px 10px">
           <div class="d-flex gap-1">
+            ${!r.pagado ? `<button class="btn btn-sm btn-outline-success" style="font-size:.58rem;padding:1px 5px" onclick="kmPagarRegistro('${r.id}')" title="Pagar este registro"><i class="bi bi-cash-coin"></i></button>` : ''}
             <button class="btn btn-sm btn-outline-primary" style="font-size:.58rem;padding:1px 5px" onclick="kmEditar('${r.id}')" title="Editar"><i class="bi bi-pencil"></i></button>
             <button class="btn btn-sm btn-outline-danger" style="font-size:.58rem;padding:1px 5px" onclick="kmEliminar('${r.id}')" title="Eliminar"><i class="bi bi-trash"></i></button>
           </div>
@@ -8081,6 +8225,30 @@ function kmGuardar() {
 }
 
 function kmEditar(id) { kmAbrir(id); }
+
+function kmPagarRegistro(id) {
+  const r = (ST.kilometraje || []).find(x => x.id === id);
+  if (!r || r.pagado) return;
+  if (!confirm(`¿Registrar pago en Caja Efectivo?\n\n${fmtF(r.fecha)} — ${r.km.toLocaleString('es-AR')} km\nMonto: ${fmt(r.monto)}\n\nSe creará un egreso en Caja Efectivo.`)) return;
+  const pagoId = uid();
+  ST.cajaEfectivo.push({
+    id: pagoId,
+    fecha: hoy(),
+    monto: r.monto,
+    concepto: 'Kilometraje',
+    socioId: '',
+    banco: '',
+    tipo: 'egreso',
+    desc: `Kilometraje cobrador — ${fmtF(r.fecha)} (${r.km.toLocaleString('es-AR')} km)`
+  });
+  r.pagado = true;
+  r.pagoId = pagoId;
+  save();
+  kmRender();
+  renderMovimientos('cajaEfectivo');
+  renderDashboard();
+  toast('Pago registrado: ' + fmt(r.monto), 'success');
+}
 
 function kmEliminar(id) {
   if (!confirm('¿Eliminar este registro de kilometraje?')) return;
