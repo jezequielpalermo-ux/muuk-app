@@ -550,13 +550,16 @@
         <i class="bi bi-file-earmark-spreadsheet" style="font-size:.85rem"></i>
       </button>
     </div>
-    <!-- Fila 2: Backup + Restaurar -->
+    <!-- Fila 2: Backup + Restaurar + Forzar Supabase -->
     <div style="display:flex;gap:4px">
-      <button class="sb-btn sb-backup flex-fill" onclick="exportarBackupJSON()" title="Descargar backup JSON">
+      <button class="sb-btn sb-backup" style="flex:1" onclick="exportarBackupJSON()" title="Descargar backup JSON">
         <i class="bi bi-download"></i>Backup
       </button>
-      <button class="sb-btn sb-restore flex-fill" onclick="importarBackupJSON()" title="Restaurar desde backup JSON">
+      <button class="sb-btn sb-restore" style="flex:1" onclick="importarBackupJSON()" title="Restaurar desde backup JSON">
         <i class="bi bi-upload"></i>Restaurar
+      </button>
+      <button class="sb-btn" style="flex:1;color:#fcd34d;border-color:rgba(251,191,36,.3);background:rgba(251,191,36,.07)" onclick="forceRestoreFromSupabase()" title="Forzar restauración completa desde Supabase">
+        <i class="bi bi-cloud-arrow-down"></i>↺ Nube
       </button>
     </div>
     <!-- Usuario + Cerrar sesión -->
@@ -3169,6 +3172,39 @@ async function pullRemoto(silent) {
     setSyncStatus('ok', 'Sincronizado');
   } catch(e) {
     setSyncStatus('error', 'Sin conexión con la base de datos');
+  }
+}
+
+// Fuerza una restauración completa desde Supabase ignorando el timestamp local
+async function forceRestoreFromSupabase() {
+  if (!sbReady()) { toast('Supabase no configurado', 'warning'); return; }
+  setSyncStatus('syncing', 'Restaurando desde Supabase...');
+  try {
+    const res = await fetch(
+      SB_URL + '/rest/v1/' + SB_TABLE + '?id=eq.' + SB_ROW_ID + '&select=data,updated_at,updated_by',
+      { headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY }, cache: 'no-store' }
+    );
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const rows = await res.json();
+    if (!rows || !rows.length) { toast('No hay datos en Supabase', 'warning'); return; }
+    const remote = rows[0];
+    if (!remote.data) { toast('Datos vacíos en Supabase', 'warning'); return; }
+    // Forzar restauración ignorando timestamp
+    Object.assign(ST, remote.data);
+    ST._syncTs = Date.now(); // actualizar timestamp local
+    if (!Array.isArray(ST.kilometraje)) ST.kilometraje = [];
+    if (!Array.isArray(ST.kmTarifas) || !ST.kmTarifas.length) {
+      ST.kmTarifas = [{ id:'kmt_base', desde:'2025-04-01', valor:1200, motivo:'Tarifa inicial acordada' }];
+    }
+    localStorage.setItem('flujoCajaV3', JSON.stringify(ST));
+    reRenderActivo();
+    renderDashboard();
+    const kmCount = ST.kilometraje.length;
+    setSyncStatus('ok', 'Restaurado ✓');
+    toast(`✅ Restaurado desde Supabase — ${kmCount} registros de km recuperados`, 'success');
+  } catch(e) {
+    setSyncStatus('error', 'Error al restaurar');
+    toast('Error al conectar con Supabase: ' + e.message, 'danger');
   }
 }
 
