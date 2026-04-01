@@ -1270,6 +1270,26 @@
       </div>
     </div>
 
+    <!-- Filtros -->
+    <div class="card p-2 mb-3" style="background:#f8fafc;border:1px solid #e2e8f0">
+      <div class="d-flex gap-2 flex-wrap align-items-center">
+        <div class="position-relative" style="flex:1;min-width:160px;max-width:280px">
+          <i class="bi bi-search position-absolute" style="left:9px;top:50%;transform:translateY(-50%);color:#94a3b8;font-size:.78rem"></i>
+          <input type="text" id="com-fil-buscar" class="form-control form-control-sm ps-4"
+            placeholder="Buscar empresa..." oninput="renderComResumen()" style="font-size:.8rem">
+        </div>
+        <select id="com-fil-estado" class="form-select form-select-sm" style="max-width:150px;font-size:.8rem" onchange="renderComResumen()">
+          <option value="">Todos los estados</option>
+          <option value="pendiente">Con saldo pendiente</option>
+          <option value="aldía">Al día (saldo $0)</option>
+        </select>
+        <button class="btn btn-sm btn-outline-secondary" style="font-size:.75rem;padding:3px 10px" onclick="document.getElementById('com-fil-buscar').value='';document.getElementById('com-fil-estado').value='';renderComResumen()">
+          <i class="bi bi-x-circle me-1"></i>Limpiar
+        </button>
+        <small id="com-fil-count" class="text-muted ms-auto" style="font-size:.72rem"></small>
+      </div>
+    </div>
+
     <!-- Grid de empresas (resumen) -->
     <div id="com-resumen-grid" class="row g-3 mb-4"></div>
 
@@ -2165,6 +2185,7 @@ CREATE POLICY "acceso total" ON flujo_caja_versions FOR ALL USING (true) WITH CH
                     <th class="text-end" id="gest-th-fac">Facturado</th>
                     <th class="text-end" id="gest-th-siv">Sin IVA</th>
                     <th class="text-end pe-3">Comisión</th>
+                    <th class="text-end pe-2" title="% Comisión sobre facturación sin IVA">% Com</th>
                   </tr>
                 </thead>
                 <tbody id="gest-tbody-mensual"></tbody>
@@ -2188,6 +2209,24 @@ CREATE POLICY "acceso total" ON flujo_caja_versions FOR ALL USING (true) WITH CH
         <div style="height:150px;position:relative">
           <canvas id="gest-chart-facturado"></canvas>
         </div>
+      </div>
+
+      <!-- YTD / YTY / MvM -->
+      <div id="gest-ytd-section" class="mt-2" style="display:none">
+        <div class="d-flex align-items-center gap-2 mb-1">
+          <span style="font-size:.7rem;font-weight:700;color:#0f172a"><i class="bi bi-calendar-range me-1 text-primary"></i>Comparativas</span>
+          <small class="text-muted" style="font-size:.65rem" id="gest-ytd-label"></small>
+        </div>
+        <div class="row g-1" id="gest-ytd-cards"></div>
+      </div>
+
+      <!-- Proyección mes en curso -->
+      <div id="gest-proyeccion-section" class="mt-2" style="display:none">
+        <div class="d-flex align-items-center gap-2 mb-1">
+          <span style="font-size:.7rem;font-weight:700;color:#0f172a"><i class="bi bi-graph-up me-1" style="color:#7c3aed"></i>Proyección mes en curso</span>
+          <small class="text-muted" style="font-size:.65rem" id="gest-proy-label"></small>
+        </div>
+        <div class="row g-1" id="gest-proy-cards"></div>
       </div>
 
       <div id="gest-cards-mensual" style="display:none"></div>
@@ -2795,15 +2834,33 @@ function fmt(n) {
    Fuente 2: bluelytics.com.ar (oficial + blue)
    Fuente 3: argentinadatos.com (array completo)
 ═══════════════════════════════════════════════════ */
-/* ── CORS proxy (api.bcra.gob.ar no tiene cabeceras CORS — se usa proxy) ── */
-const _CP = 'https://api.allorigins.win/raw?url=';
-function _purl(u) { return _CP + encodeURIComponent(u); }
+/* ── CORS proxies (api.bcra.gob.ar no tiene cabeceras CORS — se usa proxy) ── */
+const _PROXIES = [
+  u => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(u),
+  u => 'https://corsproxy.io/?' + encodeURIComponent(u),
+  u => 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(u)
+];
+let _proxyIdx = 0; // proxy activo (rota si falla)
+function _purl(u) { return _PROXIES[_proxyIdx % _PROXIES.length](u); }
+
+// BCRA base URLs — versionadas
+const _BCRA = {
+  deudores:     'https://api.bcra.gob.ar/centraldedeudores/v1.0',
+  cheques:      'https://api.bcra.gob.ar/cheques/v1.0',
+  cotizaciones: 'https://api.bcra.gob.ar/estadisticascambiarias/v1.0',
+  estadisticas: 'https://api.bcra.gob.ar/estadisticas/v3.0/monetarias'  // v3.0 activo; v4.0 como fallback
+};
+const _BCRA_STATS_FALLBACKS = [
+  'https://api.bcra.gob.ar/estadisticas/v3.0/monetarias',
+  'https://api.bcra.gob.ar/estadisticas/v2.0/monetarias',
+  'https://api.bcra.gob.ar/estadisticas/v1.0/monetarias'
+];
 
 let _tasasCache = null;    // caché en memoria
 let _tasasCacheTs = 0;     // timestamp del caché
 const _TASAS_TTL = 180000; // refrescar cada 3 min
 
-async function _fetchConTimeout(url, ms) {
+async function _fetchConTimeout(url, ms = 12000) {
   const ctrl = new AbortController();
   const tid = setTimeout(() => ctrl.abort(), ms);
   try {
@@ -2812,6 +2869,25 @@ async function _fetchConTimeout(url, ms) {
     if (!r.ok) throw new Error('HTTP ' + r.status);
     return await r.json();
   } catch(e) { clearTimeout(tid); throw e; }
+}
+
+// Fetch con retry de proxies
+async function _bcraFetch(bcraUrl, ms = 12000) {
+  let lastErr;
+  for (let i = 0; i < _PROXIES.length; i++) {
+    try {
+      const proxyUrl = _PROXIES[(_proxyIdx + i) % _PROXIES.length](bcraUrl);
+      const ctrl = new AbortController();
+      const tid = setTimeout(() => ctrl.abort(), ms);
+      const r = await fetch(proxyUrl, { cache: 'no-store', signal: ctrl.signal });
+      clearTimeout(tid);
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const data = await r.json();
+      _proxyIdx = (_proxyIdx + i) % _PROXIES.length; // usar este proxy en futuras llamadas
+      return data;
+    } catch(e) { lastErr = e; }
+  }
+  throw lastErr;
 }
 
 async function _fetchTasas() {
@@ -3350,6 +3426,28 @@ function renderAlertas() {
     </div>`);
   }
 
+  // ── Facturas próximas a vencer (7 días) ──
+  const en7dias = (ST.facturasACobrar||[]).filter(f => f.estado==='pendiente' && f.fechaVenc && dHasta(f.fechaVenc)>0 && dHasta(f.fechaVenc)<=7);
+  if (en7dias.length > 0) {
+    const tot = en7dias.reduce((s,f)=>s+ +f.total,0);
+    alertas.push(`<div class="alert alert-info py-2 mb-2 d-flex align-items-center" style="font-size:.85rem">
+      <i class="bi bi-calendar-event me-2" style="font-size:1.1rem"></i>
+      <div><strong>${en7dias.length} factura${en7dias.length>1?'s':''} a cobrar vence${en7dias.length>1?'n':''} en los próximos 7 días:</strong> ${fmt(tot)}</div>
+    </div>`);
+  }
+
+  // ── Comisiones pendientes significativas ──
+  if (ST.comisionesTotal && ST.comisionesTotal > 0) {
+    const empPend = (ST.comisionesResumen||[]).filter(e=>e.saldo>0).length;
+    if (empPend > 0) {
+      alertas.push(`<div class="alert alert-warning py-2 mb-2 d-flex align-items-center justify-content-between" style="font-size:.85rem">
+        <div><i class="bi bi-percent me-2" style="font-size:1.1rem"></i>
+        <strong>Comisiones pendientes de cobro:</strong> ${fmt(ST.comisionesTotal)} en ${empPend} empresa${empPend>1?'s':''}</div>
+        <button class="btn btn-sm btn-outline-warning ms-2" style="font-size:.73rem;padding:2px 8px;border-radius:6px;white-space:nowrap" onclick="irA('comisiones')">Ver <i class="bi bi-arrow-right"></i></button>
+      </div>`);
+    }
+  }
+
   el.innerHTML = alertas.join('');
 }
 
@@ -3624,26 +3722,25 @@ async function bcraConsultarDeudas() {
   
   try {
     // Consultar deudas
-    const r = await fetch(_purl('https://api.bcra.gob.ar/centraldedeudores/v1.0/Deudas/' + cuit));
+    let deudaData;
+    try {
+      deudaData = await _bcraFetch(_BCRA.deudores + '/Deudas/' + cuit);
+    } catch(e) {
+      if (e.message && e.message.includes('404')) {
+        result.innerHTML = '<div class="alert alert-success"><i class="bi bi-check-circle-fill me-2"></i><strong>Sin deudas registradas.</strong> El CUIT ' + cuit + ' no tiene deudas informadas en el BCRA.</div>';
+        loading.style.display = 'none'; return;
+      }
+      throw e;
+    }
+    const r = { ok: true, json: () => Promise.resolve(deudaData), status: 200 };
 
     // Consultar cheques rechazados
     let chqRech = null;
     try {
-      const r2 = await fetch(_purl('https://api.bcra.gob.ar/centraldedeudores/v1.0/Deudas/' + cuit + '/ChequeRechazados'));
-      if (r2.ok) chqRech = await r2.json();
+      chqRech = await _bcraFetch(_BCRA.deudores + '/Deudas/' + cuit + '/ChequeRechazados');
     } catch(e) {}
     
-    if (!r.ok) {
-      if (r.status === 404) {
-        result.innerHTML = '<div class="alert alert-success"><i class="bi bi-check-circle-fill me-2"></i><strong>Sin deudas registradas.</strong> El CUIT ' + cuit + ' no tiene deudas informadas en el BCRA.</div>';
-      } else {
-        result.innerHTML = '<div class="alert alert-danger"><i class="bi bi-exclamation-triangle me-2"></i>Error al consultar: HTTP ' + r.status + '</div>';
-      }
-      loading.style.display = 'none';
-      return;
-    }
-    
-    const data = await r.json();
+    const data = deudaData;
     const res = data.results;
     const periodo = res.periodos && res.periodos[0];
     
@@ -3724,9 +3821,16 @@ async function bcraConsultarCheque() {
   result.innerHTML = '';
   
   try {
-    const url = _purl('https://api.bcra.gob.ar/cheques/v1.0/denunciados/' + entidad + '/' + (sucursal||'0') + '/' + numero);
-    const r = await fetch(url);
-    
+    let chqData;
+    let chqStatus = 200;
+    try {
+      chqData = await _bcraFetch(_BCRA.cheques + '/denunciados/' + entidad + '/' + (sucursal||'0') + '/' + numero);
+    } catch(e) {
+      if (e.message && e.message.includes('404')) { chqStatus = 404; }
+      else throw e;
+    }
+    const r = { status: chqStatus, ok: chqStatus < 400, json: () => Promise.resolve(chqData), text: () => Promise.resolve('') };
+
     if (r.status === 404) {
       result.innerHTML = '<div class="alert alert-success" style="font-size:1rem">' +
         '<i class="bi bi-shield-check me-2" style="font-size:1.3rem"></i>' +
@@ -3758,9 +3862,7 @@ async function bcraCargarCotizaciones() {
   result.innerHTML = '';
   
   try {
-    const r = await fetch(_purl('https://api.bcra.gob.ar/estadisticascambiarias/v1.0/Cotizaciones'));
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    const data = await r.json();
+    const data = await _bcraFetch(_BCRA.cotizaciones + '/Cotizaciones');
     const det = data.results.detalle.filter(m => m.tipoCotizacion > 0);
     det.sort((a,b) => b.tipoCotizacion - a.tipoCotizacion);
     
@@ -3832,12 +3934,24 @@ async function bcraCargarVariables() {
   try {
     const hoy = new Date().toISOString().slice(0,10);
     const hace60 = new Date(Date.now() - 60*86400000).toISOString().slice(0,10);
-    const base = 'https://api.bcra.gob.ar/estadisticas/v4.0/monetarias/';
+    // Usar v3.0 activo; probar v2.0 como fallback si v3.0 falla
+    let base = 'https://api.bcra.gob.ar/estadisticas/v3.0/monetarias/';
+    try {
+      await _bcraFetch(base + BCRA_VARS_KEY[0].id + '?desde=' + hoy + '&hasta=' + hoy + '&limit=1&offset=0', 6000);
+    } catch(e) {
+      // v3.0 falló — intentar v2.0
+      try {
+        base = 'https://api.bcra.gob.ar/estadisticas/v2.0/monetarias/';
+        await _bcraFetch(base + BCRA_VARS_KEY[0].id + '?desde=' + hoy + '&hasta=' + hoy + '&limit=1&offset=0', 6000);
+      } catch(e2) {
+        base = 'https://api.bcra.gob.ar/estadisticas/v1.0/monetarias/';
+      }
+    }
 
     // Fetch all key variables in parallel (last 30 data points each for sparklines)
     const fetches = BCRA_VARS_KEY.map(v =>
-      _fetchConTimeout(_purl(base + v.id + '?desde=' + hace60 + '&hasta=' + hoy + '&limit=30&offset=0'), 10000)
-        .then(d => ({ ...v, data: d.results?.[0]?.detalle || [] }))
+      _bcraFetch(base + v.id + '?desde=' + hace60 + '&hasta=' + hoy + '&limit=30&offset=0', 10000)
+        .then(d => ({ ...v, data: d.results?.[0]?.detalle || d.results || [] }))
         .catch(() => ({ ...v, data: [] }))
     );
     const vars = await Promise.all(fetches);
@@ -4743,17 +4857,34 @@ function renderComResumen() {
   }
   
   if (empty) empty.style.display = 'none';
-  
+
   // Render total bar
   if (totalEl) totalEl.textContent = fmt(ST.comisionesTotal || 0);
-  if (empCount) empCount.innerHTML = `<div class="text-muted">${ST.comisionesResumen.length} ${ST.comisionesResumen.length === 1 ? 'empresa' : 'empresas'}</div>`;
-  
+
   // Update timestamp
   const tsEl = document.getElementById('com-ultima-actualizacion');
   if (tsEl) tsEl.textContent = ST.comisionesTimestamp ? `Actualizado: ${ST.comisionesTimestamp}` : '';
-  
+
+  // ── Aplicar filtros ──
+  const filBuscar = (document.getElementById('com-fil-buscar')?.value || '').toLowerCase().trim();
+  const filEstado = document.getElementById('com-fil-estado')?.value || '';
+  const filtrados = ST.comisionesResumen.filter(item => {
+    if (filBuscar && !item.empresa.toLowerCase().includes(filBuscar)) return false;
+    if (filEstado === 'pendiente' && item.saldo <= 0) return false;
+    if (filEstado === 'aldía'    && item.saldo >  0) return false;
+    return true;
+  });
+  const countEl = document.getElementById('com-fil-count');
+  if (countEl) countEl.textContent = filtrados.length + ' de ' + ST.comisionesResumen.length + ' empresas';
+  if (empCount) empCount.innerHTML = `<div class="text-muted">${filtrados.length} ${filtrados.length === 1 ? 'empresa' : 'empresas'}</div>`;
+
+  if (filtrados.length === 0) {
+    grid.innerHTML = `<div class="col-12"><div class="empty-state"><i class="bi bi-funnel"></i>Sin resultados para el filtro aplicado.</div></div>`;
+    return;
+  }
+
   // Build cards grid
-  grid.innerHTML = ST.comisionesResumen.map(item => {
+  grid.innerHTML = filtrados.map(item => {
     // Buscar pestaña: primero por nombre exacto, luego por match parcial
     let sheetTab = COM_SHEETS[item.empresa] || COM_SHEETS['CC - ' + item.empresa] || item.empresa;
     const isZero = item.saldo === 0;
@@ -6604,8 +6735,44 @@ async function extraerTextoPDF(file) {
 
 function parsearImporteAFIP(s) {
   if (!s) return 0;
-  s = s.trim().replace(/\./g,'').replace(',','.');
-  return parseFloat(s) || 0;
+  s = String(s).trim();
+  // Detectar formato argentino: puntos como miles, coma como decimal → "1.234.567,89"
+  // vs formato con coma como miles: "1,234,567.89" (Mas Nutricion y otros)
+  const tienePuntoYComa = /\d\.\d{3},\d/.test(s);      // formato AR: 1.234,56
+  const tieneComa3Punto = /\d,\d{3}\.\d/.test(s);       // formato US: 1,234.56
+  const soloConteoComas = (s.match(/,/g)||[]).length;    // cantidad de comas
+  const soloPuntos      = (s.match(/\./g)||[]).length;   // cantidad de puntos
+
+  if (tienePuntoYComa) {
+    // Formato AR: separador de miles = punto, decimal = coma
+    return parseFloat(s.replace(/\./g,'').replace(',','.')) || 0;
+  }
+  if (tieneComa3Punto) {
+    // Formato US: separador de miles = coma, decimal = punto
+    return parseFloat(s.replace(/,/g,'')) || 0;
+  }
+  if (soloConteoComas === 1 && !soloPuntos) {
+    // Solo una coma, sin puntos → podría ser decimal AR ("1234,56") o miles con coma
+    const partes = s.split(',');
+    if (partes[1] && partes[1].length <= 2) {
+      // decimal AR (< 3 dígitos después de la coma)
+      return parseFloat(s.replace(',','.')) || 0;
+    } else if (partes[1] && partes[1].length === 3) {
+      // miles con coma ("1,234") → eliminar coma
+      return parseFloat(s.replace(',','')) || 0;
+    }
+    return parseFloat(s.replace(',','.')) || 0;
+  }
+  if (soloConteoComas > 1) {
+    // Múltiples comas → separador de miles (estilo US: 1,234,567)
+    return parseFloat(s.replace(/,/g,'')) || 0;
+  }
+  // Solo puntos: si hay múltiples → separador de miles (1.234.567)
+  if (soloPuntos > 1) {
+    return parseFloat(s.replace(/\./g,'')) || 0;
+  }
+  // Un solo punto → decimal normal
+  return parseFloat(s.replace(/\./g,'').replace(',','.')) || 0;
 }
 
 // Cache de líneas e impuestos del último PDF parseado (se usa al guardar)
@@ -6613,104 +6780,172 @@ let _factLineas = [];
 let _factImpuestos = [];
 
 function parsearFacturaAFIP(text) {
-  const d = { tipo:'', numero:'', fecha:'', cuit:'', razonSocial:'', neto:0, iva:21, ivaImporte:0, total:0, lineas:[], impuestos:[] };
+  const d = { tipo:'', numero:'', fecha:'', cuit:'', razonSocial:'', emisor:'', neto:0, iva:21, ivaImporte:0, total:0, lineas:[], impuestos:[] };
 
-  const tipoM = text.match(/Factura\s+([ABC])\b/i) || text.match(/FACTURA\s+([ABC])\b/i);
+  // ── Tipo factura ──────────────────────────────────────────
+  const tipoM = text.match(/(?:Factura|FACTURA|Nota\s+de\s+Cr[eé]dito|Nota\s+de\s+D[eé]bito)\s*[:\-]?\s*([ABCM])\b/i)
+             || text.match(/Comp\.\s*([ABCM])\b/i);
   if (tipoM) d.tipo = tipoM[1].toUpperCase();
 
-  const numM = text.match(/(\d{4}[-–]\d{8})/) || text.match(/Comp\.?\s*Nro\.?\s*:?\s*0*(\d[\d\-]+)/i);
+  // ── Número comprobante ────────────────────────────────────
+  const numM = text.match(/(\d{4,5}[-–]\d{7,8})\b/)
+            || text.match(/Comp(?:robante)?\.?\s*(?:Nro|N[°º])\.?\s*:?\s*0*([\d]{1,5}[-–][\d]{7,8})/i)
+            || text.match(/N[°º]\s*:?\s*0+(\d[\d\-]+)/i);
   if (numM) d.numero = numM[1].trim();
 
-  const fechaM = text.match(/Fecha\s+de\s+Emisi[oó]n\s*:?\s*(\d{2}[\/\-]\d{2}[\/\-]\d{4})/i)
-              || text.match(/(\d{2}[\/\-]\d{2}[\/\-]\d{4})/);
-  if (fechaM) {
-    const p = fechaM[1].split(/[\/\-]/);
-    if (p.length === 3) d.fecha = `${p[2].length===4?p[2]:'20'+p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`;
+  // ── Fecha de emisión — formatos múltiples ─────────────────
+  const fechaPatterns = [
+    /Fecha\s+(?:de\s+)?Emisi[oó]n\s*:?\s*(\d{2}[\/\-]\d{2}[\/\-]\d{4})/i,
+    /Fecha\s*:?\s*(\d{2}[\/\-]\d{2}[\/\-]\d{4})/i,
+    /Emisi[oó]n\s*:?\s*(\d{2}[\/\-]\d{2}[\/\-]\d{4})/i,
+    /(\d{2}[\/\-]\d{2}[\/\-]\d{4})/                   // último recurso: primera fecha del texto
+  ];
+  for (const pat of fechaPatterns) {
+    const m = text.match(pat);
+    if (m) {
+      const p = m[1].split(/[\/\-]/);
+      if (p.length === 3) {
+        const yy = p[2].length === 4 ? p[2] : '20'+p[2];
+        d.fecha = `${yy}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`;
+      }
+      break;
+    }
   }
 
-  const cuitM = text.match(/C\.?U\.?I\.?T\.?\s*:?\s*(\d{2}[-\s]\d{8}[-\s]\d)/i);
-  if (cuitM) d.cuit = cuitM[1].replace(/\s/g,'');
+  // ── CUIT del emisor ───────────────────────────────────────
+  // AFIP muestra el CUIT del emisor primero, luego el del receptor
+  const cuitAll = [...text.matchAll(/C\.?U\.?I\.?T\.?\s*:?\s*(\d{2}[-\s]\d{8}[-\s]\d)/gi)];
+  if (cuitAll.length > 0) d.cuit = cuitAll[0][1].replace(/[\s]/g,'');
 
-  const rsM = text.match(/Raz[oó]n\s+Social\s*:?\s*([^\n\r]+)/i);
-  if (rsM) d.razonSocial = rsM[1].trim().substring(0, 80);
+  // ── Razón Social del EMISOR ───────────────────────────────
+  // Buscar primero "Razón Social:" antes del primer CUIT/antes de "Receptor"
+  const rsPatterns = [
+    /Raz[oó]n\s+Social\s*:?\s*([^\n\r]{3,80})/i,
+    /Emisor\s*:?\s*([^\n\r]{3,80})/i,
+    /^([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑa-záéíóúñ\s\.\,\-&]+(?:S\.?A\.?|S\.?R\.?L\.?|S\.?A\.?S\.?|S\.?C\.?|Ltda\.?)?)\s*\n/m
+  ];
+  for (const pat of rsPatterns) {
+    const m = text.match(pat);
+    if (m) {
+      const rs = m[1].trim().replace(/\s+/g,' ');
+      if (rs.length >= 3 && rs.length <= 100) { d.razonSocial = rs; break; }
+    }
+  }
+  // Si no se encontró mediante razón social, usar el nombre del emisor del bloque AFIP
+  if (!d.razonSocial) {
+    // AFIP PDF típico: el nombre de la empresa está en la primera línea o antes del CUIT
+    const primerCuitPos = text.search(/C\.?U\.?I\.?T\.?\s*:?\s*\d/i);
+    if (primerCuitPos > 0) {
+      const antes = text.slice(0, primerCuitPos).trim();
+      const lineas = antes.split('\n').map(l=>l.trim()).filter(l=>l.length>2);
+      if (lineas.length > 0) d.razonSocial = lineas[lineas.length-1].substring(0,80);
+    }
+  }
 
-  const netoM = text.match(/Importe\s+Neto\s+Gravado\s*\$?\s*([\d.,]+)/i)
-             || text.match(/Neto\s+Gravado\s*:?\s*\$?\s*([\d.,]+)/i);
+  // ── Importe Neto ──────────────────────────────────────────
+  const netoM = text.match(/Importe\s+Neto\s+Gravado\s*:?\s*\$?\s*([\d.,]+)/i)
+             || text.match(/Neto\s+Gravado\s*:?\s*\$?\s*([\d.,]+)/i)
+             || text.match(/Base\s+Imponible\s*:?\s*\$?\s*([\d.,]+)/i)
+             || text.match(/Subtotal\s+Neto\s*:?\s*\$?\s*([\d.,]+)/i);
   if (netoM) d.neto = parsearImporteAFIP(netoM[1]);
 
-  const iva21M = text.match(/I\.?V\.?A\.?\s+21\s*%[^\d]*([\d.,]+)/i);
-  if (iva21M) { d.iva = 21; d.ivaImporte = parsearImporteAFIP(iva21M[1]); }
+  // ── IVA ───────────────────────────────────────────────────
+  const iva21M = text.match(/I\.?V\.?A\.?\s+21\s*%\s*:?\s*\$?\s*([\d.,]+)/i);
+  const iva10M = text.match(/I\.?V\.?A\.?\s+10[.,]5\s*%\s*:?\s*\$?\s*([\d.,]+)/i);
+  const iva27M = text.match(/I\.?V\.?A\.?\s+27\s*%\s*:?\s*\$?\s*([\d.,]+)/i);
+  if (iva21M) { d.iva = 21;   d.ivaImporte = parsearImporteAFIP(iva21M[1]); }
+  else if (iva10M) { d.iva = 10.5; d.ivaImporte = parsearImporteAFIP(iva10M[1]); }
+  else if (iva27M) { d.iva = 27;   d.ivaImporte = parsearImporteAFIP(iva27M[1]); }
 
-  const iva10M = text.match(/I\.?V\.?A\.?\s+10[.,]5\s*%[^\d]*([\d.,]+)/i);
-  if (iva10M && !iva21M) { d.iva = 10.5; d.ivaImporte = parsearImporteAFIP(iva10M[1]); }
-
+  // ── Total ─────────────────────────────────────────────────
   const totM = text.match(/Importe\s+Total\s*:?\s*\$?\s*([\d.,]+)/i)
-            || text.match(/Total\s*:?\s*\$?\s*([\d.,]+)/i);
+            || text.match(/Total\s+Factura\s*:?\s*\$?\s*([\d.,]+)/i)
+            || text.match(/Total\s+a\s+(?:Pagar|Cobrar)\s*:?\s*\$?\s*([\d.,]+)/i)
+            || text.match(/\bTotal\b\s*:?\s*\$?\s*([\d.,]+)/i);
   if (totM) d.total = parsearImporteAFIP(totM[1]);
 
   if (!d.total && d.neto && d.ivaImporte) d.total = d.neto + d.ivaImporte;
   if (!d.neto  && d.total && d.ivaImporte) d.neto = d.total - d.ivaImporte;
 
-  // ── Extraer impuestos adicionales ──────────────────────────
+  // ── Impuestos detallados ──────────────────────────────────
   const impuestos = [];
   if (d.ivaImporte > 0) impuestos.push({ concepto: `IVA ${d.iva}%`, importe: d.ivaImporte });
-  // IVA 10.5%
-  const iva105Extra = text.match(/I\.?V\.?A\.?\s+10[.,]5\s*%[^\d]*([\d.,]+)/gi);
-  if (iva105Extra) iva105Extra.forEach(m => {
-    const v = m.match(/([\d.,]+)\s*$/); if(v) { const imp = parsearImporteAFIP(v[1]); if(imp>0 && imp!==d.ivaImporte) impuestos.push({concepto:'IVA 10.5%',importe:imp}); }
-  });
-  // Percepciones
-  const percPatterns = [
-    /Percepci[oó]n\s+(?:IVA|Nacional|AFIP)[^\d]*([\d.,]+)/gi,
-    /Percepci[oó]n\s+Ing\.?\s*Brutos?[^\d]*([\d.,]+)/gi,
-    /Ing\.?\s*Brutos?\s*(?:Percepci[oó]n)?[^\d]*([\d.,]+)/gi,
-    /Percepci[oó]n\s+(?:Prov\.?\s*)?(\w[\w\s]{2,20}?)[^\d]*([\d.,]+)/gi
+
+  // Múltiples alícuotas de IVA en la misma factura
+  if (iva21M && iva10M) impuestos.push({ concepto: 'IVA 10.5%', importe: parsearImporteAFIP(iva10M[1]) });
+  if (iva27M && (iva21M || iva10M)) impuestos.push({ concepto: 'IVA 27%', importe: parsearImporteAFIP(iva27M[1]) });
+
+  // Percepciones (patrones amplios)
+  const percRegexes = [
+    { re: /Percepci[oó]n\s+(?:de\s+)?(?:IVA|AFIP|Nacional)\s*:?\s*\$?\s*([\d.,]+)/gi, label: 'Percepción IVA/AFIP' },
+    { re: /Percepci[oó]n\s+(?:de\s+)?Ing(?:resos?)?\.?\s*Brutos?\s*:?\s*\$?\s*([\d.,]+)/gi, label: 'Percepción IIBB' },
+    { re: /Ing(?:resos?)?\.?\s*Brutos?\s*(?:\(?\s*Percepci[oó]n\s*\)?)?\s*:?\s*\$?\s*([\d.,]+)/gi, label: 'Ingresos Brutos' },
+    { re: /Percepci[oó]n\s+(?:Prov(?:incial)?\.?\s+)?([A-Z][a-záéíóúñ]+(?:\s+[A-Z][a-záéíóúñ]+)?)\s*:?\s*\$?\s*([\d.,]+)/gi, label: 'Percepción Provincial' },
+    { re: /Sello(?:s)?\s*:?\s*\$?\s*([\d.,]+)/gi, label: 'Sellos' },
+    { re: /Retenci[oó]n\s+(?:IVA|IIBB|Ganancias?)\s*:?\s*\$?\s*([\d.,]+)/gi, label: 'Retención' },
+    { re: /Otros\s+Tributos?\s*:?\s*\$?\s*([\d.,]+)/gi, label: 'Otros Tributos' }
   ];
-  const percLabels = ['Percepción IVA/AFIP','Percepción Ing. Brutos','Ing. Brutos','Percepción Provincial'];
-  percPatterns.forEach((pat, i) => {
+  const seenImps = new Set([d.ivaImporte]);
+  percRegexes.forEach(({ re, label }) => {
     let m;
-    while ((m = pat.exec(text)) !== null) {
-      const imp = parsearImporteAFIP(m[m.length-1]);
-      if (imp > 0) impuestos.push({ concepto: percLabels[i], importe: imp });
+    while ((m = re.exec(text)) !== null) {
+      const rawVal = m[m.length-1]; // último grupo capturado
+      const imp = parsearImporteAFIP(rawVal);
+      if (imp > 0 && !seenImps.has(imp)) {
+        seenImps.add(imp);
+        impuestos.push({ concepto: label, importe: imp });
+      }
     }
   });
   d.impuestos = impuestos;
 
-  // ── Extraer líneas de productos/servicios ──────────────────
+  // ── Líneas de productos/servicios ────────────────────────
   const lineas = [];
-  // Patrón AFIP: cantidad · descripción · precio unitario · importe
-  // Intentamos encontrar la sección "Detalle" o "Descripción" del PDF
-  const bloqueDetalle = text.match(/(?:Descripci[oó]n|Detalle|Concepto|Producto)[^\n]*\n([\s\S]*?)(?:Subtotal|Importe\s+Neto|Neto\s+Gravado|IVA)/i);
+  // Buscar bloque de detalle entre encabezado de tabla y subtotales
+  const bloqueDetalle = text.match(/(?:Descripci[oó]n|Detalle(?:\s+del\s+concepto)?|Concepto|Producto(?:s)?|Servicio(?:s)?)[^\n]*\n([\s\S]*?)(?:Subtotal|Importe\s+Neto|Neto\s+Gravado|IVA\s|Total\b)/i);
   if (bloqueDetalle) {
     const bloque = bloqueDetalle[1];
-    // Línea típica AFIP: descripción ... precio_unit ... importe
-    const reLinea = /^(.{4,60?}?)\s+([\d.,]+)\s+([\d.,]+)\s*$/gm;
+    // Intentar: descripción / precio unit / cantidad / importe
+    const reLinea = /^(.{4,80}?)\s{2,}([\d.,]+)\s{1,}([\d.,]+)\s*$/gm;
     let lm;
     while ((lm = reLinea.exec(bloque)) !== null) {
       const desc = lm[1].trim();
-      const precioUnit = parsearImporteAFIP(lm[2]);
-      const importe = parsearImporteAFIP(lm[3]);
-      if (desc && importe > 0) lineas.push({ desc, precioUnit, importe });
+      if (desc.length < 3) continue;
+      const v1 = parsearImporteAFIP(lm[2]);
+      const v2 = parsearImporteAFIP(lm[3]);
+      if (v2 > 0) lineas.push({ desc, precioUnit: v1, importe: v2 });
     }
   }
-  // Patrón alternativo: buscar filas con número + descripción + montos
+  // Patrón alternativo AFIP: cant / código / descripción / precio_unit / % bonif / importe
   if (lineas.length === 0) {
-    const reLinea2 = /(\d+(?:[.,]\d+)?)\s+([A-Za-záéíóúñÁÉÍÓÚÑ][^\n]{5,60}?)\s+([\d.,]+)\s+([\d.,]+)/g;
+    const re2 = /(\d+(?:[.,]\d+)?)\s+([A-Za-záéíóúñÁÉÍÓÚÑ\(\)][^\n]{4,70}?)\s{2,}([\d.,]+)\s{1,}([\d.,]+)\s*(?:\n|$)/g;
     let lm2;
-    while ((lm2 = reLinea2.exec(text)) !== null) {
+    while ((lm2 = re2.exec(text)) !== null) {
       const cant = parsearImporteAFIP(lm2[1]);
       const desc = lm2[2].trim();
       const precioUnit = parsearImporteAFIP(lm2[3]);
       const importe = parsearImporteAFIP(lm2[4]);
-      if (cant > 0 && importe > 0 && importe < d.total * 1.5) {
+      if (cant >= 0 && importe > 0 && (!d.total || importe <= d.total * 1.1)) {
         lineas.push({ cant, desc, precioUnit, importe });
       }
     }
   }
-  d.lineas = lineas;
+  // Último recurso: una línea con descripción libre + importe al final
+  if (lineas.length === 0) {
+    const re3 = /([A-Za-záéíóúñÁÉÍÓÚÑ][^\n]{8,80}?)\s{3,}([\d.,]+)\s*(?:\n|$)/g;
+    let lm3;
+    while ((lm3 = re3.exec(text)) !== null) {
+      const desc = lm3[1].trim();
+      const importe = parsearImporteAFIP(lm3[2]);
+      if (importe > 0 && importe < (d.total || Infinity) * 1.1 && desc.length >= 5) {
+        lineas.push({ desc, importe });
+      }
+    }
+  }
+  d.lineas = lineas.slice(0, 30); // máximo 30 líneas
 
-  // Guardar en cache global para usarlo al guardar la factura
-  _factLineas = lineas;
+  // ── Cache global ──────────────────────────────────────────
+  _factLineas = d.lineas;
   _factImpuestos = impuestos;
 
   return d;
@@ -7296,15 +7531,16 @@ function renderGestion() {
     const totCom = d.byMes.reduce((s,m)=>s+m[4],0);
     const totOps = d.byMes.reduce((s,m)=>s+m[1],0);
     const _iva = GESTION_SHOW_SIN_IVA;
+    const pctRent = totSiv > 0 ? (totCom / totSiv * 100).toFixed(1) : '0.0';
     const stats = [
       { icon:'bi-receipt', color: _iva?'#0891b2':'#1d4ed8', bg: _iva?'#ecfeff':'#eff6ff', label: _iva?'Sin IVA Total':'Facturado Total', val:fmt(_iva?totSiv:totFac) },
       { icon: _iva?'bi-receipt':'bi-file-minus', color: _iva?'#64748b':'#0891b2', bg: _iva?'#f1f5f9':'#ecfeff', label: _iva?'Facturado (c/IVA)':'Sin IVA Total', val:fmt(_iva?totFac:totSiv) },
       { icon:'bi-graph-up-arrow', color:'#16a34a', bg:'#f0fdf4', label:'Comisiones Total', val:fmt(totCom) },
-      { icon:'bi-receipt-cutoff', color:'#d97706', bg:'#fffbeb', label:'Operaciones', val:totOps + ' ops' }
+      { icon:'bi-percent', color:'#d97706', bg:'#fffbeb', label:'Rentabilidad s/SinIVA', val: pctRent + '%', title:'Comisión / Facturación sin IVA' }
     ];
     totEl.innerHTML = stats.map(s => `
       <div class="col-6 col-xl-3">
-        <div class="gest-stat" style="border-left-color:${s.color}">
+        <div class="gest-stat" style="border-left-color:${s.color}" ${s.title?`title="${s.title}"`:''}>
           <div class="gest-stat-icon" style="background:${s.bg};color:${s.color}"><i class="bi ${s.icon}"></i></div>
           <div>
             <div class="gest-stat-lbl">${s.label}</div>
@@ -7323,12 +7559,14 @@ function renderGestion() {
       totOps+=cnt; totFac2+=fac; totSiv2+=siv; totCom2+=com;
       const bg = COLORS[i % COLORS.length];
       const facShow = GESTION_SHOW_SIN_IVA ? siv : fac;
+      const pctCom = siv > 0 ? (com / siv * 100).toFixed(1) + '%' : '–';
       return `<tr>
-        <td class="ps-3"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${bg};margin-right:6px"></span>${mes.replace(' 2026','')}</td>
+        <td class="ps-3"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${bg};margin-right:6px"></span>${mes.replace(' 2026','').replace(' 2025','')}</td>
         <td class="text-end">${cnt}</td>
         <td class="text-end">${fmt(facShow)}</td>
         <td class="text-end" style="opacity:${GESTION_SHOW_SIN_IVA?'.5':'1'}">${fmt(GESTION_SHOW_SIN_IVA?fac:siv)}</td>
         <td class="text-end pe-3 text-success fw-bold">${fmt(com)}</td>
+        <td class="text-end pe-2"><small style="color:#d97706;font-weight:600">${pctCom}</small></td>
       </tr>`;
     }).join('') + `<tr class="table-dark fw-bold">
       <td class="ps-3">TOTAL</td>
@@ -7336,6 +7574,7 @@ function renderGestion() {
       <td class="text-end">${fmt(GESTION_SHOW_SIN_IVA?totSiv2:totFac2)}</td>
       <td class="text-end" style="opacity:${GESTION_SHOW_SIN_IVA?'.5':'1'}">${fmt(GESTION_SHOW_SIN_IVA?totFac2:totSiv2)}</td>
       <td class="text-end pe-3 text-success">${fmt(totCom2)}</td>
+      <td class="text-end pe-2"><small style="color:#d97706;font-weight:700">${totSiv2>0?(totCom2/totSiv2*100).toFixed(1)+'%':'–'}</small></td>
     </tr>`;
   }
 
@@ -7421,6 +7660,175 @@ function renderGestion() {
   if (filEmp) { filEmp.innerHTML = '<option value="">Todas las empresas</option>'; d.empresas.forEach(e => { const o = document.createElement('option'); o.value = e[0]; o.textContent = e[0]; filEmp.appendChild(o); }); }
   _renderDetalleTabla(d.rows);
   _addGestionDeltas();
+  _renderGestionYTD(d);
+  _renderGestionProyeccion(d);
+}
+
+function _renderGestionYTD(d) {
+  const sec = document.getElementById('gest-ytd-section');
+  const cardsEl = document.getElementById('gest-ytd-cards');
+  const lblEl = document.getElementById('gest-ytd-label');
+  if (!sec || !cardsEl || !d.byMes || d.byMes.length === 0) return;
+
+  const now = new Date();
+  const mesActual = now.getMonth() + 1; // 1-12
+  const añoActual = now.getFullYear();
+
+  // YTD: acumular meses hasta el mes en curso
+  const MESES_ES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  let ytdFac=0, ytdSiv=0, ytdCom=0, ytdOps=0;
+  let mesAnteriorData = null;
+  let mesActualData = null;
+
+  d.byMes.forEach(m => {
+    const nombreMes = m[0]; // e.g. "Enero 2026"
+    const mIdx = MESES_ES.findIndex(mn => nombreMes.toLowerCase().startsWith(mn.toLowerCase()));
+    if (mIdx < 0) return;
+    const mesNum = mIdx + 1;
+    // Solo acumular meses del año actual hasta el mes en curso
+    const esteAño = nombreMes.includes(String(añoActual));
+    if (esteAño && mesNum <= mesActual) {
+      ytdFac += m[2]; ytdSiv += m[3]; ytdCom += m[4]; ytdOps += m[1];
+      if (mesNum === mesActual) mesActualData = m;
+      if (mesNum === mesActual - 1) mesAnteriorData = m;
+    }
+  });
+
+  if (ytdFac === 0 && ytdCom === 0) { sec.style.display = 'none'; return; }
+  sec.style.display = '';
+
+  const mesNombre = MESES_ES[mesActual - 1];
+  if (lblEl) lblEl.textContent = `YTD hasta ${mesNombre} ${añoActual}`;
+
+  // MvM
+  const mvmFac = (mesActualData && mesAnteriorData && mesAnteriorData[2])
+    ? ((mesActualData[2] - mesAnteriorData[2]) / mesAnteriorData[2] * 100)
+    : null;
+  const mvmCom = (mesActualData && mesAnteriorData && mesAnteriorData[4])
+    ? ((mesActualData[4] - mesAnteriorData[4]) / mesAnteriorData[4] * 100)
+    : null;
+
+  const _pct = (v, positiveGood=true) => {
+    if (v === null) return '<small style="color:#94a3b8">–</small>';
+    const up = v >= 0;
+    const color = positiveGood ? (up?'#16a34a':'#dc2626') : (up?'#dc2626':'#16a34a');
+    return `<small style="color:${color};font-weight:700">${up?'▲':'▼'} ${Math.abs(v).toFixed(1)}%</small>`;
+  };
+
+  const ytdPctRent = ytdSiv > 0 ? (ytdCom / ytdSiv * 100).toFixed(1) + '%' : '–';
+
+  const cards = [
+    { icon:'bi-calendar-check', color:'#1d4ed8', bg:'#eff6ff',
+      label:`YTD Facturado (${añoActual})`, val: fmt(GESTION_SHOW_SIN_IVA ? ytdSiv : ytdFac),
+      sub: '', tip:'Acumulado año en curso' },
+    { icon:'bi-graph-up-arrow', color:'#16a34a', bg:'#f0fdf4',
+      label:`YTD Comisiones (${añoActual})`, val: fmt(ytdCom),
+      sub: `Rentab.: <b style="color:#d97706">${ytdPctRent}</b>`, tip:'Comisión acumulada año en curso' },
+    { icon:'bi-arrow-left-right', color:'#7c3aed', bg:'#f5f3ff',
+      label:`MvM — ${mesNombre} vs ${mesAnteriorData ? MESES_ES[mesActual-2] : 'mes ant.'}`,
+      val: mesActualData ? fmt(GESTION_SHOW_SIN_IVA ? mesActualData[3] : mesActualData[2]) : '–',
+      sub: _pct(mvmFac), tip:'Variación mensual de facturación' },
+    { icon:'bi-cash-coin', color:'#0891b2', bg:'#ecfeff',
+      label:'Com. MvM',
+      val: mesActualData ? fmt(mesActualData[4]) : '–',
+      sub: _pct(mvmCom), tip:'Variación mensual de comisión' }
+  ];
+
+  cardsEl.innerHTML = cards.map(c => `
+    <div class="col-6 col-xl-3">
+      <div class="gest-stat" style="border-left-color:${c.color};padding:7px 10px" title="${c.tip}">
+        <div class="gest-stat-icon" style="background:${c.bg};color:${c.color};width:28px;height:28px;font-size:.85rem">
+          <i class="bi ${c.icon}"></i>
+        </div>
+        <div style="min-width:0">
+          <div class="gest-stat-lbl" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.label}</div>
+          <div class="gest-stat-val gest-num" style="font-size:.82rem">${c.val}</div>
+          ${c.sub ? `<div style="font-size:.65rem;margin-top:1px">${c.sub}</div>` : ''}
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+function _renderGestionProyeccion(d) {
+  const sec = document.getElementById('gest-proyeccion-section');
+  const cardsEl = document.getElementById('gest-proy-cards');
+  const lblEl = document.getElementById('gest-proy-label');
+  if (!sec || !cardsEl || !d.byMes || d.byMes.length === 0) return;
+
+  const now = new Date();
+  const diaActual = now.getDate();
+  const diasMes = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
+  const fraccionMes = diaActual / diasMes;
+  if (fraccionMes >= 1) { sec.style.display = 'none'; return; }
+
+  const MESES_ES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const mesActual = now.getMonth() + 1;
+  const añoActual = now.getFullYear();
+
+  // Encontrar datos del mes en curso
+  const datosMesActual = d.byMes.find(m => {
+    const mIdx = MESES_ES.findIndex(mn => m[0].toLowerCase().startsWith(mn.toLowerCase()));
+    return mIdx >= 0 && (mIdx+1) === mesActual && m[0].includes(String(añoActual));
+  });
+
+  if (!datosMesActual || datosMesActual[4] === 0) { sec.style.display = 'none'; return; }
+
+  sec.style.display = '';
+  const [mes, ops, fac, siv, com] = datosMesActual;
+  const mesNombre = MESES_ES[mesActual-1];
+
+  // Proyección lineal al ritmo actual
+  const proyFac = fac / fraccionMes;
+  const proySiv = siv / fraccionMes;
+  const proyCom = com / fraccionMes;
+  const proyOps = Math.round(ops / fraccionMes);
+  const pctRent = proySiv > 0 ? (proyCom / proySiv * 100).toFixed(1) + '%' : '–';
+  const diasRestantes = diasMes - diaActual;
+  const comFaltante = proyCom - com;
+
+  if (lblEl) lblEl.textContent = `Día ${diaActual}/${diasMes} (${Math.round(fraccionMes*100)}% del mes) — ${diasRestantes} días restantes`;
+
+  cardsEl.innerHTML = `
+    <div class="col-6 col-xl-3">
+      <div class="gest-stat" style="border-left-color:#7c3aed;padding:7px 10px" title="Estimación de facturación al cierre del mes basada en ritmo actual">
+        <div class="gest-stat-icon" style="background:#f5f3ff;color:#7c3aed;width:28px;height:28px;font-size:.85rem"><i class="bi bi-graph-up"></i></div>
+        <div>
+          <div class="gest-stat-lbl">Proy. Facturado ${mesNombre}</div>
+          <div class="gest-stat-val gest-num" style="font-size:.82rem">${fmt(GESTION_SHOW_SIN_IVA ? proySiv : proyFac)}</div>
+          <div style="font-size:.62rem;color:#94a3b8">Actual: ${fmt(GESTION_SHOW_SIN_IVA ? siv : fac)}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-xl-3">
+      <div class="gest-stat" style="border-left-color:#16a34a;padding:7px 10px" title="Comisión proyectada al cierre del mes">
+        <div class="gest-stat-icon" style="background:#f0fdf4;color:#16a34a;width:28px;height:28px;font-size:.85rem"><i class="bi bi-cash-coin"></i></div>
+        <div>
+          <div class="gest-stat-lbl">Proy. Comisión ${mesNombre}</div>
+          <div class="gest-stat-val gest-num" style="font-size:.82rem">${fmt(proyCom)}</div>
+          <div style="font-size:.62rem;color:#94a3b8">Falta generar: <b style="color:#7c3aed">${fmt(comFaltante)}</b></div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-xl-3">
+      <div class="gest-stat" style="border-left-color:#d97706;padding:7px 10px" title="Rentabilidad proyectada">
+        <div class="gest-stat-icon" style="background:#fffbeb;color:#d97706;width:28px;height:28px;font-size:.85rem"><i class="bi bi-percent"></i></div>
+        <div>
+          <div class="gest-stat-lbl">Rent. Proyectada</div>
+          <div class="gest-stat-val gest-num" style="font-size:.82rem">${pctRent}</div>
+          <div style="font-size:.62rem;color:#94a3b8">Com/SinIVA</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-xl-3">
+      <div class="gest-stat" style="border-left-color:#0891b2;padding:7px 10px" title="Operaciones proyectadas al cierre del mes">
+        <div class="gest-stat-icon" style="background:#ecfeff;color:#0891b2;width:28px;height:28px;font-size:.85rem"><i class="bi bi-receipt-cutoff"></i></div>
+        <div>
+          <div class="gest-stat-lbl">Proy. Operaciones</div>
+          <div class="gest-stat-val gest-num" style="font-size:.82rem">${proyOps} ops</div>
+          <div style="font-size:.62rem;color:#94a3b8">Actual: ${ops} ops</div>
+        </div>
+      </div>
+    </div>`;
 }
 
 function _renderClienteTabla(clientes) {
