@@ -1623,7 +1623,10 @@
   <div id="page-calendarioARCA" class="page">
     <div class="page-hdr">
       <h4><i class="bi bi-calendar2-check-fill me-2" style="color:#E31E24"></i>Calendario ARCA — Vencimientos Impositivos</h4>
-      <button class="btn btn-sm btn-outline-secondary" onclick="renderCalendarioARCA()" style="font-size:.78rem;border-radius:8px"><i class="bi bi-arrow-clockwise me-1"></i>Actualizar</button>
+      <div class="d-flex gap-2">
+        <button class="btn btn-sm btn-danger" onclick="abrirModalARCAVenc(null)" style="font-size:.78rem;border-radius:8px"><i class="bi bi-plus-lg me-1"></i>Agregar</button>
+        <button class="btn btn-sm btn-outline-secondary" onclick="renderCalendarioARCA()" style="font-size:.78rem;border-radius:8px"><i class="bi bi-arrow-clockwise me-1"></i>Actualizar</button>
+      </div>
     </div>
 
     <!-- Config strip -->
@@ -1649,20 +1652,71 @@
       </div>
     </div>
 
-    <!-- Próximos vencimientos (next 45 days) -->
-    <div class="row g-3 mb-3">
-      <div class="col-12">
-        <div class="card" style="border-radius:12px;border:1px solid #e2e8f0">
-          <div class="card-body p-3">
-            <h6 style="font-size:.8rem;font-weight:700;color:#475569;margin-bottom:12px"><i class="bi bi-alarm-fill me-2 text-danger"></i>Próximos 45 días</h6>
-            <div id="arca-proximos"></div>
-          </div>
+    <!-- KPIs resumen -->
+    <div class="row g-2 mb-3" id="arca-kpis"></div>
+
+    <!-- Mis Obligaciones cargadas -->
+    <div class="card mb-3" style="border-radius:12px;border:1px solid #e2e8f0">
+      <div class="card-body p-3">
+        <div class="d-flex align-items-center justify-content-between mb-2">
+          <h6 style="font-size:.8rem;font-weight:700;color:#475569;margin:0"><i class="bi bi-list-check me-2 text-danger"></i>Mis Obligaciones</h6>
+          <small style="font-size:.68rem;color:#94a3b8">Cargadas manualmente</small>
         </div>
+        <div id="arca-lista"></div>
+      </div>
+    </div>
+
+    <!-- Próximos vencimientos (next 45 days) -->
+    <div class="card mb-3" style="border-radius:12px;border:1px solid #e2e8f0">
+      <div class="card-body p-3">
+        <h6 style="font-size:.8rem;font-weight:700;color:#475569;margin-bottom:12px"><i class="bi bi-alarm-fill me-2 text-danger"></i>Próximos 45 días <small style="font-weight:400;color:#94a3b8">(calculados + manuales)</small></h6>
+        <div id="arca-proximos"></div>
       </div>
     </div>
 
     <!-- Calendar months -->
     <div id="arca-meses" class="row g-3"></div>
+  </div>
+
+  <!-- MODAL ARCA VENCIMIENTO -->
+  <div class="modal fade" id="modal-arca-venc" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:460px">
+      <div class="modal-content" style="border-radius:14px;border:none">
+        <div class="modal-header" style="background:linear-gradient(135deg,#E31E24,#c41920);color:#fff;border-radius:14px 14px 0 0;padding:14px 20px">
+          <h5 class="modal-title" style="font-size:.9rem;font-weight:700"><i class="bi bi-calendar2-plus me-2"></i><span id="arca-modal-title">Nuevo Vencimiento</span></h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body p-4">
+          <input type="hidden" id="arca-v-id">
+          <div class="mb-3">
+            <label class="form-label" style="font-size:.78rem;font-weight:600;color:#475569">Concepto / Impuesto</label>
+            <input type="text" id="arca-v-concepto" class="form-control form-control-sm" placeholder="Ej: IVA Mensual, Ganancias, IIBB..." style="border-radius:8px;font-size:.85rem">
+          </div>
+          <div class="row g-2 mb-3">
+            <div class="col-6">
+              <label class="form-label" style="font-size:.78rem;font-weight:600;color:#475569">Fecha de vencimiento</label>
+              <input type="date" id="arca-v-fecha" class="form-control form-control-sm" style="border-radius:8px;font-size:.85rem">
+            </div>
+            <div class="col-6">
+              <label class="form-label" style="font-size:.78rem;font-weight:600;color:#475569">Importe</label>
+              <input type="number" id="arca-v-importe" class="form-control form-control-sm" placeholder="0.00" min="0" step="0.01" style="border-radius:8px;font-size:.85rem">
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" style="font-size:.78rem;font-weight:600;color:#475569">Período / Detalle</label>
+            <input type="text" id="arca-v-detalle" class="form-control form-control-sm" placeholder="Ej: Período Marzo 2026, F.931 sueldos..." style="border-radius:8px;font-size:.85rem">
+          </div>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="arca-v-pagado">
+            <label class="form-check-label" style="font-size:.82rem;color:#475569" for="arca-v-pagado">Marcado como pagado</label>
+          </div>
+        </div>
+        <div class="modal-footer" style="border-top:1px solid #f1f5f9;padding:12px 20px">
+          <button class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal" style="border-radius:8px;font-size:.82rem">Cancelar</button>
+          <button class="btn btn-sm btn-danger" onclick="guardarARCAVenc()" style="border-radius:8px;font-size:.82rem"><i class="bi bi-check2 me-1"></i>Guardar</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- DOCUMENTOS — Google Drive -->
@@ -9067,6 +9121,63 @@ function guardarARCAConfig() {
   save();
 }
 
+function abrirModalARCAVenc(id) {
+  document.getElementById('arca-v-id').value = id || '';
+  document.getElementById('arca-modal-title').textContent = id ? 'Editar Vencimiento' : 'Nuevo Vencimiento';
+  if (id) {
+    const v = (ST.arcaVencimientos || []).find(x => x.id === id);
+    if (!v) return;
+    document.getElementById('arca-v-concepto').value = v.concepto || '';
+    document.getElementById('arca-v-fecha').value    = v.fecha    || '';
+    document.getElementById('arca-v-importe').value  = v.importe != null ? v.importe : '';
+    document.getElementById('arca-v-detalle').value  = v.detalle  || '';
+    document.getElementById('arca-v-pagado').checked = !!v.pagado;
+  } else {
+    document.getElementById('arca-v-concepto').value = '';
+    document.getElementById('arca-v-fecha').value    = hoy();
+    document.getElementById('arca-v-importe').value  = '';
+    document.getElementById('arca-v-detalle').value  = '';
+    document.getElementById('arca-v-pagado').checked = false;
+  }
+  bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-arca-venc')).show();
+}
+
+function guardarARCAVenc() {
+  const concepto = document.getElementById('arca-v-concepto').value.trim();
+  const fecha    = document.getElementById('arca-v-fecha').value;
+  if (!concepto || !fecha) { toast('Completá concepto y fecha','warning'); return; }
+  const importe  = parseFloat(document.getElementById('arca-v-importe').value) || 0;
+  const detalle  = document.getElementById('arca-v-detalle').value.trim();
+  const pagado   = document.getElementById('arca-v-pagado').checked;
+  const id       = document.getElementById('arca-v-id').value;
+  if (!ST.arcaVencimientos) ST.arcaVencimientos = [];
+  if (id) {
+    const idx = ST.arcaVencimientos.findIndex(x => x.id === id);
+    if (idx >= 0) ST.arcaVencimientos[idx] = { ...ST.arcaVencimientos[idx], concepto, fecha, importe, detalle, pagado };
+  } else {
+    ST.arcaVencimientos.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2,6), concepto, fecha, importe, detalle, pagado });
+  }
+  save();
+  bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-arca-venc')).hide();
+  renderCalendarioARCA();
+  toast('Vencimiento guardado');
+}
+
+function eliminarARCAVenc(id) {
+  if (!confirm('¿Eliminar este vencimiento?')) return;
+  ST.arcaVencimientos = (ST.arcaVencimientos || []).filter(x => x.id !== id);
+  save();
+  renderCalendarioARCA();
+}
+
+function togglePagadoARCA(id) {
+  const v = (ST.arcaVencimientos || []).find(x => x.id === id);
+  if (!v) return;
+  v.pagado = !v.pagado;
+  save();
+  renderCalendarioARCA();
+}
+
 function _arcaGetVencimientos(cuitTerm, categoria) {
   // Reglas de vencimientos ARCA (aproximadas, según terminación CUIT)
   // IVA mensual (RI): días 18-22 del mes siguiente
@@ -9141,13 +9252,85 @@ function renderCalendarioARCA() {
   if (termEl) termEl.value = String(cuitTerm);
   if (catEl)  catEl.value  = categoria;
 
-  const events = _arcaGetVencimientos(cuitTerm, categoria);
+  // Merge: calculated + manual events
+  const calcEvents = _arcaGetVencimientos(cuitTerm, categoria);
+  const manualRaw  = ST.arcaVencimientos || [];
+  const manualEvents = manualRaw.map(v => ({
+    fecha: v.fecha, concepto: v.concepto, detalle: v.detalle || '',
+    color: v.pagado ? '#22c55e' : '#E31E24', icon: 'bi-pencil-square',
+    importe: v.importe || 0, pagado: v.pagado, id: v.id, isManual: true
+  }));
+  const allEvents = [...calcEvents, ...manualEvents].sort((a,b)=>a.fecha.localeCompare(b.fecha));
+
   const today = hoy();
   const todayDate = new Date(today + 'T00:00:00');
 
-  // ── Próximos 45 días ──────────────────────────────────────
+  // ── KPIs ──────────────────────────────────────────────────
+  const kpisEl = document.getElementById('arca-kpis');
+  if (kpisEl) {
+    const pendientes = manualRaw.filter(v => !v.pagado);
+    const pagados    = manualRaw.filter(v => v.pagado);
+    const totalPend  = pendientes.reduce((s,v)=>s+(v.importe||0),0);
+    const totalPag   = pagados.reduce((s,v)=>s+(v.importe||0),0);
+    const proxPend   = pendientes.filter(v=>{ const d=new Date(v.fecha+'T00:00:00'); return d>=todayDate && Math.round((d-todayDate)/86400000)<=30; });
+    kpisEl.innerHTML = [
+      { label:'Pendientes',  val: pendientes.length, sub: fmt(totalPend),   color:'#ef4444', icon:'bi-exclamation-circle-fill' },
+      { label:'Pagados',     val: pagados.length,    sub: fmt(totalPag),    color:'#22c55e', icon:'bi-check-circle-fill' },
+      { label:'Próx. 30d',   val: proxPend.length,   sub: 'vencen pronto',  color:'#f59e0b', icon:'bi-alarm-fill' },
+    ].map(k=>`<div class="col-4"><div class="card p-2 text-center" style="border-radius:10px;border:1px solid #e2e8f0">
+      <i class="bi ${k.icon}" style="color:${k.color};font-size:1.1rem"></i>
+      <div style="font-size:1.1rem;font-weight:700;color:#1e293b">${k.val}</div>
+      <div style="font-size:.62rem;color:#64748b;font-weight:600">${k.label}</div>
+      <div style="font-size:.65rem;color:${k.color}">${k.sub}</div>
+    </div></div>`).join('');
+  }
+
+  // ── Mis Obligaciones (manual list) ────────────────────────
+  const listaEl = document.getElementById('arca-lista');
+  if (listaEl) {
+    if (manualRaw.length === 0) {
+      listaEl.innerHTML = `<div class="text-center py-3" style="color:#94a3b8;font-size:.8rem">
+        <i class="bi bi-inbox d-block mb-1" style="font-size:1.4rem"></i>
+        Todavía no cargaste obligaciones. Usá <b>Agregar</b> para registrar tus vencimientos con importe.
+      </div>`;
+    } else {
+      const sorted = [...manualRaw].sort((a,b)=>a.fecha.localeCompare(b.fecha));
+      listaEl.innerHTML = `<div class="table-responsive"><table class="table table-sm mb-0" style="font-size:.78rem">
+        <thead><tr style="background:#f8fafc;font-size:.68rem;color:#64748b">
+          <th class="ps-2">Concepto</th><th>Período</th><th>Vencimiento</th>
+          <th class="text-end">Importe</th><th class="text-center">Estado</th><th></th>
+        </tr></thead><tbody>` +
+        sorted.map(v => {
+          const dias = Math.round((new Date(v.fecha+'T00:00:00')-todayDate)/86400000);
+          let estadoBadge = '';
+          if (v.pagado) estadoBadge = '<span class="badge bg-success" style="font-size:.6rem">Pagado</span>';
+          else if (dias < 0) estadoBadge = '<span class="badge bg-danger" style="font-size:.6rem">Vencido</span>';
+          else if (dias <= 7) estadoBadge = `<span class="badge bg-warning text-dark" style="font-size:.6rem">${dias}d</span>`;
+          else estadoBadge = `<span class="badge bg-light text-secondary" style="font-size:.6rem">${dias}d</span>`;
+          const rowStyle = v.pagado ? 'opacity:.55;' : (dias<0&&!v.pagado?'background:#fff5f5;':'');
+          return `<tr style="${rowStyle}">
+            <td class="ps-2 fw-semibold">${v.concepto}</td>
+            <td class="text-muted">${v.detalle||'–'}</td>
+            <td style="white-space:nowrap">${fmtF(v.fecha)}</td>
+            <td class="text-end fw-bold" style="color:${v.pagado?'#22c55e':'#e11d48'}">${v.importe?fmt(v.importe):'–'}</td>
+            <td class="text-center">${estadoBadge}</td>
+            <td class="text-nowrap text-end pe-2">
+              <button class="btn btn-xs btn-outline-success me-1" onclick="togglePagadoARCA('${v.id}')" title="${v.pagado?'Marcar pendiente':'Marcar pagado'}" style="padding:1px 5px;font-size:.65rem;border-radius:5px">
+                <i class="bi ${v.pagado?'bi-arrow-counterclockwise':'bi-check2'}"></i>
+              </button>
+              <button class="btn btn-xs btn-outline-primary me-1" onclick="abrirModalARCAVenc('${v.id}')" style="padding:1px 5px;font-size:.65rem;border-radius:5px"><i class="bi bi-pencil"></i></button>
+              <button class="btn btn-xs btn-outline-danger" onclick="eliminarARCAVenc('${v.id}')" style="padding:1px 5px;font-size:.65rem;border-radius:5px"><i class="bi bi-trash"></i></button>
+            </td>
+          </tr>`;
+        }).join('') +
+        `</tbody></table></div>`;
+    }
+  }
+
+  // ── Próximos 45 días (calculados + manuales pendientes) ───
   const lim45 = new Date(todayDate); lim45.setDate(lim45.getDate() + 45);
-  const proximos = events.filter(e => {
+  const proximos = allEvents.filter(e => {
+    if (e.isManual && e.pagado) return false;
     const ed = new Date(e.fecha + 'T00:00:00');
     return ed >= todayDate && ed <= lim45;
   });
@@ -9160,20 +9343,22 @@ function renderCalendarioARCA() {
       proximosEl.innerHTML = proximos.map(e => {
         const ed = new Date(e.fecha + 'T00:00:00');
         const dias = Math.round((ed - todayDate) / 86400000);
-        let urgStyle = '';
-        let urgBadge = '';
-        if (dias <= 3)       { urgStyle = 'background:#fef2f2;border-left:3px solid #ef4444'; urgBadge = `<span class="badge bg-danger ms-2" style="font-size:.6rem">¡${dias}d!</span>`; }
-        else if (dias <= 7)  { urgStyle = 'background:#fffbeb;border-left:3px solid #f59e0b'; urgBadge = `<span class="badge bg-warning text-dark ms-2" style="font-size:.6rem">${dias}d</span>`; }
-        else if (dias <= 15) { urgStyle = 'background:#f0fdf4;border-left:3px solid #22c55e'; urgBadge = `<span class="badge bg-success ms-2" style="font-size:.6rem">${dias}d</span>`; }
-        else                 { urgStyle = 'background:#f8fafc;border-left:3px solid #cbd5e1'; urgBadge = `<span class="ms-2" style="font-size:.68rem;color:#94a3b8">${dias}d</span>`; }
+        let urgStyle = '', urgBadge = '';
+        if (dias <= 3)       { urgStyle = 'background:#fef2f2;border-left:3px solid #ef4444'; urgBadge = `<span class="badge bg-danger ms-1" style="font-size:.6rem">¡${dias}d!</span>`; }
+        else if (dias <= 7)  { urgStyle = 'background:#fffbeb;border-left:3px solid #f59e0b'; urgBadge = `<span class="badge bg-warning text-dark ms-1" style="font-size:.6rem">${dias}d</span>`; }
+        else if (dias <= 15) { urgStyle = 'background:#f0fdf4;border-left:3px solid #22c55e'; urgBadge = `<span class="badge bg-success ms-1" style="font-size:.6rem">${dias}d</span>`; }
+        else                 { urgStyle = 'background:#f8fafc;border-left:3px solid #cbd5e1'; urgBadge = `<span class="ms-1" style="font-size:.68rem;color:#94a3b8">${dias}d</span>`; }
+        const manualBadge = e.isManual ? '<span class="badge ms-1" style="background:#fce7f3;color:#9d174d;font-size:.58rem">manual</span>' : '';
+        const importeStr  = e.isManual && e.importe ? `<span style="font-size:.75rem;font-weight:700;color:#e11d48">${fmt(e.importe)}</span>` : '';
         return `<div class="mb-2 p-2 rounded" style="${urgStyle};padding-left:12px!important">
           <div class="d-flex align-items-center justify-content-between flex-wrap gap-1">
-            <div class="d-flex align-items-center gap-2">
+            <div class="d-flex align-items-center gap-2 flex-wrap">
               <i class="bi ${e.icon}" style="color:${e.color};font-size:.9rem"></i>
-              <span style="font-size:.8rem;font-weight:600">${e.concepto}</span>
+              <span style="font-size:.8rem;font-weight:600">${e.concepto}</span>${manualBadge}
               <span style="font-size:.7rem;color:#64748b">${e.detalle}</span>
             </div>
-            <div class="d-flex align-items-center gap-1">
+            <div class="d-flex align-items-center gap-2">
+              ${importeStr}
               <span style="font-size:.75rem;font-weight:600;color:#1e293b">${fmtF(e.fecha)}</span>
               ${urgBadge}
             </div>
@@ -9183,7 +9368,7 @@ function renderCalendarioARCA() {
     }
   }
 
-  // ── Calendario mensual (3 meses: anterior, actual, siguiente) ──
+  // ── Calendario mensual (4 meses) ──────────────────────────
   const mesesEl = document.getElementById('arca-meses');
   if (!mesesEl) return;
 
@@ -9196,15 +9381,13 @@ function renderCalendarioARCA() {
     const año = ref.getFullYear();
     const mes = ref.getMonth();
     const diasEnMes = new Date(año, mes + 1, 0).getDate();
-    const primerDia = ref.getDay(); // 0=Dom
+    const primerDia = ref.getDay();
 
-    // Events this month
-    const evMes = events.filter(e => {
+    const evMes = allEvents.filter(e => {
       const d = new Date(e.fecha + 'T00:00:00');
       return d.getFullYear() === año && d.getMonth() === mes;
     });
 
-    // Build day→events map
     const dayMap = {};
     evMes.forEach(e => {
       const d = new Date(e.fecha + 'T00:00:00').getDate();
@@ -9212,49 +9395,47 @@ function renderCalendarioARCA() {
       dayMap[d].push(e);
     });
 
-    // Calendar grid
     let cells = '';
-    // Empty cells before first day
     for (let i = 0; i < primerDia; i++) cells += '<div></div>';
     for (let d = 1; d <= diasEnMes; d++) {
       const dateStr = `${año}-${String(mes+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
       const isToday = dateStr === today;
       const evs = dayMap[d] || [];
-      const hasUrgent = evs.some(e => { const dias = Math.round((new Date(e.fecha+'T00:00:00')-todayDate)/86400000); return dias>=0&&dias<=3; });
-      const hasWarn   = !hasUrgent && evs.some(e => { const dias = Math.round((new Date(e.fecha+'T00:00:00')-todayDate)/86400000); return dias>=0&&dias<=7; });
+      const activePend = evs.filter(e => !(e.isManual && e.pagado));
+      const hasUrgent = activePend.some(e => { const dias = Math.round((new Date(e.fecha+'T00:00:00')-todayDate)/86400000); return dias>=0&&dias<=3; });
+      const hasWarn   = !hasUrgent && activePend.some(e => { const dias = Math.round((new Date(e.fecha+'T00:00:00')-todayDate)/86400000); return dias>=0&&dias<=7; });
 
       let dayBg = '';
       if (isToday) dayBg = 'background:#dbeafe;border-radius:50%;font-weight:700;color:#1d4ed8';
       else if (hasUrgent) dayBg = 'background:#fee2e2;border-radius:6px;color:#dc2626';
       else if (hasWarn)   dayBg = 'background:#fef3c7;border-radius:6px;color:#d97706';
-      else if (evs.length) dayBg = 'background:#f0fdf4;border-radius:6px;color:#166534';
+      else if (activePend.length) dayBg = 'background:#f0fdf4;border-radius:6px;color:#166534';
 
       const dots = evs.map(e => `<div style="width:5px;height:5px;border-radius:50%;background:${e.color};display:inline-block;margin:0 1px"></div>`).join('');
-      const tooltip = evs.map(e => e.concepto).join('\n');
+      const tooltip = evs.map(e => e.concepto + (e.isManual&&e.importe?' ('+fmt(e.importe)+')':'')).join('\n');
 
-      cells += `<div title="${tooltip}" style="text-align:center;cursor:${evs.length?'pointer':'default'};position:relative;padding:2px">
+      cells += `<div title="${tooltip}" style="text-align:center;cursor:${evs.length?'pointer':'default'};padding:2px">
         <div style="font-size:.72rem;line-height:1.6;${dayBg};min-width:20px;display:inline-block">${d}</div>
         <div style="min-height:6px;margin-top:1px">${dots}</div>
       </div>`;
     }
 
-    // Event list for this month
     const evList = evMes.map(e => {
       const d = new Date(e.fecha+'T00:00:00');
       const dias = Math.round((d - todayDate)/86400000);
       let badge = '';
-      if (dias < 0)        badge = `<span class="badge bg-secondary" style="font-size:.58rem">Pasado</span>`;
-      else if (dias <= 3)  badge = `<span class="badge bg-danger" style="font-size:.58rem">¡${dias}d!</span>`;
-      else if (dias <= 7)  badge = `<span class="badge bg-warning text-dark" style="font-size:.58rem">${dias}d</span>`;
-      return `<div class="d-flex align-items-center justify-content-between py-1" style="border-bottom:1px solid #f1f5f9;font-size:.73rem">
-        <div class="d-flex align-items-center gap-2">
-          <div style="width:8px;height:8px;border-radius:50%;background:${e.color};flex-shrink:0"></div>
-          <span style="font-weight:600">${e.concepto}</span>
-          <span style="color:#94a3b8">${e.detalle}</span>
+      if (e.isManual && e.pagado) badge = '<span class="badge bg-success" style="font-size:.55rem">Pago</span>';
+      else if (dias < 0)  badge = '<span class="badge bg-secondary" style="font-size:.55rem">Pasado</span>';
+      else if (dias <= 3) badge = `<span class="badge bg-danger" style="font-size:.55rem">¡${dias}d!</span>`;
+      else if (dias <= 7) badge = `<span class="badge bg-warning text-dark" style="font-size:.55rem">${dias}d</span>`;
+      const importeStr = e.isManual && e.importe ? `<small style="color:#e11d48;font-weight:700"> ${fmt(e.importe)}</small>` : '';
+      return `<div class="d-flex align-items-center justify-content-between py-1" style="border-bottom:1px solid #f1f5f9;font-size:.7rem;${e.isManual&&e.pagado?'opacity:.45':''}">
+        <div class="d-flex align-items-center gap-1">
+          <div style="width:7px;height:7px;border-radius:50%;background:${e.color};flex-shrink:0"></div>
+          <span style="font-weight:600">${e.concepto}</span>${importeStr}
         </div>
-        <div class="d-flex align-items-center gap-2">
-          <span style="color:#475569;font-weight:600">${fmtF(e.fecha)}</span>
-          ${badge}
+        <div class="d-flex align-items-center gap-1">
+          <span style="color:#475569">${fmtF(e.fecha)}</span>${badge}
         </div>
       </div>`;
     }).join('');
@@ -9265,15 +9446,10 @@ function renderCalendarioARCA() {
           <div style="font-size:.82rem;font-weight:700;color:#1e293b;margin-bottom:10px;text-align:center">
             ${MESES_NOMBRE[mes]} ${año}
           </div>
-          <!-- Days of week header -->
           <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:1px;margin-bottom:4px">
             ${diasSem.map(d=>`<div style="text-align:center;font-size:.6rem;color:#94a3b8;font-weight:700">${d}</div>`).join('')}
           </div>
-          <!-- Day cells -->
-          <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:12px">
-            ${cells}
-          </div>
-          <!-- Event list -->
+          <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:12px">${cells}</div>
           <div>${evList || '<div style="font-size:.72rem;color:#94a3b8;text-align:center">Sin vencimientos</div>'}</div>
         </div>
       </div>
