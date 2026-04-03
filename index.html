@@ -1623,8 +1623,10 @@
   <div id="page-calendarioARCA" class="page">
     <div class="page-hdr">
       <h4><i class="bi bi-calendar2-check-fill me-2" style="color:#E31E24"></i>Calendario ARCA — Vencimientos Impositivos</h4>
-      <div class="d-flex gap-2">
+      <div class="d-flex gap-2 flex-wrap">
         <button class="btn btn-sm btn-danger" onclick="abrirModalARCAVenc(null)" style="font-size:.78rem;border-radius:8px"><i class="bi bi-plus-lg me-1"></i>Agregar</button>
+        <button id="btn-subir-vep" class="btn btn-sm btn-outline-danger" onclick="document.getElementById('vep-pdf-input').click()" style="font-size:.78rem;border-radius:8px"><i class="bi bi-upload me-1"></i>Subir VEP PDF</button>
+        <input type="file" id="vep-pdf-input" accept=".pdf" style="display:none" onchange="handleVEPUpload(event)">
         <button class="btn btn-sm btn-outline-secondary" onclick="renderCalendarioARCA()" style="font-size:.78rem;border-radius:8px"><i class="bi bi-arrow-clockwise me-1"></i>Actualizar</button>
       </div>
     </div>
@@ -9112,6 +9114,150 @@ function _calcClienteScoring() {
 /* ═══════════════════════════════════════════
    CALENDARIO ARCA — VENCIMIENTOS IMPOSITIVOS
    ═══════════════════════════════════════════ */
+// ── Pre-carga Plan de Facilidades V883715 (24 cuotas día 16) ──
+function _initPFPV883715() {
+  if (ST.arcaConfig?.pfpV883715Loaded) return; // ya cargado
+  if (!ST.arcaVencimientos) ST.arcaVencimientos = [];
+  const cuotas = [
+    { n:1,  fecha:'2026-04-16' }, { n:2,  fecha:'2026-05-16' }, { n:3,  fecha:'2026-06-16' },
+    { n:4,  fecha:'2026-07-16' }, { n:5,  fecha:'2026-08-16' }, { n:6,  fecha:'2026-09-16' },
+    { n:7,  fecha:'2026-10-16' }, { n:8,  fecha:'2026-11-16' }, { n:9,  fecha:'2026-12-16' },
+    { n:10, fecha:'2027-01-16' }, { n:11, fecha:'2027-02-16' }, { n:12, fecha:'2027-03-16' },
+    { n:13, fecha:'2027-04-16' }, { n:14, fecha:'2027-05-16' }, { n:15, fecha:'2027-06-16' },
+    { n:16, fecha:'2027-07-16' }, { n:17, fecha:'2027-08-16' }, { n:18, fecha:'2027-09-16' },
+    { n:19, fecha:'2027-10-16' }, { n:20, fecha:'2027-11-16' }, { n:21, fecha:'2027-12-16' },
+    { n:22, fecha:'2028-01-16' }, { n:23, fecha:'2028-02-16' }, { n:24, fecha:'2028-03-16' },
+  ];
+  cuotas.forEach(c => {
+    ST.arcaVencimientos.push({
+      id: 'pfp-v883715-c' + c.n,
+      concepto: 'Anticipo de Ganancias',
+      fecha: c.fecha,
+      importe: 696813.99,
+      detalle: 'Plan V883715 — Cuota ' + c.n + '/24',
+      pagado: false,
+      origen: 'pfp'
+    });
+  });
+  if (!ST.arcaConfig) ST.arcaConfig = {};
+  ST.arcaConfig.pfpV883715Loaded = true;
+  save();
+}
+
+// ── Parser de VEP (Volante Electrónico de Pago ARCA) ──────────
+function parsearVEP(texto) {
+  const t = texto.replace(/\s+/g, ' ');
+  const resultados = [];
+
+  // Intentar extraer uno o múltiples VEPs del texto
+  // Patrones ARCA/AFIP para VEP:
+  const parsearImporteVEP = s => {
+    if (!s) return 0;
+    s = s.trim().replace(/\$/g,'');
+    if (/\d\.\d{3},/.test(s)) return parseFloat(s.replace(/\./g,'').replace(',','.')) || 0;
+    if (/\d,\d{3}\./.test(s)) return parseFloat(s.replace(/,/g,'')) || 0;
+    return parseFloat(s.replace(',','.')) || 0;
+  };
+
+  // Patrón: buscar bloques de VEP (puede haber varios en un PDF)
+  // Campo Impuesto / Concepto
+  const impMatch  = t.match(/Impuesto[:\s]+([A-Z\s\-\/0-9]+?)(?:\s+(?:Período|Per[ií]odo|Concepto|Importe|Fecha|N[°º]|Venc))/i)
+                 || t.match(/Concepto[:\s]+([^\d]{3,60})(?=\s+(?:\d|Período|Importe))/i)
+                 || t.match(/(?:Impuesto|Tributo)[:\s#]*([\w\s]+?)(?=\s+\d{2}\/\d{2}\/\d{4}|\s+\$)/i);
+  const concepto  = impMatch ? impMatch[1].trim().replace(/\s+/g,' ') : 'VEP importado';
+
+  // Período
+  const perMatch  = t.match(/[Pp]er[íi]odo[:\s]+(\d{2}\/\d{4}|\d{6}|\d{4}[-\/]\d{2})/i)
+                 || t.match(/(\d{2})\/(\d{4})\s+(?=.*[Ii]mpuesto|.*[Vv]enc)/);
+  const periodo   = perMatch ? perMatch[1] || (perMatch[1]+'/'+perMatch[2]) : '';
+
+  // Fecha de vencimiento
+  const fvMatches = [...t.matchAll(/(?:[Vv]enc(?:imiento)?|[Ff]echa\s+[Vv]enc)[:\s]*(\d{2}\/\d{2}\/\d{4})/g)];
+  const fechasVenc = fvMatches.map(m => {
+    const [d,mo,y] = m[1].split('/'); return `${y}-${mo}-${d}`;
+  });
+
+  // Importe(s)
+  const impMatches = [...t.matchAll(/(?:[Ii]mporte|[Tt]otal|[Aa] pagar)[:\s]*\$?\s*([\d.,]+)/g)];
+  const importes = impMatches.map(m => parsearImporteVEP(m[1])).filter(v => v > 0);
+
+  // Número VEP
+  const nVep = t.match(/N[°º][:\s]*(\d{10,})/i) || t.match(/VEP[:\s#]*(\d{8,})/i);
+
+  if (fechasVenc.length > 0) {
+    fechasVenc.forEach((fv, i) => {
+      resultados.push({
+        id: 'vep-' + Date.now().toString(36) + '-' + i,
+        concepto: concepto.replace(/^\s+|\s+$/g,''),
+        fecha: fv,
+        importe: importes[i] || importes[0] || 0,
+        detalle: [periodo ? 'Período ' + periodo : '', nVep ? 'VEP ' + nVep[1] : ''].filter(Boolean).join(' · ') || 'VEP importado',
+        pagado: false,
+        origen: 'vep'
+      });
+    });
+  } else if (importes.length > 0) {
+    // Sin fecha encontrada, igual agregar con fecha vacía para que el usuario complete
+    resultados.push({
+      id: 'vep-' + Date.now().toString(36),
+      concepto: concepto,
+      fecha: '',
+      importe: importes[0],
+      detalle: [periodo ? 'Período ' + periodo : '', nVep ? 'VEP ' + nVep[1] : ''].filter(Boolean).join(' · ') || 'VEP importado',
+      pagado: false,
+      origen: 'vep'
+    });
+  }
+
+  return resultados;
+}
+
+async function handleVEPUpload(event) {
+  const file = event.target.files?.[0];
+  event.target.value = '';
+  if (!file) return;
+
+  const btn = document.getElementById('btn-subir-vep');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>Leyendo...'; }
+
+  cargarPDFjs(async (err) => {
+    if (err) { toast('No se pudo cargar el lector de PDF','danger'); if(btn){btn.disabled=false;btn.innerHTML='<i class="bi bi-upload me-1"></i>Subir VEP PDF';} return; }
+    try {
+      const texto = await extraerTextoPDF(file);
+      const veps = parsearVEP(texto);
+
+      if (veps.length === 0) {
+        toast('No se detectaron VEPs en el PDF. Verificá el formato.','warning');
+        if(btn){btn.disabled=false;btn.innerHTML='<i class="bi bi-upload me-1"></i>Subir VEP PDF';}
+        return;
+      }
+
+      if (!ST.arcaVencimientos) ST.arcaVencimientos = [];
+      let agregados = 0, sinFecha = 0;
+      veps.forEach(v => {
+        ST.arcaVencimientos.push(v);
+        if (!v.fecha) sinFecha++;
+        else agregados++;
+      });
+      save();
+      renderCalendarioARCA();
+
+      let msg = `${veps.length} VEP${veps.length>1?'s':''} agregado${veps.length>1?'s':''}`;
+      if (sinFecha > 0) msg += ` (${sinFecha} sin fecha — completá manualmente)`;
+      toast(msg, 'success');
+
+      // Si algún VEP quedó sin fecha, abrir el modal del primero para completar
+      if (sinFecha > 0) {
+        const primero = veps.find(v => !v.fecha);
+        if (primero) setTimeout(() => abrirModalARCAVenc(primero.id), 600);
+      }
+    } catch(e) {
+      toast('Error al leer el PDF: ' + e.message, 'danger');
+    }
+    if(btn){btn.disabled=false;btn.innerHTML='<i class="bi bi-upload me-1"></i>Subir VEP PDF';}
+  });
+}
+
 function guardarARCAConfig() {
   const term = document.getElementById('arca-cuit-term')?.value || '0';
   const cat  = document.getElementById('arca-categoria')?.value || 'ri';
@@ -9241,6 +9387,9 @@ function _arcaGetVencimientos(cuitTerm, categoria) {
 function renderCalendarioARCA() {
   const pg = document.getElementById('page-calendarioARCA');
   if (!pg) return;
+
+  // Pre-cargar Plan V883715 si es la primera vez
+  _initPFPV883715();
 
   // Restore config
   const cfg = ST.arcaConfig || {};
