@@ -9889,7 +9889,26 @@ function parsearResumenIVA(json) {
   };
 }
 
-// Cargar datos de un mes desde Google Drive (gviz, con caché 1h)
+// JSONP fetch para gviz — no tiene restricciones CORS y lleva cookies de Google
+function _gvizJSONP(sheetId, sheetName) {
+  return new Promise((resolve, reject) => {
+    const cb = '__muukGviz_' + Date.now() + '_' + Math.random().toString(36).slice(2,6);
+    let el;
+    const cleanup = () => {
+      clearTimeout(timer);
+      delete window[cb];
+      if (el?.parentNode) el.parentNode.removeChild(el);
+    };
+    const timer = setTimeout(() => { cleanup(); reject(new Error('timeout')); }, 15000);
+    window[cb] = resp => { cleanup(); resolve(resp); };
+    el = document.createElement('script');
+    el.src = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json;responseHandler:${cb}&sheet=${encodeURIComponent(sheetName)}`;
+    el.onerror = () => { cleanup(); reject(new Error('script error')); };
+    document.head.appendChild(el);
+  });
+}
+
+// Cargar datos de un mes desde Google Drive (JSONP gviz, con caché 1h)
 async function cargarContabilidadMes(key, force=false) {
   const id = _getSheetId(key);
   if (!id) return null;
@@ -9900,13 +9919,9 @@ async function cargarContabilidadMes(key, force=false) {
   }
 
   try {
-    const resp = await fetch(
-      `https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:json&sheet=Resumen`,
-      { credentials: 'include' }
-    );
-    if (!resp.ok) return null;
-    const txt = await resp.text();
-    const json = JSON.parse(txt.replace(/^[^\{]+/, '').replace(/\);?\s*$/, ''));
+    // JSONP: works cross-origin (Vercel→Google) because <script> tags carry session cookies
+    const json = await _gvizJSONP(id, 'Resumen');
+    if (json.status !== 'ok') throw new Error(json.errors?.[0]?.message || 'gviz error');
     const data = parsearResumenIVA(json);
     if (!ST.contabilidadCache) ST.contabilidadCache = {};
     ST.contabilidadCache[key] = { data, ts: Date.now() };
@@ -10132,16 +10147,29 @@ function abrirContabConfig() {
   const body = document.getElementById('contab-config-body');
   const custom = ST.contabilidadSheets || {};
   body.innerHTML = `
-    <p style="font-size:.82rem;color:#64748b" class="mb-3">
+    <div class="alert alert-info py-2 px-3 mb-3" style="font-size:.8rem">
       <i class="bi bi-info-circle me-1"></i>
-      Pegá la URL de Google Sheets (o el ID) para cada mes. Los meses sin archivo se muestran en gris.
-    </p>
+      <strong>Cómo agregar un mes:</strong> abrí el archivo en Google Sheets, copiá la URL completa de la barra del navegador y pegala abajo.
+      Cada mes se carga automáticamente al seleccionarlo.<br>
+      <span class="text-muted">Los campos que dejés vacíos conservan su valor actual.</span>
+    </div>
     <div class="row g-2">
       ${Object.entries(CONTABILIDAD_SHEETS).map(([k, s]) => {
-        const current = custom[k] || s._defaultId || '';
+        // Mostrar ID actual como URL completa si existe
+        const id = custom[k] || s._defaultId || '';
+        const displayVal = id ? `https://docs.google.com/spreadsheets/d/${id}/edit` : '';
+        const isCached = !!(ST.contabilidadCache || {})[k];
+        const badge = isCached
+          ? '<span class="badge bg-success ms-1" style="font-size:.6rem">✓ cargado</span>'
+          : (id ? '<span class="badge bg-warning text-dark ms-1" style="font-size:.6rem">sin cache</span>' : '');
         return `<div class="col-12 col-md-6">
-          <label style="font-size:.75rem;font-weight:600;color:#475569;margin-bottom:2px">${s.label}</label>
-          <input class="form-control form-control-sm" id="cs-${k}" placeholder="URL o ID de Google Sheets" value="${current}">
+          <label style="font-size:.75rem;font-weight:600;color:#475569;margin-bottom:2px">
+            ${s.label} ${badge}
+          </label>
+          <input class="form-control form-control-sm" id="cs-${k}"
+            placeholder="Pegá la URL de Google Sheets aquí"
+            value="${displayVal}"
+            style="font-size:.75rem">
         </div>`;
       }).join('')}
     </div>`;
@@ -10149,17 +10177,36 @@ function abrirContabConfig() {
 }
 
 function guardarContabConfig() {
-  const custom = {};
+  // Preservar IDs existentes — solo actualizar los campos que se llenaron
+  const custom = Object.assign({}, ST.contabilidadSheets || {});
+  let nuevos = 0;
+  let primerNuevo = null;
+
   Object.keys(CONTABILIDAD_SHEETS).forEach(k => {
     const val = document.getElementById('cs-' + k)?.value.trim() || '';
-    if (val) custom[k] = _extractSheetId(val);
+    if (val) {
+      const newId = _extractSheetId(val);
+      const oldId = custom[k] || CONTABILIDAD_SHEETS[k]?._defaultId || '';
+      if (newId !== oldId) {
+        // ID cambió: limpiar caché de ese mes
+        if (!ST.contabilidadCache) ST.contabilidadCache = {};
+        delete ST.contabilidadCache[k];
+        nuevos++;
+        if (!primerNuevo) primerNuevo = k;
+      }
+      custom[k] = newId;
+    }
+    // Si el campo está vacío, NO borrar el ID existente
   });
+
   ST.contabilidadSheets = custom;
-  // Limpiar caché para que recargue
-  ST.contabilidadCache = {};
   save();
   bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-contab-config')).hide();
-  toast('Configuración guardada. Sincronizando…', 'success');
+
+  // Navegar al mes recién configurado
+  if (primerNuevo) _contabMesActivo = primerNuevo;
+
+  toast(`Configuración guardada${nuevos ? '. Cargando ' + nuevos + ' mes(es)…' : ''}`, 'success');
   renderContabilidad(true);
 }
 
