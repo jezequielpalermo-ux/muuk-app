@@ -505,6 +505,7 @@
     <li><a class="nav-link" data-page="comisiones"><i class="bi bi-percent"></i>Comisiones</a></li>
     <li><a class="nav-link" data-page="bcra"><i class="bi bi-building"></i>BCRA</a></li>
     <li><a class="nav-link" data-page="calendarioARCA"><i class="bi bi-calendar2-check-fill"></i>Calendario ARCA</a></li>
+    <li><a class="nav-link" data-page="contabilidad"><i class="bi bi-calculator-fill"></i>Contabilidad</a></li>
     <li><a class="nav-link" data-page="facturasACobrar"><i class="bi bi-file-earmark-arrow-down-fill"></i>Facturas a Cobrar</a></li>
     <li><a class="nav-link" data-page="facturasPagar"><i class="bi bi-file-earmark-arrow-up-fill"></i>Facturas a Pagar</a></li>
 
@@ -1719,6 +1720,27 @@
         </div>
       </div>
     </div>
+  </div>
+
+  <!-- ══════════════════ CONTABILIDAD IVA ══════════════════ -->
+  <div id="page-contabilidad" class="page">
+    <div class="page-hdr">
+      <h4><i class="bi bi-calculator-fill me-2" style="color:#E31E24"></i>Contabilidad — Resumen IVA Mensual</h4>
+      <div class="d-flex gap-2 flex-wrap align-items-center">
+        <span id="contab-cuit-label" class="badge bg-secondary" style="font-size:.8rem">CUIT 30717617912</span>
+      </div>
+    </div>
+
+    <!-- Selector de mes -->
+    <div class="mb-3">
+      <div id="contab-mes-tabs" class="d-flex gap-2 flex-wrap"></div>
+    </div>
+
+    <!-- KPIs resumen -->
+    <div class="row g-3 mb-4" id="contab-kpis"></div>
+
+    <!-- Detalle en cards -->
+    <div class="row g-3" id="contab-cards"></div>
   </div>
 
   <!-- DOCUMENTOS — Google Drive -->
@@ -3179,6 +3201,7 @@ function reRenderActivo() {
     case 'panelVencimientos': renderPanelVencimientos(); break;
     case 'rentabilidad': renderRentabilidad(); break;
     case 'calendarioARCA': renderCalendarioARCA(); break;
+    case 'contabilidad': renderContabilidad(); break;
   }
 }
 const fmtF = d  => { if(!d) return '–'; const[y,m,v]=d.split('-'); return`${v}/${m}/${y}`; };
@@ -9606,6 +9629,178 @@ function renderCalendarioARCA() {
   }
 
   mesesEl.innerHTML = htmlMeses;
+}
+
+/* ═══════════════════════════════════════════
+   CONTABILIDAD — RESUMEN IVA MENSUAL
+═══════════════════════════════════════════ */
+
+const CONTABILIDAD_MESES = {
+  '2026-03': {
+    label: 'Marzo 2026',
+    cuit: '30717617912',
+    ventas: {
+      netoGravado:    73163184.36,
+      iva21:          15364268.72,
+      netoNoGravado:  0,
+      exentas:        0,
+      otrosTributos:  0,
+      total:          88527453.08
+    },
+    compras: {
+      netoGravado21:  131953512.55,
+      iva21:          27710237.66,
+      netoGravado105: 0,
+      iva105:         0,
+      netoNoGravado:  0,
+      exentas:        255082.72,
+      percepciones:   2727510.93,
+      total:          164875692.21
+    },
+    posicion: {
+      ivaVentas:  15364268.72,
+      ivaCompras: 27710237.66,
+      neta:       -12345968.94
+    },
+    bancarios: {
+      debitos:  141196915.96,
+      creditos: 235935941.31,
+      neto:     94739025.35
+    }
+  }
+};
+
+let _contabMesActivo = '2026-03';
+
+function renderContabilidad() {
+  const pg = document.getElementById('page-contabilidad');
+  if (!pg) return;
+
+  const keys = Object.keys(CONTABILIDAD_MESES);
+  if (!keys.includes(_contabMesActivo)) _contabMesActivo = keys[keys.length - 1];
+
+  // ── Tabs de meses ──
+  const tabsEl = document.getElementById('contab-mes-tabs');
+  tabsEl.innerHTML = keys.map(k => {
+    const active = k === _contabMesActivo ? 'btn-danger' : 'btn-outline-secondary';
+    return `<button class="btn btn-sm ${active}" style="font-size:.78rem;border-radius:20px" onclick="_contabMesActivo='${k}';renderContabilidad()">${CONTABILIDAD_MESES[k].label}</button>`;
+  }).join('');
+
+  const d = CONTABILIDAD_MESES[_contabMesActivo];
+  document.getElementById('contab-cuit-label').textContent = 'CUIT ' + d.cuit;
+
+  // ── KPIs ──
+  const posColor = d.posicion.neta >= 0 ? '#16a34a' : '#dc2626';
+  const posIcon  = d.posicion.neta >= 0 ? 'bi-arrow-up-circle-fill' : 'bi-arrow-down-circle-fill';
+  const kpis = [
+    { label: 'Facturación Bruta', value: fmt(d.ventas.total), icon: 'bi-receipt', color: '#2563eb' },
+    { label: 'Compras Totales',   value: fmt(d.compras.total), icon: 'bi-cart-fill', color: '#7c3aed' },
+    { label: 'Posición IVA Neta', value: fmt(d.posicion.neta), icon: posIcon, color: posColor },
+    { label: 'Movimiento Neto',   value: fmt(d.bancarios.neto), icon: 'bi-bank', color: '#0891b2' },
+  ];
+  document.getElementById('contab-kpis').innerHTML = kpis.map(k => `
+    <div class="col-6 col-xl-3">
+      <div class="card" style="border-radius:14px;border:none;box-shadow:0 2px 8px rgba(0,0,0,.07)">
+        <div class="card-body py-3 px-3">
+          <div class="d-flex align-items-center gap-2 mb-1">
+            <i class="bi ${k.icon}" style="font-size:1.1rem;color:${k.color}"></i>
+            <span style="font-size:.72rem;color:#64748b;font-weight:600;text-transform:uppercase">${k.label}</span>
+          </div>
+          <div style="font-size:1.25rem;font-weight:700;color:#0f172a">${k.value}</div>
+        </div>
+      </div>
+    </div>`).join('');
+
+  // ── Helper fila ──
+  const fila = (label, val, bold=false, colorVal='') =>
+    `<div class="d-flex justify-content-between align-items-center py-2" style="border-bottom:1px solid #f1f5f9">
+       <span style="font-size:.8rem;color:${bold?'#0f172a':'#475569'};font-weight:${bold?'700':'400'}">${label}</span>
+       <span style="font-size:.82rem;font-weight:${bold?'700':'500'};color:${colorVal||(bold?'#0f172a':'#334155')}">${fmt(val)}</span>
+     </div>`;
+
+  // ── Cards de detalle ──
+  document.getElementById('contab-cards').innerHTML = `
+    <!-- IVA Ventas -->
+    <div class="col-12 col-md-6">
+      <div class="card h-100" style="border-radius:14px;border:none;box-shadow:0 2px 8px rgba(0,0,0,.07)">
+        <div class="card-body p-3">
+          <div class="d-flex align-items-center gap-2 mb-3">
+            <div style="width:32px;height:32px;border-radius:8px;background:#dbeafe;display:flex;align-items:center;justify-content:center">
+              <i class="bi bi-receipt" style="color:#2563eb;font-size:.95rem"></i>
+            </div>
+            <span style="font-size:.85rem;font-weight:700;color:#0f172a">IVA Ventas</span>
+          </div>
+          ${fila('Neto Gravado Total', d.ventas.netoGravado)}
+          ${fila('Total IVA 21%', d.ventas.iva21)}
+          ${fila('Neto No Gravado', d.ventas.netoNoGravado)}
+          ${fila('Op. Exentas', d.ventas.exentas)}
+          ${fila('Otros Tributos', d.ventas.otrosTributos)}
+          ${fila('TOTAL FACTURAS EMITIDAS', d.ventas.total, true, '#2563eb')}
+        </div>
+      </div>
+    </div>
+
+    <!-- IVA Compras -->
+    <div class="col-12 col-md-6">
+      <div class="card h-100" style="border-radius:14px;border:none;box-shadow:0 2px 8px rgba(0,0,0,.07)">
+        <div class="card-body p-3">
+          <div class="d-flex align-items-center gap-2 mb-3">
+            <div style="width:32px;height:32px;border-radius:8px;background:#ede9fe;display:flex;align-items:center;justify-content:center">
+              <i class="bi bi-cart-fill" style="color:#7c3aed;font-size:.95rem"></i>
+            </div>
+            <span style="font-size:.85rem;font-weight:700;color:#0f172a">IVA Compras</span>
+          </div>
+          ${fila('Neto Gravado IVA 21%', d.compras.netoGravado21)}
+          ${fila('IVA 21% Compras', d.compras.iva21)}
+          ${fila('Neto Gravado IVA 10,5%', d.compras.netoGravado105)}
+          ${fila('IVA 10,5% Compras', d.compras.iva105)}
+          ${fila('Neto No Gravado', d.compras.netoNoGravado)}
+          ${fila('Op. Exentas', d.compras.exentas)}
+          ${fila('Percepciones / Otros Tributos', d.compras.percepciones)}
+          ${fila('TOTAL FACTURAS RECIBIDAS', d.compras.total, true, '#7c3aed')}
+        </div>
+      </div>
+    </div>
+
+    <!-- Posición IVA -->
+    <div class="col-12 col-md-6">
+      <div class="card h-100" style="border-radius:14px;border:none;box-shadow:0 2px 8px rgba(0,0,0,.07)">
+        <div class="card-body p-3">
+          <div class="d-flex align-items-center gap-2 mb-3">
+            <div style="width:32px;height:32px;border-radius:8px;background:#dcfce7;display:flex;align-items:center;justify-content:center">
+              <i class="bi bi-balance-scale-fill" style="color:#16a34a;font-size:.95rem"></i>
+            </div>
+            <span style="font-size:.85rem;font-weight:700;color:#0f172a">Posición IVA</span>
+          </div>
+          ${fila('IVA Ventas', d.posicion.ivaVentas)}
+          ${fila('IVA Compras', d.posicion.ivaCompras)}
+          ${fila('POSICIÓN IVA NETA', d.posicion.neta, true, d.posicion.neta >= 0 ? '#16a34a' : '#dc2626')}
+          <div class="mt-3 p-2 rounded text-center" style="background:${d.posicion.neta >= 0 ? '#dcfce7' : '#fee2e2'}">
+            <span style="font-size:.78rem;font-weight:600;color:${d.posicion.neta >= 0 ? '#15803d' : '#b91c1c'}">
+              ${d.posicion.neta >= 0 ? '▲ Saldo a favor ARCA' : '▼ A favor del fisco'}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Movimientos Bancarios -->
+    <div class="col-12 col-md-6">
+      <div class="card h-100" style="border-radius:14px;border:none;box-shadow:0 2px 8px rgba(0,0,0,.07)">
+        <div class="card-body p-3">
+          <div class="d-flex align-items-center gap-2 mb-3">
+            <div style="width:32px;height:32px;border-radius:8px;background:#e0f2fe;display:flex;align-items:center;justify-content:center">
+              <i class="bi bi-bank" style="color:#0891b2;font-size:.95rem"></i>
+            </div>
+            <span style="font-size:.85rem;font-weight:700;color:#0f172a">Movimientos Bancarios</span>
+          </div>
+          ${fila('Total Débitos', d.bancarios.debitos, false, '#dc2626')}
+          ${fila('Total Créditos', d.bancarios.creditos, false, '#16a34a')}
+          ${fila('Movimiento Neto', d.bancarios.neto, true, d.bancarios.neto >= 0 ? '#0891b2' : '#dc2626')}
+        </div>
+      </div>
+    </div>
+  `;
 }
 
 /* ═══════════════════════════════════════════
