@@ -360,6 +360,24 @@
     body.dark-mode .border-bottom { border-color: var(--border) !important; }
     body.dark-mode .border-top { border-color: var(--border) !important; }
 
+    /* ── CONTABILIDAD: visibilidad en modo claro ── */
+    #page-contabilidad .card { border: 1px solid #e2e8f0 !important; box-shadow: 0 2px 10px rgba(0,0,0,.06) !important; }
+    /* ── CONTABILIDAD: dark mode overrides ── */
+    body.dark-mode #page-contabilidad .card { border-color: var(--border) !important; background: var(--bg-card) !important; }
+    body.dark-mode #page-contabilidad [style*="color:#1e293b"],
+    body.dark-mode #page-contabilidad [style*="color:#0f172a"] { color: var(--text) !important; }
+    body.dark-mode #page-contabilidad [style*="color:#475569"],
+    body.dark-mode #page-contabilidad [style*="color:#64748b"],
+    body.dark-mode #page-contabilidad [style*="color:#334155"] { color: var(--text-muted) !important; }
+    body.dark-mode #page-contabilidad [style*="border-bottom:1px solid #e2e8f0"] { border-color: var(--border) !important; }
+    body.dark-mode #page-contabilidad [style*="background:#dbeafe"] { background: rgba(37,99,235,.18) !important; }
+    body.dark-mode #page-contabilidad [style*="background:#ede9fe"] { background: rgba(124,58,237,.18) !important; }
+    body.dark-mode #page-contabilidad [style*="background:#dcfce7"],
+    body.dark-mode #page-contabilidad [style*="background:#f0fdf4"] { background: rgba(22,163,74,.15) !important; }
+    body.dark-mode #page-contabilidad [style*="background:#e0f2fe"] { background: rgba(8,145,178,.18) !important; }
+    body.dark-mode #page-contabilidad [style*="background:#fee2e2"] { background: rgba(239,68,68,.15) !important; }
+    body.dark-mode #page-contabilidad [style*="color:#15803d"] { color: #4ade80 !important; }
+    body.dark-mode #page-contabilidad [style*="color:#b91c1c"] { color: #f87171 !important; }
 
     /* Búsqueda global */
     #search-results .sr-item { display:flex;align-items:center;gap:12px;padding:10px 16px;cursor:pointer;transition:background .15s; }
@@ -1783,6 +1801,12 @@
       <h4><i class="bi bi-calculator-fill me-2" style="color:#E31E24"></i>Contabilidad — Resumen IVA Mensual</h4>
       <div class="d-flex gap-2 flex-wrap align-items-center">
         <span id="contab-cuit-label" class="badge bg-secondary" style="font-size:.8rem">CUIT 30717617912</span>
+        <button class="btn btn-sm btn-outline-primary" onclick="renderContabilidad(true)" style="font-size:.78rem;border-radius:8px">
+          <i class="bi bi-arrow-clockwise me-1"></i>Sincronizar
+        </button>
+        <button class="btn btn-sm btn-outline-secondary" onclick="abrirContabConfig()" style="font-size:.78rem;border-radius:8px">
+          <i class="bi bi-gear me-1"></i>Configurar archivos
+        </button>
       </div>
     </div>
 
@@ -1796,6 +1820,23 @@
 
     <!-- Detalle en cards -->
     <div class="row g-3" id="contab-cards"></div>
+  </div>
+
+  <!-- Modal configurar hojas IVA -->
+  <div class="modal fade" id="modal-contab-config" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title"><i class="bi bi-table me-2"></i>Configurar archivos IVA por mes</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body" id="contab-config-body" style="max-height:60vh;overflow-y:auto"></div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cerrar</button>
+          <button class="btn btn-danger btn-sm" onclick="guardarContabConfig()"><i class="bi bi-save me-1"></i>Guardar</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- DOCUMENTOS — Google Drive -->
@@ -9747,152 +9788,309 @@ function renderCalendarioARCA() {
 }
 
 /* ═══════════════════════════════════════════
-   CONTABILIDAD — RESUMEN IVA MENSUAL
+   CONTABILIDAD — RESUMEN IVA MENSUAL (DINÁMICO)
+   Carga automáticamente desde Google Drive via gviz API.
+   Agregar el ID de cada nuevo mes en ST.contabilidadSheets
+   o en la pantalla Configurar archivos.
 ═══════════════════════════════════════════ */
 
-const CONTABILIDAD_MESES = {
-  '2026-03': {
-    label: 'Marzo 2026',
-    cuit: '30717617912',
-    ventas: {
-      netoGravado:    73163184.36,
-      iva21:          15364268.72,
-      netoNoGravado:  0,
-      exentas:        0,
-      otrosTributos:  0,
-      total:          88527453.08
-    },
-    compras: {
-      netoGravado21:  131953512.55,
-      iva21:          27710237.66,
-      netoGravado105: 0,
-      iva105:         0,
-      netoNoGravado:  0,
-      exentas:        255082.72,
-      percepciones:   2727510.93,
-      total:          164875692.21
-    },
-    posicion: {
-      ivaVentas:  15364268.72,
-      ivaCompras: 27710237.66,
-      neta:       -12345968.94
-    },
-    bancarios: {
-      debitos:  141196915.96,
-      creditos: 235935941.31,
-      neto:     94739025.35
-    }
-  }
+// Meses conocidos (label fijo). El ID se configura por el usuario.
+const CONTABILIDAD_SHEETS = {
+  '2025-11': { label: 'Nov 2025' },
+  '2025-12': { label: 'Dic 2025' },
+  '2026-01': { label: 'Ene 2026' },
+  '2026-02': { label: 'Feb 2026' },
+  '2026-03': { label: 'Mar 2026', _defaultId: '1xM2jan8U3aJFVkqxvwPgaI20-bYqPGG8' },
+  '2026-04': { label: 'Abr 2026' },
+  '2026-05': { label: 'May 2026' },
+  '2026-06': { label: 'Jun 2026' },
+  '2026-07': { label: 'Jul 2026' },
+  '2026-08': { label: 'Ago 2026' },
+  '2026-09': { label: 'Sep 2026' },
+  '2026-10': { label: 'Oct 2026' },
+  '2026-11': { label: 'Nov 2026' },
+  '2026-12': { label: 'Dic 2026' },
 };
 
 let _contabMesActivo = '2026-03';
 
-function renderContabilidad() {
+// Obtener ID de la hoja para un mes (user config tiene prioridad sobre default)
+function _getSheetId(key) {
+  return ((ST.contabilidadSheets || {})[key]) || CONTABILIDAD_SHEETS[key]?._defaultId || null;
+}
+
+// Extraer ID de una URL de Google Sheets
+function _extractSheetId(url) {
+  const m = url.match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/);
+  return m ? m[1] : url.trim(); // si pegan el ID directamente también funciona
+}
+
+// Parser del JSON gviz del tab "Resumen"
+function parsearResumenIVA(json) {
+  const rows = json.table?.rows || [];
+  const colHeader = json.table?.cols?.[0]?.label || '';
+  const cuitMatch = colHeader.match(/CUIT\s+(\d{11})/);
+  const cuit = cuitMatch?.[1] || '';
+
+  let section = 'ventas';
+  const sec = { ventas: {}, compras: {}, posicion: {}, bancarios: {} };
+
+  rows.forEach(r => {
+    if (!r?.c) return;
+    const label = (r.c[0]?.v || '').toString().trim();
+    if (!label) return;
+    // Detectar cabeceras de sección
+    if (label.includes('IVA COMPRAS'))         { section = 'compras';   return; }
+    if (label.includes('POSICIÓN IVA'))        { section = 'posicion';  return; }
+    if (label.includes('MOVIMIENTOS BANCARIOS')){ section = 'bancarios'; return; }
+    if (label.includes('IVA VENTAS'))          { section = 'ventas';    return; }
+    // Valor numérico: buscar en columna E (índice 4) primero, luego atrás
+    let val = null;
+    for (let i = 4; i >= 1; i--) {
+      const c = r.c[i];
+      if (c && c.v !== null && c.v !== undefined) { val = c.v; break; }
+    }
+    if (val !== null) sec[section][label] = val;
+  });
+
+  const V = sec.ventas, C = sec.compras, P = sec.posicion, B = sec.bancarios;
+  const g = (obj, ...keys) => { for (const k of keys) if (obj[k] !== undefined) return obj[k]; return 0; };
+
+  return {
+    cuit,
+    ventas: {
+      netoGravado:   g(V,'Neto Gravado Total'),
+      iva21:         g(V,'Total IVA 21%'),
+      netoNoGravado: g(V,'Neto No Gravado'),
+      exentas:       g(V,'Op. Exentas'),
+      otrosTributos: g(V,'Otros Tributos'),
+      total:         g(V,'TOTAL FACTURAS EMITIDAS'),
+    },
+    compras: {
+      netoGravado21:  g(C,'Neto Gravado IVA 21%'),
+      iva21:          g(C,'IVA 21% Compras'),
+      netoGravado105: g(C,'Neto Gravado IVA 10,5%'),
+      iva105:         g(C,'IVA 10,5% Compras'),
+      netoNoGravado:  g(C,'Neto No Gravado'),
+      exentas:        g(C,'Op. Exentas'),
+      percepciones:   g(C,'Percepciones / Otros Tributos'),
+      total:          g(C,'TOTAL FACTURAS RECIBIDAS'),
+    },
+    posicion: {
+      ivaVentas:  g(P,'IVA Ventas'),
+      ivaCompras: g(P,'IVA Compras'),
+      neta:       g(P,'POSICIÓN IVA NETA (Ventas - Compras)','POSICIÓN IVA NETA'),
+    },
+    bancarios: {
+      debitos:  g(B,'Total Débitos'),
+      creditos: g(B,'Total Créditos'),
+      neto:     g(B,'Movimiento Neto'),
+    },
+  };
+}
+
+// Cargar datos de un mes desde Google Drive (gviz, con caché 1h)
+async function cargarContabilidadMes(key, force=false) {
+  const id = _getSheetId(key);
+  if (!id) return null;
+
+  if (!force) {
+    const cached = (ST.contabilidadCache || {})[key];
+    if (cached && (Date.now() - cached.ts) < 3600000) return cached.data;
+  }
+
+  try {
+    const resp = await fetch(
+      `https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:json&sheet=Resumen`,
+      { credentials: 'include' }
+    );
+    if (!resp.ok) return null;
+    const txt = await resp.text();
+    const json = JSON.parse(txt.replace(/^[^\{]+/, '').replace(/\);?\s*$/, ''));
+    const data = parsearResumenIVA(json);
+    if (!ST.contabilidadCache) ST.contabilidadCache = {};
+    ST.contabilidadCache[key] = { data, ts: Date.now() };
+    save();
+    return data;
+  } catch(e) {
+    console.warn('CONTABILIDAD: error cargando', key, e);
+    return null;
+  }
+}
+
+// Helper fila de tabla
+function _contabFila(label, val, bold=false, colorVal='') {
+  const lc = bold ? 'color:#1e293b' : 'color:#475569';
+  const vc = colorVal || (bold ? 'color:#1e293b' : 'color:#334155');
+  return `<div class="d-flex justify-content-between align-items-center py-2" style="border-bottom:1px solid #e2e8f0">
+    <span style="font-size:.8rem;${lc};font-weight:${bold?'700':'400'}">${label}</span>
+    <span style="font-size:.82rem;font-weight:${bold?'700':'500'};${vc}">${fmt(val)}</span>
+  </div>`;
+}
+
+async function renderContabilidad(force=false) {
   const pg = document.getElementById('page-contabilidad');
   if (!pg) return;
 
-  const keys = Object.keys(CONTABILIDAD_MESES);
-  if (!keys.includes(_contabMesActivo)) _contabMesActivo = keys[keys.length - 1];
+  const allKeys = Object.keys(CONTABILIDAD_SHEETS);
+  // Auto-seleccionar mes con datos más reciente si el activo no tiene ID
+  if (!_getSheetId(_contabMesActivo)) {
+    const withId = allKeys.filter(k => _getSheetId(k));
+    if (withId.length) _contabMesActivo = withId[withId.length - 1];
+  }
 
   // ── Tabs de meses ──
   const tabsEl = document.getElementById('contab-mes-tabs');
-  tabsEl.innerHTML = keys.map(k => {
-    const active = k === _contabMesActivo ? 'btn-danger' : 'btn-outline-secondary';
-    return `<button class="btn btn-sm ${active}" style="font-size:.78rem;border-radius:20px" onclick="_contabMesActivo='${k}';renderContabilidad()">${CONTABILIDAD_MESES[k].label}</button>`;
+  tabsEl.innerHTML = allKeys.map(k => {
+    const hasId = !!_getSheetId(k);
+    const active = k === _contabMesActivo ? 'btn-danger' : (hasId ? 'btn-outline-secondary' : 'btn-outline-light text-secondary');
+    const cached = !!(ST.contabilidadCache || {})[k];
+    const dot = cached ? '<span style="width:5px;height:5px;border-radius:50%;background:#22c55e;display:inline-block;margin-left:4px;vertical-align:middle"></span>' : '';
+    return `<button class="btn btn-sm ${active}" style="font-size:.76rem;border-radius:20px;opacity:${hasId?1:.5}" onclick="_contabMesActivo='${k}';renderContabilidad()" ${hasId?'':''}>
+      ${CONTABILIDAD_SHEETS[k].label}${dot}
+    </button>`;
   }).join('');
 
-  const d = CONTABILIDAD_MESES[_contabMesActivo];
-  document.getElementById('contab-cuit-label').textContent = 'CUIT ' + d.cuit;
+  const kpisEl  = document.getElementById('contab-kpis');
+  const cardsEl = document.getElementById('contab-cards');
+
+  const sheetId = _getSheetId(_contabMesActivo);
+  if (!sheetId) {
+    kpisEl.innerHTML = '';
+    cardsEl.innerHTML = `
+      <div class="col-12">
+        <div class="card" style="border-radius:14px;text-align:center;padding:40px 20px">
+          <i class="bi bi-table" style="font-size:2.5rem;color:#94a3b8;margin-bottom:12px"></i>
+          <div style="font-size:.95rem;font-weight:600;color:#475569;margin-bottom:6px">Sin archivo configurado</div>
+          <div style="font-size:.82rem;color:#94a3b8;margin-bottom:16px">
+            ${CONTABILIDAD_SHEETS[_contabMesActivo].label} — Pegá la URL del archivo en Drive
+          </div>
+          <button class="btn btn-danger btn-sm mx-auto" style="width:fit-content" onclick="abrirContabConfig()">
+            <i class="bi bi-link-45deg me-1"></i>Configurar archivo
+          </button>
+        </div>
+      </div>`;
+    return;
+  }
+
+  // Mostrar spinner mientras carga
+  const cached = (ST.contabilidadCache || {})[_contabMesActivo];
+  if (!cached || force) {
+    kpisEl.innerHTML = `<div class="col-12 text-center py-4">
+      <div class="spinner-border text-danger" role="status" style="width:2rem;height:2rem"></div>
+      <div class="mt-2" style="font-size:.82rem;color:#64748b">Sincronizando con Google Drive…</div>
+    </div>`;
+    cardsEl.innerHTML = '';
+  }
+
+  const d = await cargarContabilidadMes(_contabMesActivo, force);
+
+  if (!d) {
+    kpisEl.innerHTML = '';
+    cardsEl.innerHTML = `<div class="col-12">
+      <div class="card" style="border-radius:14px;text-align:center;padding:30px 20px">
+        <i class="bi bi-wifi-off" style="font-size:2rem;color:#f87171;margin-bottom:8px"></i>
+        <div style="font-size:.85rem;color:#475569;margin-bottom:12px">
+          No se pudo conectar con Google Drive.<br>
+          <small>Asegurate de estar logueado con tu cuenta de Google.</small>
+        </div>
+        <button class="btn btn-sm btn-outline-danger mx-auto" style="width:fit-content" onclick="renderContabilidad(true)">
+          <i class="bi bi-arrow-clockwise me-1"></i>Reintentar
+        </button>
+      </div>
+    </div>`;
+    return;
+  }
+
+  // Actualizar CUIT
+  if (d.cuit) document.getElementById('contab-cuit-label').textContent = 'CUIT ' + d.cuit;
+
+  // Actualizar tabs con punto verde ahora que cargó
+  renderContabilidad._refreshTabs && renderContabilidad._refreshTabs();
 
   // ── KPIs ──
   const posColor = d.posicion.neta >= 0 ? '#16a34a' : '#dc2626';
   const posIcon  = d.posicion.neta >= 0 ? 'bi-arrow-up-circle-fill' : 'bi-arrow-down-circle-fill';
   const kpis = [
-    { label: 'Facturación Bruta', value: fmt(d.ventas.total), icon: 'bi-receipt', color: '#2563eb' },
-    { label: 'Compras Totales',   value: fmt(d.compras.total), icon: 'bi-cart-fill', color: '#7c3aed' },
-    { label: 'Posición IVA Neta', value: fmt(d.posicion.neta), icon: posIcon, color: posColor },
-    { label: 'Movimiento Neto',   value: fmt(d.bancarios.neto), icon: 'bi-bank', color: '#0891b2' },
+    { label: 'Facturación Bruta', value: fmt(d.ventas.total),   icon: 'bi-receipt',           color: '#2563eb' },
+    { label: 'Compras Totales',   value: fmt(d.compras.total),  icon: 'bi-cart-fill',          color: '#7c3aed' },
+    { label: 'Posición IVA Neta', value: fmt(d.posicion.neta),  icon: posIcon,                 color: posColor  },
+    { label: 'Movimiento Neto',   value: fmt(d.bancarios.neto), icon: 'bi-bank',               color: '#0891b2' },
   ];
-  document.getElementById('contab-kpis').innerHTML = kpis.map(k => `
+  kpisEl.innerHTML = kpis.map(k => `
     <div class="col-6 col-xl-3">
-      <div class="card" style="border-radius:14px;border:none;box-shadow:0 2px 8px rgba(0,0,0,.07)">
+      <div class="card" style="border-radius:14px">
         <div class="card-body py-3 px-3">
           <div class="d-flex align-items-center gap-2 mb-1">
             <i class="bi ${k.icon}" style="font-size:1.1rem;color:${k.color}"></i>
-            <span style="font-size:.72rem;color:#64748b;font-weight:600;text-transform:uppercase">${k.label}</span>
+            <span style="font-size:.7rem;color:#64748b;font-weight:600;text-transform:uppercase;line-height:1.2">${k.label}</span>
           </div>
-          <div style="font-size:1.25rem;font-weight:700;color:#0f172a">${k.value}</div>
+          <div style="font-size:1.15rem;font-weight:700;color:#1e293b">${k.value}</div>
         </div>
       </div>
     </div>`).join('');
 
-  // ── Helper fila ──
-  const fila = (label, val, bold=false, colorVal='') =>
-    `<div class="d-flex justify-content-between align-items-center py-2" style="border-bottom:1px solid #f1f5f9">
-       <span style="font-size:.8rem;color:${bold?'#0f172a':'#475569'};font-weight:${bold?'700':'400'}">${label}</span>
-       <span style="font-size:.82rem;font-weight:${bold?'700':'500'};color:${colorVal||(bold?'#0f172a':'#334155')}">${fmt(val)}</span>
-     </div>`;
-
   // ── Cards de detalle ──
-  document.getElementById('contab-cards').innerHTML = `
+  const posNeta = d.posicion.neta;
+  cardsEl.innerHTML = `
     <!-- IVA Ventas -->
     <div class="col-12 col-md-6">
-      <div class="card h-100" style="border-radius:14px;border:none;box-shadow:0 2px 8px rgba(0,0,0,.07)">
+      <div class="card h-100" style="border-radius:14px">
         <div class="card-body p-3">
           <div class="d-flex align-items-center gap-2 mb-3">
-            <div style="width:32px;height:32px;border-radius:8px;background:#dbeafe;display:flex;align-items:center;justify-content:center">
+            <div style="width:32px;height:32px;border-radius:8px;background:#dbeafe;display:flex;align-items:center;justify-content:center;flex-shrink:0">
               <i class="bi bi-receipt" style="color:#2563eb;font-size:.95rem"></i>
             </div>
-            <span style="font-size:.85rem;font-weight:700;color:#0f172a">IVA Ventas</span>
+            <span style="font-size:.88rem;font-weight:700;color:#1e293b">IVA Ventas</span>
           </div>
-          ${fila('Neto Gravado Total', d.ventas.netoGravado)}
-          ${fila('Total IVA 21%', d.ventas.iva21)}
-          ${fila('Neto No Gravado', d.ventas.netoNoGravado)}
-          ${fila('Op. Exentas', d.ventas.exentas)}
-          ${fila('Otros Tributos', d.ventas.otrosTributos)}
-          ${fila('TOTAL FACTURAS EMITIDAS', d.ventas.total, true, '#2563eb')}
+          ${_contabFila('Neto Gravado Total',      d.ventas.netoGravado)}
+          ${_contabFila('Total IVA 21%',           d.ventas.iva21)}
+          ${_contabFila('Neto No Gravado',         d.ventas.netoNoGravado)}
+          ${_contabFila('Op. Exentas',             d.ventas.exentas)}
+          ${_contabFila('Otros Tributos',          d.ventas.otrosTributos)}
+          ${_contabFila('TOTAL FACTURAS EMITIDAS', d.ventas.total, true, 'color:#2563eb')}
         </div>
       </div>
     </div>
 
     <!-- IVA Compras -->
     <div class="col-12 col-md-6">
-      <div class="card h-100" style="border-radius:14px;border:none;box-shadow:0 2px 8px rgba(0,0,0,.07)">
+      <div class="card h-100" style="border-radius:14px">
         <div class="card-body p-3">
           <div class="d-flex align-items-center gap-2 mb-3">
-            <div style="width:32px;height:32px;border-radius:8px;background:#ede9fe;display:flex;align-items:center;justify-content:center">
+            <div style="width:32px;height:32px;border-radius:8px;background:#ede9fe;display:flex;align-items:center;justify-content:center;flex-shrink:0">
               <i class="bi bi-cart-fill" style="color:#7c3aed;font-size:.95rem"></i>
             </div>
-            <span style="font-size:.85rem;font-weight:700;color:#0f172a">IVA Compras</span>
+            <span style="font-size:.88rem;font-weight:700;color:#1e293b">IVA Compras</span>
           </div>
-          ${fila('Neto Gravado IVA 21%', d.compras.netoGravado21)}
-          ${fila('IVA 21% Compras', d.compras.iva21)}
-          ${fila('Neto Gravado IVA 10,5%', d.compras.netoGravado105)}
-          ${fila('IVA 10,5% Compras', d.compras.iva105)}
-          ${fila('Neto No Gravado', d.compras.netoNoGravado)}
-          ${fila('Op. Exentas', d.compras.exentas)}
-          ${fila('Percepciones / Otros Tributos', d.compras.percepciones)}
-          ${fila('TOTAL FACTURAS RECIBIDAS', d.compras.total, true, '#7c3aed')}
+          ${_contabFila('Neto Gravado IVA 21%',           d.compras.netoGravado21)}
+          ${_contabFila('IVA 21% Compras',                d.compras.iva21)}
+          ${_contabFila('Neto Gravado IVA 10,5%',         d.compras.netoGravado105)}
+          ${_contabFila('IVA 10,5% Compras',              d.compras.iva105)}
+          ${_contabFila('Neto No Gravado',                d.compras.netoNoGravado)}
+          ${_contabFila('Op. Exentas',                    d.compras.exentas)}
+          ${_contabFila('Percepciones / Otros Tributos',  d.compras.percepciones)}
+          ${_contabFila('TOTAL FACTURAS RECIBIDAS',       d.compras.total, true, 'color:#7c3aed')}
         </div>
       </div>
     </div>
 
     <!-- Posición IVA -->
     <div class="col-12 col-md-6">
-      <div class="card h-100" style="border-radius:14px;border:none;box-shadow:0 2px 8px rgba(0,0,0,.07)">
+      <div class="card h-100" style="border-radius:14px">
         <div class="card-body p-3">
           <div class="d-flex align-items-center gap-2 mb-3">
-            <div style="width:32px;height:32px;border-radius:8px;background:#dcfce7;display:flex;align-items:center;justify-content:center">
+            <div style="width:32px;height:32px;border-radius:8px;background:#dcfce7;display:flex;align-items:center;justify-content:center;flex-shrink:0">
               <i class="bi bi-balance-scale-fill" style="color:#16a34a;font-size:.95rem"></i>
             </div>
-            <span style="font-size:.85rem;font-weight:700;color:#0f172a">Posición IVA</span>
+            <span style="font-size:.88rem;font-weight:700;color:#1e293b">Posición IVA</span>
           </div>
-          ${fila('IVA Ventas', d.posicion.ivaVentas)}
-          ${fila('IVA Compras', d.posicion.ivaCompras)}
-          ${fila('POSICIÓN IVA NETA', d.posicion.neta, true, d.posicion.neta >= 0 ? '#16a34a' : '#dc2626')}
-          <div class="mt-3 p-2 rounded text-center" style="background:${d.posicion.neta >= 0 ? '#dcfce7' : '#fee2e2'}">
-            <span style="font-size:.78rem;font-weight:600;color:${d.posicion.neta >= 0 ? '#15803d' : '#b91c1c'}">
-              ${d.posicion.neta >= 0 ? '▲ Saldo a favor ARCA' : '▼ A favor del fisco'}
+          ${_contabFila('IVA Ventas',      d.posicion.ivaVentas)}
+          ${_contabFila('IVA Compras',     d.posicion.ivaCompras)}
+          ${_contabFila('POSICIÓN IVA NETA', posNeta, true, posNeta>=0?'color:#16a34a':'color:#dc2626')}
+          <div class="mt-3 p-2 rounded text-center" style="background:${posNeta>=0?'#dcfce7':'#fee2e2'}">
+            <span style="font-size:.78rem;font-weight:600;color:${posNeta>=0?'#15803d':'#b91c1c'}">
+              ${posNeta>=0?'▲ Saldo a favor ARCA':'▼ A favor del fisco'}
             </span>
           </div>
         </div>
@@ -9901,21 +10099,68 @@ function renderContabilidad() {
 
     <!-- Movimientos Bancarios -->
     <div class="col-12 col-md-6">
-      <div class="card h-100" style="border-radius:14px;border:none;box-shadow:0 2px 8px rgba(0,0,0,.07)">
+      <div class="card h-100" style="border-radius:14px">
         <div class="card-body p-3">
           <div class="d-flex align-items-center gap-2 mb-3">
-            <div style="width:32px;height:32px;border-radius:8px;background:#e0f2fe;display:flex;align-items:center;justify-content:center">
+            <div style="width:32px;height:32px;border-radius:8px;background:#e0f2fe;display:flex;align-items:center;justify-content:center;flex-shrink:0">
               <i class="bi bi-bank" style="color:#0891b2;font-size:.95rem"></i>
             </div>
-            <span style="font-size:.85rem;font-weight:700;color:#0f172a">Movimientos Bancarios</span>
+            <span style="font-size:.88rem;font-weight:700;color:#1e293b">Movimientos Bancarios</span>
           </div>
-          ${fila('Total Débitos', d.bancarios.debitos, false, '#dc2626')}
-          ${fila('Total Créditos', d.bancarios.creditos, false, '#16a34a')}
-          ${fila('Movimiento Neto', d.bancarios.neto, true, d.bancarios.neto >= 0 ? '#0891b2' : '#dc2626')}
+          ${_contabFila('Total Débitos',   d.bancarios.debitos,  false, 'color:#dc2626')}
+          ${_contabFila('Total Créditos',  d.bancarios.creditos, false, 'color:#16a34a')}
+          ${_contabFila('Movimiento Neto', d.bancarios.neto,     true,  d.bancarios.neto>=0?'color:#0891b2':'color:#dc2626')}
         </div>
       </div>
     </div>
   `;
+
+  // Re-render tabs con dots actualizados
+  tabsEl.innerHTML = allKeys.map(k => {
+    const hasId = !!_getSheetId(k);
+    const active = k === _contabMesActivo ? 'btn-danger' : (hasId ? 'btn-outline-secondary' : 'btn-outline-light text-secondary');
+    const isCached = !!(ST.contabilidadCache || {})[k];
+    const dot = isCached ? '<span style="width:5px;height:5px;border-radius:50%;background:#22c55e;display:inline-block;margin-left:4px;vertical-align:middle"></span>' : '';
+    return `<button class="btn btn-sm ${active}" style="font-size:.76rem;border-radius:20px;opacity:${hasId?1:.45}" onclick="_contabMesActivo='${k}';renderContabilidad()">
+      ${CONTABILIDAD_SHEETS[k].label}${dot}
+    </button>`;
+  }).join('');
+}
+
+// ── Configurar IDs de hojas por mes ──
+function abrirContabConfig() {
+  const body = document.getElementById('contab-config-body');
+  const custom = ST.contabilidadSheets || {};
+  body.innerHTML = `
+    <p style="font-size:.82rem;color:#64748b" class="mb-3">
+      <i class="bi bi-info-circle me-1"></i>
+      Pegá la URL de Google Sheets (o el ID) para cada mes. Los meses sin archivo se muestran en gris.
+    </p>
+    <div class="row g-2">
+      ${Object.entries(CONTABILIDAD_SHEETS).map(([k, s]) => {
+        const current = custom[k] || s._defaultId || '';
+        return `<div class="col-12 col-md-6">
+          <label style="font-size:.75rem;font-weight:600;color:#475569;margin-bottom:2px">${s.label}</label>
+          <input class="form-control form-control-sm" id="cs-${k}" placeholder="URL o ID de Google Sheets" value="${current}">
+        </div>`;
+      }).join('')}
+    </div>`;
+  bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-contab-config')).show();
+}
+
+function guardarContabConfig() {
+  const custom = {};
+  Object.keys(CONTABILIDAD_SHEETS).forEach(k => {
+    const val = document.getElementById('cs-' + k)?.value.trim() || '';
+    if (val) custom[k] = _extractSheetId(val);
+  });
+  ST.contabilidadSheets = custom;
+  // Limpiar caché para que recargue
+  ST.contabilidadCache = {};
+  save();
+  bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-contab-config')).hide();
+  toast('Configuración guardada. Sincronizando…', 'success');
+  renderContabilidad(true);
 }
 
 /* ═══════════════════════════════════════════
