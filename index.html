@@ -9839,11 +9839,15 @@ function parsearResumenIVA(json) {
     if (!r?.c) return;
     const label = (r.c[0]?.v || '').toString().trim();
     if (!label) return;
-    // Detectar cabeceras de sección
-    if (label.includes('IVA COMPRAS'))         { section = 'compras';   return; }
-    if (label.includes('POSICIÓN IVA'))        { section = 'posicion';  return; }
-    if (label.includes('MOVIMIENTOS BANCARIOS')){ section = 'bancarios'; return; }
-    if (label.includes('IVA VENTAS'))          { section = 'ventas';    return; }
+    // Detectar cabeceras de sección: solo las filas que empiezan con "──" son separadores
+    // (evita falso positivo en "POSICIÓN IVA NETA (Ventas - Compras)")
+    if (label.startsWith('─') || label.startsWith('-')) {
+      if      (label.includes('IVA COMPRAS'))          section = 'compras';
+      else if (label.includes('POSICIÓN IVA'))         section = 'posicion';
+      else if (label.includes('MOVIMIENTOS BANCARIOS'))section = 'bancarios';
+      else if (label.includes('IVA VENTAS'))           section = 'ventas';
+      return; // cabecera → no guardar valor
+    }
     // Valor numérico: buscar en columna E (índice 4) primero, luego atrás
     let val = null;
     for (let i = 4; i >= 1; i--) {
@@ -10024,8 +10028,10 @@ async function renderContabilidad(force=false) {
   renderContabilidad._refreshTabs && renderContabilidad._refreshTabs();
 
   // ── KPIs ──
-  const posColor = d.posicion.neta >= 0 ? '#16a34a' : '#dc2626';
-  const posIcon  = d.posicion.neta >= 0 ? 'bi-arrow-up-circle-fill' : 'bi-arrow-down-circle-fill';
+  // neta > 0 → IVA Ventas > IVA Compras → debés a ARCA → ROJO
+  // neta < 0 → IVA Compras > IVA Ventas → saldo a tu favor → VERDE
+  const posColor = d.posicion.neta <= 0 ? '#16a34a' : '#dc2626';
+  const posIcon  = d.posicion.neta <= 0 ? 'bi-arrow-down-circle-fill' : 'bi-arrow-up-circle-fill';
   const kpis = [
     { label: 'Facturación Bruta', value: fmt(d.ventas.total),   icon: 'bi-receipt',           color: '#2563eb' },
     { label: 'Compras Totales',   value: fmt(d.compras.total),  icon: 'bi-cart-fill',          color: '#7c3aed' },
@@ -10102,10 +10108,10 @@ async function renderContabilidad(force=false) {
           </div>
           ${_contabFila('IVA Ventas',      d.posicion.ivaVentas)}
           ${_contabFila('IVA Compras',     d.posicion.ivaCompras)}
-          ${_contabFila('POSICIÓN IVA NETA', posNeta, true, posNeta>=0?'color:#16a34a':'color:#dc2626')}
-          <div class="mt-3 p-2 rounded text-center" style="background:${posNeta>=0?'#dcfce7':'#fee2e2'}">
-            <span style="font-size:.78rem;font-weight:600;color:${posNeta>=0?'#15803d':'#b91c1c'}">
-              ${posNeta>=0?'▲ Saldo a favor ARCA':'▼ A favor del fisco'}
+          ${_contabFila('POSICIÓN IVA NETA', posNeta, true, posNeta<=0?'color:#16a34a':'color:#dc2626')}
+          <div class="mt-3 p-2 rounded text-center" style="background:${posNeta<=0?'#dcfce7':'#fee2e2'}">
+            <span style="font-size:.78rem;font-weight:600;color:${posNeta<=0?'#15803d':'#b91c1c'}">
+              ${posNeta<0?'▼ Saldo a tu favor (crédito fiscal)':posNeta>0?'▲ A pagar a ARCA':'= Posición neutra'}
             </span>
           </div>
         </div>
