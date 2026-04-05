@@ -78,8 +78,21 @@
     .sidebar-logo { padding: 12px 12px 8px; border-bottom: 1px solid rgba(255,255,255,.08); flex-shrink: 0; }
     .sidebar-logo h5 { color: #fff; font-weight: 700; margin: 0; font-size: 1rem; }
     .sidebar-logo small { color: #64748b; font-size: .73rem; }
-    .sl { color: #cbd5e1; font-size: .67rem; text-transform: uppercase; letter-spacing: .12em; padding: 12px 14px 4px; font-weight: 700; flex-shrink: 0; border-top: 1px solid rgba(148,163,184,.15); margin-top: 6px; position:relative; }
-    .sl::after { content:''; display:block; width:24px; height:2px; background:linear-gradient(90deg,#3b82f6,transparent); border-radius:1px; margin-top:3px; }
+    .sl {
+      color: #64748b; font-size: .62rem; text-transform: uppercase; letter-spacing: .12em;
+      padding: 10px 14px 4px 12px; font-weight: 700; flex-shrink: 0;
+      border-top: 1px solid rgba(148,163,184,.1); margin-top: 4px; position: relative;
+      display: flex; align-items: center; justify-content: space-between;
+      cursor: pointer; user-select: none; transition: color .15s;
+    }
+    .sl:hover { color: #94a3b8; }
+    .sl-chevron { font-size: .6rem; transition: transform .22s ease; opacity: .6; }
+    .sl.collapsed .sl-chevron { transform: rotate(-90deg); }
+    .sl-items {
+      overflow: hidden; transition: max-height .25s ease, opacity .2s ease;
+      max-height: 600px; opacity: 1;
+    }
+    .sl-items.collapsed { max-height: 0 !important; opacity: 0; }
     #sidebar-nav {
       overflow-y: auto; flex: 1 1 0; min-height: 0;
       scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.15) transparent;
@@ -487,40 +500,82 @@
     </div>
   </div>
   <ul class="nav flex-column mt-1 flex-grow-1" id="sidebar-nav">
+
+    <!-- ── Fijos ── -->
     <li><a class="nav-link active" data-page="dashboard"><i class="bi bi-speedometer2"></i>Dashboard</a></li>
-    <li><a class="nav-link" data-page="socios"><i class="bi bi-people-fill"></i>Socios</a></li>
-    <li><a class="nav-link" data-page="cuentaSocios"><i class="bi bi-bar-chart-steps"></i>Cuenta Socios</a></li>
 
-    <div class="sl">Cheques</div>
-    <li><a class="nav-link" data-page="chequesFisicos"><i class="bi bi-file-earmark-check-fill"></i>Cheques Físicos</a></li>
-    <li><a class="nav-link" data-page="eCheques"><i class="bi bi-credit-card-fill"></i>E-Cheques</a></li>
-    <li><a class="nav-link" data-page="chequesPagar"><i class="bi bi-file-earmark-minus-fill"></i>Cheques a Pagar</a></li>
+    <!-- ── Empresa ── -->
+    <div class="sl" data-group="empresa" onclick="toggleSBGroup('empresa')">
+      <span><i class="bi bi-building-fill me-1" style="font-size:.6rem;opacity:.7"></i>Empresa</span>
+      <i class="bi bi-chevron-down sl-chevron"></i>
+    </div>
+    <div class="sl-items" id="sg-empresa">
+      <li><a class="nav-link" data-page="socios"><i class="bi bi-people-fill"></i>Socios</a></li>
+      <li><a class="nav-link" data-page="cuentaSocios"><i class="bi bi-bar-chart-steps"></i>Cuenta Socios</a></li>
+    </div>
 
-    <div class="sl">Caja</div>
-    <li><a class="nav-link" data-page="cajaBancos"><i class="bi bi-bank2"></i>Caja — Bancos</a></li>
-    <li><a class="nav-link" data-page="cajaEfectivo"><i class="bi bi-cash-coin"></i>Caja — Efectivo</a></li>
-    <li><a class="nav-link" data-page="kilometraje"><i class="bi bi-speedometer2"></i>Kilometraje</a></li>
+    <!-- ── Cheques ── -->
+    <div class="sl" data-group="cheques" onclick="toggleSBGroup('cheques')">
+      <span><i class="bi bi-file-earmark-check me-1" style="font-size:.6rem;opacity:.7"></i>Cheques</span>
+      <i class="bi bi-chevron-down sl-chevron"></i>
+    </div>
+    <div class="sl-items" id="sg-cheques">
+      <li><a class="nav-link" data-page="chequesFisicos"><i class="bi bi-file-earmark-check-fill"></i>Cheques Físicos</a></li>
+      <li><a class="nav-link" data-page="eCheques"><i class="bi bi-credit-card-fill"></i>E-Cheques</a></li>
+      <li><a class="nav-link" data-page="chequesPagar"><i class="bi bi-file-earmark-minus-fill"></i>Cheques a Pagar</a></li>
+    </div>
 
-    <div class="sl">Gestión</div>
-    <li><a class="nav-link" data-page="comisiones"><i class="bi bi-percent"></i>Comisiones</a></li>
-    <li><a class="nav-link" data-page="bcra"><i class="bi bi-building"></i>BCRA</a></li>
-    <li><a class="nav-link" data-page="calendarioARCA"><i class="bi bi-calendar2-check-fill"></i>Calendario ARCA</a></li>
-    <li><a class="nav-link" data-page="contabilidad"><i class="bi bi-calculator-fill"></i>Contabilidad</a></li>
-    <li><a class="nav-link" data-page="facturasACobrar"><i class="bi bi-file-earmark-arrow-down-fill"></i>Facturas a Cobrar</a></li>
-    <li><a class="nav-link" data-page="facturasPagar"><i class="bi bi-file-earmark-arrow-up-fill"></i>Facturas a Pagar</a></li>
+    <!-- ── Caja ── -->
+    <div class="sl" data-group="caja" onclick="toggleSBGroup('caja')">
+      <span><i class="bi bi-cash-coin me-1" style="font-size:.6rem;opacity:.7"></i>Caja</span>
+      <i class="bi bi-chevron-down sl-chevron"></i>
+    </div>
+    <div class="sl-items" id="sg-caja">
+      <li><a class="nav-link" data-page="cajaBancos"><i class="bi bi-bank2"></i>Caja — Bancos</a></li>
+      <li><a class="nav-link" data-page="cajaEfectivo"><i class="bi bi-cash-coin"></i>Caja — Efectivo</a></li>
+      <li><a class="nav-link" data-page="kilometraje"><i class="bi bi-speedometer2"></i>Kilometraje</a></li>
+    </div>
 
-    <div class="sl">Análisis</div>
-    <li><a class="nav-link" data-page="flujoProyectado"><i class="bi bi-graph-up"></i>Flujo Proyectado</a></li>
-    <li><a class="nav-link" data-page="panelVencimientos"><i class="bi bi-calendar-event"></i>Vencimientos</a></li>
-    <li><a class="nav-link" data-page="rentabilidad"><i class="bi bi-pie-chart-fill"></i>Rentabilidad</a></li>
-    <li><a class="nav-link" data-page="gestion"><i class="bi bi-graph-up-arrow"></i>Gestión</a></li>
-    <li><a class="nav-link" data-page="reportes"><i class="bi bi-bar-chart-line-fill"></i>Reportes</a></li>
-    <li><a class="nav-link" data-page="historial"><i class="bi bi-clock-history"></i>Historial</a></li>
-    <li><a class="nav-link" data-page="estrategicos"><i class="bi bi-lightbulb-fill"></i>Estratégicos</a></li>
-    <div class="sl">Archivos</div>
-    <li><a class="nav-link" data-page="estadosCuenta"><i class="bi bi-person-lines-fill"></i>Estados de Cuenta</a></li>
-    <li><a class="nav-link" data-page="documentos"><i class="bi bi-folder2-open"></i>Documentos</a></li>
-    <li><a class="nav-link" data-page="config"><i class="bi bi-gear-fill"></i>Configuración</a></li>
+    <!-- ── Gestión ── -->
+    <div class="sl" data-group="gestion" onclick="toggleSBGroup('gestion')">
+      <span><i class="bi bi-briefcase-fill me-1" style="font-size:.6rem;opacity:.7"></i>Gestión</span>
+      <i class="bi bi-chevron-down sl-chevron"></i>
+    </div>
+    <div class="sl-items" id="sg-gestion">
+      <li><a class="nav-link" data-page="comisiones"><i class="bi bi-percent"></i>Comisiones</a></li>
+      <li><a class="nav-link" data-page="bcra"><i class="bi bi-building"></i>BCRA</a></li>
+      <li><a class="nav-link" data-page="calendarioARCA"><i class="bi bi-calendar2-check-fill"></i>Calendario ARCA</a></li>
+      <li><a class="nav-link" data-page="contabilidad"><i class="bi bi-calculator-fill"></i>Contabilidad</a></li>
+      <li><a class="nav-link" data-page="facturasACobrar"><i class="bi bi-file-earmark-arrow-down-fill"></i>Facturas a Cobrar</a></li>
+      <li><a class="nav-link" data-page="facturasPagar"><i class="bi bi-file-earmark-arrow-up-fill"></i>Facturas a Pagar</a></li>
+    </div>
+
+    <!-- ── Análisis ── -->
+    <div class="sl" data-group="analisis" onclick="toggleSBGroup('analisis')">
+      <span><i class="bi bi-graph-up me-1" style="font-size:.6rem;opacity:.7"></i>Análisis</span>
+      <i class="bi bi-chevron-down sl-chevron"></i>
+    </div>
+    <div class="sl-items" id="sg-analisis">
+      <li><a class="nav-link" data-page="flujoProyectado"><i class="bi bi-graph-up"></i>Flujo Proyectado</a></li>
+      <li><a class="nav-link" data-page="panelVencimientos"><i class="bi bi-calendar-event"></i>Vencimientos</a></li>
+      <li><a class="nav-link" data-page="rentabilidad"><i class="bi bi-pie-chart-fill"></i>Rentabilidad</a></li>
+      <li><a class="nav-link" data-page="gestion"><i class="bi bi-graph-up-arrow"></i>Gestión</a></li>
+      <li><a class="nav-link" data-page="reportes"><i class="bi bi-bar-chart-line-fill"></i>Reportes</a></li>
+      <li><a class="nav-link" data-page="historial"><i class="bi bi-clock-history"></i>Historial</a></li>
+      <li><a class="nav-link" data-page="estrategicos"><i class="bi bi-lightbulb-fill"></i>Estratégicos</a></li>
+    </div>
+
+    <!-- ── Archivos ── -->
+    <div class="sl" data-group="archivos" onclick="toggleSBGroup('archivos')">
+      <span><i class="bi bi-folder-fill me-1" style="font-size:.6rem;opacity:.7"></i>Archivos</span>
+      <i class="bi bi-chevron-down sl-chevron"></i>
+    </div>
+    <div class="sl-items" id="sg-archivos">
+      <li><a class="nav-link" data-page="estadosCuenta"><i class="bi bi-person-lines-fill"></i>Estados de Cuenta</a></li>
+      <li><a class="nav-link" data-page="documentos"><i class="bi bi-folder2-open"></i>Documentos</a></li>
+      <li><a class="nav-link" data-page="config"><i class="bi bi-gear-fill"></i>Configuración</a></li>
+    </div>
+
   </ul>
 
   <!-- BCRA TASAS -->
@@ -4295,11 +4350,71 @@ function initApp() {
       closeSidebarMobile();
       document.querySelectorAll('#sidebar-nav .nav-link').forEach(l=>l.classList.remove('active'));
       a.classList.add('active');
+      expandSBGroupForPage(a.dataset.page);
     });
   });
+  initSBGroups();
   renderTodo();
   // Service Worker para modo offline
   if(typeof _registerServiceWorker==='function') _registerServiceWorker();
+}
+
+/* ═══════════════════════════════════════════
+   SIDEBAR — Grupos Colapsables
+═══════════════════════════════════════════ */
+const _SB_GROUPS = {
+  empresa:  ['socios','cuentaSocios'],
+  cheques:  ['chequesFisicos','eCheques','chequesPagar'],
+  caja:     ['cajaBancos','cajaEfectivo','kilometraje'],
+  gestion:  ['comisiones','bcra','calendarioARCA','contabilidad','facturasACobrar','facturasPagar'],
+  analisis: ['flujoProyectado','panelVencimientos','rentabilidad','gestion','reportes','historial','estrategicos'],
+  archivos: ['estadosCuenta','documentos','config'],
+};
+
+function toggleSBGroup(group) {
+  const items = document.getElementById('sg-' + group);
+  const hdr   = document.querySelector(`.sl[data-group="${group}"]`);
+  if (!items) return;
+  const closing = !items.classList.contains('collapsed');
+  items.classList.toggle('collapsed', closing);
+  if (hdr) hdr.classList.toggle('collapsed', closing);
+  // Persist state
+  try {
+    const s = JSON.parse(localStorage.getItem('muuk_sb_groups') || '{}');
+    s[group] = closing;
+    localStorage.setItem('muuk_sb_groups', JSON.stringify(s));
+  } catch(e) {}
+}
+
+function initSBGroups() {
+  try {
+    const s = JSON.parse(localStorage.getItem('muuk_sb_groups') || '{}');
+    Object.keys(_SB_GROUPS).forEach(group => {
+      if (s[group] === true) {
+        const items = document.getElementById('sg-' + group);
+        const hdr   = document.querySelector(`.sl[data-group="${group}"]`);
+        if (items) items.classList.add('collapsed');
+        if (hdr)   hdr.classList.add('collapsed');
+      }
+    });
+  } catch(e) {}
+}
+
+function expandSBGroupForPage(page) {
+  Object.entries(_SB_GROUPS).forEach(([group, pages]) => {
+    if (pages.includes(page)) {
+      const items = document.getElementById('sg-' + group);
+      const hdr   = document.querySelector(`.sl[data-group="${group}"]`);
+      if (items) items.classList.remove('collapsed');
+      if (hdr)   hdr.classList.remove('collapsed');
+      // Update persisted state
+      try {
+        const s = JSON.parse(localStorage.getItem('muuk_sb_groups') || '{}');
+        s[group] = false;
+        localStorage.setItem('muuk_sb_groups', JSON.stringify(s));
+      } catch(e) {}
+    }
+  });
 }
 
 /* ═══════════════════════════════════════════
