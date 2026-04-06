@@ -553,16 +553,6 @@
     </div>
 
     <!-- ── Cheques ── -->
-    <div class="sl" data-group="cheques" onclick="toggleSBGroup('cheques')">
-      <span><i class="bi bi-file-earmark-check me-1" style="font-size:.6rem;opacity:.7"></i>Cheques</span>
-      <i class="bi bi-chevron-down sl-chevron"></i>
-    </div>
-    <div class="sl-items" id="sg-cheques">
-      <li><a class="nav-link" data-page="chequesFisicos"><i class="bi bi-file-earmark-check-fill"></i>Cheques Físicos</a></li>
-      <li><a class="nav-link" data-page="eCheques"><i class="bi bi-credit-card-fill"></i>E-Cheques</a></li>
-      <li><a class="nav-link" data-page="chequesPagar"><i class="bi bi-file-earmark-minus-fill"></i>Cheques a Pagar</a></li>
-    </div>
-
     <!-- ── Caja ── -->
     <div class="sl" data-group="caja" onclick="toggleSBGroup('caja')">
       <span><i class="bi bi-cash-coin me-1" style="font-size:.6rem;opacity:.7"></i>Caja</span>
@@ -571,6 +561,9 @@
     <div class="sl-items" id="sg-caja">
       <li><a class="nav-link" data-page="cajaBancos"><i class="bi bi-bank2"></i>Caja — Bancos</a></li>
       <li><a class="nav-link" data-page="cajaEfectivo"><i class="bi bi-cash-coin"></i>Caja — Efectivo</a></li>
+      <li><a class="nav-link" data-page="chequesFisicos"><i class="bi bi-file-earmark-check-fill"></i>Cheques Físicos</a></li>
+      <li><a class="nav-link" data-page="eCheques"><i class="bi bi-credit-card-fill"></i>E-Cheques</a></li>
+      <li><a class="nav-link" data-page="chequesPagar"><i class="bi bi-file-earmark-minus-fill"></i>Cheques a Pagar</a></li>
       <li><a class="nav-link" data-page="kilometraje"><i class="bi bi-speedometer2"></i>Kilometraje</a></li>
     </div>
 
@@ -586,6 +579,7 @@
       <li><a class="nav-link" data-page="contabilidad"><i class="bi bi-calculator-fill"></i>Contabilidad</a></li>
       <li><a class="nav-link" data-page="facturasACobrar"><i class="bi bi-file-earmark-arrow-down-fill"></i>Facturas a Cobrar</a></li>
       <li><a class="nav-link" data-page="facturasPagar"><i class="bi bi-file-earmark-arrow-up-fill"></i>Facturas a Pagar</a></li>
+      <li><a class="nav-link" data-page="estadosCuenta"><i class="bi bi-person-lines-fill"></i>Estados de Cuenta</a></li>
     </div>
 
     <!-- ── Análisis ── -->
@@ -610,7 +604,6 @@
       <i class="bi bi-chevron-down sl-chevron"></i>
     </div>
     <div class="sl-items" id="sg-archivos">
-      <li><a class="nav-link" data-page="estadosCuenta"><i class="bi bi-person-lines-fill"></i>Estados de Cuenta</a></li>
       <li><a class="nav-link" data-page="documentos"><i class="bi bi-folder2-open"></i>Documentos</a></li>
       <li><a class="nav-link" data-page="config"><i class="bi bi-gear-fill"></i>Configuración</a></li>
     </div>
@@ -1869,26 +1862,6 @@
 
     <!-- Posición Actual -->
     <div class="row g-3 mb-4" id="tes-kpis"></div>
-
-    <!-- Gráfico de flujo proyectado -->
-    <div class="row g-3 mb-4">
-      <div class="col-12 col-lg-7">
-        <div class="card" style="border-radius:14px;border:1px solid #e2e8f0">
-          <div class="card-body p-3">
-            <div style="font-size:.85rem;font-weight:700;color:#1e293b;margin-bottom:12px"><i class="bi bi-graph-up me-2" style="color:#2563eb"></i>Flujo proyectado 30 días</div>
-            <canvas id="tes-chart-flujo" height="200"></canvas>
-          </div>
-        </div>
-      </div>
-      <div class="col-12 col-lg-5">
-        <div class="card" style="border-radius:14px;border:1px solid #e2e8f0">
-          <div class="card-body p-3">
-            <div style="font-size:.85rem;font-weight:700;color:#1e293b;margin-bottom:12px"><i class="bi bi-pie-chart-fill me-2" style="color:#7c3aed"></i>Composición de activos</div>
-            <canvas id="tes-chart-composicion" height="200"></canvas>
-          </div>
-        </div>
-      </div>
-    </div>
 
     <!-- Detalle por fuente -->
     <div class="row g-3 mb-4" id="tes-detalle"></div>
@@ -4485,11 +4458,10 @@ function initApp() {
 ═══════════════════════════════════════════ */
 const _SB_GROUPS = {
   empresa:  ['socios','cuentaSocios'],
-  cheques:  ['chequesFisicos','eCheques','chequesPagar'],
-  caja:     ['cajaBancos','cajaEfectivo','kilometraje'],
-  gestion:  ['comisiones','bcra','calendarioARCA','contabilidad','facturasACobrar','facturasPagar'],
+  caja:     ['cajaBancos','cajaEfectivo','chequesFisicos','eCheques','chequesPagar','kilometraje'],
+  gestion:  ['comisiones','bcra','calendarioARCA','contabilidad','facturasACobrar','facturasPagar','estadosCuenta'],
   analisis: ['tesoreria','flujoProyectado','panelVencimientos','rentabilidad','gestion','reportes','historial','estrategicos'],
-  archivos: ['estadosCuenta','documentos','config'],
+  archivos: ['documentos','config'],
 };
 
 function toggleSBGroup(group) {
@@ -9268,71 +9240,95 @@ function renderFlujoProyectado() {
    #3 RENTABILIDAD POR CLIENTE
 ═══════════════════════════════════════════ */
 function renderRentabilidad() {
-  const clientes={};
-  // Comisiones from ECTA data
-  ECTA_VENDEDORES.forEach(v=>{
-    (_ectaCache[v]||[]).forEach(c=>{
-      const k=c.nombre;
-      if(!clientes[k])clientes[k]={nombre:k,facturado:0,cobrado:0,pendiente:0,comision:0,facturas:0};
-      clientes[k].cobrado+=c.totalCobrado;
-      clientes[k].pendiente+=c.totalPendiente;
-      clientes[k].facturas+=c.cobradas.length+c.pendientes.length;
-    });
-  });
-  // Comisiones from Gestión
-  if(GESTION_DATA&&GESTION_DATA.rows){
-    GESTION_DATA.rows.forEach(r=>{
-      const cli=(r[3]||'').trim();
-      if(!cli)return;
-      if(!clientes[cli])clientes[cli]={nombre:cli,facturado:0,cobrado:0,pendiente:0,comision:0,facturas:0};
-      clientes[cli].facturado+=(parseFloat(r[5])||0);
-      clientes[cli].comision+=(parseFloat(r[7])||0);
+  const empresas = {};
+
+  // ── Fuente principal: GESTION_DATA.empresas (ya agregado por empresa) ──
+  // empresas[i] = [nombre, ops, facturado, sinIVA, comision]
+  if (GESTION_DATA && GESTION_DATA.empresas) {
+    GESTION_DATA.empresas.forEach(e => {
+      const k = e[0] || 'Sin nombre';
+      if (!empresas[k]) empresas[k] = { nombre: k, ops: 0, facturado: 0, sinIVA: 0, comision: 0, cobrado: 0, pendiente: 0 };
+      empresas[k].ops      += (e[1] || 0);
+      empresas[k].facturado += (e[2] || 0);
+      empresas[k].sinIVA    += (e[3] || 0);
+      empresas[k].comision  += (e[4] || 0);
     });
   }
-  // Facturas pendientes
-  (ST.facturasACobrar||[]).forEach(f=>{
-    const k=f.cliente||'Sin nombre';
-    if(!clientes[k])clientes[k]={nombre:k,facturado:0,cobrado:0,pendiente:0,comision:0,facturas:0};
-    if(f.estado==='pendiente')clientes[k].pendiente+=(+f.total||0);
+
+  // ── Enriquecer con datos de ECTA (cobrado / pendiente por cliente) ──
+  ECTA_VENDEDORES.forEach(v => {
+    (_ectaCache[v] || []).forEach(c => {
+      const k = c.nombre;
+      if (!empresas[k]) empresas[k] = { nombre: k, ops: 0, facturado: 0, sinIVA: 0, comision: 0, cobrado: 0, pendiente: 0 };
+      empresas[k].cobrado   += c.totalCobrado;
+      empresas[k].pendiente += c.totalPendiente;
+    });
   });
 
-  const arr=Object.values(clientes).filter(c=>c.facturado||c.cobrado||c.pendiente||c.comision);
-  arr.sort((a,b)=>(b.comision||b.facturado)-(a.comision||a.facturado));
+  // ── Enriquecer con facturas pendientes ──
+  (ST.facturasACobrar || []).forEach(f => {
+    const k = f.cliente || 'Sin nombre';
+    if (!empresas[k]) empresas[k] = { nombre: k, ops: 0, facturado: 0, sinIVA: 0, comision: 0, cobrado: 0, pendiente: 0 };
+    if (f.estado === 'pendiente') empresas[k].pendiente += (+f.total || 0);
+  });
 
-  const totFac=arr.reduce((s,c)=>s+c.facturado,0);
-  const totCom=arr.reduce((s,c)=>s+c.comision,0);
-  const totPend=arr.reduce((s,c)=>s+c.pendiente,0);
-  const totCob=arr.reduce((s,c)=>s+c.cobrado,0);
+  const arr = Object.values(empresas).filter(c => c.facturado || c.cobrado || c.pendiente || c.comision);
+  arr.sort((a, b) => (b.facturado || b.comision) - (a.facturado || a.comision));
 
-  const kpis=document.getElementById('rent-kpis');
-  if(kpis)kpis.innerHTML=`
-    <div class="col-6 col-md-3"><div class="card p-2 text-center" style="border-radius:8px"><div style="font-size:.7rem;color:#475569;font-weight:600">Clientes</div><div style="font-size:1.2rem;font-weight:800">${arr.length}</div></div></div>
-    <div class="col-6 col-md-3"><div class="card p-2 text-center" style="border-radius:8px"><div style="font-size:.7rem;color:#475569;font-weight:600">Facturado Total</div><div style="font-size:1rem;font-weight:700;color:#1e293b">${fmt(totFac)}</div></div></div>
-    <div class="col-6 col-md-3"><div class="card p-2 text-center" style="border-radius:8px;background:#f0fdf4"><div style="font-size:.7rem;color:#15803d;font-weight:600">Comisiones</div><div style="font-size:1rem;font-weight:700;color:#16a34a">${fmt(totCom)}</div></div></div>
-    <div class="col-6 col-md-3"><div class="card p-2 text-center" style="border-radius:8px;background:#fef2f2"><div style="font-size:.7rem;color:#991b1b;font-weight:600">Pendiente Cobro</div><div style="font-size:1rem;font-weight:700;color:#b91c1c">${fmt(totPend)}</div></div></div>`;
+  const totFac  = arr.reduce((s, c) => s + c.facturado, 0);
+  const totSIVA = arr.reduce((s, c) => s + c.sinIVA, 0);
+  const totCom  = arr.reduce((s, c) => s + c.comision, 0);
+  const totPend = arr.reduce((s, c) => s + c.pendiente, 0);
+  const totCob  = arr.reduce((s, c) => s + c.cobrado, 0);
+  const totalOps = arr.reduce((s, c) => s + c.ops, 0);
+  const pctRent = totFac ? ((totCom / totFac) * 100).toFixed(1) : '0.0';
 
-  const wrap=document.getElementById('rent-tabla');
-  if(!wrap)return;
-  if(!arr.length){wrap.innerHTML='<div class="text-center text-muted py-4">Sin datos. Cargue datos de Gestión y Estados de Cuenta primero.</div>';return;}
-  let html='<div class="table-responsive"><table class="table table-sm table-hover mb-0" style="font-size:.86rem"><thead><tr style="background:#f1f5f9"><th style="padding:8px">Cliente</th><th class="text-end" style="padding:8px">Facturado</th><th class="text-end" style="padding:8px">Comisión</th><th class="text-end" style="padding:8px">% Rent.</th><th class="text-end" style="padding:8px">Cobrado</th><th class="text-end" style="padding:8px">Pendiente</th><th style="padding:8px;width:120px">Riesgo</th></tr></thead><tbody>';
-  arr.forEach((c,i)=>{
-    const rent=c.facturado?((c.comision/c.facturado)*100):0;
-    const riesgo=c.pendiente>c.cobrado*0.5?'alto':c.pendiente>0?'medio':'bajo';
-    const rColor={alto:'#dc2626',medio:'#d97706',bajo:'#16a34a'}[riesgo];
-    const rBg={alto:'#fef2f2',medio:'#fffbeb',bajo:'#f0fdf4'}[riesgo];
-    const rowBg=i%2===0?'#fff':'#f8fafc';
-    html+=`<tr style="background:${rowBg}">
-      <td style="padding:7px 8px;font-weight:600">${c.nombre}</td>
+  const kpis = document.getElementById('rent-kpis');
+  if (kpis) kpis.innerHTML = `
+    <div class="col-6 col-md-3"><div class="card p-2 text-center" style="border-radius:8px"><div style="font-size:.7rem;color:#475569;font-weight:600">Empresas</div><div style="font-size:1.2rem;font-weight:800">${arr.length}</div><div style="font-size:.6rem;color:#94a3b8">${totalOps} operaciones</div></div></div>
+    <div class="col-6 col-md-3"><div class="card p-2 text-center" style="border-radius:8px"><div style="font-size:.7rem;color:#475569;font-weight:600">Facturado Total</div><div style="font-size:1rem;font-weight:700;color:#1e293b">${fmt(totFac)}</div><div style="font-size:.6rem;color:#94a3b8">Sin IVA: ${fmt(totSIVA)}</div></div></div>
+    <div class="col-6 col-md-3"><div class="card p-2 text-center" style="border-radius:8px;background:#f0fdf4"><div style="font-size:.7rem;color:#15803d;font-weight:600">Comisiones</div><div style="font-size:1rem;font-weight:700;color:#16a34a">${fmt(totCom)}</div><div style="font-size:.6rem;color:#16a34a;font-weight:700">${pctRent}% sobre facturado</div></div></div>
+    <div class="col-6 col-md-3"><div class="card p-2 text-center" style="border-radius:8px;background:#fef2f2"><div style="font-size:.7rem;color:#991b1b;font-weight:600">Pendiente Cobro</div><div style="font-size:1rem;font-weight:700;color:#b91c1c">${fmt(totPend)}</div><div style="font-size:.6rem;color:#94a3b8">Cobrado: ${fmt(totCob)}</div></div></div>`;
+
+  const wrap = document.getElementById('rent-tabla');
+  if (!wrap) return;
+  if (!arr.length) { wrap.innerHTML = '<div class="text-center text-muted py-4"><i class="bi bi-info-circle me-2"></i>Sin datos. Sincronice Gestión 2026 primero.</div>'; return; }
+
+  const maxFac = Math.max(1, ...arr.map(c => c.facturado));
+  let html = `<div class="table-responsive"><table class="table table-sm table-hover mb-0" style="font-size:.82rem">
+    <thead><tr style="background:#f1f5f9">
+      <th style="padding:8px">Empresa / Cliente</th>
+      <th class="text-end" style="padding:8px">Ops</th>
+      <th class="text-end" style="padding:8px">Facturado</th>
+      <th class="text-end" style="padding:8px">Sin IVA</th>
+      <th class="text-end" style="padding:8px">Comisión</th>
+      <th class="text-end" style="padding:8px">% Rent.</th>
+      <th class="text-end" style="padding:8px">Cobrado</th>
+      <th class="text-end" style="padding:8px">Pendiente</th>
+      <th style="padding:8px;width:70px"></th>
+    </tr></thead><tbody>`;
+
+  arr.forEach((c, i) => {
+    const rent = c.facturado ? ((c.comision / c.facturado) * 100) : 0;
+    const riesgo = c.pendiente > c.cobrado * 0.5 && c.pendiente > 0 ? 'alto' : c.pendiente > 0 ? 'medio' : 'bajo';
+    const rColor = { alto: '#dc2626', medio: '#d97706', bajo: '#16a34a' }[riesgo];
+    const rBg    = { alto: '#fef2f2', medio: '#fffbeb', bajo: '#f0fdf4' }[riesgo];
+    const barW   = Math.max(2, (c.facturado / maxFac) * 100);
+    html += `<tr style="background:${i % 2 === 0 ? '#fff' : '#f8fafc'}">
+      <td style="padding:7px 8px"><div style="font-weight:600">${c.nombre}</div>
+        <div style="height:3px;background:#f1f5f9;border-radius:2px;margin-top:3px"><div style="width:${barW}%;height:100%;background:#7c3aed;border-radius:2px;opacity:.5"></div></div></td>
+      <td class="text-end" style="padding:7px 8px;color:#64748b">${c.ops || '—'}</td>
       <td class="text-end" style="padding:7px 8px">${fmt(c.facturado)}</td>
+      <td class="text-end" style="padding:7px 8px;color:#64748b">${fmt(c.sinIVA)}</td>
       <td class="text-end" style="padding:7px 8px;color:#16a34a;font-weight:600">${fmt(c.comision)}</td>
       <td class="text-end" style="padding:7px 8px;font-weight:700;color:#7c3aed">${rent.toFixed(1)}%</td>
-      <td class="text-end" style="padding:7px 8px;color:#15803d">${fmt(c.cobrado)}</td>
-      <td class="text-end" style="padding:7px 8px;color:#b91c1c;font-weight:${c.pendiente?'700':'400'}">${c.pendiente?fmt(c.pendiente):'—'}</td>
-      <td style="padding:7px 8px"><span style="background:${rBg};color:${rColor};font-size:.72rem;padding:2px 8px;border-radius:4px;font-weight:700">${riesgo.toUpperCase()}</span></td>
+      <td class="text-end" style="padding:7px 8px;color:#15803d">${c.cobrado ? fmt(c.cobrado) : '—'}</td>
+      <td class="text-end" style="padding:7px 8px;color:#b91c1c;font-weight:${c.pendiente ? '700' : '400'}">${c.pendiente ? fmt(c.pendiente) : '—'}</td>
+      <td style="padding:7px 8px"><span style="background:${rBg};color:${rColor};font-size:.68rem;padding:2px 8px;border-radius:4px;font-weight:700">${riesgo.toUpperCase()}</span></td>
     </tr>`;
   });
-  html+='</tbody></table></div>';
-  wrap.innerHTML=html;
+  html += '</tbody></table></div>';
+  wrap.innerHTML = html;
 }
 
 /* ═══════════════════════════════════════════
@@ -9871,9 +9867,6 @@ function renderCalendarioARCA() {
    TESORERÍA INTEGRAL — Reporte cruzado
 ═══════════════════════════════════════════ */
 
-let _tesChartFlujo = null;
-let _tesChartComp  = null;
-
 function renderTesoreria() {
   const today  = new Date(hoy() + 'T00:00:00');
   const in30   = new Date(today); in30.setDate(in30.getDate() + 30);
@@ -9937,70 +9930,7 @@ function renderTesoreria() {
       </div>
     </div>`).join('');
 
-  // ── 4. Gráfico Flujo 30 días ──
-  const flujoData = [];
-  for (let i = 0; i <= 30; i++) {
-    const d = new Date(today); d.setDate(d.getDate() + i);
-    const ds = d.toISOString().split('T')[0];
-    let ingreso = 0, egreso = 0;
-    // Cheques a cobrar que vencen este día
-    chqCartera.forEach(c => { const f = c.fechaVenc || c.fechaVto; if (f === ds) ingreso += (+c.monto || 0); });
-    // Facturas a cobrar que vencen este día
-    factCobrar.forEach(f => { if (f.fechaVenc === ds) ingreso += (+f.total || 0); });
-    // Cheques a pagar que vencen este día
-    chqPagar.forEach(c => { const f = c.fechaVenc || c.fechaVto; if (f === ds) egreso += (+c.monto || 0); });
-    // Facturas a pagar
-    factPagar.forEach(f => { if (f.fechaVenc === ds) egreso += (+f.total || 0); });
-    // ARCA
-    arcaPend30.forEach(v => { if (v.fecha === ds) egreso += (+v.importe || 0); });
-    flujoData.push({ label: ds.slice(5), ingreso, egreso });
-  }
-
-  if (_tesChartFlujo) _tesChartFlujo.destroy();
-  const ctxF = document.getElementById('tes-chart-flujo')?.getContext('2d');
-  if (ctxF) {
-    _tesChartFlujo = new Chart(ctxF, {
-      type: 'bar',
-      data: {
-        labels: flujoData.map(d => d.label),
-        datasets: [
-          { label: 'Ingresos', data: flujoData.map(d => d.ingreso), backgroundColor: 'rgba(22,163,74,.7)', borderRadius: 3, barPercentage: .6 },
-          { label: 'Egresos', data: flujoData.map(d => d.egreso), backgroundColor: 'rgba(220,38,38,.7)', borderRadius: 3, barPercentage: .6 },
-        ],
-      },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        scales: { y: { ticks: { callback: v => (v/1e6).toFixed(1) + 'M' }, grid: { color: 'rgba(0,0,0,.04)' } }, x: { ticks: { maxRotation: 45, font: { size: 9 } } } },
-        plugins: { legend: { position: 'top', labels: { boxWidth: 10, font: { size: 10 } } }, tooltip: { callbacks: { label: c => c.dataset.label + ': ' + fmt(c.raw) } } },
-      },
-    });
-  }
-
-  // ── 5. Doughnut composición ──
-  if (_tesChartComp) _tesChartComp.destroy();
-  const ctxC = document.getElementById('tes-chart-composicion')?.getContext('2d');
-  if (ctxC) {
-    _tesChartComp = new Chart(ctxC, {
-      type: 'doughnut',
-      data: {
-        labels: ['Bancos', 'Efectivo', 'Cheques Cartera', 'Facturas x Cobrar'],
-        datasets: [{
-          data: [Math.max(0,saldoBancos), Math.max(0,saldoEfectivo), totalCartera, totalFactCobrar],
-          backgroundColor: ['#2563eb', '#16a34a', '#f59e0b', '#7c3aed'],
-          borderWidth: 0,
-        }],
-      },
-      options: {
-        responsive: true, maintainAspectRatio: false, cutout: '60%',
-        plugins: {
-          legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } },
-          tooltip: { callbacks: { label: c => c.label + ': ' + fmt(c.raw) } },
-        },
-      },
-    });
-  }
-
-  // ── 6. Detalle por fuente ──
+  // ── 4. Detalle por fuente ──
   const detalleEl = document.getElementById('tes-detalle');
   const fila = (l, v, c='') => `<div class="d-flex justify-content-between py-1" style="border-bottom:1px solid #e2e8f0;font-size:.78rem">
     <span style="color:#475569">${l}</span><span style="font-weight:600;color:${c||'#1e293b'}">${fmt(v)}</span></div>`;
