@@ -379,6 +379,26 @@
     body.dark-mode #page-contabilidad [style*="color:#15803d"] { color: #4ade80 !important; }
     body.dark-mode #page-contabilidad [style*="color:#b91c1c"] { color: #f87171 !important; }
 
+    /* ── TESORERÍA: dark mode overrides ── */
+    #page-tesoreria .card { border: 1px solid #e2e8f0 !important; }
+    body.dark-mode #page-tesoreria .card { border-color: var(--border) !important; background: var(--bg-card) !important; }
+    body.dark-mode #page-tesoreria [style*="color:#1e293b"],
+    body.dark-mode #page-tesoreria [style*="color:#0f172a"] { color: var(--text) !important; }
+    body.dark-mode #page-tesoreria [style*="color:#475569"],
+    body.dark-mode #page-tesoreria [style*="color:#64748b"],
+    body.dark-mode #page-tesoreria [style*="color:#334155"] { color: var(--text-muted) !important; }
+    body.dark-mode #page-tesoreria [style*="border-bottom:1px solid #e2e8f0"] { border-color: var(--border) !important; }
+    body.dark-mode #page-tesoreria [style*="background:#dbeafe"] { background: rgba(37,99,235,.18) !important; }
+    body.dark-mode #page-tesoreria [style*="background:#dcfce7"],
+    body.dark-mode #page-tesoreria [style*="background:#f0fdf4"] { background: rgba(22,163,74,.15) !important; }
+    body.dark-mode #page-tesoreria [style*="background:#fee2e2"],
+    body.dark-mode #page-tesoreria [style*="background:#fef2f2"] { background: rgba(239,68,68,.12) !important; }
+    body.dark-mode #page-tesoreria [style*="background:#fef3c7"],
+    body.dark-mode #page-tesoreria [style*="background:#fffbeb"] { background: rgba(245,158,11,.12) !important; }
+    body.dark-mode #page-tesoreria [style*="background:#ede9fe"] { background: rgba(124,58,237,.15) !important; }
+    body.dark-mode #page-tesoreria [style*="background:#e0f2fe"] { background: rgba(8,145,178,.15) !important; }
+    body.dark-mode #page-tesoreria .aging-bar { opacity: .85; }
+
     /* Búsqueda global */
     #search-results .sr-item { display:flex;align-items:center;gap:12px;padding:10px 16px;cursor:pointer;transition:background .15s; }
     #search-results .sr-item:hover { background:#f8fafc; }
@@ -574,6 +594,7 @@
       <i class="bi bi-chevron-down sl-chevron"></i>
     </div>
     <div class="sl-items" id="sg-analisis">
+      <li><a class="nav-link" data-page="tesoreria"><i class="bi bi-safe-fill"></i>Tesorería Integral</a></li>
       <li><a class="nav-link" data-page="flujoProyectado"><i class="bi bi-graph-up"></i>Flujo Proyectado</a></li>
       <li><a class="nav-link" data-page="panelVencimientos"><i class="bi bi-calendar-event"></i>Vencimientos</a></li>
       <li><a class="nav-link" data-page="rentabilidad"><i class="bi bi-pie-chart-fill"></i>Rentabilidad</a></li>
@@ -1834,6 +1855,64 @@
         <div class="modal-footer">
           <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cerrar</button>
           <button class="btn btn-danger btn-sm" onclick="guardarContabConfig()"><i class="bi bi-save me-1"></i>Guardar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════ TESORERÍA INTEGRAL ══════════════════ -->
+  <div id="page-tesoreria" class="page">
+    <div class="page-hdr">
+      <h4><i class="bi bi-safe-fill me-2" style="color:#E31E24"></i>Tesorería Integral</h4>
+      <button class="btn btn-sm btn-outline-secondary" onclick="renderTesoreria()" style="font-size:.78rem;border-radius:8px"><i class="bi bi-arrow-clockwise me-1"></i>Actualizar</button>
+    </div>
+
+    <!-- Posición Actual -->
+    <div class="row g-3 mb-4" id="tes-kpis"></div>
+
+    <!-- Gráfico de flujo proyectado -->
+    <div class="row g-3 mb-4">
+      <div class="col-12 col-lg-7">
+        <div class="card" style="border-radius:14px;border:1px solid #e2e8f0">
+          <div class="card-body p-3">
+            <div style="font-size:.85rem;font-weight:700;color:#1e293b;margin-bottom:12px"><i class="bi bi-graph-up me-2" style="color:#2563eb"></i>Flujo proyectado 30 días</div>
+            <canvas id="tes-chart-flujo" height="200"></canvas>
+          </div>
+        </div>
+      </div>
+      <div class="col-12 col-lg-5">
+        <div class="card" style="border-radius:14px;border:1px solid #e2e8f0">
+          <div class="card-body p-3">
+            <div style="font-size:.85rem;font-weight:700;color:#1e293b;margin-bottom:12px"><i class="bi bi-pie-chart-fill me-2" style="color:#7c3aed"></i>Composición de activos</div>
+            <canvas id="tes-chart-composicion" height="200"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Detalle por fuente -->
+    <div class="row g-3 mb-4" id="tes-detalle"></div>
+
+    <!-- Aging de cobranzas -->
+    <div class="row g-3 mb-4">
+      <div class="col-12">
+        <div class="card" style="border-radius:14px;border:1px solid #e2e8f0">
+          <div class="card-body p-3">
+            <div style="font-size:.85rem;font-weight:700;color:#1e293b;margin-bottom:12px"><i class="bi bi-clock-history me-2" style="color:#f59e0b"></i>Aging de Cobranzas — Antigüedad de cuentas por cobrar</div>
+            <div id="tes-aging"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Calendario de compromisos -->
+    <div class="row g-3">
+      <div class="col-12">
+        <div class="card" style="border-radius:14px;border:1px solid #e2e8f0">
+          <div class="card-body p-3">
+            <div style="font-size:.85rem;font-weight:700;color:#1e293b;margin-bottom:12px"><i class="bi bi-calendar3 me-2" style="color:#dc2626"></i>Compromisos próximos 30 días</div>
+            <div id="tes-compromisos" style="max-height:400px;overflow-y:auto"></div>
+          </div>
         </div>
       </div>
     </div>
@@ -3298,6 +3377,7 @@ function reRenderActivo() {
     case 'rentabilidad': renderRentabilidad(); break;
     case 'calendarioARCA': renderCalendarioARCA(); break;
     case 'contabilidad': renderContabilidad(); break;
+    case 'tesoreria': renderTesoreria(); break;
   }
 }
 const fmtF = d  => { if(!d) return '–'; const[y,m,v]=d.split('-'); return`${v}/${m}/${y}`; };
@@ -4408,7 +4488,7 @@ const _SB_GROUPS = {
   cheques:  ['chequesFisicos','eCheques','chequesPagar'],
   caja:     ['cajaBancos','cajaEfectivo','kilometraje'],
   gestion:  ['comisiones','bcra','calendarioARCA','contabilidad','facturasACobrar','facturasPagar'],
-  analisis: ['flujoProyectado','panelVencimientos','rentabilidad','gestion','reportes','historial','estrategicos'],
+  analisis: ['tesoreria','flujoProyectado','panelVencimientos','rentabilidad','gestion','reportes','historial','estrategicos'],
   archivos: ['estadosCuenta','documentos','config'],
 };
 
@@ -9785,6 +9865,290 @@ function renderCalendarioARCA() {
   }
 
   mesesEl.innerHTML = htmlMeses;
+}
+
+/* ═══════════════════════════════════════════
+   TESORERÍA INTEGRAL — Reporte cruzado
+═══════════════════════════════════════════ */
+
+let _tesChartFlujo = null;
+let _tesChartComp  = null;
+
+function renderTesoreria() {
+  const today  = new Date(hoy() + 'T00:00:00');
+  const in30   = new Date(today); in30.setDate(in30.getDate() + 30);
+
+  // ── 1. Recolectar datos de todas las fuentes ──
+
+  // Saldos actuales
+  const saldoBancos = (ST.cajaBancos || []).reduce((s, m) => s + (m.tipo === 'ingreso' ? +m.monto : -m.monto), 0);
+  const saldoEfectivo = (ST.cajaEfectivo || []).reduce((s, m) => s + (m.tipo === 'ingreso' ? +m.monto : -m.monto), 0);
+
+  // Cheques en cartera (físicos + e-cheques)
+  const chqCartera = [
+    ...(ST.chequesFisicos || []).filter(c => c.estado === 'en_cartera' || c.estado === 'pendiente'),
+    ...(ST.eCheques || []).filter(c => c.estado === 'pendiente'),
+  ];
+  const totalCartera = chqCartera.reduce((s, c) => s + (+c.monto || 0), 0);
+
+  // Cheques a pagar pendientes
+  const chqPagar = (ST.chequesPagar || []).filter(c => c.estado === 'pendiente');
+  const totalChqPagar = chqPagar.reduce((s, c) => s + (+c.monto || 0), 0);
+
+  // Facturas pendientes
+  const factCobrar = (ST.facturasACobrar || []).filter(f => f.estado === 'pendiente');
+  const factPagar  = (ST.facturasPagar || []).filter(f => f.estado === 'pendiente');
+  const totalFactCobrar = factCobrar.reduce((s, f) => s + (+f.total || 0), 0);
+  const totalFactPagar  = factPagar.reduce((s, f) => s + (+f.total || 0), 0);
+
+  // ARCA obligaciones pendientes
+  const arcaPend = (ST.arcaVencimientos || []).filter(v => !v.pagado && v.fecha >= hoy());
+  const arcaPend30 = arcaPend.filter(v => v.fecha <= in30.toISOString().split('T')[0]);
+  const totalArca30 = arcaPend30.reduce((s, v) => s + (+v.importe || 0), 0);
+
+  // ── 2. Posición neta ──
+  const liquidez = saldoBancos + saldoEfectivo + totalCartera;
+  const compromisos = totalChqPagar + totalFactPagar + totalArca30;
+  const posNeta = liquidez - compromisos;
+
+  // ── 3. KPIs ──
+  const kpisEl = document.getElementById('tes-kpis');
+  const kpis = [
+    { label: 'Liquidez Disponible', sub: 'Bancos + Efectivo + Cartera', value: fmt(liquidez), icon: 'bi-wallet2', color: '#2563eb', bg: '#dbeafe' },
+    { label: 'Por Cobrar', sub: `${factCobrar.length} facturas + ${chqCartera.length} cheques`, value: fmt(totalFactCobrar + totalCartera), icon: 'bi-arrow-down-circle', color: '#16a34a', bg: '#dcfce7' },
+    { label: 'Compromisos 30d', sub: `Cheques + Fact + ARCA`, value: fmt(compromisos), icon: 'bi-arrow-up-circle', color: '#dc2626', bg: '#fee2e2' },
+    { label: 'Posición Neta', sub: 'Liquidez - Compromisos', value: fmt(posNeta), icon: posNeta >= 0 ? 'bi-shield-check' : 'bi-exclamation-triangle-fill', color: posNeta >= 0 ? '#16a34a' : '#dc2626', bg: posNeta >= 0 ? '#dcfce7' : '#fee2e2' },
+  ];
+  kpisEl.innerHTML = kpis.map(k => `
+    <div class="col-6 col-xl-3">
+      <div class="card" style="border-radius:14px">
+        <div class="card-body py-3 px-3">
+          <div class="d-flex align-items-center gap-2 mb-1">
+            <div style="width:28px;height:28px;border-radius:7px;background:${k.bg};display:flex;align-items:center;justify-content:center;flex-shrink:0">
+              <i class="bi ${k.icon}" style="font-size:.85rem;color:${k.color}"></i>
+            </div>
+            <div>
+              <div style="font-size:.68rem;color:#64748b;font-weight:600;text-transform:uppercase;line-height:1.1">${k.label}</div>
+              <div style="font-size:.6rem;color:#94a3b8;line-height:1.1">${k.sub}</div>
+            </div>
+          </div>
+          <div style="font-size:1.15rem;font-weight:700;color:${k.color}">${k.value}</div>
+        </div>
+      </div>
+    </div>`).join('');
+
+  // ── 4. Gráfico Flujo 30 días ──
+  const flujoData = [];
+  for (let i = 0; i <= 30; i++) {
+    const d = new Date(today); d.setDate(d.getDate() + i);
+    const ds = d.toISOString().split('T')[0];
+    let ingreso = 0, egreso = 0;
+    // Cheques a cobrar que vencen este día
+    chqCartera.forEach(c => { const f = c.fechaVenc || c.fechaVto; if (f === ds) ingreso += (+c.monto || 0); });
+    // Facturas a cobrar que vencen este día
+    factCobrar.forEach(f => { if (f.fechaVenc === ds) ingreso += (+f.total || 0); });
+    // Cheques a pagar que vencen este día
+    chqPagar.forEach(c => { const f = c.fechaVenc || c.fechaVto; if (f === ds) egreso += (+c.monto || 0); });
+    // Facturas a pagar
+    factPagar.forEach(f => { if (f.fechaVenc === ds) egreso += (+f.total || 0); });
+    // ARCA
+    arcaPend30.forEach(v => { if (v.fecha === ds) egreso += (+v.importe || 0); });
+    flujoData.push({ label: ds.slice(5), ingreso, egreso });
+  }
+
+  if (_tesChartFlujo) _tesChartFlujo.destroy();
+  const ctxF = document.getElementById('tes-chart-flujo')?.getContext('2d');
+  if (ctxF) {
+    _tesChartFlujo = new Chart(ctxF, {
+      type: 'bar',
+      data: {
+        labels: flujoData.map(d => d.label),
+        datasets: [
+          { label: 'Ingresos', data: flujoData.map(d => d.ingreso), backgroundColor: 'rgba(22,163,74,.7)', borderRadius: 3, barPercentage: .6 },
+          { label: 'Egresos', data: flujoData.map(d => d.egreso), backgroundColor: 'rgba(220,38,38,.7)', borderRadius: 3, barPercentage: .6 },
+        ],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        scales: { y: { ticks: { callback: v => (v/1e6).toFixed(1) + 'M' }, grid: { color: 'rgba(0,0,0,.04)' } }, x: { ticks: { maxRotation: 45, font: { size: 9 } } } },
+        plugins: { legend: { position: 'top', labels: { boxWidth: 10, font: { size: 10 } } }, tooltip: { callbacks: { label: c => c.dataset.label + ': ' + fmt(c.raw) } } },
+      },
+    });
+  }
+
+  // ── 5. Doughnut composición ──
+  if (_tesChartComp) _tesChartComp.destroy();
+  const ctxC = document.getElementById('tes-chart-composicion')?.getContext('2d');
+  if (ctxC) {
+    _tesChartComp = new Chart(ctxC, {
+      type: 'doughnut',
+      data: {
+        labels: ['Bancos', 'Efectivo', 'Cheques Cartera', 'Facturas x Cobrar'],
+        datasets: [{
+          data: [Math.max(0,saldoBancos), Math.max(0,saldoEfectivo), totalCartera, totalFactCobrar],
+          backgroundColor: ['#2563eb', '#16a34a', '#f59e0b', '#7c3aed'],
+          borderWidth: 0,
+        }],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false, cutout: '60%',
+        plugins: {
+          legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } },
+          tooltip: { callbacks: { label: c => c.label + ': ' + fmt(c.raw) } },
+        },
+      },
+    });
+  }
+
+  // ── 6. Detalle por fuente ──
+  const detalleEl = document.getElementById('tes-detalle');
+  const fila = (l, v, c='') => `<div class="d-flex justify-content-between py-1" style="border-bottom:1px solid #e2e8f0;font-size:.78rem">
+    <span style="color:#475569">${l}</span><span style="font-weight:600;color:${c||'#1e293b'}">${fmt(v)}</span></div>`;
+  detalleEl.innerHTML = `
+    <div class="col-12 col-md-4">
+      <div class="card" style="border-radius:14px"><div class="card-body p-3">
+        <div style="font-size:.82rem;font-weight:700;color:#1e293b;margin-bottom:8px"><i class="bi bi-plus-circle me-1" style="color:#16a34a"></i>Ingresos esperados</div>
+        ${fila('Cheques en cartera (' + chqCartera.length + ')', totalCartera, '#16a34a')}
+        ${fila('Facturas a cobrar (' + factCobrar.length + ')', totalFactCobrar, '#16a34a')}
+        ${fila('<strong>Total ingresos pendientes</strong>', totalCartera + totalFactCobrar, '#16a34a')}
+      </div></div>
+    </div>
+    <div class="col-12 col-md-4">
+      <div class="card" style="border-radius:14px"><div class="card-body p-3">
+        <div style="font-size:.82rem;font-weight:700;color:#1e293b;margin-bottom:8px"><i class="bi bi-dash-circle me-1" style="color:#dc2626"></i>Egresos comprometidos</div>
+        ${fila('Cheques a pagar (' + chqPagar.length + ')', totalChqPagar, '#dc2626')}
+        ${fila('Facturas a pagar (' + factPagar.length + ')', totalFactPagar, '#dc2626')}
+        ${fila('ARCA próximos 30d (' + arcaPend30.length + ')', totalArca30, '#dc2626')}
+        ${fila('<strong>Total compromisos</strong>', compromisos, '#dc2626')}
+      </div></div>
+    </div>
+    <div class="col-12 col-md-4">
+      <div class="card" style="border-radius:14px"><div class="card-body p-3">
+        <div style="font-size:.82rem;font-weight:700;color:#1e293b;margin-bottom:8px"><i class="bi bi-bank me-1" style="color:#2563eb"></i>Posición de caja</div>
+        ${fila('Saldo bancos', saldoBancos, '#2563eb')}
+        ${fila('Efectivo', saldoEfectivo, '#0891b2')}
+        ${fila('<strong>Total disponible</strong>', saldoBancos + saldoEfectivo)}
+        <div class="mt-2 p-2 rounded text-center" style="background:${posNeta>=0?'#dcfce7':'#fee2e2'}">
+          <div style="font-size:.65rem;color:#64748b;text-transform:uppercase">Cobertura</div>
+          <div style="font-size:.85rem;font-weight:700;color:${posNeta>=0?'#16a34a':'#dc2626'}">
+            ${compromisos > 0 ? Math.round((liquidez / compromisos) * 100) + '%' : '∞'}
+          </div>
+        </div>
+      </div></div>
+    </div>
+  `;
+
+  // ── 7. Aging de Cobranzas ──
+  const agingEl = document.getElementById('tes-aging');
+  const buckets = [
+    { label: 'Al día', min: -999, max: 0, color: '#16a34a', bg: '#dcfce7' },
+    { label: '1-30 días', min: 1, max: 30, color: '#f59e0b', bg: '#fef3c7' },
+    { label: '31-60 días', min: 31, max: 60, color: '#ea580c', bg: '#ffedd5' },
+    { label: '61-90 días', min: 61, max: 90, color: '#dc2626', bg: '#fee2e2' },
+    { label: '90+ días', min: 91, max: 9999, color: '#7f1d1d', bg: '#fef2f2' },
+  ];
+  const allCobrar = [...factCobrar, ...chqCartera.map(c => ({ total: +c.monto || 0, fechaVenc: c.fechaVenc || c.fechaVto, _tipo: 'cheque', _desc: (c.librador || c.banco || '') + ' #' + (c.numero || '') }))];
+
+  const agingData = buckets.map(b => {
+    const items = allCobrar.filter(f => {
+      const fv = f.fechaVenc;
+      if (!fv) return b.label === '90+ días'; // sin fecha = muy viejo
+      const dias = Math.round((today - new Date(fv + 'T00:00:00')) / 86400000);
+      return dias >= b.min && dias <= b.max;
+    });
+    return { ...b, count: items.length, total: items.reduce((s, f) => s + (+f.total || 0), 0), items };
+  });
+
+  const maxAging = Math.max(1, ...agingData.map(d => d.total));
+  agingEl.innerHTML = `
+    <div class="row g-2 mb-3">
+      ${agingData.map(b => `
+        <div class="col">
+          <div class="text-center p-2 rounded" style="background:${b.bg};min-height:80px">
+            <div style="font-size:.65rem;font-weight:700;color:${b.color};text-transform:uppercase;margin-bottom:4px">${b.label}</div>
+            <div style="font-size:1rem;font-weight:700;color:${b.color}">${fmt(b.total)}</div>
+            <div style="font-size:.65rem;color:#64748b">${b.count} docs</div>
+          </div>
+        </div>`).join('')}
+    </div>
+    <div style="margin-bottom:12px">
+      ${agingData.map(b => `
+        <div class="d-flex align-items-center gap-2 mb-1">
+          <span style="font-size:.68rem;color:#64748b;min-width:70px">${b.label}</span>
+          <div style="flex:1;background:#f1f5f9;border-radius:4px;height:16px;overflow:hidden" class="aging-bar">
+            <div style="width:${Math.max(.5,(b.total/maxAging)*100)}%;height:100%;background:${b.color};border-radius:4px;transition:width .3s"></div>
+          </div>
+          <span style="font-size:.7rem;font-weight:600;color:#1e293b;min-width:80px;text-align:right">${fmt(b.total)}</span>
+        </div>`).join('')}
+    </div>
+    ${agingData.filter(b => b.total > 0 && b.min >= 31).length ? `
+      <div class="alert alert-warning py-2 px-3" style="font-size:.78rem;border-radius:8px">
+        <i class="bi bi-exclamation-triangle me-1"></i>
+        <strong>Atención:</strong> tenés ${fmt(agingData.filter(b => b.min >= 31).reduce((s,b) => s + b.total, 0))} en cobranzas vencidas hace más de 30 días.
+      </div>` : ''}`;
+
+  // ── 8. Compromisos próximos 30 días (timeline unificado) ──
+  const compEl = document.getElementById('tes-compromisos');
+  const eventos = [];
+  // Cheques a cobrar
+  chqCartera.forEach(c => {
+    const f = c.fechaVenc || c.fechaVto; if (!f) return;
+    const d = Math.round((new Date(f + 'T00:00:00') - today) / 86400000);
+    if (d > 30 || d < -5) return;
+    eventos.push({ fecha: f, dias: d, tipo: 'ingreso', icon: 'bi-receipt', color: '#16a34a', label: 'Cheque a cobrar', desc: (c.librador || c.banco || '') + ' #' + (c.numero || ''), monto: +c.monto || 0 });
+  });
+  // Facturas a cobrar
+  factCobrar.forEach(f => {
+    const fv = f.fechaVenc; if (!fv) return;
+    const d = Math.round((new Date(fv + 'T00:00:00') - today) / 86400000);
+    if (d > 30 || d < -5) return;
+    eventos.push({ fecha: fv, dias: d, tipo: 'ingreso', icon: 'bi-file-earmark-arrow-down', color: '#16a34a', label: 'Factura a cobrar', desc: f.cliente || f.numero, monto: +f.total || 0 });
+  });
+  // Cheques a pagar
+  chqPagar.forEach(c => {
+    const f = c.fechaVenc || c.fechaVto; if (!f) return;
+    const d = Math.round((new Date(f + 'T00:00:00') - today) / 86400000);
+    if (d > 30 || d < -5) return;
+    eventos.push({ fecha: f, dias: d, tipo: 'egreso', icon: 'bi-file-earmark-minus', color: '#dc2626', label: 'Cheque a pagar', desc: (c.beneficiario || c.librador || '') + ' #' + (c.numero || ''), monto: +c.monto || 0 });
+  });
+  // Facturas a pagar
+  factPagar.forEach(f => {
+    const fv = f.fechaVenc; if (!fv) return;
+    const d = Math.round((new Date(fv + 'T00:00:00') - today) / 86400000);
+    if (d > 30 || d < -5) return;
+    eventos.push({ fecha: fv, dias: d, tipo: 'egreso', icon: 'bi-file-earmark-arrow-up', color: '#dc2626', label: 'Factura a pagar', desc: f.cliente || f.numero, monto: +f.total || 0 });
+  });
+  // ARCA
+  arcaPend30.forEach(v => {
+    const d = Math.round((new Date(v.fecha + 'T00:00:00') - today) / 86400000);
+    eventos.push({ fecha: v.fecha, dias: d, tipo: 'egreso', icon: 'bi-calendar2-check', color: '#7c3aed', label: v.concepto, desc: v.detalle || '', monto: +v.importe || 0 });
+  });
+
+  eventos.sort((a, b) => a.fecha.localeCompare(b.fecha));
+
+  if (!eventos.length) {
+    compEl.innerHTML = '<div class="text-center py-3" style="color:#94a3b8;font-size:.82rem"><i class="bi bi-check-circle me-2"></i>No hay compromisos en los próximos 30 días</div>';
+  } else {
+    compEl.innerHTML = `<table class="table table-sm mb-0" style="font-size:.76rem">
+      <thead><tr style="color:#64748b;font-size:.68rem;text-transform:uppercase">
+        <th>Fecha</th><th>Días</th><th>Tipo</th><th>Detalle</th><th class="text-end">Monto</th>
+      </tr></thead>
+      <tbody>${eventos.map(e => {
+        const badge = e.dias < 0 ? '<span class="badge bg-secondary" style="font-size:.55rem">Vencido</span>'
+          : e.dias <= 3 ? `<span class="badge bg-danger" style="font-size:.55rem">¡${e.dias}d!</span>`
+          : e.dias <= 7 ? `<span class="badge bg-warning text-dark" style="font-size:.55rem">${e.dias}d</span>`
+          : `<span style="color:#64748b">${e.dias}d</span>`;
+        const rowBg = e.dias < 0 ? 'background:#fef2f2' : e.dias <= 3 ? 'background:#fffbeb' : '';
+        return `<tr style="${rowBg}">
+          <td style="font-weight:500;color:#1e293b">${fmtF(e.fecha)}</td>
+          <td>${badge}</td>
+          <td><i class="bi ${e.icon} me-1" style="color:${e.color}"></i>${e.label}</td>
+          <td style="color:#475569;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.desc}</td>
+          <td class="text-end" style="font-weight:600;color:${e.tipo==='ingreso'?'#16a34a':'#dc2626'}">${e.tipo==='ingreso'?'+':'−'}${fmt(e.monto)}</td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table>`;
+  }
 }
 
 /* ═══════════════════════════════════════════
