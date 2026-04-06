@@ -379,6 +379,20 @@
     body.dark-mode #page-contabilidad [style*="color:#15803d"] { color: #4ade80 !important; }
     body.dark-mode #page-contabilidad [style*="color:#b91c1c"] { color: #f87171 !important; }
 
+    /* ── CROSS-SELL (inside Gestión): dark mode overrides ── */
+    body.dark-mode #gest-crosssell-section [style*="color:#0f172a"],
+    body.dark-mode #gest-crosssell-section [style*="color:#1e293b"] { color: var(--text) !important; }
+    body.dark-mode #gest-crosssell-section [style*="color:#64748b"],
+    body.dark-mode #gest-crosssell-section [style*="color:#334155"] { color: var(--text-muted) !important; }
+    body.dark-mode #gest-crosssell-section [style*="background:#fff"] { background: var(--bg-card) !important; }
+    body.dark-mode #gest-crosssell-section [style*="background:#f8fafc"] { background: var(--bg-card) !important; }
+    body.dark-mode #gest-crosssell-section [style*="border:1px solid #e2e8f0"] { border-color: var(--border) !important; }
+    body.dark-mode #gest-crosssell-section [style*="border-top:1px solid #f1f5f9"] { border-color: var(--border) !important; }
+    body.dark-mode #gest-crosssell-section table { color: var(--text) !important; }
+    body.dark-mode #gest-crosssell-section th { background: var(--bg-card) !important; color: var(--text-muted) !important; }
+    body.dark-mode #gest-crosssell-section td[style*="position:sticky"] { background: var(--bg-card) !important; }
+    body.dark-mode #gest-crosssell-section [style*="color:#065f46"] { color: #4ade80 !important; }
+
     /* ── TESORERÍA: dark mode overrides ── */
     #page-tesoreria .card { border: 1px solid #e2e8f0 !important; }
     body.dark-mode #page-tesoreria .card { border-color: var(--border) !important; background: var(--bg-card) !important; }
@@ -2616,9 +2630,18 @@ CREATE POLICY "acceso total" ON flujo_caja_versions FOR ALL USING (true) WITH CH
             <tbody id="gest-tbody-detalle"></tbody>
           </table>
         </div>
-        <div id="gest-detalle-total" class="p-2 border-top fw-semibold" 
+        <div id="gest-detalle-total" class="p-2 border-top fw-semibold"
           style="font-size:.78rem;background:#f8fafc;color:#374151"></div>
       </div>
+    </div>
+
+    <!-- ── Cross-Sell: Oportunidades de Venta Cruzada ── -->
+    <div class="mt-3" id="gest-crosssell-section">
+      <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
+        <span style="font-size:.78rem;font-weight:700;color:#0f172a"><i class="bi bi-shuffle me-1" style="color:#7c3aed"></i>Oportunidades de Venta Cruzada</span>
+        <small class="text-muted" style="font-size:.62rem">Clientes que compran a algunas empresas pero no a otras</small>
+      </div>
+      <div id="gest-crosssell-content"></div>
     </div>
 
   </div>
@@ -8041,6 +8064,7 @@ function renderGestion() {
   _addGestionDeltas();
   _renderGestionYTD(d);
   _renderGestionProyeccion(d);
+  _renderCrossSell(d);
 }
 
 function _renderGestionYTD(d) {
@@ -8208,6 +8232,182 @@ function _renderGestionProyeccion(d) {
         </div>
       </div>
     </div>`;
+}
+
+/* ─── Cross-Sell: Oportunidades de Venta Cruzada ─── */
+function _renderCrossSell(d) {
+  const el = document.getElementById('gest-crosssell-content');
+  if (!el || !d.rows || !d.rows.length) { if(el) el.innerHTML=''; return; }
+
+  // Build matrix: cliente → { empresa → { ops, fac, siv, com } }
+  const matrix = {};
+  const allEmpresas = new Set();
+  d.rows.forEach(r => {
+    const cli = r[2], emp = r[3], fac = r[4], siv = r[5], com = r[7];
+    if (!cli || !emp) return;
+    allEmpresas.add(emp);
+    if (!matrix[cli]) matrix[cli] = {};
+    if (!matrix[cli][emp]) matrix[cli][emp] = { ops:0, fac:0, siv:0, com:0 };
+    matrix[cli][emp].ops++; matrix[cli][emp].fac+=fac; matrix[cli][emp].siv+=siv; matrix[cli][emp].com+=com;
+  });
+
+  const empresas = d.empresas.map(e => e[0]); // sorted by facturado desc
+  const clientes = d.clientes.map(c => c[0]); // sorted by facturado desc
+
+  // Skip if less than 2 empresas
+  if (empresas.length < 2) { el.innerHTML = '<p class="text-muted" style="font-size:.75rem">Se necesitan al menos 2 empresas para el análisis cruzado.</p>'; return; }
+
+  // Totales por empresa (para sizing)
+  const empTotals = {};
+  empresas.forEach(emp => { empTotals[emp] = d.empresas.find(e=>e[0]===emp); });
+
+  // Build opportunities: for each client, find empresas they DON'T buy from
+  const opportunities = [];
+  clientes.forEach(cli => {
+    const cliData = matrix[cli] || {};
+    const compraA = Object.keys(cliData);
+    const noCompraA = empresas.filter(emp => !cliData[emp]);
+    if (compraA.length === 0 || noCompraA.length === 0) return; // buys from all or from none
+    // Potential value: average spend across empresas they DO buy from
+    const totalCliSiv = compraA.reduce((s,e) => s + (cliData[e]?.siv||0), 0);
+    const avgPerEmpresa = totalCliSiv / compraA.length;
+    noCompraA.forEach(emp => {
+      opportunities.push({
+        cliente: cli,
+        empresa: emp,
+        compraA: compraA,
+        totalCliSiv: totalCliSiv,
+        avgPerEmpresa: avgPerEmpresa,
+        potencial: Math.round(avgPerEmpresa),
+        clienteOps: compraA.reduce((s,e) => s + (cliData[e]?.ops||0), 0)
+      });
+    });
+  });
+
+  // Sort by potential value desc
+  opportunities.sort((a,b) => b.potencial - a.potencial);
+  const topOps = opportunities.slice(0, 30);
+
+  // ── Matrix heatmap (top 15 clients) ──
+  const topClientes = clientes.slice(0, 15);
+  let matrixHTML = `<div style="overflow-x:auto;margin-bottom:12px">
+    <table class="table table-sm mb-0" style="font-size:.7rem;min-width:${200 + empresas.length * 80}px">
+      <thead><tr style="background:#f8fafc">
+        <th class="ps-2" style="position:sticky;left:0;background:#f8fafc;z-index:2;min-width:160px">Cliente</th>
+        ${empresas.map(e => `<th class="text-center" style="font-size:.62rem;writing-mode:horizontal-tb;max-width:80px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${e}">${e.length>12?e.substring(0,11)+'…':e}</th>`).join('')}
+        <th class="text-center" style="font-size:.62rem">Cobertura</th>
+      </tr></thead>
+      <tbody>`;
+
+  topClientes.forEach(cli => {
+    const cliData = matrix[cli] || {};
+    const compraCount = empresas.filter(e => cliData[e]).length;
+    const coverPct = Math.round(compraCount / empresas.length * 100);
+    const coverColor = coverPct >= 80 ? '#16a34a' : coverPct >= 50 ? '#d97706' : '#dc2626';
+    matrixHTML += `<tr>
+      <td class="ps-2 fw-semibold" style="position:sticky;left:0;background:#fff;z-index:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px" title="${cli}">${cli}</td>`;
+    empresas.forEach(emp => {
+      if (cliData[emp]) {
+        const intensity = Math.min(1, cliData[emp].siv / (d.empresas.find(e=>e[0]===emp)?.[3] || 1) * empresas.length * 0.8);
+        const alpha = 0.15 + intensity * 0.6;
+        matrixHTML += `<td class="text-center" style="background:rgba(22,163,74,${alpha.toFixed(2)});cursor:default" title="${cli} → ${emp}: ${cliData[emp].ops} ops, ${fmt(cliData[emp].siv)} sin IVA">
+          <span style="font-size:.62rem;font-weight:600;color:#065f46">${fmt(cliData[emp].siv)}</span></td>`;
+      } else {
+        matrixHTML += `<td class="text-center" style="background:rgba(220,38,38,.06);cursor:default" title="${cli} NO compra a ${emp}">
+          <i class="bi bi-dash" style="color:#e2e8f0;font-size:.65rem"></i></td>`;
+      }
+    });
+    matrixHTML += `<td class="text-center"><span class="badge" style="background:${coverColor};font-size:.6rem">${coverPct}%</span></td></tr>`;
+  });
+  matrixHTML += '</tbody></table></div>';
+
+  // ── Top opportunities list ──
+  let opsHTML = '';
+  if (topOps.length > 0) {
+    opsHTML = `<div style="font-size:.72rem;font-weight:700;color:#0f172a;margin-bottom:6px"><i class="bi bi-lightbulb-fill me-1" style="color:#d97706"></i>Top Oportunidades</div>
+    <div class="row g-2">`;
+    topOps.slice(0, 12).forEach(op => {
+      const compraLabel = op.compraA.length <= 3
+        ? op.compraA.join(', ')
+        : op.compraA.slice(0,2).join(', ') + ' +' + (op.compraA.length-2) + ' más';
+      opsHTML += `
+      <div class="col-12 col-md-6 col-xl-4">
+        <div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:8px 10px;font-size:.7rem;border-left:3px solid #7c3aed">
+          <div style="font-weight:700;color:#1e293b;margin-bottom:2px">${op.cliente}</div>
+          <div style="color:#64748b;margin-bottom:4px">
+            <i class="bi bi-check-circle-fill text-success me-1" style="font-size:.6rem"></i>Compra a: <span style="color:#334155">${compraLabel}</span>
+          </div>
+          <div style="color:#dc2626;margin-bottom:4px">
+            <i class="bi bi-x-circle-fill me-1" style="font-size:.6rem"></i>No compra a: <b>${op.empresa}</b>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px;padding-top:4px;border-top:1px solid #f1f5f9">
+            <span style="color:#7c3aed;font-weight:600"><i class="bi bi-graph-up-arrow me-1"></i>Potencial: ${fmt(op.potencial)}</span>
+            <span style="color:#94a3b8;font-size:.6rem">${op.clienteOps} ops actuales</span>
+          </div>
+        </div>
+      </div>`;
+    });
+    opsHTML += '</div>';
+  }
+
+  // ── Summary KPIs ──
+  const totalClientes = clientes.length;
+  const clientesFull = clientes.filter(cli => {
+    const cliData = matrix[cli] || {};
+    return empresas.every(e => cliData[e]);
+  }).length;
+  const clientesParcial = totalClientes - clientesFull;
+  const totalPotencial = topOps.reduce((s,o) => s + o.potencial, 0);
+  const avgCoverage = totalClientes > 0
+    ? Math.round(clientes.reduce((s, cli) => {
+        const cliData = matrix[cli] || {};
+        return s + empresas.filter(e => cliData[e]).length / empresas.length * 100;
+      }, 0) / totalClientes)
+    : 0;
+
+  el.innerHTML = `
+    <div class="row g-2 mb-2">
+      <div class="col-6 col-xl-3">
+        <div class="gest-stat" style="border-left-color:#7c3aed;padding:7px 10px">
+          <div class="gest-stat-icon" style="background:#f5f3ff;color:#7c3aed;width:28px;height:28px;font-size:.85rem"><i class="bi bi-shuffle"></i></div>
+          <div>
+            <div class="gest-stat-lbl">Oportunidades</div>
+            <div class="gest-stat-val gest-num" style="font-size:.82rem">${opportunities.length}</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-6 col-xl-3">
+        <div class="gest-stat" style="border-left-color:#d97706;padding:7px 10px">
+          <div class="gest-stat-icon" style="background:#fffbeb;color:#d97706;width:28px;height:28px;font-size:.85rem"><i class="bi bi-graph-up-arrow"></i></div>
+          <div>
+            <div class="gest-stat-lbl">Potencial Total</div>
+            <div class="gest-stat-val gest-num" style="font-size:.82rem">${fmt(totalPotencial)}</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-6 col-xl-3">
+        <div class="gest-stat" style="border-left-color:#16a34a;padding:7px 10px">
+          <div class="gest-stat-icon" style="background:#f0fdf4;color:#16a34a;width:28px;height:28px;font-size:.85rem"><i class="bi bi-people-fill"></i></div>
+          <div>
+            <div class="gest-stat-lbl">Cobertura Promedio</div>
+            <div class="gest-stat-val gest-num" style="font-size:.82rem">${avgCoverage}%</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-6 col-xl-3">
+        <div class="gest-stat" style="border-left-color:#0891b2;padding:7px 10px">
+          <div class="gest-stat-icon" style="background:#ecfeff;color:#0891b2;width:28px;height:28px;font-size:.85rem"><i class="bi bi-check-all"></i></div>
+          <div>
+            <div class="gest-stat-lbl">Compran a Todas</div>
+            <div class="gest-stat-val gest-num" style="font-size:.82rem">${clientesFull} <small style="font-size:.6rem;color:#94a3b8">/ ${totalClientes}</small></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div style="font-size:.72rem;font-weight:700;color:#0f172a;margin-bottom:4px"><i class="bi bi-grid-3x3 me-1" style="color:#3b82f6"></i>Matriz Cliente × Empresa</div>
+    <small class="text-muted d-block mb-2" style="font-size:.6rem"><span style="display:inline-block;width:10px;height:10px;background:rgba(22,163,74,.5);border-radius:2px;margin-right:3px"></span>Compra (verde = mayor volumen) &nbsp;<span style="display:inline-block;width:10px;height:10px;background:rgba(220,38,38,.06);border:1px solid #e2e8f0;border-radius:2px;margin-right:3px"></span>No compra (oportunidad)</small>
+    ${matrixHTML}
+    ${opsHTML}`;
 }
 
 function _renderClienteTabla(clientes) {
