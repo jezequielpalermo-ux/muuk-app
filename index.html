@@ -2640,6 +2640,14 @@ CREATE POLICY "acceso total" ON flujo_caja_versions FOR ALL USING (true) WITH CH
       <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
         <span style="font-size:.78rem;font-weight:700;color:#0f172a"><i class="bi bi-shuffle me-1" style="color:#7c3aed"></i>Oportunidades de Venta Cruzada</span>
         <small class="text-muted" style="font-size:.62rem">Clientes que compran a algunas empresas pero no a otras</small>
+        <div class="ms-auto d-flex align-items-center gap-2">
+          <select id="crosssell-mes-filter" class="form-select form-select-sm" style="font-size:.68rem;width:auto;min-width:130px;border-radius:6px" onchange="_renderCrossSell(GESTION_DATA)">
+            <option value="">Todos los meses</option>
+          </select>
+          <button class="btn btn-sm btn-outline-primary" style="font-size:.68rem;border-radius:6px;padding:3px 10px;white-space:nowrap" onclick="printCrossSellPDF()">
+            <i class="bi bi-file-earmark-pdf me-1"></i>Imprimir PDF
+          </button>
+        </div>
       </div>
       <div id="gest-crosssell-content"></div>
     </div>
@@ -8239,10 +8247,21 @@ function _renderCrossSell(d) {
   const el = document.getElementById('gest-crosssell-content');
   if (!el || !d.rows || !d.rows.length) { if(el) el.innerHTML=''; return; }
 
+  // Populate month filter (only once if empty)
+  const filMes = document.getElementById('crosssell-mes-filter');
+  if (filMes && filMes.options.length <= 1) {
+    d.byMes.forEach(m => { const o = document.createElement('option'); o.value = m[0]; o.textContent = m[0]; filMes.appendChild(o); });
+  }
+  const mesFilter = filMes ? filMes.value : '';
+
+  // Filter rows by selected month
+  const rows = mesFilter ? d.rows.filter(r => r[0] === mesFilter) : d.rows;
+  if (rows.length === 0) { el.innerHTML = '<p class="text-muted" style="font-size:.75rem">No hay datos para el mes seleccionado.</p>'; return; }
+
   // Build matrix: cliente → { empresa → { ops, fac, siv, com } }
   const matrix = {};
   const allEmpresas = new Set();
-  d.rows.forEach(r => {
+  rows.forEach(r => {
     const cli = r[2], emp = r[3], fac = r[4], siv = r[5], com = r[7];
     if (!cli || !emp) return;
     allEmpresas.add(emp);
@@ -8251,15 +8270,22 @@ function _renderCrossSell(d) {
     matrix[cli][emp].ops++; matrix[cli][emp].fac+=fac; matrix[cli][emp].siv+=siv; matrix[cli][emp].com+=com;
   });
 
-  const empresas = d.empresas.map(e => e[0]); // sorted by facturado desc
-  const clientes = d.clientes.map(c => c[0]); // sorted by facturado desc
+  // Re-aggregate empresas/clientes from filtered rows
+  const empMap = {}, cliMap = {};
+  rows.forEach(r => {
+    const cli=r[2], emp=r[3], fac=r[4], siv=r[5], com=r[7];
+    if(!empMap[emp]) empMap[emp]=[0,0,0,0]; empMap[emp][0]++; empMap[emp][1]+=fac; empMap[emp][2]+=siv; empMap[emp][3]+=com;
+    if(!cliMap[cli]) cliMap[cli]=[0,0,0,0]; cliMap[cli][0]++; cliMap[cli][1]+=fac; cliMap[cli][2]+=siv; cliMap[cli][3]+=com;
+  });
+  const empresas = Object.entries(empMap).sort((a,b)=>b[1][1]-a[1][1]).map(e=>e[0]);
+  const clientes = Object.entries(cliMap).sort((a,b)=>b[1][1]-a[1][1]).map(e=>e[0]);
 
   // Skip if less than 2 empresas
   if (empresas.length < 2) { el.innerHTML = '<p class="text-muted" style="font-size:.75rem">Se necesitan al menos 2 empresas para el análisis cruzado.</p>'; return; }
 
   // Totales por empresa (para sizing)
   const empTotals = {};
-  empresas.forEach(emp => { empTotals[emp] = d.empresas.find(e=>e[0]===emp); });
+  empresas.forEach(emp => { empTotals[emp] = empMap[emp]; });
 
   // Build opportunities: for each client, find empresas they DON'T buy from
   const opportunities = [];
@@ -8308,7 +8334,7 @@ function _renderCrossSell(d) {
       <td class="ps-2 fw-semibold" style="position:sticky;left:0;background:#fff;z-index:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px" title="${cli}">${cli}</td>`;
     empresas.forEach(emp => {
       if (cliData[emp]) {
-        const intensity = Math.min(1, cliData[emp].siv / (d.empresas.find(e=>e[0]===emp)?.[3] || 1) * empresas.length * 0.8);
+        const intensity = Math.min(1, cliData[emp].siv / (empTotals[emp]?.[2] || 1) * empresas.length * 0.8);
         const alpha = 0.15 + intensity * 0.6;
         matrixHTML += `<td class="text-center" style="background:rgba(22,163,74,${alpha.toFixed(2)});cursor:default" title="${cli} → ${emp}: ${cliData[emp].ops} ops, ${fmt(cliData[emp].siv)} sin IVA">
           <span style="font-size:.62rem;font-weight:600;color:#065f46">${fmt(cliData[emp].siv)}</span></td>`;
@@ -8408,6 +8434,140 @@ function _renderCrossSell(d) {
     <small class="text-muted d-block mb-2" style="font-size:.6rem"><span style="display:inline-block;width:10px;height:10px;background:rgba(22,163,74,.5);border-radius:2px;margin-right:3px"></span>Compra (verde = mayor volumen) &nbsp;<span style="display:inline-block;width:10px;height:10px;background:rgba(220,38,38,.06);border:1px solid #e2e8f0;border-radius:2px;margin-right:3px"></span>No compra (oportunidad)</small>
     ${matrixHTML}
     ${opsHTML}`;
+}
+
+/* ─── Imprimir Cross-Sell como PDF ─── */
+function printCrossSellPDF() {
+  if (!GESTION_DATA || !GESTION_DATA.rows || !GESTION_DATA.rows.length) { toast('No hay datos de Gestión cargados','warning'); return; }
+
+  const filMes = document.getElementById('crosssell-mes-filter');
+  const mesFilter = filMes ? filMes.value : '';
+  const rows = mesFilter ? GESTION_DATA.rows.filter(r => r[0] === mesFilter) : GESTION_DATA.rows;
+  if (rows.length === 0) { toast('No hay datos para el período seleccionado','warning'); return; }
+
+  const periodoLabel = mesFilter || 'Todos los meses 2026';
+
+  // Build data
+  const matrix = {}, empMap = {}, cliMap = {};
+  rows.forEach(r => {
+    const cli=r[2], emp=r[3], fac=r[4], siv=r[5], com=r[7];
+    if (!cli || !emp) return;
+    if (!matrix[cli]) matrix[cli] = {};
+    if (!matrix[cli][emp]) matrix[cli][emp] = { ops:0, fac:0, siv:0, com:0 };
+    matrix[cli][emp].ops++; matrix[cli][emp].fac+=fac; matrix[cli][emp].siv+=siv; matrix[cli][emp].com+=com;
+    if(!empMap[emp]) empMap[emp]=[0,0,0,0]; empMap[emp][0]++; empMap[emp][1]+=fac; empMap[emp][2]+=siv; empMap[emp][3]+=com;
+    if(!cliMap[cli]) cliMap[cli]=[0,0,0,0]; cliMap[cli][0]++; cliMap[cli][1]+=fac; cliMap[cli][2]+=siv; cliMap[cli][3]+=com;
+  });
+  const empresas = Object.entries(empMap).sort((a,b)=>b[1][1]-a[1][1]).map(e=>e[0]);
+  const clientes = Object.entries(cliMap).sort((a,b)=>b[1][1]-a[1][1]).map(e=>e[0]);
+  if (empresas.length < 2) { toast('Se necesitan al menos 2 empresas','warning'); return; }
+
+  // Build opportunities
+  const opportunities = [];
+  clientes.forEach(cli => {
+    const cd = matrix[cli] || {};
+    const compraA = Object.keys(cd);
+    const noCompraA = empresas.filter(e => !cd[e]);
+    if (compraA.length === 0 || noCompraA.length === 0) return;
+    const totalSiv = compraA.reduce((s,e) => s + (cd[e]?.siv||0), 0);
+    const avg = totalSiv / compraA.length;
+    noCompraA.forEach(emp => {
+      opportunities.push({ cliente:cli, empresa:emp, compraA, potencial:Math.round(avg), ops:compraA.reduce((s,e)=>s+(cd[e]?.ops||0),0) });
+    });
+  });
+  opportunities.sort((a,b) => b.potencial - a.potencial);
+
+  // KPIs
+  const totalPotencial = opportunities.reduce((s,o)=>s+o.potencial,0);
+  const clientesFull = clientes.filter(cli => empresas.every(e => matrix[cli]?.[e])).length;
+  const avgCov = clientes.length > 0 ? Math.round(clientes.reduce((s,cli)=> s + empresas.filter(e=>matrix[cli]?.[e]).length/empresas.length*100, 0)/clientes.length) : 0;
+
+  // Build matrix rows HTML
+  let matrixRows = '';
+  clientes.forEach(cli => {
+    const cd = matrix[cli] || {};
+    const cov = Math.round(empresas.filter(e=>cd[e]).length / empresas.length * 100);
+    const covCol = cov>=80?'#16a34a':cov>=50?'#d97706':'#dc2626';
+    matrixRows += `<tr><td style="font-weight:600;white-space:nowrap;max-width:180px;overflow:hidden;text-overflow:ellipsis">${cli}</td>`;
+    empresas.forEach(emp => {
+      if (cd[emp]) {
+        const alpha = 0.2 + Math.min(0.6, cd[emp].siv / (empMap[emp]?.[2]||1) * empresas.length * 0.5);
+        matrixRows += `<td style="text-align:center;background:rgba(22,163,74,${alpha.toFixed(2)});font-size:9px;font-weight:600;color:#065f46">${fmt(cd[emp].siv)}</td>`;
+      } else {
+        matrixRows += `<td style="text-align:center;background:#fff5f5;color:#fca5a5;font-size:9px">✗</td>`;
+      }
+    });
+    matrixRows += `<td style="text-align:center;font-weight:700;color:${covCol}">${cov}%</td></tr>`;
+  });
+
+  // Build opportunities rows
+  let opsRows = '';
+  opportunities.slice(0,30).forEach((op,i) => {
+    const compraLabel = op.compraA.length<=3 ? op.compraA.join(', ') : op.compraA.slice(0,2).join(', ')+' +'+(op.compraA.length-2)+' más';
+    opsRows += `<tr>
+      <td style="text-align:center;color:#94a3b8">${i+1}</td>
+      <td style="font-weight:600">${op.cliente}</td>
+      <td style="color:#dc2626;font-weight:600">${op.empresa}</td>
+      <td style="font-size:9px;color:#64748b">${compraLabel}</td>
+      <td style="text-align:right;color:#7c3aed;font-weight:700">${fmt(op.potencial)}</td>
+      <td style="text-align:center;color:#94a3b8">${op.ops}</td>
+    </tr>`;
+  });
+
+  const now = new Date().toLocaleDateString('es-AR',{year:'numeric',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit'});
+
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
+<title>MUUK — Cross-Sell ${periodoLabel}</title>
+<style>
+  @page { size: A4 landscape; margin: 12mm 10mm; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family: 'Segoe UI',system-ui,-apple-system,sans-serif; font-size:10px; color:#1e293b; padding:10px; }
+  h1 { font-size:16px; color:#0f172a; margin-bottom:2px; }
+  h2 { font-size:12px; color:#334155; margin:14px 0 6px; border-bottom:2px solid #e2e8f0; padding-bottom:3px; }
+  .subtitle { font-size:10px; color:#64748b; margin-bottom:10px; }
+  .kpis { display:flex; gap:10px; margin-bottom:12px; }
+  .kpi { flex:1; border:1px solid #e2e8f0; border-radius:6px; padding:8px 10px; border-left:3px solid #7c3aed; }
+  .kpi-label { font-size:8px; color:#64748b; text-transform:uppercase; letter-spacing:.5px; }
+  .kpi-val { font-size:14px; font-weight:700; color:#0f172a; }
+  table { width:100%; border-collapse:collapse; font-size:9px; margin-bottom:10px; }
+  th { background:#f8fafc; font-weight:700; font-size:8px; text-transform:uppercase; letter-spacing:.3px; color:#64748b; padding:4px 5px; border-bottom:2px solid #e2e8f0; }
+  td { padding:3px 5px; border-bottom:1px solid #f1f5f9; }
+  tr:nth-child(even) { background:#fafbfc; }
+  .matrix-table td { padding:2px 3px; }
+  .matrix-table th { font-size:7px; padding:3px 2px; text-align:center; }
+  .footer { margin-top:10px; font-size:8px; color:#94a3b8; text-align:center; border-top:1px solid #e2e8f0; padding-top:6px; }
+  @media print { body { -webkit-print-color-adjust:exact; print-color-adjust:exact; } }
+</style></head><body>
+<h1>Oportunidades de Venta Cruzada</h1>
+<div class="subtitle">Período: <b>${periodoLabel}</b> · Generado: ${now} · ${rows.length} operaciones</div>
+
+<div class="kpis">
+  <div class="kpi"><div class="kpi-label">Oportunidades</div><div class="kpi-val">${opportunities.length}</div></div>
+  <div class="kpi" style="border-left-color:#d97706"><div class="kpi-label">Potencial Total</div><div class="kpi-val">${fmt(totalPotencial)}</div></div>
+  <div class="kpi" style="border-left-color:#16a34a"><div class="kpi-label">Cobertura Promedio</div><div class="kpi-val">${avgCov}%</div></div>
+  <div class="kpi" style="border-left-color:#0891b2"><div class="kpi-label">Compran a Todas</div><div class="kpi-val">${clientesFull} / ${clientes.length}</div></div>
+</div>
+
+<h2>Matriz Cliente × Empresa</h2>
+<table class="matrix-table">
+  <thead><tr><th style="text-align:left">Cliente</th>${empresas.map(e=>`<th>${e.length>14?e.substring(0,13)+'…':e}</th>`).join('')}<th>Cob.</th></tr></thead>
+  <tbody>${matrixRows}</tbody>
+</table>
+
+<h2>Detalle de Oportunidades (Top ${Math.min(30,opportunities.length)})</h2>
+<table>
+  <thead><tr><th>#</th><th style="text-align:left">Cliente</th><th style="text-align:left">No Compra A</th><th style="text-align:left">Compra A</th><th style="text-align:right">Potencial</th><th style="text-align:center">Ops</th></tr></thead>
+  <tbody>${opsRows}</tbody>
+</table>
+
+<div class="footer">MUUK · Reporte de Venta Cruzada · ${periodoLabel} · Confidencial</div>
+</body></html>`;
+
+  const w = window.open('', '_blank', 'width=1100,height=700');
+  if (!w) { toast('Bloqueador de pop-ups activo. Permití pop-ups para imprimir.','warning'); return; }
+  w.document.write(html);
+  w.document.close();
+  setTimeout(() => { w.print(); }, 400);
 }
 
 function _renderClienteTabla(clientes) {
