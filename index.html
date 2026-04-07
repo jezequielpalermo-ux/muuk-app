@@ -1098,7 +1098,11 @@
   <div id="page-cajaBancos" class="page">
     <div class="page-hdr">
       <h4><i class="bi bi-bank2 me-2 text-success"></i>Caja — Bancos</h4>
-      <button class="btn btn-primary btn-sm" onclick="abrirModalMov('banco')"><i class="bi bi-plus-lg me-1"></i>Nuevo Movimiento</button>
+      <div class="d-flex gap-2">
+        <button class="btn btn-outline-info btn-sm" onclick="abrirModalTraspaso()"><i class="bi bi-arrow-left-right me-1"></i>Traspaso</button>
+        <button class="btn btn-outline-warning btn-sm" onclick="abrirModalAjuste()"><i class="bi bi-pencil-square me-1"></i>Ajuste</button>
+        <button class="btn btn-primary btn-sm" onclick="abrirModalMov('banco')"><i class="bi bi-plus-lg me-1"></i>Nuevo Movimiento</button>
+      </div>
     </div>
     <div class="row g-3 mb-3" id="saldos-bancos"></div>
     <!-- FILTROS -->
@@ -3095,6 +3099,110 @@ CREATE POLICY "acceso total" ON flujo_caja_versions FOR ALL USING (true) WITH CH
       <div class="modal-footer">
         <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
         <button class="btn btn-primary" onclick="guardarMov()">Guardar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ MODAL: TRASPASO ENTRE CUENTAS ══════════ -->
+<div class="modal fade" id="modalTraspaso" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header" style="background:linear-gradient(135deg,#0ea5e9,#0284c7);color:#fff">
+        <h5 class="modal-title"><i class="bi bi-arrow-left-right me-2"></i>Traspaso entre Cuentas</h5>
+        <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label fw-bold small">Fecha</label>
+            <input type="date" class="form-control form-control-sm" id="tr-fecha">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-bold small">Monto <span class="text-danger">*</span></label>
+            <div class="input-group input-group-sm">
+              <span class="input-group-text">$</span>
+              <input type="number" class="form-control" id="tr-monto" placeholder="0.00" step="0.01" min="0">
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-bold small">Cuenta Origen (sale de)</label>
+            <select class="form-select form-select-sm" id="tr-origen">
+              <option value="Banco Galicia - Cta. Corriente">Banco Galicia - Cta. Corriente</option>
+              <option value="Banco Galicia - FIMA">Banco Galicia - FIMA</option>
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-bold small">Cuenta Destino (entra a)</label>
+            <select class="form-select form-select-sm" id="tr-destino">
+              <option value="Banco Galicia - FIMA">Banco Galicia - FIMA</option>
+              <option value="Banco Galicia - Cta. Corriente">Banco Galicia - Cta. Corriente</option>
+            </select>
+          </div>
+          <div class="col-12">
+            <label class="form-label fw-bold small">Descripción / Referencia</label>
+            <input type="text" class="form-control form-control-sm" id="tr-desc" placeholder="Ej: Suscripción FIMA, Rescate FIMA...">
+          </div>
+        </div>
+        <div class="alert alert-info mt-3 mb-0 py-2" style="font-size:.78rem">
+          <i class="bi bi-info-circle me-1"></i>Se crean 2 movimientos automáticos: un <b>egreso</b> en la cuenta origen y un <b>ingreso</b> en la cuenta destino. El saldo total no cambia.
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button class="btn btn-primary" onclick="ejecutarTraspaso()"><i class="bi bi-arrow-left-right me-1"></i>Traspasar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ MODAL: AJUSTE DE CUENTA ══════════ -->
+<div class="modal fade" id="modalAjuste" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header" style="background:linear-gradient(135deg,#d97706,#f59e0b);color:#fff">
+        <h5 class="modal-title"><i class="bi bi-pencil-square me-2"></i>Ajuste de Cuenta</h5>
+        <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label fw-bold small">Fecha</label>
+            <input type="date" class="form-control form-control-sm" id="aj-fecha">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-bold small">Cuenta a ajustar</label>
+            <select class="form-select form-select-sm" id="aj-banco" onchange="_calcAjuste()">
+              <option value="Banco Galicia - Cta. Corriente">Banco Galicia - Cta. Corriente</option>
+              <option value="Banco Galicia - FIMA">Banco Galicia - FIMA</option>
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-bold small">Saldo actual en MUUK</label>
+            <div class="input-group input-group-sm">
+              <span class="input-group-text">$</span>
+              <input type="text" class="form-control" id="aj-saldoActual" readonly style="background:#f1f5f9;font-weight:700">
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-bold small">Saldo real (según banco) <span class="text-danger">*</span></label>
+            <div class="input-group input-group-sm">
+              <span class="input-group-text">$</span>
+              <input type="number" class="form-control" id="aj-saldoReal" placeholder="0.00" step="0.01" oninput="_calcAjuste()">
+            </div>
+          </div>
+          <div class="col-12" id="aj-diferencia-wrap" style="display:none">
+            <div class="alert py-2 mb-0" id="aj-diferencia-alert" style="font-size:.82rem"></div>
+          </div>
+          <div class="col-12">
+            <label class="form-label fw-bold small">Motivo del ajuste</label>
+            <input type="text" class="form-control form-control-sm" id="aj-desc" placeholder="Ej: Conciliación bancaria, Intereses, Comisiones...">
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button class="btn btn-warning" onclick="ejecutarAjuste()"><i class="bi bi-check-lg me-1"></i>Aplicar Ajuste</button>
       </div>
     </div>
   </div>
@@ -6422,6 +6530,116 @@ function renderSaldosBancos(){
         <div class="mt-1"><span class="${s>=0?'saldo-pos':'saldo-neg'}">${fmt(s)}</span></div>
         </div></div>`).join('')
     :`<div class="col-12"><p class="text-muted">Sin movimientos bancarios.</p></div>`);
+}
+
+/* ─── Traspaso entre cuentas ─── */
+function abrirModalTraspaso() {
+  document.getElementById('tr-fecha').value = hoy();
+  document.getElementById('tr-monto').value = '';
+  document.getElementById('tr-desc').value = '';
+  document.getElementById('tr-origen').value = 'Banco Galicia - Cta. Corriente';
+  document.getElementById('tr-destino').value = 'Banco Galicia - FIMA';
+  new bootstrap.Modal(document.getElementById('modalTraspaso')).show();
+}
+
+function ejecutarTraspaso() {
+  const fecha = document.getElementById('tr-fecha').value;
+  const monto = parseFloat(document.getElementById('tr-monto').value);
+  const origen = document.getElementById('tr-origen').value;
+  const destino = document.getElementById('tr-destino').value;
+  const desc = document.getElementById('tr-desc').value.trim();
+  if (!fecha || isNaN(monto) || monto <= 0) { toast('Completá fecha y monto','warning'); return; }
+  if (origen === destino) { toast('Origen y destino no pueden ser iguales','warning'); return; }
+  if (!ST.cajaBancos) ST.cajaBancos = [];
+  if (!ST.conceptos) ST.conceptos = [];
+  if (!ST.conceptos.includes('Traspaso entre cuentas')) ST.conceptos.push('Traspaso entre cuentas');
+  const refId = uid();
+  // Egreso de la cuenta origen
+  ST.cajaBancos.push({
+    id: uid(), fecha, socioId: '', banco: origen,
+    tipo: 'egreso', concepto: 'Traspaso entre cuentas',
+    monto, desc: `Traspaso a ${destino}${desc ? ' — '+desc : ''} [ref:${refId}]`
+  });
+  // Ingreso en la cuenta destino
+  ST.cajaBancos.push({
+    id: uid(), fecha, socioId: '', banco: destino,
+    tipo: 'ingreso', concepto: 'Traspaso entre cuentas',
+    monto, desc: `Traspaso desde ${origen}${desc ? ' — '+desc : ''} [ref:${refId}]`
+  });
+  save();
+  bootstrap.Modal.getInstance(document.getElementById('modalTraspaso')).hide();
+  renderMovimientos('cajaBancos');
+  try { renderDashboard(); } catch(e) {}
+  toast(`✓ Traspaso de ${fmt(monto)} de ${origen.split(' - ')[1]||origen} a ${destino.split(' - ')[1]||destino}`, 'success');
+}
+
+/* ─── Ajuste de cuenta ─── */
+function _getSaldoBanco(banco) {
+  if (!ST.cajaBancos) return 0;
+  return ST.cajaBancos.filter(m => m.banco === banco)
+    .reduce((s, m) => s + (m.tipo === 'ingreso' ? 1 : -1) * +m.monto, 0);
+}
+
+function abrirModalAjuste() {
+  document.getElementById('aj-fecha').value = hoy();
+  document.getElementById('aj-banco').value = 'Banco Galicia - Cta. Corriente';
+  document.getElementById('aj-saldoReal').value = '';
+  document.getElementById('aj-desc').value = '';
+  document.getElementById('aj-diferencia-wrap').style.display = 'none';
+  _calcAjuste();
+  new bootstrap.Modal(document.getElementById('modalAjuste')).show();
+}
+
+function _calcAjuste() {
+  const banco = document.getElementById('aj-banco').value;
+  const saldoActual = _getSaldoBanco(banco);
+  document.getElementById('aj-saldoActual').value = fmt(saldoActual);
+  const saldoRealStr = document.getElementById('aj-saldoReal').value;
+  const diffWrap = document.getElementById('aj-diferencia-wrap');
+  const diffAlert = document.getElementById('aj-diferencia-alert');
+  if (saldoRealStr !== '' && !isNaN(parseFloat(saldoRealStr))) {
+    const saldoReal = parseFloat(saldoRealStr);
+    const diff = saldoReal - saldoActual;
+    diffWrap.style.display = '';
+    if (Math.abs(diff) < 0.01) {
+      diffAlert.className = 'alert alert-success py-2 mb-0';
+      diffAlert.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i>Los saldos coinciden. No se necesita ajuste.';
+    } else if (diff > 0) {
+      diffAlert.className = 'alert alert-info py-2 mb-0';
+      diffAlert.innerHTML = `<i class="bi bi-arrow-up-circle-fill me-1"></i>Diferencia: <b class="text-success">+${fmt(diff)}</b> — Se registrará un <b>ingreso</b> de ajuste.`;
+    } else {
+      diffAlert.className = 'alert alert-warning py-2 mb-0';
+      diffAlert.innerHTML = `<i class="bi bi-arrow-down-circle-fill me-1"></i>Diferencia: <b class="text-danger">${fmt(diff)}</b> — Se registrará un <b>egreso</b> de ajuste.`;
+    }
+  } else {
+    diffWrap.style.display = 'none';
+  }
+}
+
+function ejecutarAjuste() {
+  const fecha = document.getElementById('aj-fecha').value;
+  const banco = document.getElementById('aj-banco').value;
+  const saldoReal = parseFloat(document.getElementById('aj-saldoReal').value);
+  const desc = document.getElementById('aj-desc').value.trim() || 'Ajuste de cuenta';
+  if (!fecha || isNaN(saldoReal)) { toast('Completá la fecha y el saldo real','warning'); return; }
+  const saldoActual = _getSaldoBanco(banco);
+  const diff = saldoReal - saldoActual;
+  if (Math.abs(diff) < 0.01) { toast('Los saldos ya coinciden, no se necesita ajuste','info'); return; }
+  if (!ST.cajaBancos) ST.cajaBancos = [];
+  if (!ST.conceptos) ST.conceptos = [];
+  if (!ST.conceptos.includes('Ajuste de cuenta')) ST.conceptos.push('Ajuste de cuenta');
+  ST.cajaBancos.push({
+    id: uid(), fecha, socioId: '', banco,
+    tipo: diff > 0 ? 'ingreso' : 'egreso',
+    concepto: 'Ajuste de cuenta',
+    monto: Math.abs(diff),
+    desc: `${desc} — Saldo anterior: ${fmt(saldoActual)}, Saldo real: ${fmt(saldoReal)}`
+  });
+  save();
+  bootstrap.Modal.getInstance(document.getElementById('modalAjuste')).hide();
+  renderMovimientos('cajaBancos');
+  try { renderDashboard(); } catch(e) {}
+  toast(`✓ Ajuste aplicado en ${banco}: ${diff>0?'+':''}${fmt(diff)}`, 'success');
 }
 
 function abrirModalMov(cat){
