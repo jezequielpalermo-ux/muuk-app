@@ -2816,7 +2816,7 @@ CREATE POLICY "acceso total" ON flujo_caja_versions FOR ALL USING (true) WITH CH
           </div>
           <div class="col-sm-4">
             <label class="form-label small fw-bold">Estado</label>
-            <select class="form-select form-select-sm" id="mf-estado">
+            <select class="form-select form-select-sm" id="mf-estado" onchange="_togglePagoSection()">
               <option value="pendiente">Pendiente</option>
               <option value="cobrada">Cobrada</option>
               <option value="pagada">Pagada</option>
@@ -2832,6 +2832,95 @@ CREATE POLICY "acceso total" ON flujo_caja_versions FOR ALL USING (true) WITH CH
             <select class="form-select form-select-sm" id="mf-chequeId">
               <option value="">— Sin vincular —</option>
             </select>
+          </div>
+
+          <!-- ── Sección dinámica: Modalidad de Pago (aparece al marcar cobrada/pagada) ── -->
+          <div class="col-12" id="mf-pago-section" style="display:none">
+            <div class="alert alert-success border py-2 px-3 mb-0" style="font-size:.82rem;background:#f0fdf4">
+              <div class="fw-bold mb-2"><i class="bi bi-cash-stack me-1"></i>Modalidad de Cobro/Pago</div>
+              <div class="row g-2">
+                <div class="col-sm-4">
+                  <label class="form-label small fw-bold mb-0">Medio de pago</label>
+                  <select class="form-select form-select-sm" id="mf-medioPago" onchange="_toggleMedioPagoFields()">
+                    <option value="">— Sin registrar —</option>
+                    <option value="transferencia">Transferencia bancaria</option>
+                    <option value="efectivo">Efectivo</option>
+                    <option value="chequeFisico">Cheque Físico</option>
+                    <option value="eCheque">E-Cheque</option>
+                  </select>
+                </div>
+                <div class="col-sm-4" id="mf-pago-monto-wrap">
+                  <label class="form-label small fw-bold mb-0">Monto cobrado</label>
+                  <div class="input-group input-group-sm">
+                    <span class="input-group-text">$</span>
+                    <input type="number" class="form-control" id="mf-pagoMonto" placeholder="Igual al total" step="0.01">
+                  </div>
+                </div>
+              </div>
+
+              <!-- Transferencia fields -->
+              <div id="mf-pago-transf" style="display:none" class="mt-2">
+                <div class="row g-2">
+                  <div class="col-sm-6">
+                    <label class="form-label small fw-bold mb-0">Banco destino</label>
+                    <input type="text" class="form-control form-control-sm" id="mf-transfBanco" placeholder="Ej: Banco Galicia - Cta. Corriente">
+                  </div>
+                  <div class="col-sm-6">
+                    <label class="form-label small fw-bold mb-0">Referencia / CBU / Nro. operación</label>
+                    <input type="text" class="form-control form-control-sm" id="mf-transfRef" placeholder="Opcional">
+                  </div>
+                </div>
+              </div>
+
+              <!-- Efectivo fields -->
+              <div id="mf-pago-efectivo" style="display:none" class="mt-2">
+                <small class="text-muted"><i class="bi bi-info-circle me-1"></i>Se registrará un ingreso en Caja Efectivo.</small>
+              </div>
+
+              <!-- Cheque Físico fields -->
+              <div id="mf-pago-chfisico" style="display:none" class="mt-2">
+                <div class="row g-2">
+                  <div class="col-sm-3">
+                    <label class="form-label small fw-bold mb-0">Nro. Cheque</label>
+                    <input type="text" class="form-control form-control-sm" id="mf-chfNro" placeholder="000000">
+                  </div>
+                  <div class="col-sm-3">
+                    <label class="form-label small fw-bold mb-0">Banco Emisor</label>
+                    <input list="bcra-banks-list" class="form-control form-control-sm" id="mf-chfBanco" placeholder="Banco..." autocomplete="off">
+                  </div>
+                  <div class="col-sm-3">
+                    <label class="form-label small fw-bold mb-0">Fecha Vto. Cheque</label>
+                    <input type="date" class="form-control form-control-sm" id="mf-chfVenc">
+                  </div>
+                  <div class="col-sm-3">
+                    <label class="form-label small fw-bold mb-0">Banco Custodia</label>
+                    <input type="text" class="form-control form-control-sm" id="mf-chfCustodia" placeholder="Banco destino">
+                  </div>
+                </div>
+              </div>
+
+              <!-- E-Cheque fields -->
+              <div id="mf-pago-echeque" style="display:none" class="mt-2">
+                <div class="row g-2">
+                  <div class="col-sm-3">
+                    <label class="form-label small fw-bold mb-0">Nro. E-Cheque</label>
+                    <input type="text" class="form-control form-control-sm" id="mf-echNro" placeholder="000000">
+                  </div>
+                  <div class="col-sm-3">
+                    <label class="form-label small fw-bold mb-0">Banco Emisor</label>
+                    <input list="bcra-banks-list" class="form-control form-control-sm" id="mf-echBanco" placeholder="Banco..." autocomplete="off">
+                  </div>
+                  <div class="col-sm-3">
+                    <label class="form-label small fw-bold mb-0">Fecha Vto. E-Cheque</label>
+                    <input type="date" class="form-control form-control-sm" id="mf-echVenc">
+                  </div>
+                  <div class="col-sm-3">
+                    <label class="form-label small fw-bold mb-0">Banco Custodia</label>
+                    <input type="text" class="form-control form-control-sm" id="mf-echCustodia" placeholder="Banco destino">
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
           <div class="col-12">
             <label class="form-label small fw-bold">Observaciones</label>
@@ -7438,7 +7527,47 @@ function abrirModalFactura(cat, id) {
     : '<option value="pendiente">Pendiente</option><option value="pagada">Pagada</option><option value="vencida">Vencida</option>';
   if (f?.estado) estEl.value = f.estado;
 
+  // Reset payment section
+  const mpSel = document.getElementById('mf-medioPago');
+  if (mpSel) mpSel.value = f?.medioPago || '';
+  const mpMonto = document.getElementById('mf-pagoMonto');
+  if (mpMonto) mpMonto.value = '';
+  ['mf-transfBanco','mf-transfRef','mf-chfNro','mf-chfBanco','mf-chfVenc','mf-chfCustodia','mf-echNro','mf-echBanco','mf-echVenc','mf-echCustodia'].forEach(fid => {
+    const el = document.getElementById(fid); if (el) el.value = '';
+  });
+  _togglePagoSection();
+  _toggleMedioPagoFields();
+
   new bootstrap.Modal(document.getElementById('modalFactura')).show();
+}
+
+function _togglePagoSection() {
+  const est = document.getElementById('mf-estado').value;
+  const sec = document.getElementById('mf-pago-section');
+  if (!sec) return;
+  const show = (est === 'cobrada' || est === 'pagada');
+  sec.style.display = show ? '' : 'none';
+  if (show && !document.getElementById('mf-fechaPago').value) {
+    document.getElementById('mf-fechaPago').value = hoy();
+  }
+  // Default monto = total
+  if (show) {
+    const tot = document.getElementById('mf-total').value;
+    const mp = document.getElementById('mf-pagoMonto');
+    if (mp && !mp.value) mp.value = tot;
+  }
+}
+
+function _toggleMedioPagoFields() {
+  const medio = document.getElementById('mf-medioPago').value;
+  ['mf-pago-transf','mf-pago-efectivo','mf-pago-chfisico','mf-pago-echeque'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+  if (medio === 'transferencia')  document.getElementById('mf-pago-transf').style.display = '';
+  if (medio === 'efectivo')       document.getElementById('mf-pago-efectivo').style.display = '';
+  if (medio === 'chequeFisico')   document.getElementById('mf-pago-chfisico').style.display = '';
+  if (medio === 'eCheque')        document.getElementById('mf-pago-echeque').style.display = '';
 }
 
 function calcularIVAModal() {
@@ -7481,11 +7610,103 @@ function guardarFactura() {
   };
   _factLineas = []; _factImpuestos = [];
 
+  // Detectar si cambió a cobrada/pagada (para crear movimientos cruzados)
+  const esNuevoCobro = (obj.estado === 'cobrada' || obj.estado === 'pagada');
+  const eraCobroPrevio = id ? (arr.find(f=>f.id===id)?.estado === 'cobrada' || arr.find(f=>f.id===id)?.estado === 'pagada') : false;
+
   const idx = arr.findIndex(f=>f.id===id);
   if (idx >= 0) arr[idx] = obj; else arr.push(obj);
+
+  // ── Registrar movimiento cruzado si corresponde ──
+  const medio = document.getElementById('mf-medioPago')?.value || '';
+  if (esNuevoCobro && !eraCobroPrevio && medio) {
+    const pagoMonto = parseFloat(document.getElementById('mf-pagoMonto')?.value) || obj.total;
+    const facRef = `${obj.tipo||''} ${obj.numero||''} — ${obj.cliente||''}`.trim();
+
+    if (medio === 'transferencia') {
+      const banco = document.getElementById('mf-transfBanco')?.value || 'Banco (sin especificar)';
+      const ref = document.getElementById('mf-transfRef')?.value || '';
+      if (!ST.conceptos.includes('Cobro por transferencia')) ST.conceptos.push('Cobro por transferencia');
+      ST.cajaBancos.push({
+        id: uid(), fecha: obj.fechaPago || hoy(), socioId: '', banco,
+        tipo: 'ingreso', concepto: 'Cobro por transferencia',
+        monto: pagoMonto,
+        desc: `Cobro Factura ${facRef}${ref ? ' | Ref: '+ref : ''}`
+      });
+      obj.medioPago = 'transferencia';
+      obj.medioPagoDetalle = banco + (ref ? ' ('+ref+')' : '');
+      toast(`✓ Ingreso por transferencia registrado en ${banco}: ${fmt(pagoMonto)}`, 'success');
+    }
+
+    if (medio === 'efectivo') {
+      if (!ST.cajaEfectivo) ST.cajaEfectivo = [];
+      if (!ST.conceptos.includes('Cobro en efectivo')) ST.conceptos.push('Cobro en efectivo');
+      ST.cajaEfectivo.push({
+        id: uid(), fecha: obj.fechaPago || hoy(), socioId: '',
+        tipo: 'ingreso', concepto: 'Cobro en efectivo',
+        monto: pagoMonto,
+        desc: `Cobro Factura ${facRef}`
+      });
+      obj.medioPago = 'efectivo';
+      toast(`✓ Ingreso en efectivo registrado: ${fmt(pagoMonto)}`, 'success');
+    }
+
+    if (medio === 'chequeFisico') {
+      const chNro = document.getElementById('mf-chfNro')?.value || '';
+      const chBanco = document.getElementById('mf-chfBanco')?.value || '';
+      const chVenc = document.getElementById('mf-chfVenc')?.value || '';
+      const chCust = document.getElementById('mf-chfCustodia')?.value || 'Banco Galicia - Cta. Corriente';
+      if (!chVenc) { toast('Ingresá la fecha de vencimiento del cheque','warning'); return; }
+      if (!ST.chequesFisicos) ST.chequesFisicos = [];
+      const chId = uid();
+      ST.chequesFisicos.push({
+        id: chId, fecha: obj.fechaPago || hoy(), fechaVenc: chVenc,
+        socioId: '', banco: chBanco, bancoCustodia: chCust,
+        numero: chNro, monto: pagoMonto, estado: 'en cartera',
+        tipo: '', desc: `Cobro Factura ${facRef}`,
+        cliente: obj.cliente || '', factura: `${obj.tipo||''} ${obj.numero||''}`
+      });
+      obj.medioPago = 'chequeFisico';
+      obj.chequeId = chId;
+      obj.medioPagoDetalle = `Cheque ${chNro} — ${chBanco}`;
+      toast(`✓ Cheque Físico Nro. ${chNro} ingresado en cartera: ${fmt(pagoMonto)}`, 'success');
+    }
+
+    if (medio === 'eCheque') {
+      const echNro = document.getElementById('mf-echNro')?.value || '';
+      const echBanco = document.getElementById('mf-echBanco')?.value || '';
+      const echVenc = document.getElementById('mf-echVenc')?.value || '';
+      const echCust = document.getElementById('mf-echCustodia')?.value || 'Banco Galicia - Cta. Corriente';
+      if (!echVenc) { toast('Ingresá la fecha de vencimiento del e-cheque','warning'); return; }
+      if (!ST.eCheques) ST.eCheques = [];
+      const echId = uid();
+      ST.eCheques.push({
+        id: echId, fecha: obj.fechaPago || hoy(), fechaVenc: echVenc,
+        socioId: '', banco: echBanco, bancoCustodia: echCust,
+        numero: echNro, monto: pagoMonto, estado: 'en cartera',
+        tipo: '', desc: `Cobro Factura ${facRef}`,
+        cliente: obj.cliente || '', factura: `${obj.tipo||''} ${obj.numero||''}`
+      });
+      obj.medioPago = 'eCheque';
+      obj.chequeId = echId;
+      obj.medioPagoDetalle = `E-Cheque ${echNro} — ${echBanco}`;
+      toast(`✓ E-Cheque Nro. ${echNro} ingresado en cartera: ${fmt(pagoMonto)}`, 'success');
+    }
+
+    // Update the saved obj in array
+    const idx2 = arr.findIndex(f=>f.id===obj.id);
+    if (idx2 >= 0) arr[idx2] = obj;
+  }
+
   save();
   bootstrap.Modal.getInstance(document.getElementById('modalFactura')).hide();
   if (cat === 'cobrar') renderFacturasACobrar(); else renderFacturasPagar();
+  // Refresh related sections
+  try { renderMovimientos('cajaBancos'); } catch(e) {}
+  try { renderMovimientos('cajaEfectivo'); } catch(e) {}
+  try { renderCheques('chequesFisicos'); } catch(e) {}
+  try { renderCheques('eCheques'); } catch(e) {}
+  try { renderDashboard(); } catch(e) {}
   toast('Factura guardada ✓');
 }
 
@@ -7497,6 +7718,16 @@ function eliminarFactura(cat, id) {
   save();
   if (cat === 'cobrar') renderFacturasACobrar(); else renderFacturasPagar();
   toast('Factura eliminada');
+}
+
+function _cobrarRapido(id) {
+  abrirModalFactura('cobrar', id);
+  // Pre-set to cobrada so payment section appears
+  setTimeout(() => {
+    const est = document.getElementById('mf-estado');
+    if (est) { est.value = 'cobrada'; _togglePagoSection(); }
+    document.getElementById('mf-fechaPago').value = hoy();
+  }, 200);
 }
 
 function limpiarFiltrosFactura(cat) {
@@ -7591,8 +7822,9 @@ function _tablaFacturas(list, cat) {
       <td>${fmt(f.neto)}</td>
       <td>${fmt(f.ivaImporte)}<small class="text-muted ms-1">${f.iva}%</small></td>
       <td><strong>${fmt(f.total)}</strong></td>
-      <td>${badges[f.estado]||f.estado}${f.fechaPago?`<br><small class="text-muted">${fmtF(f.fechaPago)}</small>`:''}</td>
-      <td>
+      <td>${badges[f.estado]||f.estado}${f.medioPago?`<br><small class="text-muted"><i class="bi bi-${f.medioPago==='transferencia'?'bank':f.medioPago==='efectivo'?'cash-coin':f.medioPago==='chequeFisico'?'file-earmark-check':'credit-card'} me-1"></i>${f.medioPago==='transferencia'?'Transf.':f.medioPago==='efectivo'?'Efectivo':f.medioPago==='chequeFisico'?'Cheque':'E-Cheque'}</small>`:''}${f.fechaPago?`<br><small class="text-muted">${fmtF(f.fechaPago)}</small>`:''}</td>
+      <td style="white-space:nowrap">
+        ${f.estado==='pendiente' && cat==='cobrar' ? `<button class="btn btn-a btn-outline-success me-1" onclick="_cobrarRapido('${f.id}')" title="Registrar cobro"><i class="bi bi-cash-stack"></i></button>` : ''}
         ${tieneDetalle ? `<button class="btn btn-a btn-outline-info me-1" onclick="_toggleDetFac('${detId}')" title="Ver detalle"><i class="bi bi-list-ul"></i></button>` : ''}
         <button class="btn btn-a btn-outline-primary me-1" onclick="abrirModalFactura('${cat}','${f.id}')"><i class="bi bi-pencil"></i></button>
         <button class="btn btn-a btn-outline-danger" onclick="eliminarFactura('${cat}','${f.id}')"><i class="bi bi-trash"></i></button>
