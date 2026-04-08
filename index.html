@@ -856,7 +856,7 @@
         </div>
       </div>
       <div class="col-sm-6 col-xl">
-        <div class="stat-card" style="background:linear-gradient(135deg,#0f766e,#14b8a6)">
+        <div class="stat-card" style="background:linear-gradient(135deg,#334155,#64748b)">
           <div class="bg-icon"><i class="bi bi-percent"></i></div>
           <div class="lbl">Comisiones del Mes</div>
           <div class="val" id="stat-comisiones">$0</div>
@@ -877,6 +877,14 @@
           <div class="lbl">Facturas a Pagar</div>
           <div class="val" id="stat-fac-pagar">$0</div>
           <div class="sub" id="stat-fac-pagar-n">0 pendientes</div>
+        </div>
+      </div>
+      <div class="col-sm-6 col-xl">
+        <div class="stat-card" style="background:linear-gradient(135deg,#581c87,#a855f7)">
+          <div class="bg-icon"><i class="bi bi-box-seam-fill"></i></div>
+          <div class="lbl">Stock</div>
+          <div class="val" id="stat-stock-valor">$0</div>
+          <div class="sub" id="stat-stock-sub">0 productos</div>
         </div>
       </div>
     </div>
@@ -5268,6 +5276,14 @@ function renderDashboard() {
   _setEl('stat-fac-cobrar-n', `${facCobPend.length} pendiente${facCobPend.length!==1?'s':''}`);
   _setEl('stat-fac-pagar', fmt(facPagPend.reduce((s,f)=>s+ +f.total,0)));
   _setEl('stat-fac-pagar-n', `${facPagPend.length} pendiente${facPagPend.length!==1?'s':''}`);
+
+  // Stock
+  const stkProds = ST.stockProductos || [];
+  const stkValor = stkProds.reduce((s,p) => s + (p.stockActual||0) * (p.precioCosto||0), 0);
+  const stkBajo = stkProds.filter(p => p.stockMin > 0 && p.stockActual < p.stockMin).length;
+  _setEl('stat-stock-valor', fmt(stkValor));
+  const stkSubEl = document.getElementById('stat-stock-sub');
+  if (stkSubEl) stkSubEl.innerHTML = `${stkProds.length} producto${stkProds.length!==1?'s':''}${stkBajo>0?' · <span style="color:#fca5a5;font-weight:700">'+stkBajo+' bajo mín.</span>':''}`;
 
   // ── LIQUIDEZ NETA ──
   const totFacPagar = facPagPend.reduce((s,f)=>s+ +f.total,0);
