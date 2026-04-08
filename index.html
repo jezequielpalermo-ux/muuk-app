@@ -2910,13 +2910,17 @@ CREATE POLICY "acceso total" ON flujo_caja_versions FOR ALL USING (true) WITH CH
             <label class="form-label small fw-bold">Fecha Vencimiento</label>
             <input type="date" class="form-control form-control-sm" id="mf-fechaVenc">
           </div>
-          <div class="col-sm-8">
-            <label class="form-label small fw-bold" id="mf-cat-label">Cliente</label>
-            <input type="text" class="form-control form-control-sm" id="mf-cliente" placeholder="Razón social...">
+          <div class="col-sm-5">
+            <label class="form-label small fw-bold">Emisor (Razón Social)</label>
+            <input type="text" class="form-control form-control-sm" id="mf-cliente" placeholder="Quién emite la factura">
+          </div>
+          <div class="col-sm-3">
+            <label class="form-label small fw-bold">CUIT Emisor</label>
+            <input type="text" class="form-control form-control-sm" id="mf-cuit" placeholder="20-12345678-9">
           </div>
           <div class="col-sm-4">
-            <label class="form-label small fw-bold">CUIT</label>
-            <input type="text" class="form-control form-control-sm" id="mf-cuit" placeholder="20-12345678-9">
+            <label class="form-label small fw-bold" id="mf-cat-label">Cliente / Receptor</label>
+            <input type="text" class="form-control form-control-sm" id="mf-receptor" placeholder="A quién va dirigida">
           </div>
           <div class="col-sm-3">
             <label class="form-label small fw-bold">Neto Gravado</label>
@@ -3050,6 +3054,14 @@ CREATE POLICY "acceso total" ON flujo_caja_versions FOR ALL USING (true) WITH CH
           <div class="col-12">
             <label class="form-label small fw-bold">Observaciones</label>
             <input type="text" class="form-control form-control-sm" id="mf-desc" placeholder="Notas adicionales...">
+          </div>
+
+          <!-- Vista previa del PDF -->
+          <div class="col-12" id="mf-preview-wrap" style="display:none">
+            <label class="form-label small fw-bold"><i class="bi bi-image me-1"></i>Vista Previa</label>
+            <div style="max-height:300px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:6px;background:#f8fafc;text-align:center;padding:4px">
+              <img id="mf-preview-img" src="" style="max-width:100%;border-radius:4px" alt="Vista previa de factura">
+            </div>
           </div>
         </div>
       </div>
@@ -7730,49 +7742,74 @@ async function extraerTextoPDF(file) {
 
 function parsearImporteAFIP(s) {
   if (!s) return 0;
-  s = String(s).trim();
+  s = String(s).replace(/\$/g,'').replace(/\s/g,'').trim();
+  if (!s) return 0;
+
   // Detectar formato argentino: puntos como miles, coma como decimal → "1.234.567,89"
-  // vs formato con coma como miles: "1,234,567.89" (Mas Nutricion y otros)
   const tienePuntoYComa = /\d\.\d{3},\d/.test(s);      // formato AR: 1.234,56
   const tieneComa3Punto = /\d,\d{3}\.\d/.test(s);       // formato US: 1,234.56
-  const soloConteoComas = (s.match(/,/g)||[]).length;    // cantidad de comas
-  const soloPuntos      = (s.match(/\./g)||[]).length;   // cantidad de puntos
+  const soloConteoComas = (s.match(/,/g)||[]).length;
+  const soloPuntos      = (s.match(/\./g)||[]).length;
 
-  if (tienePuntoYComa) {
-    // Formato AR: separador de miles = punto, decimal = coma
+  // Caso: solo tiene coma como último separador → AR "1234,56" o "1.234,56"
+  if (s.includes(',') && s.lastIndexOf(',') > s.lastIndexOf('.')) {
     return parseFloat(s.replace(/\./g,'').replace(',','.')) || 0;
   }
-  if (tieneComa3Punto) {
-    // Formato US: separador de miles = coma, decimal = punto
-    return parseFloat(s.replace(/,/g,'')) || 0;
-  }
-  if (soloConteoComas === 1 && !soloPuntos) {
-    // Solo una coma, sin puntos → podría ser decimal AR ("1234,56") o miles con coma
-    const partes = s.split(',');
-    if (partes[1] && partes[1].length <= 2) {
-      // decimal AR (< 3 dígitos después de la coma)
-      return parseFloat(s.replace(',','.')) || 0;
-    } else if (partes[1] && partes[1].length === 3) {
-      // miles con coma ("1,234") → eliminar coma
-      return parseFloat(s.replace(',','')) || 0;
+  // Caso: solo tiene punto como último separador → podría ser "1,234.56" o "1234.56"
+  if (s.includes('.') && s.lastIndexOf('.') > s.lastIndexOf(',')) {
+    // Si tiene comas antes del punto → formato US "1,234.56"
+    if (s.includes(',')) return parseFloat(s.replace(/,/g,'')) || 0;
+    // Múltiples puntos → miles AR "1.234.567"
+    if (soloPuntos > 1) return parseFloat(s.replace(/\./g,'')) || 0;
+    // Un solo punto: "1234.56" (decimal) vs "1.234" (miles AR sin decimal)
+    const afterDot = s.split('.')[1];
+    if (afterDot && afterDot.length === 3 && !afterDot.includes('0')) {
+      // Podría ser miles "1.234" — pero asumimos decimal por seguridad en facturas
     }
-    return parseFloat(s.replace(',','.')) || 0;
+    return parseFloat(s) || 0;
   }
-  if (soloConteoComas > 1) {
-    // Múltiples comas → separador de miles (estilo US: 1,234,567)
-    return parseFloat(s.replace(/,/g,'')) || 0;
-  }
-  // Solo puntos: si hay múltiples → separador de miles (1.234.567)
-  if (soloPuntos > 1) {
-    return parseFloat(s.replace(/\./g,'')) || 0;
-  }
-  // Un solo punto → decimal normal
+  // Sin puntos ni comas
+  if (soloConteoComas === 0 && soloPuntos === 0) return parseFloat(s) || 0;
+  // Fallback
   return parseFloat(s.replace(/\./g,'').replace(',','.')) || 0;
 }
 
 // Cache de líneas e impuestos del último PDF parseado (se usa al guardar)
 let _factLineas = [];
 let _factImpuestos = [];
+let _factPdfPreview = ''; // data URL de la preview del PDF
+
+function _generarPDFPreview(file) {
+  _factPdfPreview = '';
+  const previewWrap = document.getElementById('mf-preview-wrap');
+  const previewImg = document.getElementById('mf-preview-img');
+  if (!previewWrap || !previewImg) return;
+  previewWrap.style.display = 'none';
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const data = new Uint8Array(e.target.result);
+    cargarPDFjs(async (err) => {
+      if (err) return;
+      try {
+        const pdf = await pdfjsLib.getDocument({ data }).promise;
+        const page = await pdf.getPage(1);
+        const scale = 1.5;
+        const viewport = page.getViewport({ scale });
+        const canvas = document.createElement('canvas');
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        const ctx = canvas.getContext('2d');
+        await page.render({ canvasContext: ctx, viewport }).promise;
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+        _factPdfPreview = dataUrl;
+        previewImg.src = dataUrl;
+        previewWrap.style.display = '';
+      } catch(e) { /* silently fail preview */ }
+    });
+  };
+  reader.readAsArrayBuffer(file);
+}
 
 function parsearFacturaAFIP(text) {
   const d = { tipo:'', numero:'', fecha:'', cuit:'', razonSocial:'', emisor:'', neto:0, iva:21, ivaImporte:0, total:0, lineas:[], impuestos:[] };
@@ -7807,16 +7844,28 @@ function parsearFacturaAFIP(text) {
     }
   }
 
-  // ── CUIT del emisor ───────────────────────────────────────
+  // ── CUIT: separar emisor y receptor ───────────────────────
   // AFIP muestra el CUIT del emisor primero, luego el del receptor
-  const cuitAll = [...text.matchAll(/C\.?U\.?I\.?T\.?\s*:?\s*(\d{2}[-\s]\d{8}[-\s]\d)/gi)];
-  if (cuitAll.length > 0) d.cuit = cuitAll[0][1].replace(/[\s]/g,'');
+  const cuitAll = [...text.matchAll(/C\.?U\.?I\.?T\.?\s*:?\s*(\d{2}[-–\s]?\d{8}[-–\s]?\d)/gi)];
+  if (cuitAll.length >= 2) {
+    d.cuitEmisor = cuitAll[0][1].replace(/[\s–-]/g,'-').replace(/^(\d{2})(\d{8})(\d)$/,'$1-$2-$3');
+    d.cuit = d.cuitEmisor; // campo principal = emisor
+    d.cuitReceptor = cuitAll[1][1].replace(/[\s–-]/g,'-').replace(/^(\d{2})(\d{8})(\d)$/,'$1-$2-$3');
+  } else if (cuitAll.length === 1) {
+    d.cuit = cuitAll[0][1].replace(/[\s–-]/g,'-').replace(/^(\d{2})(\d{8})(\d)$/,'$1-$2-$3');
+    d.cuitEmisor = d.cuit;
+  }
+  // También buscar patrón sin "CUIT:" (solo los números 11 dígitos)
+  if (!d.cuit) {
+    const cuitPlano = text.match(/\b(\d{2})-?(\d{8})-?(\d)\b/);
+    if (cuitPlano) d.cuit = `${cuitPlano[1]}-${cuitPlano[2]}-${cuitPlano[3]}`;
+  }
 
   // ── Razón Social del EMISOR ───────────────────────────────
-  // Buscar primero "Razón Social:" antes del primer CUIT/antes de "Receptor"
   const rsPatterns = [
     /Raz[oó]n\s+Social\s*:?\s*([^\n\r]{3,80})/i,
     /Emisor\s*:?\s*([^\n\r]{3,80})/i,
+    /Apellido\s+y\s+Nombre\s*(?:\/?\s*Raz[oó]n\s+Social)?\s*:?\s*([^\n\r]{3,80})/i,
     /^([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑa-záéíóúñ\s\.\,\-&]+(?:S\.?A\.?|S\.?R\.?L\.?|S\.?A\.?S\.?|S\.?C\.?|Ltda\.?)?)\s*\n/m
   ];
   for (const pat of rsPatterns) {
@@ -7826,14 +7875,27 @@ function parsearFacturaAFIP(text) {
       if (rs.length >= 3 && rs.length <= 100) { d.razonSocial = rs; break; }
     }
   }
-  // Si no se encontró mediante razón social, usar el nombre del emisor del bloque AFIP
   if (!d.razonSocial) {
-    // AFIP PDF típico: el nombre de la empresa está en la primera línea o antes del CUIT
     const primerCuitPos = text.search(/C\.?U\.?I\.?T\.?\s*:?\s*\d/i);
     if (primerCuitPos > 0) {
       const antes = text.slice(0, primerCuitPos).trim();
       const lineas = antes.split('\n').map(l=>l.trim()).filter(l=>l.length>2);
       if (lineas.length > 0) d.razonSocial = lineas[lineas.length-1].substring(0,80);
+    }
+  }
+  // ── Razón Social del RECEPTOR (cliente) ───────────────────
+  // Buscar después de "Señor(es)" o "Receptor" o segundo bloque de Razón Social
+  const receptorPatterns = [
+    /Se[ñn]or(?:es)?\s*:?\s*([^\n\r]{3,80})/i,
+    /Receptor\s*:?\s*([^\n\r]{3,80})/i,
+    /Destinatario\s*:?\s*([^\n\r]{3,80})/i,
+    /(?:Comprador|Cliente)\s*:?\s*([^\n\r]{3,80})/i
+  ];
+  for (const pat of receptorPatterns) {
+    const m = text.match(pat);
+    if (m) {
+      const rc = m[1].trim().replace(/\s+/g,' ');
+      if (rc.length >= 3 && rc.length <= 100) { d.receptor = rc; break; }
     }
   }
 
@@ -7967,6 +8029,10 @@ function _procesarPDFenModal(file) {
   document.getElementById('mf-pdf-nombre').textContent = file.name;
   document.getElementById('mf-pdf-estado').innerHTML =
     '<span class="text-muted"><i class="bi bi-hourglass-split me-1"></i>Leyendo PDF...</span>';
+
+  // Generar preview del PDF como imagen
+  _generarPDFPreview(file);
+
   cargarPDFjs(async (err) => {
     if (err) {
       document.getElementById('mf-pdf-estado').innerHTML =
@@ -7981,6 +8047,7 @@ function _procesarPDFenModal(file) {
       if (d.fecha)       document.getElementById('mf-fecha').value = d.fecha;
       if (d.cuit)        document.getElementById('mf-cuit').value = d.cuit;
       if (d.razonSocial) document.getElementById('mf-cliente').value = d.razonSocial;
+      if (d.receptor)    document.getElementById('mf-receptor').value = d.receptor;
       if (d.neto)        document.getElementById('mf-neto').value = d.neto.toFixed(2);
       if (d.iva)         document.getElementById('mf-iva').value = d.iva;
       if (d.ivaImporte)  document.getElementById('mf-ivaImporte').value = d.ivaImporte.toFixed(2);
@@ -8034,8 +8101,21 @@ function abrirModalFactura(cat, id) {
   document.getElementById('mf-total').value       = f?.total || '';
   document.getElementById('mf-estado').value      = f?.estado || 'pendiente';
   document.getElementById('mf-desc').value        = f?.desc || '';
+  document.getElementById('mf-receptor').value         = f?.receptor || '';
   document.getElementById('mf-pdf-nombre').textContent = f?.pdfNombre || '';
   document.getElementById('mf-pdf-estado').textContent = '';
+
+  // Reset PDF preview
+  _factPdfPreview = '';
+  const _prevWrap = document.getElementById('mf-preview-wrap');
+  const _prevImg  = document.getElementById('mf-preview-img');
+  if (f?.pdfPreview) {
+    _prevImg.src = f.pdfPreview;
+    _prevWrap.style.display = '';
+  } else {
+    _prevImg.src = '';
+    _prevWrap.style.display = 'none';
+  }
 
   // Populate cheque select
   const sel = document.getElementById('mf-chequeId');
@@ -8133,11 +8213,13 @@ function guardarFactura() {
     estado:     document.getElementById('mf-estado').value,
     chequeId:   document.getElementById('mf-chequeId').value,
     desc:       document.getElementById('mf-desc').value.trim(),
+    receptor:   document.getElementById('mf-receptor')?.value.trim() || '',
     pdfNombre:  document.getElementById('mf-pdf-nombre').textContent || '',
+    pdfPreview: _factPdfPreview || (id ? (arr.find(f=>f.id===id)?.pdfPreview || '') : ''),
     lineas:     _factLineas.length > 0 ? _factLineas : (id ? (arr.find(f=>f.id===id)?.lineas || []) : []),
     impuestos:  _factImpuestos.length > 0 ? _factImpuestos : (id ? (arr.find(f=>f.id===id)?.impuestos || []) : [])
   };
-  _factLineas = []; _factImpuestos = [];
+  _factLineas = []; _factImpuestos = []; _factPdfPreview = '';
 
   // Detectar si cambió a cobrada/pagada ANTES de sobreescribir
   const esNuevoCobro = (obj.estado === 'cobrada' || obj.estado === 'pagada');
@@ -8351,13 +8433,14 @@ function _tablaFacturas(list, cat) {
     let mainRow = `<tr>
       <td>${fmtF(f.fecha)}</td>
       <td><strong>${f.tipo||''} ${f.numero||'—'}</strong></td>
-      <td>${f.cliente||'—'}<br><small class="text-muted">${f.cuit||''}</small></td>
+      <td>${f.cliente||'—'}<br><small class="text-muted">${f.cuit||''}</small>${f.receptor?`<br><small class="text-muted">→ ${f.receptor}</small>`:''}</td>
       <td>${f.fechaVenc?fmtF(f.fechaVenc):'—'}${vTag}</td>
       <td>${fmt(f.neto)}</td>
       <td>${fmt(f.ivaImporte)}<small class="text-muted ms-1">${f.iva}%</small></td>
       <td><strong>${fmt(f.total)}</strong></td>
       <td>${badges[f.estado]||f.estado}${f.medioPago?`<br><small class="text-muted"><i class="bi bi-${f.medioPago==='transferencia'?'bank':f.medioPago==='efectivo'?'cash-coin':f.medioPago==='chequeFisico'?'file-earmark-check':'credit-card'} me-1"></i>${f.medioPago==='transferencia'?'Transf.':f.medioPago==='efectivo'?'Efectivo':f.medioPago==='chequeFisico'?'Cheque':'E-Cheque'}</small>`:''}${f.fechaPago?`<br><small class="text-muted">${fmtF(f.fechaPago)}</small>`:''}</td>
       <td style="white-space:nowrap">
+        ${f.pdfPreview ? `<button class="btn btn-a btn-outline-secondary me-1" onclick="_verPdfPreview('${cat}','${f.id}')" title="Ver factura"><i class="bi bi-file-earmark-image"></i></button>` : ''}
         ${f.estado==='pendiente' && cat==='cobrar' ? `<button class="btn btn-a btn-outline-success me-1" onclick="_cobrarRapido('${f.id}')" title="Registrar cobro"><i class="bi bi-cash-stack"></i></button>` : ''}
         ${tieneDetalle ? `<button class="btn btn-a btn-outline-info me-1" onclick="_toggleDetFac('${detId}')" title="Ver detalle"><i class="bi bi-list-ul"></i></button>` : ''}
         <button class="btn btn-a btn-outline-primary me-1" onclick="abrirModalFactura('${cat}','${f.id}')"><i class="bi bi-pencil"></i></button>
@@ -8419,6 +8502,18 @@ function _tablaFacturas(list, cat) {
 function _toggleDetFac(id) {
   const el = document.getElementById(id);
   if (el) el.style.display = el.style.display === 'none' ? 'table-row' : 'none';
+}
+
+function _verPdfPreview(cat, id) {
+  const arr = cat === 'cobrar' ? (ST.facturasACobrar||[]) : (ST.facturasPagar||[]);
+  const f = arr.find(x=>x.id===id);
+  if (!f?.pdfPreview) { toast('Sin vista previa disponible','warning'); return; }
+  const w = window.open('','_blank','width=800,height=1000');
+  w.document.write(`<!DOCTYPE html><html><head><title>Factura ${f.tipo||''} ${f.numero||''}</title>
+    <style>body{margin:0;display:flex;justify-content:center;align-items:flex-start;background:#333;min-height:100vh}
+    img{max-width:100%;height:auto;box-shadow:0 4px 20px rgba(0,0,0,.5)}</style></head>
+    <body><img src="${f.pdfPreview}" alt="Vista previa"></body></html>`);
+  w.document.close();
 }
 
 /* ══════════════════════════════════════════════════════════
