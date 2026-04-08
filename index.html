@@ -393,6 +393,11 @@
     body.dark-mode #gest-crosssell-section td[style*="position:sticky"] { background: var(--bg-card) !important; }
     body.dark-mode #gest-crosssell-section [style*="color:#065f46"] { color: #4ade80 !important; }
 
+    /* ── STOCK: dark mode overrides ── */
+    body.dark-mode #page-stock .stat-card { border-color: var(--border) !important; }
+    body.dark-mode #page-stock .card { border-color: var(--border) !important; background: var(--bg-card) !important; }
+    body.dark-mode #page-stock .bg-light { background: var(--bg-card) !important; }
+
     /* ── TESORERÍA: dark mode overrides ── */
     #page-tesoreria .card { border: 1px solid #e2e8f0 !important; }
     body.dark-mode #page-tesoreria .card { border-color: var(--border) !important; background: var(--bg-card) !important; }
@@ -594,6 +599,7 @@
       <li><a class="nav-link" data-page="facturasACobrar"><i class="bi bi-file-earmark-arrow-down-fill"></i>Facturas a Cobrar</a></li>
       <li><a class="nav-link" data-page="facturasPagar"><i class="bi bi-file-earmark-arrow-up-fill"></i>Facturas a Pagar</a></li>
       <li><a class="nav-link" data-page="estadosCuenta"><i class="bi bi-person-lines-fill"></i>Estados de Cuenta</a></li>
+      <li><a class="nav-link" data-page="stock"><i class="bi bi-box-seam-fill"></i>Stock</a></li>
     </div>
 
     <!-- ── Análisis ── -->
@@ -2659,6 +2665,113 @@ CREATE POLICY "acceso total" ON flujo_caja_versions FOR ALL USING (true) WITH CH
   </div>
 
 
+  <!-- ══════════════════ STOCK ══════════════════ -->
+  <div id="page-stock" class="page">
+    <div class="page-hdr">
+      <h4><i class="bi bi-box-seam-fill me-2" style="color:#7c3aed"></i>Control de Stock</h4>
+      <div class="d-flex gap-2">
+        <button class="btn btn-outline-warning btn-sm" onclick="abrirModalStockMov(null)" style="font-size:.75rem"><i class="bi bi-arrow-left-right me-1"></i>Movimiento</button>
+        <button class="btn btn-primary btn-sm" onclick="abrirModalStockProd(null)" style="font-size:.75rem"><i class="bi bi-plus-lg me-1"></i>Nuevo Producto</button>
+      </div>
+    </div>
+
+    <!-- KPIs -->
+    <div class="row g-3 mb-3">
+      <div class="col-sm-3">
+        <div class="stat-card" style="background:linear-gradient(135deg,#7c3aed,#a78bfa)">
+          <div class="bg-icon"><i class="bi bi-box-seam"></i></div>
+          <div class="lbl">Productos Registrados</div>
+          <div class="val" id="stk-total-prod">0</div>
+          <div class="sub" id="stk-total-cats">0 categorías</div>
+        </div>
+      </div>
+      <div class="col-sm-3">
+        <div class="stat-card" style="background:linear-gradient(135deg,#1d4ed8,#3b82f6)">
+          <div class="bg-icon"><i class="bi bi-currency-dollar"></i></div>
+          <div class="lbl">Valor del Stock (costo)</div>
+          <div class="val" id="stk-valor-costo">$0</div>
+          <div class="sub" id="stk-valor-venta">Venta: $0</div>
+        </div>
+      </div>
+      <div class="col-sm-3">
+        <div class="stat-card" style="background:linear-gradient(135deg,#dc2626,#f87171)">
+          <div class="bg-icon"><i class="bi bi-exclamation-triangle-fill"></i></div>
+          <div class="lbl">Bajo Stock Mínimo</div>
+          <div class="val" id="stk-bajo-min">0</div>
+          <div class="sub" id="stk-bajo-min-sub">productos con alerta</div>
+        </div>
+      </div>
+      <div class="col-sm-3">
+        <div class="stat-card" style="background:linear-gradient(135deg,#0f766e,#14b8a6)">
+          <div class="bg-icon"><i class="bi bi-arrow-left-right"></i></div>
+          <div class="lbl">Movimientos (30d)</div>
+          <div class="val" id="stk-mov-30d">0</div>
+          <div class="sub" id="stk-mov-30d-sub">entradas y salidas</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="card mb-2 border-0 bg-light">
+      <div class="card-body py-2 px-3">
+        <div class="row g-2 align-items-end">
+          <div class="col-6 col-sm-3">
+            <label class="form-label small mb-0 fw-bold" style="font-size:.7rem">Buscar</label>
+            <input type="text" class="form-control form-control-sm" id="stk-buscar" placeholder="Nombre, código, proveedor..." oninput="renderStock()">
+          </div>
+          <div class="col-6 col-sm-2">
+            <label class="form-label small mb-0 fw-bold" style="font-size:.7rem">Categoría</label>
+            <select class="form-select form-select-sm" id="stk-fil-cat" onchange="renderStock()">
+              <option value="">Todas</option>
+            </select>
+          </div>
+          <div class="col-6 col-sm-2">
+            <label class="form-label small mb-0 fw-bold" style="font-size:.7rem">Estado</label>
+            <select class="form-select form-select-sm" id="stk-fil-estado" onchange="renderStock()">
+              <option value="">Todos</option>
+              <option value="ok">OK</option>
+              <option value="bajo">Bajo Mínimo</option>
+              <option value="sinstock">Sin Stock</option>
+              <option value="sobre">Sobre Máximo</option>
+            </select>
+          </div>
+          <div class="col-6 col-sm-2">
+            <label class="form-label small mb-0 fw-bold" style="font-size:.7rem">Depósito</label>
+            <select class="form-select form-select-sm" id="stk-fil-deposito" onchange="renderStock()">
+              <option value="">Todos</option>
+            </select>
+          </div>
+          <div class="col-6 col-sm-2">
+            <label class="form-label small mb-0 fw-bold" style="font-size:.7rem">Ordenar por</label>
+            <select class="form-select form-select-sm" id="stk-ordenar" onchange="renderStock()">
+              <option value="nombre">Nombre</option>
+              <option value="codigo">Código</option>
+              <option value="stockAsc">Stock ↑</option>
+              <option value="stockDesc">Stock ↓</option>
+              <option value="valorDesc">Valor ↓</option>
+              <option value="alerta">Alertas primero</option>
+            </select>
+          </div>
+          <div class="col-6 col-sm-1 d-flex align-items-end">
+            <button class="btn btn-sm btn-outline-secondary w-100" onclick="_limpiarFiltrosStock()" title="Limpiar" style="font-size:.72rem"><i class="bi bi-x-lg"></i></button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabla de productos -->
+    <div class="card"><div class="card-body p-0" id="wrap-stock"></div></div>
+
+    <!-- Últimos movimientos -->
+    <div class="mt-3">
+      <div class="d-flex align-items-center gap-2 mb-2">
+        <span style="font-size:.78rem;font-weight:700;color:#0f172a"><i class="bi bi-clock-history me-1" style="color:#0891b2"></i>Últimos Movimientos de Stock</span>
+        <small class="text-muted" style="font-size:.62rem" id="stk-mov-count"></small>
+      </div>
+      <div class="card"><div class="card-body p-0" id="wrap-stock-movs"></div></div>
+    </div>
+  </div>
+
   <!-- ══════════════════ ESTRATÉGICOS ══════════════════ -->
   <div id="page-estrategicos" class="page">
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px">
@@ -3209,6 +3322,181 @@ CREATE POLICY "acceso total" ON flujo_caja_versions FOR ALL USING (true) WITH CH
 </div>
 
 <!-- TOAST -->
+<!-- ══════════ MODAL: PRODUCTO STOCK ══════════ -->
+<div class="modal fade" id="modalStockProd" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header" style="background:linear-gradient(135deg,#7c3aed,#a78bfa);color:#fff">
+        <h5 class="modal-title" id="modalStockProd-title"><i class="bi bi-box-seam me-2"></i>Producto</h5>
+        <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="sp-id">
+        <div class="row g-3">
+          <div class="col-md-3">
+            <label class="form-label fw-bold small">Código / SKU <span class="text-danger">*</span></label>
+            <input type="text" class="form-control form-control-sm" id="sp-codigo" placeholder="Ej: PRD-001">
+          </div>
+          <div class="col-md-9">
+            <label class="form-label fw-bold small">Nombre / Descripción <span class="text-danger">*</span></label>
+            <input type="text" class="form-control form-control-sm" id="sp-nombre" placeholder="Nombre del producto">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-bold small">Categoría</label>
+            <input type="text" class="form-control form-control-sm" id="sp-categoria" list="stk-cats-list" placeholder="Ej: Electrónica, Insumos...">
+            <datalist id="stk-cats-list"></datalist>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-bold small">Unidad de medida</label>
+            <select class="form-select form-select-sm" id="sp-unidad">
+              <option value="unidades">Unidades</option>
+              <option value="kg">Kilogramos (kg)</option>
+              <option value="litros">Litros (lt)</option>
+              <option value="metros">Metros (m)</option>
+              <option value="cajas">Cajas</option>
+              <option value="paquetes">Paquetes</option>
+              <option value="rollos">Rollos</option>
+              <option value="bolsas">Bolsas</option>
+              <option value="pares">Pares</option>
+              <option value="docenas">Docenas</option>
+            </select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-bold small">Depósito / Ubicación</label>
+            <input type="text" class="form-control form-control-sm" id="sp-deposito" list="stk-deps-list" placeholder="Ej: Depósito Central">
+            <datalist id="stk-deps-list"></datalist>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label fw-bold small">Stock Actual</label>
+            <input type="number" class="form-control form-control-sm" id="sp-stockActual" value="0" min="0" step="0.01">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label fw-bold small">Stock Mínimo</label>
+            <input type="number" class="form-control form-control-sm" id="sp-stockMin" value="0" min="0" step="0.01" title="Alerta cuando el stock baje de este valor">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label fw-bold small">Stock Máximo</label>
+            <input type="number" class="form-control form-control-sm" id="sp-stockMax" value="0" min="0" step="0.01" title="Capacidad máxima de almacenamiento">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label fw-bold small">Punto de Reposición</label>
+            <input type="number" class="form-control form-control-sm" id="sp-puntoRepo" value="0" min="0" step="0.01" title="Cantidad a la cual se debe reponer">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-bold small">Precio Costo (sin IVA)</label>
+            <div class="input-group input-group-sm">
+              <span class="input-group-text">$</span>
+              <input type="number" class="form-control" id="sp-precioCosto" placeholder="0.00" step="0.01" min="0">
+            </div>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-bold small">Precio Venta (sin IVA)</label>
+            <div class="input-group input-group-sm">
+              <span class="input-group-text">$</span>
+              <input type="number" class="form-control" id="sp-precioVenta" placeholder="0.00" step="0.01" min="0">
+            </div>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-bold small">IVA %</label>
+            <select class="form-select form-select-sm" id="sp-iva">
+              <option value="0">0%</option>
+              <option value="10.5">10.5%</option>
+              <option value="21" selected>21%</option>
+              <option value="27">27%</option>
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-bold small">Proveedor Principal</label>
+            <input type="text" class="form-control form-control-sm" id="sp-proveedor" placeholder="Nombre del proveedor">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-bold small">Código de Barras / EAN</label>
+            <input type="text" class="form-control form-control-sm" id="sp-codigoBarras" placeholder="Opcional">
+          </div>
+          <div class="col-12">
+            <label class="form-label fw-bold small">Notas</label>
+            <input type="text" class="form-control form-control-sm" id="sp-notas" placeholder="Observaciones adicionales...">
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button class="btn btn-primary" onclick="guardarStockProd()"><i class="bi bi-save me-1"></i>Guardar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ MODAL: MOVIMIENTO DE STOCK ══════════ -->
+<div class="modal fade" id="modalStockMov" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header" style="background:linear-gradient(135deg,#0891b2,#22d3ee);color:#fff">
+        <h5 class="modal-title"><i class="bi bi-arrow-left-right me-2"></i>Movimiento de Stock</h5>
+        <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row g-3">
+          <div class="col-md-12">
+            <label class="form-label fw-bold small">Producto <span class="text-danger">*</span></label>
+            <select class="form-select form-select-sm" id="sm-producto" onchange="_smUpdateInfo()">
+              <option value="">— Seleccionar producto —</option>
+            </select>
+            <small class="text-muted" id="sm-prod-info" style="font-size:.68rem"></small>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-bold small">Tipo de Movimiento <span class="text-danger">*</span></label>
+            <select class="form-select form-select-sm" id="sm-tipo">
+              <option value="entrada">↑ Entrada (compra/recepción)</option>
+              <option value="salida">↓ Salida (venta/consumo)</option>
+              <option value="ajuste_pos">± Ajuste positivo</option>
+              <option value="ajuste_neg">± Ajuste negativo</option>
+              <option value="devolucion">↩ Devolución</option>
+              <option value="merma">⚠ Merma / Rotura</option>
+              <option value="transferencia">↔ Transferencia depósito</option>
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-bold small">Cantidad <span class="text-danger">*</span></label>
+            <input type="number" class="form-control form-control-sm" id="sm-cantidad" placeholder="0" min="0.01" step="0.01">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-bold small">Fecha</label>
+            <input type="date" class="form-control form-control-sm" id="sm-fecha">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-bold small">Precio unitario (opcional)</label>
+            <div class="input-group input-group-sm">
+              <span class="input-group-text">$</span>
+              <input type="number" class="form-control" id="sm-precioUnit" placeholder="0.00" step="0.01">
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-bold small">Comprobante / Remito</label>
+            <input type="text" class="form-control form-control-sm" id="sm-comprobante" placeholder="Nro. de remito o factura">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-bold small">Proveedor / Cliente</label>
+            <input type="text" class="form-control form-control-sm" id="sm-proveedor" placeholder="Quién entrega/recibe">
+          </div>
+          <div class="col-md-6" id="sm-deposito-destino-wrap" style="display:none">
+            <label class="form-label fw-bold small">Depósito Destino</label>
+            <input type="text" class="form-control form-control-sm" id="sm-depositoDestino" placeholder="Depósito al que se transfiere">
+          </div>
+          <div class="col-12">
+            <label class="form-label fw-bold small">Observaciones</label>
+            <input type="text" class="form-control form-control-sm" id="sm-notas" placeholder="Motivo, detalle...">
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button class="btn btn-primary" onclick="guardarStockMov()"><i class="bi bi-check-lg me-1"></i>Registrar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="position-fixed bottom-0 end-0 p-3" style="z-index:9999">
   <div id="toast" class="toast align-items-center text-white border-0" role="alert">
     <div class="d-flex">
@@ -4687,7 +4975,7 @@ function initApp() {
 const _SB_GROUPS = {
   empresa:  ['socios','cuentaSocios'],
   caja:     ['cajaBancos','cajaEfectivo','chequesFisicos','eCheques','chequesPagar','kilometraje'],
-  gestion:  ['comisiones','bcra','calendarioARCA','contabilidad','facturasACobrar','facturasPagar','estadosCuenta'],
+  gestion:  ['comisiones','bcra','calendarioARCA','contabilidad','facturasACobrar','facturasPagar','estadosCuenta','stock'],
   analisis: ['tesoreria','flujoProyectado','panelVencimientos','rentabilidad','gestion','reportes','historial','estrategicos'],
   archivos: ['documentos','config'],
 };
@@ -4924,6 +5212,7 @@ function irA(p) {
   if (p==='gestion')          renderGestion();
   if (p==='estrategicos')     renderEstrategicos();
   if (p==='estadosCuenta')   renderEstadosCuenta();
+  if (p==='stock')            renderStock();
 }
 
 function renderTodo() {
@@ -8114,6 +8403,338 @@ function _tablaFacturas(list, cat) {
 function _toggleDetFac(id) {
   const el = document.getElementById(id);
   if (el) el.style.display = el.style.display === 'none' ? 'table-row' : 'none';
+}
+
+/* ══════════════════════════════════════════════════════════
+   STOCK — Control de Inventario
+══════════════════════════════════════════════════════════ */
+
+function renderStock() {
+  if (!ST.stockProductos) ST.stockProductos = [];
+  if (!ST.stockMovimientos) ST.stockMovimientos = [];
+  const prods = ST.stockProductos;
+  const movs = ST.stockMovimientos;
+
+  // Populate filter dropdowns
+  const filCat = document.getElementById('stk-fil-cat');
+  const filDep = document.getElementById('stk-fil-deposito');
+  if (filCat) {
+    const cats = [...new Set(prods.map(p=>p.categoria).filter(Boolean))].sort();
+    const prev = filCat.value;
+    filCat.innerHTML = '<option value="">Todas</option>' + cats.map(c=>`<option value="${c}">${c}</option>`).join('');
+    filCat.value = prev;
+  }
+  if (filDep) {
+    const deps = [...new Set(prods.map(p=>p.deposito).filter(Boolean))].sort();
+    const prev = filDep.value;
+    filDep.innerHTML = '<option value="">Todos</option>' + deps.map(d=>`<option value="${d}">${d}</option>`).join('');
+    filDep.value = prev;
+  }
+  // Populate datalists in modal
+  const catsList = document.getElementById('stk-cats-list');
+  if (catsList) catsList.innerHTML = [...new Set(prods.map(p=>p.categoria).filter(Boolean))].map(c=>`<option value="${c}">`).join('');
+  const depsList = document.getElementById('stk-deps-list');
+  if (depsList) depsList.innerHTML = [...new Set(prods.map(p=>p.deposito).filter(Boolean))].map(d=>`<option value="${d}">`).join('');
+
+  // KPIs
+  const totalCats = new Set(prods.map(p=>p.categoria).filter(Boolean)).size;
+  const valorCosto = prods.reduce((s,p) => s + (p.stockActual||0) * (p.precioCosto||0), 0);
+  const valorVenta = prods.reduce((s,p) => s + (p.stockActual||0) * (p.precioVenta||0), 0);
+  const bajoMin = prods.filter(p => p.stockMin > 0 && p.stockActual < p.stockMin).length;
+  const hace30d = new Date(); hace30d.setDate(hace30d.getDate()-30);
+  const h30str = hace30d.toISOString().split('T')[0];
+  const movs30d = movs.filter(m => m.fecha >= h30str).length;
+  const entradas30 = movs.filter(m => m.fecha >= h30str && ['entrada','ajuste_pos','devolucion'].includes(m.tipo)).length;
+  const salidas30 = movs.filter(m => m.fecha >= h30str && ['salida','ajuste_neg','merma'].includes(m.tipo)).length;
+
+  _setEl('stk-total-prod', prods.length);
+  _setEl('stk-total-cats', totalCats + ' categoría' + (totalCats!==1?'s':''));
+  _setEl('stk-valor-costo', fmt(valorCosto));
+  _setEl('stk-valor-venta', 'Venta: ' + fmt(valorVenta));
+  _setEl('stk-bajo-min', bajoMin);
+  _setEl('stk-bajo-min-sub', bajoMin + ' producto' + (bajoMin!==1?'s':'') + ' con alerta');
+  _setEl('stk-mov-30d', movs30d);
+  _setEl('stk-mov-30d-sub', entradas30 + ' entradas · ' + salidas30 + ' salidas');
+
+  // Filter & sort products
+  const buscar = (document.getElementById('stk-buscar')?.value||'').toLowerCase();
+  const catFil = document.getElementById('stk-fil-cat')?.value || '';
+  const estFil = document.getElementById('stk-fil-estado')?.value || '';
+  const depFil = document.getElementById('stk-fil-deposito')?.value || '';
+  const orden = document.getElementById('stk-ordenar')?.value || 'nombre';
+
+  let filtered = prods.filter(p => {
+    if (buscar && !`${p.codigo} ${p.nombre} ${p.proveedor} ${p.categoria}`.toLowerCase().includes(buscar)) return false;
+    if (catFil && p.categoria !== catFil) return false;
+    if (depFil && p.deposito !== depFil) return false;
+    if (estFil === 'bajo' && !(p.stockMin > 0 && p.stockActual < p.stockMin && p.stockActual > 0)) return false;
+    if (estFil === 'sinstock' && p.stockActual > 0) return false;
+    if (estFil === 'sobre' && !(p.stockMax > 0 && p.stockActual > p.stockMax)) return false;
+    if (estFil === 'ok' && ((p.stockMin > 0 && p.stockActual < p.stockMin) || p.stockActual <= 0)) return false;
+    return true;
+  });
+
+  const sortFns = {
+    nombre: (a,b) => (a.nombre||'').localeCompare(b.nombre||''),
+    codigo: (a,b) => (a.codigo||'').localeCompare(b.codigo||''),
+    stockAsc: (a,b) => (a.stockActual||0) - (b.stockActual||0),
+    stockDesc: (a,b) => (b.stockActual||0) - (a.stockActual||0),
+    valorDesc: (a,b) => ((b.stockActual||0)*(b.precioCosto||0)) - ((a.stockActual||0)*(a.precioCosto||0)),
+    alerta: (a,b) => {
+      const aAlert = (a.stockMin>0 && a.stockActual<a.stockMin) ? 0 : 1;
+      const bAlert = (b.stockMin>0 && b.stockActual<b.stockMin) ? 0 : 1;
+      return aAlert - bAlert || (a.nombre||'').localeCompare(b.nombre||'');
+    }
+  };
+  filtered.sort(sortFns[orden] || sortFns.nombre);
+
+  // Render table
+  const wrap = document.getElementById('wrap-stock');
+  if (!wrap) return;
+  if (!prods.length) { wrap.innerHTML = '<div class="empty-state"><i class="bi bi-box-seam"></i>Sin productos registrados.<br><small>Usá "Nuevo Producto" para cargar el inventario.</small></div>'; return; }
+  if (!filtered.length) { wrap.innerHTML = '<div class="empty-state"><i class="bi bi-funnel"></i>Sin resultados para los filtros aplicados.</div>'; return; }
+
+  const rows = filtered.map(p => {
+    const val = (p.stockActual||0) * (p.precioCosto||0);
+    let estadoBadge = '<span class="bdg bg-success text-white">OK</span>';
+    if (p.stockActual <= 0) estadoBadge = '<span class="bdg bg-dark text-white">Sin Stock</span>';
+    else if (p.stockMin > 0 && p.stockActual < p.stockMin) estadoBadge = '<span class="bdg bg-danger text-white">Bajo Mín.</span>';
+    else if (p.stockMax > 0 && p.stockActual > p.stockMax) estadoBadge = '<span class="bdg bg-warning text-dark">Sobre Máx.</span>';
+    const pctBar = p.stockMax > 0 ? Math.min(100, Math.round(p.stockActual / p.stockMax * 100)) : -1;
+    const barColor = p.stockMin > 0 && p.stockActual < p.stockMin ? '#ef4444' : pctBar > 80 ? '#d97706' : '#16a34a';
+    return `<tr>
+      <td class="ps-2"><small class="text-muted">${p.codigo||'—'}</small></td>
+      <td><strong>${p.nombre}</strong>${p.categoria?`<br><small class="text-muted">${p.categoria}</small>`:''}</td>
+      <td class="text-center"><strong style="font-size:.9rem">${_fmtStock(p.stockActual, p.unidad)}</strong>
+        ${pctBar>=0?`<div style="width:50px;height:4px;background:#e2e8f0;border-radius:2px;margin:2px auto 0"><div style="width:${pctBar}%;height:100%;background:${barColor};border-radius:2px"></div></div>`:''}
+      </td>
+      <td class="text-center"><small>${p.stockMin||'—'}</small> / <small>${p.stockMax||'—'}</small></td>
+      <td class="text-end">${p.precioCosto ? fmt(p.precioCosto) : '—'}</td>
+      <td class="text-end">${p.precioVenta ? fmt(p.precioVenta) : '—'}</td>
+      <td class="text-end"><strong>${val>0?fmt(val):'—'}</strong></td>
+      <td class="text-center">${estadoBadge}</td>
+      <td class="text-center" style="white-space:nowrap">
+        <button class="btn btn-a btn-outline-success me-1" onclick="abrirModalStockMov('${p.id}')" title="Mover stock"><i class="bi bi-arrow-left-right"></i></button>
+        <button class="btn btn-a btn-outline-primary me-1" onclick="abrirModalStockProd('${p.id}')" title="Editar"><i class="bi bi-pencil"></i></button>
+        <button class="btn btn-a btn-outline-danger" onclick="eliminarStockProd('${p.id}')" title="Eliminar"><i class="bi bi-trash"></i></button>
+      </td>
+    </tr>`;
+  }).join('');
+
+  wrap.innerHTML = `<div class="table-responsive"><table class="table table-hover mb-0" style="font-size:.82rem">
+    <thead><tr>
+      <th class="ps-2">Código</th><th>Producto</th><th class="text-center">Stock</th>
+      <th class="text-center">Mín / Máx</th><th class="text-end">P. Costo</th><th class="text-end">P. Venta</th>
+      <th class="text-end">Valor</th><th class="text-center">Estado</th><th></th>
+    </tr></thead><tbody>${rows}</tbody></table></div>`;
+
+  // Render movements
+  _renderStockMovs();
+}
+
+function _fmtStock(val, unidad) {
+  const u = unidad || 'unidades';
+  const abbr = {unidades:'u',kg:'kg',litros:'lt',metros:'m',cajas:'cj',paquetes:'paq',rollos:'rol',bolsas:'bls',pares:'par',docenas:'doc'};
+  return (val % 1 === 0 ? val : val.toFixed(2)) + ' ' + (abbr[u]||u);
+}
+
+function _renderStockMovs() {
+  const wrap = document.getElementById('wrap-stock-movs');
+  const countEl = document.getElementById('stk-mov-count');
+  if (!wrap) return;
+  const movs = (ST.stockMovimientos||[]).slice().sort((a,b) => b.fecha.localeCompare(a.fecha) || b.id.localeCompare(a.id));
+  if (countEl) countEl.textContent = movs.length + ' movimientos totales';
+  if (!movs.length) { wrap.innerHTML = '<div class="empty-state"><i class="bi bi-clock-history"></i>Sin movimientos registrados.</div>'; return; }
+  const show = movs.slice(0, 50);
+  const tipoIcons = {entrada:'↑',salida:'↓',ajuste_pos:'±',ajuste_neg:'±',devolucion:'↩',merma:'⚠',transferencia:'↔'};
+  const tipoColors = {entrada:'text-success',salida:'text-danger',ajuste_pos:'text-info',ajuste_neg:'text-warning',devolucion:'text-primary',merma:'text-danger',transferencia:'text-muted'};
+  const tipoLabels = {entrada:'Entrada',salida:'Salida',ajuste_pos:'Ajuste +',ajuste_neg:'Ajuste −',devolucion:'Devolución',merma:'Merma',transferencia:'Transferencia'};
+  const rows = show.map(m => {
+    const prod = (ST.stockProductos||[]).find(p=>p.id===m.productoId);
+    const sign = ['entrada','ajuste_pos','devolucion'].includes(m.tipo) ? '+' : '−';
+    return `<tr>
+      <td><small>${fmtF(m.fecha)}</small></td>
+      <td><span class="${tipoColors[m.tipo]||''} fw-bold">${tipoIcons[m.tipo]||''} ${tipoLabels[m.tipo]||m.tipo}</span></td>
+      <td><strong>${prod?prod.nombre:'(eliminado)'}</strong><br><small class="text-muted">${prod?prod.codigo:m.productoId}</small></td>
+      <td class="text-center fw-bold ${sign==='+'?'text-success':'text-danger'}">${sign}${m.cantidad}</td>
+      <td><small class="text-muted">${m.stockResultante!=null?'→ '+m.stockResultante:''}</small></td>
+      <td class="text-end">${m.precioUnit?fmt(m.precioUnit):'—'}</td>
+      <td><small class="text-muted">${m.comprobante||''} ${m.notas||''}</small></td>
+    </tr>`;
+  }).join('');
+  wrap.innerHTML = `<div class="table-responsive"><table class="table table-hover mb-0" style="font-size:.8rem">
+    <thead><tr><th>Fecha</th><th>Tipo</th><th>Producto</th><th class="text-center">Cant.</th><th>Stock</th><th class="text-end">P.U.</th><th>Detalle</th></tr></thead>
+    <tbody>${rows}</tbody></table></div>`;
+}
+
+/* ─ Modal producto ─ */
+function abrirModalStockProd(id) {
+  const p = id ? (ST.stockProductos||[]).find(x=>x.id===id) : null;
+  document.getElementById('sp-id').value = id || '';
+  document.getElementById('modalStockProd-title').textContent = (id ? 'Editar' : 'Nuevo') + ' Producto';
+  document.getElementById('sp-codigo').value = p?.codigo || '';
+  document.getElementById('sp-nombre').value = p?.nombre || '';
+  document.getElementById('sp-categoria').value = p?.categoria || '';
+  document.getElementById('sp-unidad').value = p?.unidad || 'unidades';
+  document.getElementById('sp-deposito').value = p?.deposito || '';
+  document.getElementById('sp-stockActual').value = p?.stockActual ?? 0;
+  document.getElementById('sp-stockMin').value = p?.stockMin ?? 0;
+  document.getElementById('sp-stockMax').value = p?.stockMax ?? 0;
+  document.getElementById('sp-puntoRepo').value = p?.puntoRepo ?? 0;
+  document.getElementById('sp-precioCosto').value = p?.precioCosto || '';
+  document.getElementById('sp-precioVenta').value = p?.precioVenta || '';
+  document.getElementById('sp-iva').value = p?.iva ?? 21;
+  document.getElementById('sp-proveedor').value = p?.proveedor || '';
+  document.getElementById('sp-codigoBarras').value = p?.codigoBarras || '';
+  document.getElementById('sp-notas').value = p?.notas || '';
+  renderStock(); // refresh datalists
+  new bootstrap.Modal(document.getElementById('modalStockProd')).show();
+}
+
+function guardarStockProd() {
+  if (!ST.stockProductos) ST.stockProductos = [];
+  const id = document.getElementById('sp-id').value;
+  const nombre = document.getElementById('sp-nombre').value.trim();
+  const codigo = document.getElementById('sp-codigo').value.trim();
+  if (!nombre) { toast('Ingresá el nombre del producto','warning'); return; }
+  if (!codigo) { toast('Ingresá el código/SKU','warning'); return; }
+  // Check duplicate code
+  const dup = ST.stockProductos.find(p => p.codigo === codigo && p.id !== id);
+  if (dup) { toast('Ya existe un producto con el código ' + codigo,'warning'); return; }
+
+  const obj = {
+    id: id || uid(),
+    codigo, nombre,
+    categoria: document.getElementById('sp-categoria').value.trim(),
+    unidad: document.getElementById('sp-unidad').value,
+    deposito: document.getElementById('sp-deposito').value.trim(),
+    stockActual: parseFloat(document.getElementById('sp-stockActual').value) || 0,
+    stockMin: parseFloat(document.getElementById('sp-stockMin').value) || 0,
+    stockMax: parseFloat(document.getElementById('sp-stockMax').value) || 0,
+    puntoRepo: parseFloat(document.getElementById('sp-puntoRepo').value) || 0,
+    precioCosto: parseFloat(document.getElementById('sp-precioCosto').value) || 0,
+    precioVenta: parseFloat(document.getElementById('sp-precioVenta').value) || 0,
+    iva: parseFloat(document.getElementById('sp-iva').value) || 21,
+    proveedor: document.getElementById('sp-proveedor').value.trim(),
+    codigoBarras: document.getElementById('sp-codigoBarras').value.trim(),
+    notas: document.getElementById('sp-notas').value.trim(),
+    updatedAt: new Date().toISOString()
+  };
+  const idx = ST.stockProductos.findIndex(p=>p.id===id);
+  if (idx >= 0) ST.stockProductos[idx] = obj; else ST.stockProductos.push(obj);
+  save();
+  bootstrap.Modal.getInstance(document.getElementById('modalStockProd')).hide();
+  renderStock();
+  toast('Producto guardado ✓');
+}
+
+function eliminarStockProd(id) {
+  const p = (ST.stockProductos||[]).find(x=>x.id===id);
+  if (!p) return;
+  if (!confirm(`¿Eliminar "${p.nombre}" (${p.codigo})? Se mantendrán los movimientos históricos.`)) return;
+  ST.stockProductos = ST.stockProductos.filter(x=>x.id!==id);
+  save(); renderStock(); toast('Producto eliminado','warning');
+}
+
+/* ─ Modal movimiento de stock ─ */
+function abrirModalStockMov(prodId) {
+  if (!ST.stockProductos || !ST.stockProductos.length) { toast('Primero cargá al menos un producto','warning'); return; }
+  const sel = document.getElementById('sm-producto');
+  sel.innerHTML = '<option value="">— Seleccionar producto —</option>' +
+    ST.stockProductos.map(p => `<option value="${p.id}" ${p.id===prodId?'selected':''}>${p.codigo} — ${p.nombre} (Stock: ${p.stockActual} ${p.unidad||'u'})</option>`).join('');
+  document.getElementById('sm-tipo').value = 'entrada';
+  document.getElementById('sm-cantidad').value = '';
+  document.getElementById('sm-fecha').value = hoy();
+  document.getElementById('sm-precioUnit').value = '';
+  document.getElementById('sm-comprobante').value = '';
+  document.getElementById('sm-proveedor').value = '';
+  document.getElementById('sm-notas').value = '';
+  document.getElementById('sm-depositoDestino').value = '';
+  document.getElementById('sm-deposito-destino-wrap').style.display = 'none';
+  _smUpdateInfo();
+  // Show/hide deposito destino on tipo change
+  document.getElementById('sm-tipo').onchange = function() {
+    document.getElementById('sm-deposito-destino-wrap').style.display = this.value==='transferencia' ? '' : 'none';
+  };
+  new bootstrap.Modal(document.getElementById('modalStockMov')).show();
+}
+
+function _smUpdateInfo() {
+  const sel = document.getElementById('sm-producto');
+  const info = document.getElementById('sm-prod-info');
+  if (!info) return;
+  const p = (ST.stockProductos||[]).find(x=>x.id===sel.value);
+  if (p) {
+    info.innerHTML = `Stock actual: <b>${p.stockActual} ${p.unidad||'u'}</b> · Mín: ${p.stockMin||'—'} · Máx: ${p.stockMax||'—'} · Costo: ${p.precioCosto?fmt(p.precioCosto):'—'} · Depósito: ${p.deposito||'—'}`;
+    // Pre-fill precio unitario with cost
+    const pu = document.getElementById('sm-precioUnit');
+    if (pu && !pu.value && p.precioCosto) pu.value = p.precioCosto;
+  } else {
+    info.textContent = '';
+  }
+}
+
+function guardarStockMov() {
+  if (!ST.stockMovimientos) ST.stockMovimientos = [];
+  const prodId = document.getElementById('sm-producto').value;
+  const tipo = document.getElementById('sm-tipo').value;
+  const cantidad = parseFloat(document.getElementById('sm-cantidad').value);
+  const fecha = document.getElementById('sm-fecha').value;
+  if (!prodId) { toast('Seleccioná un producto','warning'); return; }
+  if (!cantidad || cantidad <= 0) { toast('Ingresá la cantidad','warning'); return; }
+  if (!fecha) { toast('Ingresá la fecha','warning'); return; }
+
+  const prod = ST.stockProductos.find(p=>p.id===prodId);
+  if (!prod) { toast('Producto no encontrado','warning'); return; }
+
+  // Check salida doesn't exceed stock
+  const esSalida = ['salida','ajuste_neg','merma'].includes(tipo);
+  if (esSalida && cantidad > prod.stockActual) {
+    if (!confirm(`La cantidad (${cantidad}) supera el stock actual (${prod.stockActual}). ¿Continuar de todos modos?`)) return;
+  }
+
+  // Update stock
+  if (['entrada','ajuste_pos','devolucion'].includes(tipo)) {
+    prod.stockActual = (prod.stockActual||0) + cantidad;
+  } else if (esSalida) {
+    prod.stockActual = (prod.stockActual||0) - cantidad;
+  }
+  // Update cost if entrada has price
+  const precioUnit = parseFloat(document.getElementById('sm-precioUnit').value) || 0;
+  if (tipo === 'entrada' && precioUnit > 0) {
+    prod.precioCosto = precioUnit;
+  }
+  prod.updatedAt = new Date().toISOString();
+
+  // Register movement
+  const mov = {
+    id: uid(), productoId: prodId, tipo, cantidad, fecha,
+    precioUnit,
+    stockResultante: Math.round(prod.stockActual * 100) / 100,
+    comprobante: document.getElementById('sm-comprobante').value.trim(),
+    proveedor: document.getElementById('sm-proveedor').value.trim(),
+    depositoDestino: document.getElementById('sm-depositoDestino').value.trim(),
+    notas: document.getElementById('sm-notas').value.trim()
+  };
+  ST.stockMovimientos.push(mov);
+  save();
+  bootstrap.Modal.getInstance(document.getElementById('modalStockMov')).hide();
+  renderStock();
+
+  // Alert if below minimum
+  if (prod.stockMin > 0 && prod.stockActual < prod.stockMin) {
+    toast(`⚠ "${prod.nombre}" quedó debajo del stock mínimo (${prod.stockActual}/${prod.stockMin})`, 'warning');
+  } else {
+    toast('Movimiento registrado ✓');
+  }
+}
+
+function _limpiarFiltrosStock() {
+  ['stk-buscar','stk-fil-cat','stk-fil-estado','stk-fil-deposito'].forEach(id => {
+    const el = document.getElementById(id); if(el) el.value = '';
+  });
+  const ord = document.getElementById('stk-ordenar'); if(ord) ord.value = 'nombre';
+  renderStock();
 }
 
 /* ══════════════════════════════════════════════════════════
