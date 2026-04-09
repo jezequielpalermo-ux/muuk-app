@@ -2684,6 +2684,7 @@ CREATE POLICY "acceso total" ON flujo_caja_versions FOR ALL USING (true) WITH CH
     <div class="page-hdr">
       <h4><i class="bi bi-box-seam-fill me-2" style="color:#7c3aed"></i>Control de Stock</h4>
       <div class="d-flex gap-2">
+        <button class="btn btn-outline-info btn-sm" onclick="printReporteStock()" style="font-size:.75rem"><i class="bi bi-printer me-1"></i>Imprimir Reporte</button>
         <button class="btn btn-outline-warning btn-sm" onclick="abrirModalStockMov(null)" style="font-size:.75rem"><i class="bi bi-arrow-left-right me-1"></i>Movimiento</button>
         <button class="btn btn-primary btn-sm" onclick="abrirModalStockProd(null)" style="font-size:.75rem"><i class="bi bi-plus-lg me-1"></i>Nuevo Producto</button>
       </div>
@@ -8967,6 +8968,148 @@ function _limpiarFiltrosStock() {
   });
   const ord = document.getElementById('stk-ordenar'); if(ord) ord.value = 'nombre';
   renderStock();
+}
+
+// ── Imprimir reporte de stock ────────────────────────
+function printReporteStock() {
+  const prods = ST.stockProductos || [];
+  if (!prods.length) { toast('No hay productos en stock para imprimir','info'); return; }
+
+  const hoyStr = new Date().toLocaleDateString('es-AR');
+  const _f = n => (n||0).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const _fn = n => (n||0).toLocaleString('es-AR',{minimumFractionDigits:0,maximumFractionDigits:0});
+
+  const sorted = [...prods].sort((a,b) => (a.nombre||'').localeCompare(b.nombre||''));
+  const totalCosto = sorted.reduce((s,p) => s + (p.stockActual||0) * (p.precioCosto||0), 0);
+  const totalVenta = sorted.reduce((s,p) => s + (p.stockActual||0) * (p.precioVenta||0), 0);
+  const bajoMin = sorted.filter(p => p.stockMin > 0 && p.stockActual < p.stockMin);
+  const sinStock = sorted.filter(p => (p.stockActual||0) <= 0);
+
+  // Agrupar por categoría
+  const cats = {};
+  sorted.forEach(p => {
+    const cat = p.categoria || 'Sin categoría';
+    if (!cats[cat]) cats[cat] = { prods: [], valorCosto: 0, valorVenta: 0 };
+    cats[cat].prods.push(p);
+    cats[cat].valorCosto += (p.stockActual||0) * (p.precioCosto||0);
+    cats[cat].valorVenta += (p.stockActual||0) * (p.precioVenta||0);
+  });
+
+  const rows = sorted.map(p => {
+    const alerta = p.stockMin > 0 && p.stockActual < p.stockMin;
+    const sinStk = (p.stockActual||0) <= 0;
+    const bg = sinStk ? '#fef2f2' : alerta ? '#fffbeb' : '';
+    return `<tr style="${bg ? 'background:'+bg : ''}">
+      <td style="font-weight:600">${p.codigo||'—'}</td>
+      <td>${p.nombre||'—'}</td>
+      <td>${p.categoria||'—'}</td>
+      <td>${p.deposito||'—'}</td>
+      <td style="text-align:center;font-weight:700;${sinStk ? 'color:#dc2626' : alerta ? 'color:#d97706' : ''}">${_fn(p.stockActual)}${sinStk ? ' <span style="color:#dc2626;font-size:8px">SIN STOCK</span>' : alerta ? ' <span style="color:#d97706;font-size:8px">BAJO</span>' : ''}</td>
+      <td style="text-align:center">${p.stockMin||'—'}</td>
+      <td style="text-align:center">${p.unidad||'u'}</td>
+      <td style="text-align:right">$${_f(p.precioCosto)}</td>
+      <td style="text-align:right">$${_f(p.precioVenta)}</td>
+      <td style="text-align:right;font-weight:600">$${_f((p.stockActual||0)*(p.precioCosto||0))}</td>
+      <td>${p.proveedor||'—'}</td>
+    </tr>`;
+  }).join('');
+
+  const catResumen = Object.entries(cats).sort((a,b) => b[1].valorCosto - a[1].valorCosto)
+    .map(([cat,v]) => `<tr><td style="font-weight:600">${cat}</td><td style="text-align:center">${v.prods.length}</td><td style="text-align:right">$${_f(v.valorCosto)}</td><td style="text-align:right">$${_f(v.valorVenta)}</td></tr>`)
+    .join('');
+
+  // Productos en alerta
+  let alertaHtml = '';
+  if (bajoMin.length > 0 || sinStock.length > 0) {
+    const alertRows = [...sinStock, ...bajoMin.filter(p => (p.stockActual||0) > 0)]
+      .map(p => `<tr style="background:${(p.stockActual||0)<=0?'#fef2f2':'#fffbeb'}">
+        <td style="font-weight:600">${p.nombre}</td>
+        <td style="text-align:center;font-weight:700;color:${(p.stockActual||0)<=0?'#dc2626':'#d97706'}">${_fn(p.stockActual)}</td>
+        <td style="text-align:center">${p.stockMin||'—'}</td>
+        <td>${p.proveedor||'—'}</td>
+      </tr>`).join('');
+    alertaHtml = `<div style="margin-top:16px;page-break-inside:avoid">
+      <h3 style="font-size:13px;font-weight:700;color:#dc2626;text-transform:uppercase;margin-bottom:8px"><span style="font-size:11px">⚠</span> Productos con Alerta de Stock</h3>
+      <table><thead><tr><th>Producto</th><th style="text-align:center">Actual</th><th style="text-align:center">Mínimo</th><th>Proveedor</th></tr></thead>
+      <tbody>${alertRows}</tbody></table></div>`;
+  }
+
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+    <title>Reporte de Stock</title>
+    <style>
+      @page { size: A4 landscape; margin: 12mm; }
+      @media print { .no-print { display:none!important; } }
+      * { margin:0; padding:0; box-sizing:border-box; }
+      body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 10px; color: #1a1a1a; padding: 10px; }
+      h1 { font-size: 18px; margin-bottom: 2px; }
+      .fecha { color: #666; font-size: 10px; margin-bottom: 12px; }
+      .kpis { display: flex; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
+      .kpi { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px 14px; flex:1; min-width:120px; }
+      .kpi .lbl { font-size: 8px; text-transform: uppercase; color: #64748b; font-weight: 600; }
+      .kpi .val { font-size: 15px; font-weight: 700; }
+      .kpi .sub { font-size: 8px; color: #94a3b8; }
+      table { width: 100%; border-collapse: collapse; margin-bottom: 14px; }
+      th { background: #1e293b; color: #fff; padding: 4px 6px; font-size: 8px; text-transform: uppercase; letter-spacing: .03em; text-align: left; }
+      td { padding: 3px 6px; border-bottom: 1px solid #e2e8f0; font-size: 9px; }
+      .total-row { background: #f1f5f9; font-weight: 700; border-top: 2px solid #334155; }
+      h3 { page-break-after: avoid; }
+      .resumen-table { max-width: 500px; }
+      .resumen-table th { background: #334155; }
+      .no-print { margin-bottom: 12px; }
+    </style>
+  </head><body>
+    <div class="no-print" style="display:flex;gap:8px;justify-content:flex-end">
+      <button onclick="window.print()" style="background:#7c3aed;color:#fff;border:none;border-radius:6px;padding:6px 16px;font-size:11px;cursor:pointer;font-weight:600">Imprimir / Guardar PDF</button>
+      <button onclick="window.close()" style="background:#64748b;color:#fff;border:none;border-radius:6px;padding:6px 16px;font-size:11px;cursor:pointer;font-weight:600">Volver</button>
+    </div>
+    <h1>Reporte de Stock</h1>
+    <div class="fecha">Generado: ${hoyStr}</div>
+
+    <div class="kpis">
+      <div class="kpi"><div class="lbl">Productos</div><div class="val" style="color:#7c3aed">${prods.length}</div><div class="sub">${Object.keys(cats).length} categorías</div></div>
+      <div class="kpi"><div class="lbl">Valor Costo</div><div class="val" style="color:#1d4ed8">$${_f(totalCosto)}</div><div class="sub">al costo unitario</div></div>
+      <div class="kpi"><div class="lbl">Valor Venta</div><div class="val" style="color:#16a34a">$${_f(totalVenta)}</div><div class="sub">precio de venta</div></div>
+      <div class="kpi"><div class="lbl">Margen Estimado</div><div class="val" style="color:#0f766e">$${_f(totalVenta - totalCosto)}</div><div class="sub">${totalCosto > 0 ? (((totalVenta-totalCosto)/totalCosto)*100).toFixed(1)+'%' : '—'}</div></div>
+      <div class="kpi"><div class="lbl">Bajo Mínimo</div><div class="val" style="color:#dc2626">${bajoMin.length}</div><div class="sub">requieren reposición</div></div>
+      <div class="kpi"><div class="lbl">Sin Stock</div><div class="val" style="color:#991b1b">${sinStock.length}</div><div class="sub">stock en 0</div></div>
+    </div>
+
+    <table>
+      <thead><tr>
+        <th>Código</th><th>Producto</th><th>Categoría</th><th>Depósito</th>
+        <th style="text-align:center">Stock</th><th style="text-align:center">Mín.</th><th style="text-align:center">Unidad</th>
+        <th style="text-align:right">P. Costo</th><th style="text-align:right">P. Venta</th>
+        <th style="text-align:right">Valor Total</th><th>Proveedor</th>
+      </tr></thead>
+      <tbody>${rows}
+        <tr class="total-row">
+          <td colspan="9" style="text-align:right">TOTAL VALOR STOCK (COSTO)</td>
+          <td style="text-align:right;font-size:11px">$${_f(totalCosto)}</td>
+          <td></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div style="display:flex;gap:20px;flex-wrap:wrap">
+      <div style="flex:1;min-width:300px">
+        <h3 style="font-size:13px;font-weight:700;color:#334155;text-transform:uppercase;margin-bottom:8px">Resumen por Categoría</h3>
+        <table class="resumen-table">
+          <thead><tr><th>Categoría</th><th style="text-align:center">Productos</th><th style="text-align:right">Valor Costo</th><th style="text-align:right">Valor Venta</th></tr></thead>
+          <tbody>${catResumen}
+            <tr class="total-row"><td>TOTAL</td><td style="text-align:center">${prods.length}</td><td style="text-align:right">$${_f(totalCosto)}</td><td style="text-align:right">$${_f(totalVenta)}</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    ${alertaHtml}
+
+  </body></html>`;
+
+  const w = window.open('','_blank');
+  w.document.write(html);
+  w.document.close();
+  setTimeout(() => w.print(), 400);
 }
 
 /* ══════════════════════════════════════════════════════════
