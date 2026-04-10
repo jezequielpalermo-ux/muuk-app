@@ -3009,11 +3009,14 @@ CREATE POLICY "acceso total" ON flujo_caja_versions FOR ALL USING (true) WITH CH
 
   <!-- MODAL: Ver Detalle Lista -->
   <div class="modal fade" id="modalLPDetalle" tabindex="-1">
-    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable" style="max-width:95vw">
       <div class="modal-content">
         <div class="modal-header py-2" style="background:linear-gradient(135deg,#0369a1,#38bdf8)">
           <h6 class="modal-title text-white" id="modalLPDetalle-title"><i class="bi bi-tags me-2"></i>Detalle de Lista</h6>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+          <div class="d-flex gap-2 align-items-center">
+            <button class="btn btn-sm btn-light" onclick="lpPrintDetalle()" style="font-size:.72rem"><i class="bi bi-printer me-1"></i>Imprimir</button>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+          </div>
         </div>
         <div class="modal-body" id="modalLPDetalle-body" style="font-size:.85rem">
         </div>
@@ -9503,9 +9506,14 @@ function lpEliminar(id) {
   toast('Lista eliminada');
 }
 
+// Track current detail list for printing
+let _lpDetalleId = null;
+
 function lpVerDetalle(id) {
   const l = (ST.listasPrecios||[]).find(x => x.id === id);
   if (!l) return;
+  _lpDetalleId = id;
+  if (!l.comentarios) l.comentarios = [];
   const body = document.getElementById('modalLPDetalle-body');
   document.getElementById('modalLPDetalle-title').innerHTML = `<i class="bi bi-tags me-2"></i>${l.nombre}`;
 
@@ -9529,6 +9537,10 @@ function lpVerDetalle(id) {
   const fileIcons = { xlsx:'bi-file-earmark-spreadsheet', xls:'bi-file-earmark-spreadsheet', csv:'bi-file-earmark-spreadsheet', pdf:'bi-file-earmark-pdf', docx:'bi-file-earmark-word', doc:'bi-file-earmark-word' };
   const ext = l.archivo?.nombre ? l.archivo.nombre.split('.').pop().toLowerCase() : '';
   const fileIcon = fileIcons[ext] || 'bi-file-earmark';
+  const canPreview = l.archivo?.dataB64 && ['xlsx','xls','csv','pdf'].includes(ext);
+
+  // Comentarios HTML
+  const comentariosHtml = _lpRenderComentarios(l);
 
   body.innerHTML = `
     <div class="row g-3 mb-3">
@@ -9559,21 +9571,319 @@ function lpVerDetalle(id) {
         <div style="font-size:.82rem">${l.updatedAt ? new Date(l.updatedAt).toLocaleString('es-AR') : '—'}</div>
       </div>
     </div>
+
     ${l.archivo?.nombre ? `<div class="card mb-3 border-0" style="background:#eff6ff;border:1px solid #93c5fd!important;border-radius:8px">
-      <div class="card-body py-2 px-3 d-flex align-items-center gap-2">
+      <div class="card-body py-2 px-3 d-flex align-items-center gap-2 flex-wrap">
         <i class="bi ${fileIcon} text-primary" style="font-size:1.4rem"></i>
-        <div style="flex:1">
+        <div style="flex:1;min-width:150px">
           <div style="font-weight:600;font-size:.85rem">${l.archivo.nombre}</div>
           <div style="font-size:.72rem;color:#64748b">${l.archivo.size ? (l.archivo.size/1024).toFixed(0)+' KB' : ''} ${l.archivo.tipo||''}</div>
         </div>
+        ${canPreview ? `<button class="btn btn-sm btn-primary" onclick="lpToggleViewer('${l.id}')" style="font-size:.72rem;border-radius:6px" id="lp-btn-viewer"><i class="bi bi-eye me-1"></i>Ver en la App</button>` : ''}
         ${l.archivo.driveUrl ? `<a href="${l.archivo.driveUrl}" target="_blank" class="btn btn-sm btn-outline-primary" style="font-size:.72rem"><i class="bi bi-box-arrow-up-right me-1"></i>Abrir en Drive</a>` : ''}
         ${l.archivo.dataB64 ? `<button class="btn btn-sm btn-outline-success" onclick="lpDescargarArchivo('${l.id}')" style="font-size:.72rem"><i class="bi bi-download me-1"></i>Descargar</button>` : ''}
       </div>
     </div>` : ''}
+
+    <!-- Visor de archivo in-app -->
+    <div id="lp-file-viewer" style="display:none;margin-bottom:14px">
+      <div class="card border-0" style="border:2px solid #3b82f6!important;border-radius:10px;overflow:hidden">
+        <div style="background:#1e293b;padding:6px 12px;display:flex;justify-content:between;align-items:center">
+          <span style="color:#94a3b8;font-size:.78rem;flex:1"><i class="bi bi-file-earmark-text me-1"></i>Vista previa del archivo</span>
+          <select id="lp-viewer-sheet" onchange="lpSwitchSheet()" style="display:none;font-size:.72rem;padding:2px 8px;border-radius:4px;background:#334155;color:#fff;border:1px solid #475569;margin-right:8px"></select>
+          <button class="btn btn-sm btn-outline-light" onclick="document.getElementById('lp-file-viewer').style.display='none'" style="font-size:.68rem;padding:2px 8px"><i class="bi bi-x-lg"></i></button>
+        </div>
+        <div id="lp-viewer-content" style="max-height:60vh;overflow:auto;background:#fff;padding:8px">
+          <div class="text-center py-4 text-muted"><div class="spinner-border spinner-border-sm"></div> Cargando...</div>
+        </div>
+      </div>
+    </div>
+
     ${l.condiciones?.length ? `<div style="font-weight:700;font-size:.88rem;margin-bottom:4px"><i class="bi bi-percent me-1 text-success"></i>Condiciones de Pago (${l.condiciones.length})</div>${condHtml}` : '<div class="text-muted" style="font-size:.82rem">Sin condiciones de pago configuradas</div>'}
-    ${l.notas ? `<div class="mt-3" style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:8px 12px;font-size:.82rem"><i class="bi bi-sticky me-1 text-warning"></i><strong>Notas:</strong> ${l.notas}</div>` : ''}
+
+    ${l.notas ? `<div class="mt-3 mb-3" style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:8px 12px;font-size:.82rem"><i class="bi bi-sticky me-1 text-warning"></i><strong>Notas:</strong> ${l.notas}</div>` : ''}
+
+    <!-- Comentarios -->
+    <div class="mt-3" style="border-top:2px solid #e2e8f0;padding-top:12px">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <strong style="font-size:.88rem"><i class="bi bi-chat-left-text me-1 text-info"></i>Comentarios (${l.comentarios.length})</strong>
+        <small class="text-muted" style="font-size:.7rem"><i class="bi bi-printer me-1"></i>Visibles al imprimir</small>
+      </div>
+      <div id="lp-comentarios-list">${comentariosHtml}</div>
+      <div class="d-flex gap-2 mt-2">
+        <input type="text" class="form-control form-control-sm" id="lp-nuevo-comentario" placeholder="Agregar comentario..." style="font-size:.82rem" onkeydown="if(event.key==='Enter')lpAgregarComentario('${l.id}')">
+        <button class="btn btn-sm btn-primary" onclick="lpAgregarComentario('${l.id}')" style="font-size:.75rem;white-space:nowrap"><i class="bi bi-plus me-1"></i>Agregar</button>
+      </div>
+    </div>
   `;
   new bootstrap.Modal(document.getElementById('modalLPDetalle')).show();
+}
+
+function _lpRenderComentarios(l) {
+  if (!l.comentarios?.length) return '<div class="text-muted text-center py-2" style="font-size:.78rem">Sin comentarios — agregá uno abajo</div>';
+  return l.comentarios.map((c,i) => `<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:6px 10px;margin-bottom:4px;display:flex;align-items:flex-start;gap:8px">
+    <div style="flex:1">
+      <div style="font-size:.82rem">${c.texto}</div>
+      <div style="font-size:.68rem;color:#94a3b8">${new Date(c.fecha).toLocaleString('es-AR')}${c.autor ? ' · '+c.autor : ''}</div>
+    </div>
+    <button class="btn btn-sm btn-outline-danger" onclick="lpEliminarComentario('${l.id}',${i})" style="padding:1px 5px;font-size:.68rem" title="Eliminar"><i class="bi bi-x"></i></button>
+  </div>`).join('');
+}
+
+function lpAgregarComentario(id) {
+  const input = document.getElementById('lp-nuevo-comentario');
+  const texto = input.value.trim();
+  if (!texto) return;
+  const l = (ST.listasPrecios||[]).find(x => x.id === id);
+  if (!l) return;
+  if (!l.comentarios) l.comentarios = [];
+  l.comentarios.push({ texto, fecha: new Date().toISOString(), autor: sessionStorage.getItem('muukAuth') || '' });
+  l.updatedAt = new Date().toISOString();
+  save();
+  input.value = '';
+  document.getElementById('lp-comentarios-list').innerHTML = _lpRenderComentarios(l);
+}
+
+function lpEliminarComentario(id, idx) {
+  const l = (ST.listasPrecios||[]).find(x => x.id === id);
+  if (!l?.comentarios) return;
+  l.comentarios.splice(idx, 1);
+  l.updatedAt = new Date().toISOString();
+  save();
+  document.getElementById('lp-comentarios-list').innerHTML = _lpRenderComentarios(l);
+}
+
+// ── Visor de archivos in-app ──────────────────────────
+
+let _lpViewerSheets = {}; // cache for Excel sheet data
+
+function lpToggleViewer(id) {
+  const viewer = document.getElementById('lp-file-viewer');
+  if (viewer.style.display !== 'none') { viewer.style.display = 'none'; return; }
+  viewer.style.display = '';
+  const content = document.getElementById('lp-viewer-content');
+  content.innerHTML = '<div class="text-center py-4 text-muted"><div class="spinner-border spinner-border-sm"></div> Cargando vista previa...</div>';
+  const l = (ST.listasPrecios||[]).find(x => x.id === id);
+  if (!l?.archivo?.dataB64) { content.innerHTML = '<div class="text-muted text-center py-3">Sin archivo para previsualizar</div>'; return; }
+
+  const ext = l.archivo.nombre.split('.').pop().toLowerCase();
+  if (['xlsx','xls'].includes(ext)) _lpViewExcel(l);
+  else if (ext === 'csv') _lpViewCSV(l);
+  else if (ext === 'pdf') _lpViewPDF(l);
+  else content.innerHTML = '<div class="text-muted text-center py-3">Formato no soportado para vista previa</div>';
+}
+
+function _lpLoadSheetJS(cb) {
+  if (window.XLSX) { cb(); return; }
+  const s = document.createElement('script');
+  s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+  s.onload = () => cb();
+  s.onerror = () => cb('Error cargando SheetJS');
+  document.head.appendChild(s);
+}
+
+function _lpViewExcel(l) {
+  const content = document.getElementById('lp-viewer-content');
+  _lpLoadSheetJS((err) => {
+    if (err) { content.innerHTML = '<div class="text-danger text-center py-3">No se pudo cargar el lector de Excel</div>'; return; }
+    try {
+      // Decode base64 data URL to binary
+      const b64 = l.archivo.dataB64.split(',')[1];
+      const wb = XLSX.read(b64, { type: 'base64' });
+      _lpViewerSheets = {};
+
+      // Populate sheet selector
+      const sel = document.getElementById('lp-viewer-sheet');
+      sel.innerHTML = wb.SheetNames.map((n,i) => `<option value="${n}">${n}</option>`).join('');
+      sel.style.display = wb.SheetNames.length > 1 ? '' : 'none';
+      sel.dataset.listaId = l.id;
+
+      // Render each sheet to HTML and cache
+      wb.SheetNames.forEach(name => {
+        const ws = wb.Sheets[name];
+        const html = XLSX.utils.sheet_to_html(ws, { id: 'lp-sheet-table', editable: false });
+        _lpViewerSheets[name] = html;
+      });
+
+      // Show first sheet
+      _lpRenderSheetView(wb.SheetNames[0]);
+    } catch(e) {
+      content.innerHTML = `<div class="text-danger text-center py-3">Error leyendo el archivo: ${e.message}</div>`;
+    }
+  });
+}
+
+function _lpRenderSheetView(sheetName) {
+  const content = document.getElementById('lp-viewer-content');
+  const html = _lpViewerSheets[sheetName];
+  if (!html) { content.innerHTML = '<div class="text-muted text-center py-3">Hoja vacía</div>'; return; }
+  content.innerHTML = `<div style="overflow:auto">${html}</div>`;
+  // Style the generated table
+  const tbl = content.querySelector('table');
+  if (tbl) {
+    tbl.style.cssText = 'width:100%;border-collapse:collapse;font-size:.78rem;';
+    tbl.querySelectorAll('th,td').forEach(cell => {
+      cell.style.cssText += 'padding:3px 8px;border:1px solid #e2e8f0;white-space:nowrap;';
+    });
+    tbl.querySelectorAll('tr:first-child th, tr:first-child td').forEach(cell => {
+      cell.style.cssText += 'background:#1e293b;color:#fff;font-weight:700;font-size:.72rem;position:sticky;top:0;z-index:1;';
+    });
+    // Zebra striping
+    tbl.querySelectorAll('tr:nth-child(even)').forEach(row => { row.style.background = '#f8fafc'; });
+  }
+}
+
+function lpSwitchSheet() {
+  const sel = document.getElementById('lp-viewer-sheet');
+  _lpRenderSheetView(sel.value);
+}
+
+function _lpViewCSV(l) {
+  const content = document.getElementById('lp-viewer-content');
+  try {
+    const b64 = l.archivo.dataB64.split(',')[1];
+    const text = atob(b64);
+    const rows = text.split('\n').filter(r => r.trim());
+    if (!rows.length) { content.innerHTML = '<div class="text-muted text-center py-3">Archivo vacío</div>'; return; }
+
+    let html = '<table style="width:100%;border-collapse:collapse;font-size:.78rem">';
+    rows.forEach((row, ri) => {
+      const cells = row.split(/[,;\t]/).map(c => c.replace(/^"|"$/g,'').trim());
+      const tag = ri === 0 ? 'th' : 'td';
+      const bg = ri === 0 ? 'background:#1e293b;color:#fff;font-weight:700;font-size:.72rem;' : ri % 2 === 0 ? 'background:#f8fafc;' : '';
+      html += '<tr>' + cells.map(c => `<${tag} style="padding:3px 8px;border:1px solid #e2e8f0;white-space:nowrap;${bg}">${c}</${tag}>`).join('') + '</tr>';
+    });
+    html += '</table>';
+    content.innerHTML = `<div style="overflow:auto">${html}</div>`;
+    document.getElementById('lp-viewer-sheet').style.display = 'none';
+  } catch(e) {
+    content.innerHTML = `<div class="text-danger text-center py-3">Error: ${e.message}</div>`;
+  }
+}
+
+function _lpViewPDF(l) {
+  const content = document.getElementById('lp-viewer-content');
+  document.getElementById('lp-viewer-sheet').style.display = 'none';
+  cargarPDFjs(async (err) => {
+    if (err) { content.innerHTML = '<div class="text-danger text-center py-3">No se pudo cargar el lector PDF</div>'; return; }
+    try {
+      const b64 = l.archivo.dataB64.split(',')[1];
+      const data = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+      const pdf = await pdfjsLib.getDocument({ data }).promise;
+      let pagesHtml = '';
+      for (let p = 1; p <= Math.min(pdf.numPages, 20); p++) {
+        const page = await pdf.getPage(p);
+        const scale = 1.5;
+        const viewport = page.getViewport({ scale });
+        const canvas = document.createElement('canvas');
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+        pagesHtml += `<div style="margin-bottom:8px;text-align:center;background:#f1f5f9;padding:4px;border-radius:4px">
+          <div style="font-size:.68rem;color:#64748b;margin-bottom:2px">Página ${p} de ${pdf.numPages}</div>
+          <img src="${canvas.toDataURL('image/jpeg',0.85)}" style="max-width:100%;box-shadow:0 2px 8px rgba(0,0,0,.15);border-radius:2px" alt="Página ${p}">
+        </div>`;
+      }
+      if (pdf.numPages > 20) pagesHtml += '<div class="text-muted text-center py-2" style="font-size:.78rem">Mostrando las primeras 20 páginas</div>';
+      content.innerHTML = pagesHtml;
+    } catch(e) {
+      content.innerHTML = `<div class="text-danger text-center py-3">Error: ${e.message}</div>`;
+    }
+  });
+}
+
+// ── Imprimir detalle con comentarios ──────────────────
+
+function lpPrintDetalle() {
+  const l = (ST.listasPrecios||[]).find(x => x.id === _lpDetalleId);
+  if (!l) { toast('No hay lista seleccionada','warning'); return; }
+  const hoyStr = new Date().toLocaleDateString('es-AR');
+  const _fd = d => d ? new Date(d+'T12:00').toLocaleDateString('es-AR',{year:'numeric',month:'long',day:'numeric'}) : '—';
+
+  // Condiciones table
+  let condRows = '';
+  if (l.condiciones?.length) {
+    condRows = l.condiciones.map(c =>
+      `<tr><td style="font-weight:600">${c.nombre||'—'}</td><td style="text-align:center">${c.plazo||'—'}</td><td style="text-align:center;color:#16a34a">${c.descuento?'-'+c.descuento+'%':'—'}</td><td style="text-align:center;color:#dc2626">${c.recargo?'+'+c.recargo+'%':'—'}</td><td>${c.notas||''}</td></tr>`
+    ).join('');
+  }
+
+  // Comentarios
+  let comentariosSection = '';
+  if (l.comentarios?.length) {
+    const comRows = l.comentarios.map(c => {
+      const fecha = new Date(c.fecha).toLocaleString('es-AR');
+      return `<div style="border-left:3px solid #3b82f6;padding:4px 10px;margin-bottom:6px;background:#f8fafc;border-radius:0 4px 4px 0">
+        <div style="font-size:10px">${c.texto}</div>
+        <div style="font-size:8px;color:#94a3b8;margin-top:2px">${fecha}${c.autor ? ' — '+c.autor : ''}</div>
+      </div>`;
+    }).join('');
+    comentariosSection = `<div style="margin-top:16px;page-break-inside:avoid">
+      <h3 style="font-size:12px;font-weight:700;color:#1d4ed8;text-transform:uppercase;margin-bottom:8px;border-bottom:1px solid #93c5fd;padding-bottom:4px"><span style="font-size:11px">💬</span> Comentarios (${l.comentarios.length})</h3>
+      ${comRows}
+    </div>`;
+  }
+
+  // Capture viewer content if visible
+  let viewerSection = '';
+  const viewerEl = document.getElementById('lp-file-viewer');
+  if (viewerEl && viewerEl.style.display !== 'none') {
+    const viewerContent = document.getElementById('lp-viewer-content');
+    if (viewerContent) {
+      viewerSection = `<div style="margin-top:14px;page-break-before:auto">
+        <h3 style="font-size:12px;font-weight:700;color:#334155;text-transform:uppercase;margin-bottom:8px;border-bottom:1px solid #cbd5e1;padding-bottom:4px"><span style="font-size:11px">📄</span> Contenido de la Lista — ${l.archivo?.nombre||''}</h3>
+        <div style="overflow:auto;font-size:9px">${viewerContent.innerHTML}</div>
+      </div>`;
+    }
+  }
+
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${l.nombre} — Lista de Precios</title>
+    <style>
+      @page { size: A4; margin: 14mm; }
+      @media print { .no-print { display:none!important; } img { max-width:100%!important; } table { page-break-inside:auto; } tr { page-break-inside:avoid; } }
+      * { margin:0; padding:0; box-sizing:border-box; }
+      body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 11px; color: #1a1a1a; padding: 10px; }
+      h1 { font-size: 18px; margin-bottom: 2px; }
+      .meta { color: #64748b; font-size: 10px; margin-bottom: 14px; }
+      .info-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-bottom:14px; }
+      .info-item .lbl { font-size:8px; color:#64748b; text-transform:uppercase; font-weight:600; }
+      .info-item .val { font-size:11px; font-weight:600; }
+      table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
+      th { background: #1e293b; color: #fff; padding: 4px 8px; font-size: 9px; text-transform: uppercase; text-align: left; }
+      td { padding: 4px 8px; border-bottom: 1px solid #e2e8f0; font-size: 10px; }
+    </style>
+  </head><body>
+    <div class="no-print" style="display:flex;gap:8px;justify-content:flex-end;margin-bottom:10px">
+      <button onclick="window.print()" style="background:#0369a1;color:#fff;border:none;border-radius:6px;padding:6px 16px;font-size:11px;cursor:pointer;font-weight:600">Imprimir</button>
+      <button onclick="window.close()" style="background:#64748b;color:#fff;border:none;border-radius:6px;padding:6px 16px;font-size:11px;cursor:pointer;font-weight:600">Volver</button>
+    </div>
+    <h1>${l.nombre}</h1>
+    <div class="meta">${l.proveedor} · ${l.moneda||'ARS'} · Generado: ${hoyStr}</div>
+
+    <div class="info-grid">
+      <div class="info-item"><div class="lbl">Proveedor</div><div class="val">${l.proveedor||'—'}</div></div>
+      <div class="info-item"><div class="lbl">Categoría</div><div class="val">${l.categoria||'—'}</div></div>
+      <div class="info-item"><div class="lbl">Estado</div><div class="val">${l.estado||'—'}</div></div>
+      <div class="info-item"><div class="lbl">Vigencia desde</div><div class="val">${_fd(l.fechaVigencia)}</div></div>
+      <div class="info-item"><div class="lbl">Vencimiento</div><div class="val">${_fd(l.fechaVencimiento)}</div></div>
+      <div class="info-item"><div class="lbl">Archivo</div><div class="val">${l.archivo?.nombre||'—'}</div></div>
+    </div>
+
+    ${condRows ? `<h3 style="font-size:12px;font-weight:700;color:#15803d;text-transform:uppercase;margin-bottom:6px">Condiciones de Pago</h3>
+    <table><thead><tr><th>Condición</th><th style="text-align:center">Plazo</th><th style="text-align:center">Descuento</th><th style="text-align:center">Recargo</th><th>Notas</th></tr></thead>
+    <tbody>${condRows}</tbody></table>` : ''}
+
+    ${l.notas ? `<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:6px;padding:6px 10px;margin-bottom:12px;font-size:10px"><strong>Notas:</strong> ${l.notas}</div>` : ''}
+
+    ${comentariosSection}
+    ${viewerSection}
+
+  </body></html>`;
+
+  const w = window.open('','_blank');
+  w.document.write(html);
+  w.document.close();
+  setTimeout(() => w.print(), 500);
 }
 
 function lpDescargarArchivo(id) {
