@@ -398,6 +398,10 @@
     body.dark-mode #page-stock .card { border-color: var(--border) !important; background: var(--bg-card) !important; }
     body.dark-mode #page-stock .bg-light { background: var(--bg-card) !important; }
 
+    body.dark-mode #page-listasPrecios .stat-card { border-color: var(--border) !important; }
+    body.dark-mode #page-listasPrecios .card { border-color: var(--border) !important; background: var(--bg-card) !important; }
+    body.dark-mode #page-listasPrecios .bg-light { background: var(--bg-card) !important; }
+
     /* ── TESORERÍA: dark mode overrides ── */
     #page-tesoreria .card { border: 1px solid #e2e8f0 !important; }
     body.dark-mode #page-tesoreria .card { border-color: var(--border) !important; background: var(--bg-card) !important; }
@@ -600,6 +604,7 @@
       <li><a class="nav-link" data-page="facturasPagar"><i class="bi bi-file-earmark-arrow-up-fill"></i>Facturas a Pagar</a></li>
       <li><a class="nav-link" data-page="estadosCuenta"><i class="bi bi-person-lines-fill"></i>Estados de Cuenta</a></li>
       <li><a class="nav-link" data-page="stock"><i class="bi bi-box-seam-fill"></i>Stock</a></li>
+      <li><a class="nav-link" data-page="listasPrecios"><i class="bi bi-tags-fill"></i>Listas de Precios</a></li>
     </div>
 
     <!-- ── Análisis ── -->
@@ -2784,6 +2789,235 @@ CREATE POLICY "acceso total" ON flujo_caja_versions FOR ALL USING (true) WITH CH
         <small class="text-muted" style="font-size:.62rem" id="stk-mov-count"></small>
       </div>
       <div class="card"><div class="card-body p-0" id="wrap-stock-movs"></div></div>
+    </div>
+  </div>
+
+  <!-- ══════════════════ LISTAS DE PRECIOS ══════════════════ -->
+  <div id="page-listasPrecios" class="page">
+    <div class="page-hdr">
+      <h4><i class="bi bi-tags-fill me-2" style="color:#0ea5e9"></i>Listas de Precios</h4>
+      <div class="d-flex gap-2">
+        <button class="btn btn-outline-info btn-sm" onclick="printListasPrecios()" style="font-size:.75rem"><i class="bi bi-printer me-1"></i>Imprimir</button>
+        <button class="btn btn-outline-secondary btn-sm" onclick="document.getElementById('lp-upload-file').click()" style="font-size:.75rem">
+          <i class="bi bi-cloud-arrow-up me-1"></i>Subir Archivo
+        </button>
+        <input type="file" id="lp-upload-file" accept=".xlsx,.xls,.pdf,.docx,.doc,.csv" style="display:none" onchange="lpUploadArchivo(event)">
+        <button class="btn btn-primary btn-sm" onclick="abrirModalListaPrecio(null)" style="font-size:.75rem"><i class="bi bi-plus-lg me-1"></i>Nueva Lista</button>
+      </div>
+    </div>
+
+    <!-- KPIs -->
+    <div class="row g-3 mb-3">
+      <div class="col-sm-3">
+        <div class="stat-card" style="background:linear-gradient(135deg,#0369a1,#38bdf8)">
+          <div class="bg-icon"><i class="bi bi-tags"></i></div>
+          <div class="lbl">Listas Activas</div>
+          <div class="val" id="lp-total-listas">0</div>
+          <div class="sub" id="lp-total-proveedores">0 proveedores</div>
+        </div>
+      </div>
+      <div class="col-sm-3">
+        <div class="stat-card" style="background:linear-gradient(135deg,#7c3aed,#a78bfa)">
+          <div class="bg-icon"><i class="bi bi-file-earmark-spreadsheet"></i></div>
+          <div class="lbl">Archivos Vinculados</div>
+          <div class="val" id="lp-total-archivos">0</div>
+          <div class="sub" id="lp-archivos-tipos">Excel, PDF, Word</div>
+        </div>
+      </div>
+      <div class="col-sm-3">
+        <div class="stat-card" style="background:linear-gradient(135deg,#16a34a,#4ade80)">
+          <div class="bg-icon"><i class="bi bi-percent"></i></div>
+          <div class="lbl">Condiciones de Pago</div>
+          <div class="val" id="lp-total-condiciones">0</div>
+          <div class="sub">configuradas</div>
+        </div>
+      </div>
+      <div class="col-sm-3">
+        <div class="stat-card" style="background:linear-gradient(135deg,#dc2626,#f87171)">
+          <div class="bg-icon"><i class="bi bi-clock-history"></i></div>
+          <div class="lbl">Última Actualización</div>
+          <div class="val" id="lp-ultima-act" style="font-size:1rem">—</div>
+          <div class="sub" id="lp-ultima-act-sub">sin datos</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Drive folder link -->
+    <div class="card mb-3 border-0" style="background:linear-gradient(135deg,#eff6ff,#dbeafe);border:1px solid #93c5fd!important;border-radius:10px">
+      <div class="card-body py-2 px-3 d-flex justify-content-between align-items-center">
+        <div>
+          <i class="bi bi-google text-primary me-2"></i>
+          <strong style="font-size:.85rem">Carpeta de Drive vinculada:</strong>
+          <span class="text-muted" style="font-size:.82rem" id="lp-drive-folder-name">Sin configurar</span>
+        </div>
+        <div class="d-flex gap-2">
+          <a href="#" id="lp-drive-link" target="_blank" class="btn btn-sm btn-outline-primary" style="font-size:.72rem;border-radius:6px;display:none">
+            <i class="bi bi-box-arrow-up-right me-1"></i>Abrir en Drive
+          </a>
+          <button class="btn btn-sm btn-outline-secondary" onclick="lpConfigDrive()" style="font-size:.72rem;border-radius:6px">
+            <i class="bi bi-gear me-1"></i>Configurar
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="card mb-2 border-0 bg-light">
+      <div class="card-body py-2 px-3">
+        <div class="row g-2 align-items-end">
+          <div class="col-6 col-sm-3">
+            <label class="form-label small mb-0 fw-bold" style="font-size:.7rem">Buscar</label>
+            <input type="text" class="form-control form-control-sm" id="lp-buscar" placeholder="Proveedor, producto..." oninput="renderListasPrecios()">
+          </div>
+          <div class="col-6 col-sm-2">
+            <label class="form-label small mb-0 fw-bold" style="font-size:.7rem">Proveedor</label>
+            <select class="form-select form-select-sm" id="lp-fil-proveedor" onchange="renderListasPrecios()">
+              <option value="">Todos</option>
+            </select>
+          </div>
+          <div class="col-6 col-sm-2">
+            <label class="form-label small mb-0 fw-bold" style="font-size:.7rem">Categoría</label>
+            <select class="form-select form-select-sm" id="lp-fil-categoria" onchange="renderListasPrecios()">
+              <option value="">Todas</option>
+            </select>
+          </div>
+          <div class="col-6 col-sm-2">
+            <label class="form-label small mb-0 fw-bold" style="font-size:.7rem">Estado</label>
+            <select class="form-select form-select-sm" id="lp-fil-estado" onchange="renderListasPrecios()">
+              <option value="">Todos</option>
+              <option value="vigente">Vigente</option>
+              <option value="vencida">Vencida</option>
+              <option value="borrador">Borrador</option>
+            </select>
+          </div>
+          <div class="col-6 col-sm-2">
+            <label class="form-label small mb-0 fw-bold" style="font-size:.7rem">Ordenar</label>
+            <select class="form-select form-select-sm" id="lp-ordenar" onchange="renderListasPrecios()">
+              <option value="reciente">Más recientes</option>
+              <option value="proveedor">Proveedor A-Z</option>
+              <option value="nombre">Nombre A-Z</option>
+              <option value="vencimiento">Vencimiento</option>
+            </select>
+          </div>
+          <div class="col-6 col-sm-1 d-flex align-items-end">
+            <button class="btn btn-sm btn-outline-secondary w-100" onclick="lpLimpiarFiltros()" style="font-size:.72rem"><i class="bi bi-x-lg"></i></button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Contenedor principal -->
+    <div id="wrap-listasPrecios"></div>
+  </div>
+
+  <!-- MODAL: Nueva/Editar Lista de Precios -->
+  <div class="modal fade" id="modalListaPrecio" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header py-2" style="background:linear-gradient(135deg,#0369a1,#38bdf8)">
+          <h6 class="modal-title text-white" id="modalLP-title"><i class="bi bi-tags me-2"></i>Nueva Lista de Precios</h6>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body" style="font-size:.85rem">
+          <input type="hidden" id="lp-id">
+          <!-- Datos generales -->
+          <div class="row g-2 mb-3">
+            <div class="col-sm-5">
+              <label class="form-label small fw-bold">Nombre de la Lista *</label>
+              <input type="text" class="form-control form-control-sm" id="lp-nombre" placeholder="Ej: Lista Mayorista Marzo 2026">
+            </div>
+            <div class="col-sm-4">
+              <label class="form-label small fw-bold">Proveedor / Empresa *</label>
+              <input type="text" class="form-control form-control-sm" id="lp-proveedor" placeholder="Nombre del proveedor">
+            </div>
+            <div class="col-sm-3">
+              <label class="form-label small fw-bold">Categoría</label>
+              <input type="text" class="form-control form-control-sm" id="lp-categoria" placeholder="Ej: Alimentos, Limpieza...">
+            </div>
+            <div class="col-sm-3">
+              <label class="form-label small fw-bold">Moneda</label>
+              <select class="form-select form-select-sm" id="lp-moneda">
+                <option value="ARS" selected>ARS (Pesos)</option>
+                <option value="USD">USD (Dólares)</option>
+              </select>
+            </div>
+            <div class="col-sm-3">
+              <label class="form-label small fw-bold">Fecha de Vigencia</label>
+              <input type="date" class="form-control form-control-sm" id="lp-fechaVigencia">
+            </div>
+            <div class="col-sm-3">
+              <label class="form-label small fw-bold">Fecha de Vencimiento</label>
+              <input type="date" class="form-control form-control-sm" id="lp-fechaVencimiento">
+            </div>
+            <div class="col-sm-3">
+              <label class="form-label small fw-bold">Estado</label>
+              <select class="form-select form-select-sm" id="lp-estado">
+                <option value="vigente">Vigente</option>
+                <option value="vencida">Vencida</option>
+                <option value="borrador">Borrador</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Condiciones de pago -->
+          <div class="card mb-3 border-0" style="background:#f0fdf4;border:1px solid #bbf7d0!important;border-radius:8px">
+            <div class="card-body py-2 px-3">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <strong style="font-size:.82rem;color:#15803d"><i class="bi bi-percent me-1"></i>Condiciones de Pago y Descuentos</strong>
+                <button class="btn btn-sm btn-outline-success" onclick="lpAgregarCondicion()" style="font-size:.72rem;padding:2px 8px;border-radius:6px"><i class="bi bi-plus me-1"></i>Agregar</button>
+              </div>
+              <div id="lp-condiciones-wrap">
+                <!-- Se llena dinámicamente -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Archivo vinculado -->
+          <div class="card mb-3 border-0" style="background:#eff6ff;border:1px solid #93c5fd!important;border-radius:8px">
+            <div class="card-body py-2 px-3">
+              <strong style="font-size:.82rem;color:#1d4ed8"><i class="bi bi-file-earmark-arrow-up me-1"></i>Archivo de Lista de Precios</strong>
+              <div class="mt-2 d-flex gap-2 align-items-center flex-wrap">
+                <button class="btn btn-sm btn-outline-primary" onclick="document.getElementById('lp-modal-file').click()" style="font-size:.72rem;border-radius:6px">
+                  <i class="bi bi-upload me-1"></i>Subir archivo (Excel, PDF, Word)
+                </button>
+                <input type="file" id="lp-modal-file" accept=".xlsx,.xls,.pdf,.docx,.doc,.csv" style="display:none" onchange="lpModalFileSelected(event)">
+                <span class="text-muted" style="font-size:.78rem" id="lp-modal-file-name">Sin archivo</span>
+                <span id="lp-modal-file-badge"></span>
+              </div>
+              <div class="mt-1">
+                <label class="form-label small fw-bold mb-0" style="font-size:.72rem">O pegar enlace de Drive:</label>
+                <input type="text" class="form-control form-control-sm" id="lp-driveUrl" placeholder="https://drive.google.com/file/d/...">
+              </div>
+            </div>
+          </div>
+
+          <!-- Notas -->
+          <div class="row g-2">
+            <div class="col-12">
+              <label class="form-label small fw-bold">Notas / Observaciones</label>
+              <textarea class="form-control form-control-sm" id="lp-notas" rows="2" placeholder="Observaciones, vigencia especial, bonificaciones extra..."></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer py-2">
+          <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+          <button class="btn btn-primary btn-sm" onclick="guardarListaPrecio()"><i class="bi bi-check-lg me-1"></i>Guardar Lista</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Ver Detalle Lista -->
+  <div class="modal fade" id="modalLPDetalle" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header py-2" style="background:linear-gradient(135deg,#0369a1,#38bdf8)">
+          <h6 class="modal-title text-white" id="modalLPDetalle-title"><i class="bi bi-tags me-2"></i>Detalle de Lista</h6>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body" id="modalLPDetalle-body" style="font-size:.85rem">
+        </div>
+      </div>
     </div>
   </div>
 
@@ -5002,7 +5236,7 @@ function initApp() {
 const _SB_GROUPS = {
   empresa:  ['socios','cuentaSocios'],
   caja:     ['cajaBancos','cajaEfectivo','chequesFisicos','eCheques','chequesPagar','kilometraje'],
-  gestion:  ['comisiones','bcra','calendarioARCA','contabilidad','facturasACobrar','facturasPagar','estadosCuenta','stock'],
+  gestion:  ['comisiones','bcra','calendarioARCA','contabilidad','facturasACobrar','facturasPagar','estadosCuenta','stock','listasPrecios'],
   analisis: ['tesoreria','flujoProyectado','panelVencimientos','rentabilidad','gestion','reportes','historial','estrategicos'],
   archivos: ['documentos','config'],
 };
@@ -5240,6 +5474,7 @@ function irA(p) {
   if (p==='estrategicos')     renderEstrategicos();
   if (p==='estadosCuenta')   renderEstadosCuenta();
   if (p==='stock')            renderStock();
+  if (p==='listasPrecios')    renderListasPrecios();
 }
 
 function renderTodo() {
@@ -8968,6 +9203,469 @@ function _limpiarFiltrosStock() {
   });
   const ord = document.getElementById('stk-ordenar'); if(ord) ord.value = 'nombre';
   renderStock();
+}
+
+/* ══════════════════════════════════════════════════════════
+   LISTAS DE PRECIOS — Gestión de Listas y Condiciones
+══════════════════════════════════════════════════════════ */
+
+// Estructura: ST.listasPrecios = [{ id, nombre, proveedor, categoria, moneda, fechaVigencia, fechaVencimiento,
+//   estado, condiciones:[{id, nombre, plazo, descuento, recargo, notas}], archivo:{nombre,tipo,driveUrl,dataB64,size},
+//   notas, createdAt, updatedAt }]
+// ST.lpDriveFolder = { url, nombre }
+
+let _lpCondiciones = []; // temp condiciones en modal
+let _lpArchivoTemp = null; // temp file data en modal
+
+function renderListasPrecios() {
+  if (!ST.listasPrecios) ST.listasPrecios = [];
+  if (!ST.lpDriveFolder) ST.lpDriveFolder = { url: '', nombre: '' };
+  const wrap = document.getElementById('wrap-listasPrecios'); if(!wrap) return;
+  const listas = ST.listasPrecios;
+
+  // Auto-check vencidas
+  const hoyISO = new Date().toISOString().slice(0,10);
+  listas.forEach(l => {
+    if (l.estado === 'vigente' && l.fechaVencimiento && l.fechaVencimiento < hoyISO) l.estado = 'vencida';
+  });
+
+  // KPIs
+  const vigentes = listas.filter(l => l.estado === 'vigente');
+  const proveedores = [...new Set(listas.map(l => l.proveedor).filter(Boolean))];
+  const archivos = listas.filter(l => l.archivo?.nombre);
+  const tiposArch = [...new Set(archivos.map(l => {
+    const ext = (l.archivo.nombre||'').split('.').pop().toLowerCase();
+    if (['xlsx','xls','csv'].includes(ext)) return 'Excel';
+    if (ext === 'pdf') return 'PDF';
+    if (['docx','doc'].includes(ext)) return 'Word';
+    return ext.toUpperCase();
+  }))];
+  const condTotal = listas.reduce((s,l) => s + (l.condiciones||[]).length, 0);
+  const ultimaAct = listas.reduce((max,l) => l.updatedAt > max ? l.updatedAt : max, '');
+
+  _setEl('lp-total-listas', vigentes.length.toString());
+  _setEl('lp-total-proveedores', proveedores.length + ' proveedor' + (proveedores.length!==1?'es':''));
+  _setEl('lp-total-archivos', archivos.length.toString());
+  _setEl('lp-archivos-tipos', tiposArch.length ? tiposArch.join(', ') : 'Sin archivos');
+  _setEl('lp-total-condiciones', condTotal.toString());
+  if (ultimaAct) {
+    const d = new Date(ultimaAct);
+    _setEl('lp-ultima-act', d.toLocaleDateString('es-AR',{day:'2-digit',month:'short'}));
+    _setEl('lp-ultima-act-sub', d.toLocaleDateString('es-AR',{year:'numeric',month:'long',day:'numeric'}));
+  }
+
+  // Drive folder
+  const driveLink = document.getElementById('lp-drive-link');
+  const driveLabel = document.getElementById('lp-drive-folder-name');
+  if (ST.lpDriveFolder.url) {
+    driveLink.href = ST.lpDriveFolder.url;
+    driveLink.style.display = '';
+    driveLabel.textContent = ST.lpDriveFolder.nombre || 'Carpeta configurada';
+  } else {
+    driveLink.style.display = 'none';
+    driveLabel.textContent = 'Sin configurar';
+  }
+
+  // Populate filter selects
+  const filProv = document.getElementById('lp-fil-proveedor');
+  const curProv = filProv.value;
+  filProv.innerHTML = '<option value="">Todos</option>' + proveedores.sort().map(p => `<option value="${p}" ${p===curProv?'selected':''}>${p}</option>`).join('');
+  const categorias = [...new Set(listas.map(l => l.categoria).filter(Boolean))];
+  const filCat = document.getElementById('lp-fil-categoria');
+  const curCat = filCat.value;
+  filCat.innerHTML = '<option value="">Todas</option>' + categorias.sort().map(c => `<option value="${c}" ${c===curCat?'selected':''}>${c}</option>`).join('');
+
+  // Filters
+  const buscar = (document.getElementById('lp-buscar')?.value||'').toLowerCase();
+  const filProvV = document.getElementById('lp-fil-proveedor')?.value||'';
+  const filCatV = document.getElementById('lp-fil-categoria')?.value||'';
+  const filEstV = document.getElementById('lp-fil-estado')?.value||'';
+  const orden = document.getElementById('lp-ordenar')?.value||'reciente';
+
+  let filtered = listas.filter(l => {
+    if (filProvV && l.proveedor !== filProvV) return false;
+    if (filCatV && l.categoria !== filCatV) return false;
+    if (filEstV && l.estado !== filEstV) return false;
+    if (buscar && !`${l.nombre} ${l.proveedor} ${l.categoria} ${l.notas}`.toLowerCase().includes(buscar)) return false;
+    return true;
+  });
+
+  // Sort
+  if (orden === 'proveedor') filtered.sort((a,b) => (a.proveedor||'').localeCompare(b.proveedor||''));
+  else if (orden === 'nombre') filtered.sort((a,b) => (a.nombre||'').localeCompare(b.nombre||''));
+  else if (orden === 'vencimiento') filtered.sort((a,b) => (a.fechaVencimiento||'9999').localeCompare(b.fechaVencimiento||'9999'));
+  else filtered.sort((a,b) => (b.updatedAt||b.createdAt||'').localeCompare(a.updatedAt||a.createdAt||''));
+
+  if (!listas.length) {
+    wrap.innerHTML = `<div class="empty-state"><i class="bi bi-tags"></i>Sin listas de precios registradas.<br>
+      <small>Usá "Nueva Lista" para crear una o "Subir Archivo" para importar desde Drive.</small></div>`;
+    return;
+  }
+  if (!filtered.length) {
+    wrap.innerHTML = '<div class="text-muted text-center py-4">No se encontraron listas con los filtros aplicados.</div>';
+    return;
+  }
+
+  // Render cards
+  const badges = { vigente:'<span class="bdg bg-success text-white">Vigente</span>', vencida:'<span class="bdg bg-danger text-white">Vencida</span>', borrador:'<span class="bdg bg-warning text-dark">Borrador</span>' };
+  const fileIcons = { xlsx:'bi-file-earmark-spreadsheet', xls:'bi-file-earmark-spreadsheet', csv:'bi-file-earmark-spreadsheet', pdf:'bi-file-earmark-pdf', docx:'bi-file-earmark-word', doc:'bi-file-earmark-word' };
+
+  let html = '<div class="row g-3">';
+  for (const l of filtered) {
+    const ext = l.archivo?.nombre ? l.archivo.nombre.split('.').pop().toLowerCase() : '';
+    const fileIcon = fileIcons[ext] || 'bi-file-earmark';
+    const condCount = (l.condiciones||[]).length;
+    const vencDias = l.fechaVencimiento ? Math.ceil((new Date(l.fechaVencimiento) - new Date()) / 86400000) : null;
+    const vencTag = vencDias !== null && l.estado === 'vigente'
+      ? vencDias < 0 ? '<span class="bdg bg-danger text-white ms-1">Vencida</span>'
+      : vencDias <= 7 ? `<span class="bdg bg-warning text-dark ms-1">${vencDias}d</span>` : '' : '';
+
+    html += `<div class="col-md-6 col-lg-4">
+      <div class="card h-100" style="border-radius:10px;border-left:4px solid ${l.estado==='vigente'?'#16a34a':l.estado==='vencida'?'#dc2626':'#d97706'};overflow:hidden">
+        <div class="card-body p-3">
+          <div class="d-flex justify-content-between align-items-start mb-2">
+            <div style="flex:1">
+              <div style="font-weight:700;font-size:.92rem;color:#0f172a">${l.nombre||'Sin nombre'}</div>
+              <div style="font-size:.78rem;color:#64748b"><i class="bi bi-building me-1"></i>${l.proveedor||'—'}</div>
+            </div>
+            ${badges[l.estado]||''}${vencTag}
+          </div>
+          <div style="font-size:.76rem;color:#475569;margin-bottom:8px">
+            ${l.categoria ? `<span class="me-2"><i class="bi bi-tag me-1"></i>${l.categoria}</span>` : ''}
+            <span class="me-2"><i class="bi bi-coin me-1"></i>${l.moneda||'ARS'}</span>
+            ${condCount ? `<span class="me-2"><i class="bi bi-percent me-1"></i>${condCount} condicion${condCount!==1?'es':''}</span>` : ''}
+          </div>
+          ${l.archivo?.nombre ? `<div style="font-size:.74rem;background:#eff6ff;padding:4px 8px;border-radius:5px;margin-bottom:8px">
+            <i class="bi ${fileIcon} me-1 text-primary"></i>${l.archivo.nombre}
+            ${l.archivo.driveUrl ? `<a href="${l.archivo.driveUrl}" target="_blank" class="ms-1" style="font-size:.68rem"><i class="bi bi-box-arrow-up-right"></i></a>` : ''}
+          </div>` : ''}
+          ${(l.condiciones||[]).length > 0 ? `<div style="font-size:.72rem;margin-bottom:6px">
+            ${l.condiciones.slice(0,3).map(c => `<span style="display:inline-block;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:4px;padding:1px 6px;margin:1px;font-size:.7rem">
+              ${c.nombre}${c.descuento ? ' <strong style="color:#16a34a">-'+c.descuento+'%</strong>' : ''}${c.recargo ? ' <strong style="color:#dc2626">+'+c.recargo+'%</strong>' : ''}${c.plazo ? ' · '+c.plazo+'d' : ''}
+            </span>`).join('')}${l.condiciones.length > 3 ? `<span style="font-size:.68rem;color:#64748b"> +${l.condiciones.length-3} más</span>` : ''}
+          </div>` : ''}
+          <div style="font-size:.7rem;color:#94a3b8">
+            ${l.fechaVigencia ? 'Desde: '+new Date(l.fechaVigencia+'T12:00').toLocaleDateString('es-AR') : ''}
+            ${l.fechaVencimiento ? ' — Hasta: '+new Date(l.fechaVencimiento+'T12:00').toLocaleDateString('es-AR') : ''}
+          </div>
+        </div>
+        <div class="card-footer bg-transparent border-top-0 px-3 pb-2 pt-0 d-flex gap-1 justify-content-end">
+          <button class="btn btn-a btn-outline-info" onclick="lpVerDetalle('${l.id}')" title="Ver detalle"><i class="bi bi-eye"></i></button>
+          <button class="btn btn-a btn-outline-primary" onclick="abrirModalListaPrecio('${l.id}')" title="Editar"><i class="bi bi-pencil"></i></button>
+          <button class="btn btn-a btn-outline-danger" onclick="lpEliminar('${l.id}')" title="Eliminar"><i class="bi bi-trash"></i></button>
+        </div>
+      </div>
+    </div>`;
+  }
+  html += '</div>';
+  wrap.innerHTML = html;
+}
+
+function abrirModalListaPrecio(id) {
+  const listas = ST.listasPrecios || [];
+  const l = id ? listas.find(x => x.id === id) : null;
+  _lpCondiciones = l ? JSON.parse(JSON.stringify(l.condiciones||[])) : [];
+  _lpArchivoTemp = null;
+
+  document.getElementById('lp-id').value = id || '';
+  document.getElementById('modalLP-title').innerHTML = `<i class="bi bi-tags me-2"></i>${id ? 'Editar' : 'Nueva'} Lista de Precios`;
+  document.getElementById('lp-nombre').value = l?.nombre || '';
+  document.getElementById('lp-proveedor').value = l?.proveedor || '';
+  document.getElementById('lp-categoria').value = l?.categoria || '';
+  document.getElementById('lp-moneda').value = l?.moneda || 'ARS';
+  document.getElementById('lp-fechaVigencia').value = l?.fechaVigencia || hoy();
+  document.getElementById('lp-fechaVencimiento').value = l?.fechaVencimiento || '';
+  document.getElementById('lp-estado').value = l?.estado || 'vigente';
+  document.getElementById('lp-driveUrl').value = l?.archivo?.driveUrl || '';
+  document.getElementById('lp-notas').value = l?.notas || '';
+
+  // File info
+  document.getElementById('lp-modal-file-name').textContent = l?.archivo?.nombre || 'Sin archivo';
+  document.getElementById('lp-modal-file-badge').innerHTML = l?.archivo?.nombre
+    ? `<span class="badge bg-primary" style="font-size:.68rem">${l.archivo.tipo||l.archivo.nombre.split('.').pop().toUpperCase()}</span>` : '';
+
+  // Render condiciones
+  _lpRenderCondiciones();
+
+  new bootstrap.Modal(document.getElementById('modalListaPrecio')).show();
+}
+
+function _lpRenderCondiciones() {
+  const wrap = document.getElementById('lp-condiciones-wrap');
+  if (!_lpCondiciones.length) {
+    wrap.innerHTML = '<div class="text-muted text-center py-2" style="font-size:.78rem">Sin condiciones configuradas — usá "Agregar" para crear una</div>';
+    return;
+  }
+  let html = '';
+  _lpCondiciones.forEach((c, i) => {
+    html += `<div class="d-flex gap-2 align-items-center mb-2" style="background:#fff;padding:6px 10px;border-radius:6px;border:1px solid #e2e8f0">
+      <div style="flex:1">
+        <input type="text" class="form-control form-control-sm" value="${c.nombre||''}" placeholder="Nombre (ej: Contado, 30 días...)" onchange="_lpCondiciones[${i}].nombre=this.value" style="font-size:.8rem;font-weight:600">
+      </div>
+      <div style="width:80px">
+        <input type="number" class="form-control form-control-sm" value="${c.plazo||''}" placeholder="Días" title="Plazo en días" onchange="_lpCondiciones[${i}].plazo=+this.value||0" style="font-size:.78rem">
+      </div>
+      <div style="width:80px">
+        <div class="input-group input-group-sm">
+          <span class="input-group-text" style="font-size:.68rem;padding:2px 4px;background:#dcfce7;color:#15803d">-%</span>
+          <input type="number" class="form-control" value="${c.descuento||''}" placeholder="Dto" step="0.5" onchange="_lpCondiciones[${i}].descuento=+this.value||0" style="font-size:.78rem">
+        </div>
+      </div>
+      <div style="width:80px">
+        <div class="input-group input-group-sm">
+          <span class="input-group-text" style="font-size:.68rem;padding:2px 4px;background:#fef2f2;color:#dc2626">+%</span>
+          <input type="number" class="form-control" value="${c.recargo||''}" placeholder="Rec" step="0.5" onchange="_lpCondiciones[${i}].recargo=+this.value||0" style="font-size:.78rem">
+        </div>
+      </div>
+      <div style="width:140px">
+        <input type="text" class="form-control form-control-sm" value="${c.notas||''}" placeholder="Notas" onchange="_lpCondiciones[${i}].notas=this.value" style="font-size:.76rem">
+      </div>
+      <button class="btn btn-sm btn-outline-danger" onclick="_lpCondiciones.splice(${i},1);_lpRenderCondiciones()" style="padding:2px 6px"><i class="bi bi-x-lg"></i></button>
+    </div>`;
+  });
+  wrap.innerHTML = html;
+}
+
+function lpAgregarCondicion() {
+  _lpCondiciones.push({ id: uid(), nombre: '', plazo: 0, descuento: 0, recargo: 0, notas: '' });
+  _lpRenderCondiciones();
+}
+
+function lpModalFileSelected(evt) {
+  const file = evt.target.files[0];
+  if (!file) return;
+  document.getElementById('lp-modal-file-name').textContent = file.name;
+  const ext = file.name.split('.').pop().toUpperCase();
+  document.getElementById('lp-modal-file-badge').innerHTML = `<span class="badge bg-primary" style="font-size:.68rem">${ext}</span>`;
+
+  // Read as base64 for local storage (small files) or just metadata
+  if (file.size <= 5 * 1024 * 1024) { // max 5MB
+    const reader = new FileReader();
+    reader.onload = e => {
+      _lpArchivoTemp = { nombre: file.name, tipo: ext, size: file.size, dataB64: e.target.result };
+    };
+    reader.readAsDataURL(file);
+  } else {
+    _lpArchivoTemp = { nombre: file.name, tipo: ext, size: file.size, dataB64: '' };
+    toast('Archivo muy grande para almacenar localmente. Subilo a Drive y pegá el enlace.', 'warning');
+  }
+}
+
+function guardarListaPrecio() {
+  if (!ST.listasPrecios) ST.listasPrecios = [];
+  const id = document.getElementById('lp-id').value;
+  const nombre = document.getElementById('lp-nombre').value.trim();
+  const proveedor = document.getElementById('lp-proveedor').value.trim();
+  if (!nombre) { toast('Ingresá el nombre de la lista','warning'); return; }
+  if (!proveedor) { toast('Ingresá el proveedor','warning'); return; }
+
+  const prev = id ? ST.listasPrecios.find(l => l.id === id) : null;
+  const driveUrl = document.getElementById('lp-driveUrl').value.trim();
+
+  let archivo = prev?.archivo || {};
+  if (_lpArchivoTemp) {
+    archivo = _lpArchivoTemp;
+  }
+  if (driveUrl) archivo.driveUrl = driveUrl;
+
+  const obj = {
+    id: id || uid(),
+    nombre,
+    proveedor,
+    categoria: document.getElementById('lp-categoria').value.trim(),
+    moneda: document.getElementById('lp-moneda').value,
+    fechaVigencia: document.getElementById('lp-fechaVigencia').value,
+    fechaVencimiento: document.getElementById('lp-fechaVencimiento').value,
+    estado: document.getElementById('lp-estado').value,
+    condiciones: _lpCondiciones,
+    archivo,
+    notas: document.getElementById('lp-notas').value.trim(),
+    createdAt: prev?.createdAt || new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+
+  const idx = ST.listasPrecios.findIndex(l => l.id === obj.id);
+  if (idx >= 0) ST.listasPrecios[idx] = obj; else ST.listasPrecios.push(obj);
+
+  _lpCondiciones = [];
+  _lpArchivoTemp = null;
+  save();
+  bootstrap.Modal.getInstance(document.getElementById('modalListaPrecio')).hide();
+  renderListasPrecios();
+  toast('Lista de precios guardada ✓');
+}
+
+function lpEliminar(id) {
+  if (!confirm('¿Eliminar esta lista de precios?')) return;
+  ST.listasPrecios = (ST.listasPrecios||[]).filter(l => l.id !== id);
+  save();
+  renderListasPrecios();
+  toast('Lista eliminada');
+}
+
+function lpVerDetalle(id) {
+  const l = (ST.listasPrecios||[]).find(x => x.id === id);
+  if (!l) return;
+  const body = document.getElementById('modalLPDetalle-body');
+  document.getElementById('modalLPDetalle-title').innerHTML = `<i class="bi bi-tags me-2"></i>${l.nombre}`;
+
+  const badges = { vigente:'<span class="badge bg-success">Vigente</span>', vencida:'<span class="badge bg-danger">Vencida</span>', borrador:'<span class="badge bg-warning text-dark">Borrador</span>' };
+  const _fd = d => d ? new Date(d+'T12:00').toLocaleDateString('es-AR',{year:'numeric',month:'long',day:'numeric'}) : '—';
+
+  let condHtml = '';
+  if (l.condiciones?.length) {
+    condHtml = `<table class="table table-sm mt-2" style="font-size:.82rem">
+      <thead style="background:#f0fdf4"><tr><th>Condición</th><th style="text-align:center">Plazo (días)</th><th style="text-align:center">Descuento</th><th style="text-align:center">Recargo</th><th>Notas</th></tr></thead>
+      <tbody>${l.condiciones.map(c => `<tr>
+        <td style="font-weight:600">${c.nombre||'—'}</td>
+        <td style="text-align:center">${c.plazo||'—'}</td>
+        <td style="text-align:center;color:#16a34a;font-weight:600">${c.descuento ? '-'+c.descuento+'%' : '—'}</td>
+        <td style="text-align:center;color:#dc2626;font-weight:600">${c.recargo ? '+'+c.recargo+'%' : '—'}</td>
+        <td style="font-size:.78rem;color:#64748b">${c.notas||''}</td>
+      </tr>`).join('')}</tbody>
+    </table>`;
+  }
+
+  const fileIcons = { xlsx:'bi-file-earmark-spreadsheet', xls:'bi-file-earmark-spreadsheet', csv:'bi-file-earmark-spreadsheet', pdf:'bi-file-earmark-pdf', docx:'bi-file-earmark-word', doc:'bi-file-earmark-word' };
+  const ext = l.archivo?.nombre ? l.archivo.nombre.split('.').pop().toLowerCase() : '';
+  const fileIcon = fileIcons[ext] || 'bi-file-earmark';
+
+  body.innerHTML = `
+    <div class="row g-3 mb-3">
+      <div class="col-sm-6">
+        <div style="font-size:.76rem;color:#64748b;text-transform:uppercase;letter-spacing:.04em;font-weight:600">Proveedor</div>
+        <div style="font-size:1rem;font-weight:700">${l.proveedor||'—'}</div>
+      </div>
+      <div class="col-sm-3">
+        <div style="font-size:.76rem;color:#64748b;text-transform:uppercase;letter-spacing:.04em;font-weight:600">Categoría</div>
+        <div style="font-size:.9rem">${l.categoria||'—'}</div>
+      </div>
+      <div class="col-sm-3">
+        <div style="font-size:.76rem;color:#64748b;text-transform:uppercase;letter-spacing:.04em;font-weight:600">Estado</div>
+        <div>${badges[l.estado]||l.estado} <span style="font-size:.78rem;color:#64748b;margin-left:4px">${l.moneda||'ARS'}</span></div>
+      </div>
+    </div>
+    <div class="row g-3 mb-3">
+      <div class="col-sm-4">
+        <div style="font-size:.76rem;color:#64748b;text-transform:uppercase;font-weight:600">Vigencia desde</div>
+        <div>${_fd(l.fechaVigencia)}</div>
+      </div>
+      <div class="col-sm-4">
+        <div style="font-size:.76rem;color:#64748b;text-transform:uppercase;font-weight:600">Vencimiento</div>
+        <div>${_fd(l.fechaVencimiento)}</div>
+      </div>
+      <div class="col-sm-4">
+        <div style="font-size:.76rem;color:#64748b;text-transform:uppercase;font-weight:600">Última actualización</div>
+        <div style="font-size:.82rem">${l.updatedAt ? new Date(l.updatedAt).toLocaleString('es-AR') : '—'}</div>
+      </div>
+    </div>
+    ${l.archivo?.nombre ? `<div class="card mb-3 border-0" style="background:#eff6ff;border:1px solid #93c5fd!important;border-radius:8px">
+      <div class="card-body py-2 px-3 d-flex align-items-center gap-2">
+        <i class="bi ${fileIcon} text-primary" style="font-size:1.4rem"></i>
+        <div style="flex:1">
+          <div style="font-weight:600;font-size:.85rem">${l.archivo.nombre}</div>
+          <div style="font-size:.72rem;color:#64748b">${l.archivo.size ? (l.archivo.size/1024).toFixed(0)+' KB' : ''} ${l.archivo.tipo||''}</div>
+        </div>
+        ${l.archivo.driveUrl ? `<a href="${l.archivo.driveUrl}" target="_blank" class="btn btn-sm btn-outline-primary" style="font-size:.72rem"><i class="bi bi-box-arrow-up-right me-1"></i>Abrir en Drive</a>` : ''}
+        ${l.archivo.dataB64 ? `<button class="btn btn-sm btn-outline-success" onclick="lpDescargarArchivo('${l.id}')" style="font-size:.72rem"><i class="bi bi-download me-1"></i>Descargar</button>` : ''}
+      </div>
+    </div>` : ''}
+    ${l.condiciones?.length ? `<div style="font-weight:700;font-size:.88rem;margin-bottom:4px"><i class="bi bi-percent me-1 text-success"></i>Condiciones de Pago (${l.condiciones.length})</div>${condHtml}` : '<div class="text-muted" style="font-size:.82rem">Sin condiciones de pago configuradas</div>'}
+    ${l.notas ? `<div class="mt-3" style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:8px 12px;font-size:.82rem"><i class="bi bi-sticky me-1 text-warning"></i><strong>Notas:</strong> ${l.notas}</div>` : ''}
+  `;
+  new bootstrap.Modal(document.getElementById('modalLPDetalle')).show();
+}
+
+function lpDescargarArchivo(id) {
+  const l = (ST.listasPrecios||[]).find(x => x.id === id);
+  if (!l?.archivo?.dataB64) { toast('Sin archivo almacenado','warning'); return; }
+  const a = document.createElement('a');
+  a.href = l.archivo.dataB64;
+  a.download = l.archivo.nombre;
+  a.click();
+}
+
+function lpUploadArchivo(evt) {
+  const file = evt.target.files[0];
+  if (!file) return;
+  // Crear una lista rápida con el archivo
+  _lpArchivoTemp = null;
+  const reader = new FileReader();
+  reader.onload = e => {
+    _lpArchivoTemp = { nombre: file.name, tipo: file.name.split('.').pop().toUpperCase(), size: file.size, dataB64: file.size <= 5*1024*1024 ? e.target.result : '' };
+    // Open modal pre-filled with file
+    abrirModalListaPrecio(null);
+    document.getElementById('lp-modal-file-name').textContent = file.name;
+    document.getElementById('lp-modal-file-badge').innerHTML = `<span class="badge bg-primary" style="font-size:.68rem">${_lpArchivoTemp.tipo}</span>`;
+    // Try to guess proveedor from filename
+    const parts = file.name.replace(/\.[^.]+$/,'').replace(/[-_]/g,' ').split(' ');
+    if (parts.length > 1) document.getElementById('lp-nombre').value = parts.join(' ');
+  };
+  reader.readAsDataURL(file);
+  evt.target.value = '';
+}
+
+function lpConfigDrive() {
+  if (!ST.lpDriveFolder) ST.lpDriveFolder = { url: '', nombre: '' };
+  const url = prompt('Pegá la URL de la carpeta de Google Drive donde están las listas de precios:', ST.lpDriveFolder.url || '');
+  if (url === null) return;
+  const nombre = prompt('Nombre descriptivo para la carpeta:', ST.lpDriveFolder.nombre || 'Listas de Precios');
+  if (nombre === null) return;
+  ST.lpDriveFolder = { url: url.trim(), nombre: nombre.trim() };
+  save();
+  renderListasPrecios();
+  toast('Carpeta de Drive configurada ✓');
+}
+
+function lpLimpiarFiltros() {
+  ['lp-buscar','lp-fil-proveedor','lp-fil-categoria','lp-fil-estado'].forEach(id => {
+    const el = document.getElementById(id); if(el) el.value = '';
+  });
+  const ord = document.getElementById('lp-ordenar'); if(ord) ord.value = 'reciente';
+  renderListasPrecios();
+}
+
+function printListasPrecios() {
+  const listas = (ST.listasPrecios||[]).filter(l => l.estado === 'vigente' || l.estado === 'borrador');
+  if (!listas.length) { toast('No hay listas de precios para imprimir','info'); return; }
+  const hoyStr = new Date().toLocaleDateString('es-AR');
+  const _f = n => (n||0).toLocaleString('es-AR',{minimumFractionDigits:0,maximumFractionDigits:1});
+
+  let listasHtml = '';
+  for (const l of listas) {
+    const condRows = (l.condiciones||[]).map(c =>
+      `<tr><td style="font-weight:600">${c.nombre||'—'}</td><td style="text-align:center">${c.plazo||'—'}</td><td style="text-align:center;color:#16a34a">${c.descuento?'-'+c.descuento+'%':'—'}</td><td style="text-align:center;color:#dc2626">${c.recargo?'+'+c.recargo+'%':'—'}</td><td>${c.notas||''}</td></tr>`
+    ).join('');
+    listasHtml += `<div style="border:1px solid #e2e8f0;border-radius:8px;margin-bottom:12px;page-break-inside:avoid;overflow:hidden">
+      <div style="background:${l.estado==='vigente'?'#f0fdf4':'#fffbeb'};padding:8px 14px;border-bottom:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center">
+        <div><strong style="font-size:13px">${l.nombre}</strong><span style="color:#64748b;margin-left:10px;font-size:10px">${l.proveedor} · ${l.moneda||'ARS'}</span></div>
+        <div style="font-size:9px;color:#64748b">${l.fechaVigencia ? 'Desde: '+l.fechaVigencia : ''} ${l.fechaVencimiento ? '— Hasta: '+l.fechaVencimiento : ''}</div>
+      </div>
+      ${condRows ? `<table style="width:100%;border-collapse:collapse;font-size:10px">
+        <thead><tr style="background:#f8fafc"><th style="padding:4px 8px;font-size:9px">Condición</th><th style="text-align:center;padding:4px 8px;font-size:9px">Plazo</th><th style="text-align:center;padding:4px 8px;font-size:9px">Descuento</th><th style="text-align:center;padding:4px 8px;font-size:9px">Recargo</th><th style="padding:4px 8px;font-size:9px">Notas</th></tr></thead>
+        <tbody>${condRows}</tbody></table>` : '<div style="padding:6px 14px;font-size:10px;color:#94a3b8">Sin condiciones de pago</div>'}
+      ${l.notas ? `<div style="padding:4px 14px 6px;font-size:9px;color:#64748b;border-top:1px solid #f1f5f9"><i>Nota: ${l.notas}</i></div>` : ''}
+    </div>`;
+  }
+
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Listas de Precios</title>
+    <style>@page{size:A4;margin:14mm}*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Segoe UI',Arial,sans-serif;font-size:11px;color:#1a1a1a;padding:10px}
+    h1{font-size:18px;margin-bottom:2px}.fecha{color:#666;font-size:10px;margin-bottom:14px}
+    table{width:100%;border-collapse:collapse}th{text-align:left}td{border-bottom:1px solid #f1f5f9;padding:4px 8px}
+    @media print{.no-print{display:none!important}}</style>
+  </head><body>
+    <div class="no-print" style="display:flex;gap:8px;justify-content:flex-end;margin-bottom:10px">
+      <button onclick="window.print()" style="background:#0369a1;color:#fff;border:none;border-radius:6px;padding:6px 16px;font-size:11px;cursor:pointer;font-weight:600">Imprimir</button>
+      <button onclick="window.close()" style="background:#64748b;color:#fff;border:none;border-radius:6px;padding:6px 16px;font-size:11px;cursor:pointer;font-weight:600">Volver</button>
+    </div>
+    <h1>Listas de Precios</h1>
+    <div class="fecha">Generado: ${hoyStr} — ${listas.length} lista${listas.length!==1?'s':''}</div>
+    ${listasHtml}
+  </body></html>`;
+  const w = window.open('','_blank');
+  w.document.write(html);
+  w.document.close();
+  setTimeout(() => w.print(), 400);
 }
 
 // ── Imprimir reporte de stock ────────────────────────
