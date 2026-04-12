@@ -1980,7 +1980,7 @@
     <div class="page-hdr">
       <h4><i class="bi bi-calendar-event me-2" style="color:#d97706"></i>Panel de Vencimientos</h4>
       <select class="form-select form-select-sm" id="pv-dias" onchange="renderPanelVencimientos()" style="width:auto;border-radius:8px;font-size:.78rem">
-        <option value="7">7 días</option><option value="15" selected>15 días</option><option value="30">30 días</option>
+        <option value="7">7 días</option><option value="15">15 días</option><option value="30" selected>30 días</option>
       </select>
     </div>
     <div class="row g-2 mb-3" id="pv-kpis"></div>
@@ -5271,6 +5271,13 @@ function initApp() {
   document.getElementById('fecha-hoy').textContent =
     new Date().toLocaleDateString('es-AR',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
   iniciarAutoSync();
+  // ── Auto-sync Gestión al iniciar ──
+  // 1) Cargar caché inmediato para render rápido
+  _loadGestionData();
+  // 2) Sincronizar en background desde Google Sheets (no bloquea)
+  setTimeout(() => {
+    _gestionAutoSync();
+  }, 2000);
   initAutoRefresh(); // Auto-detectar cambios en las bases
   document.querySelectorAll('#sidebar-nav .nav-link[data-page]').forEach(a => {
     a.addEventListener('click', e => {
@@ -5451,8 +5458,9 @@ async function _arCheckGestion() {
     const csv = await resp.text();
     const hash = _arSimpleHash(csv);
     if (_arLastGestionHash !== null && hash !== _arLastGestionHash) {
-      console.log('[AutoRefresh] Cambio detectado en Gestión');
-      await gestionSincronizar();
+      console.log('[AutoRefresh] Cambio detectado en Gestión — resincronizando');
+      _arLastGestionHash = hash;
+      await _gestionAutoSync();
       return true;
     }
     _arLastGestionHash = hash;
@@ -5575,6 +5583,13 @@ function irA(p) {
   if (p==='estadosCuenta')   renderEstadosCuenta();
   if (p==='stock')            renderStock();
   if (p==='listasPrecios')    renderListasPrecios();
+  if (p==='tesoreria')        renderTesoreria();
+  if (p==='panelVencimientos') renderPanelVencimientos();
+  if (p==='rentabilidad')     renderRentabilidad();
+  if (p==='flujoProyectado')  renderFlujoProyectado();
+  if (p==='contabilidad')     renderContabilidad();
+  if (p==='calendarioARCA')   renderCalendarioARCA();
+  if (p==='kilometraje')      kmRender();
 }
 
 function renderTodo() {
@@ -10417,6 +10432,53 @@ async function gestionSincronizar() {
   renderGestion();
 }
 
+/* ─── Auto-sync silencioso de Gestión (al abrir app) ─── */
+async function _gestionAutoSync() {
+  console.log('[GestionAutoSync] Sincronizando en background...');
+  const st = document.getElementById('gest-status');
+  if (st && !GESTION_DATA) st.innerHTML = '<i class="bi bi-cloud-download me-1 text-info sync-spin"></i>Sincronizando automáticamente...';
+
+  let rawRows = null, source = '';
+  try { rawRows = await _fetchGestionGviz(); source = 'JSONP'; }
+  catch(e1) {
+    try { rawRows = await _fetchGestionCSV(); source = 'CSV'; }
+    catch(e2) {
+      console.warn('[GestionAutoSync] No se pudo conectar, usando caché.');
+      if (st && GESTION_DATA) st.innerHTML = '<i class="bi bi-check-circle-fill text-success me-1"></i>Datos en caché · ' + (GESTION_DATA.updatedAt||'') + ' · <b>' + (GESTION_DATA.rows||[]).length + '</b> registros';
+      return;
+    }
+  }
+
+  const oldHash = GESTION_DATA ? _arSimpleHash(GESTION_DATA.rows) : null;
+  const newData = _buildGestionData(rawRows);
+  if (newData.rows.length === 0) {
+    console.warn('[GestionAutoSync] Sin datos 2026.');
+    return;
+  }
+
+  const newHash = _arSimpleHash(newData.rows);
+  const changed = oldHash !== null && oldHash !== newHash;
+
+  GESTION_DATA = newData;
+  try { localStorage.setItem('gestionData2026', JSON.stringify(GESTION_DATA)); } catch(e) {}
+
+  // Establecer hash base para el auto-refresh
+  _arLastGestionHash = newHash;
+
+  if (st) st.innerHTML = '<i class="bi bi-check-circle-fill text-success me-1"></i>Sincronizado · ' +
+    GESTION_DATA.updatedAt + ' · <b>' + GESTION_DATA.rows.length + '</b> registros · vía ' + source +
+    (changed ? ' <span class="badge bg-info" style="font-size:.6rem">Actualizado</span>' : '');
+
+  if (changed) {
+    toast('Gestión actualizada automáticamente: ' + GESTION_DATA.rows.length + ' registros', 'info');
+    // Si el usuario está viendo Gestión, re-renderizar
+    const activePage = document.querySelector('.page.active');
+    if (activePage && activePage.id === 'page-gestion') renderGestion();
+  } else {
+    console.log('[GestionAutoSync] Sin cambios respecto al caché.');
+  }
+}
+
 function _loadGestionData() {
   if (GESTION_DATA) return true;
   try {
@@ -13449,7 +13511,7 @@ function guardarContabConfig() {
    #6 PANEL DE VENCIMIENTOS UNIFICADO
 ═══════════════════════════════════════════ */
 function renderPanelVencimientos() {
-  const dias=parseInt(document.getElementById('pv-dias')?.value)||15;
+  const dias=parseInt(document.getElementById('pv-dias')?.value)||30;
   const today=new Date(hoy()+'T00:00:00');
   const items=[];
 
