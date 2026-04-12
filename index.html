@@ -2356,6 +2356,88 @@ CREATE POLICY "acceso total" ON flujo_caja_versions FOR ALL USING (true) WITH CH
       </div>
     </div>
 
+    <!-- TELEGRAM BOT -->
+    <div class="card mb-4">
+      <div class="card-header bg-white fw-bold"><i class="bi bi-telegram me-2" style="color:#0088cc"></i>Bot de Telegram</div>
+      <div class="card-body">
+        <div id="tg-bot-status" class="alert alert-info mb-3" style="font-size:.84rem">
+          <i class="bi bi-telegram me-2" style="color:#0088cc"></i><b>Bot disponible para configurar</b> — Los 3 socios pueden consultar datos desde el celular por Telegram.
+        </div>
+
+        <div class="accordion mb-3" id="tgBotAccordion">
+          <div class="accordion-item border-0">
+            <h6 class="accordion-header">
+              <button class="accordion-button collapsed bg-light fw-bold" style="font-size:.84rem;border-radius:8px" type="button" data-bs-toggle="collapse" data-bs-target="#tgBotInstructions">
+                <i class="bi bi-journal-text me-2"></i>Instrucciones de configuración (10 minutos)
+              </button>
+            </h6>
+            <div id="tgBotInstructions" class="accordion-collapse collapse" data-bs-parent="#tgBotAccordion">
+              <div class="accordion-body" style="font-size:.82rem">
+
+                <h6 class="fw-bold text-primary mb-2">Paso 1 — Crear el bot en Telegram (2 min)</h6>
+                <ol class="mb-3">
+                  <li>Abrí Telegram en el celular y buscá <b>@BotFather</b></li>
+                  <li>Mandá el comando <code>/newbot</code></li>
+                  <li>Nombre del bot: <code>MÜÜK Finanzas</code> (o el que quieras)</li>
+                  <li>Username del bot: <code>muuk_finanzas_bot</code> (tiene que terminar en <code>bot</code>)</li>
+                  <li>BotFather te da un <b>token</b> que empieza con números. <b>Copialo.</b></li>
+                </ol>
+
+                <h6 class="fw-bold text-primary mb-2">Paso 2 — Conseguir los Telegram IDs de los socios (2 min)</h6>
+                <ol class="mb-3">
+                  <li>Cada socio busca <b>@userinfobot</b> en Telegram y le manda <code>/start</code></li>
+                  <li>El bot responde con su <b>ID</b> (un número). Cada socio anota el suyo.</li>
+                  <li>Juntá los 3 IDs separados por coma, ej: <code>123456789,987654321,555555555</code></li>
+                </ol>
+
+                <h6 class="fw-bold text-primary mb-2">Paso 3 — Deploy en Supabase (5 min)</h6>
+                <ol class="mb-3">
+                  <li>Asegurate de tener el CLI de Supabase: <code>npm install -g supabase</code></li>
+                  <li>Logueate: <code>supabase login</code></li>
+                  <li>Descargá la carpeta <b>telegram-bot</b> que creamos y hacé deploy:
+                    <pre class="bg-light p-2 rounded mt-1" style="font-size:.75rem;overflow-x:auto">supabase functions deploy muuk-telegram-bot --project-ref TU_PROJECT_REF</pre>
+                  </li>
+                  <li>Configurá los secrets (reemplazá con tus datos):
+                    <pre class="bg-light p-2 rounded mt-1" style="font-size:.75rem;overflow-x:auto">supabase secrets set \
+  TELEGRAM_BOT_TOKEN=TU_TOKEN_DE_BOTFATHER \
+  ANTHROPIC_API_KEY=sk-ant-TU_KEY \
+  MUUK_ALLOWED_USERS=ID1,ID2,ID3 \
+  --project-ref TU_PROJECT_REF</pre>
+                  </li>
+                </ol>
+
+                <h6 class="fw-bold text-primary mb-2">Paso 4 — Conectar el webhook (1 min)</h6>
+                <ol class="mb-3">
+                  <li>Abrí esta URL en el navegador (reemplazá los datos):
+                    <pre class="bg-light p-2 rounded mt-1" style="font-size:.75rem;overflow-x:auto">https://api.telegram.org/bot<b>TU_TOKEN</b>/setWebhook?url=https://<b>TU_PROJECT_REF</b>.supabase.co/functions/v1/muuk-telegram-bot</pre>
+                  </li>
+                  <li>Tiene que responder <code>{"ok":true}</code></li>
+                  <li>¡Listo! Abrí el bot en Telegram y mandá <code>/start</code> para probar 🚀</li>
+                </ol>
+
+                <div class="alert alert-success mb-2" style="font-size:.78rem">
+                  <i class="bi bi-chat-dots me-1"></i><b>Comandos del bot:</b><br>
+                  <code>/start</code> — Ver ayuda y opciones<br>
+                  <code>/resumen</code> — Resumen financiero rápido<br>
+                  <b>Cualquier pregunta</b> — "cuánto nos debe Pérez?", "qué vence mañana?", etc.
+                </div>
+
+                <div class="alert alert-info mb-0" style="font-size:.78rem">
+                  <i class="bi bi-shield-check me-1"></i><b>Seguridad:</b> Solo los Telegram IDs que configures tienen acceso. Si alguien no autorizado escribe, el bot rechaza el mensaje y muestra su ID para que puedas agregarlo.
+                  <br><i class="bi bi-cash-coin me-1"></i><b>Costo:</b> Telegram es 100% gratis, sin límites. Solo se paga la API de Claude (~$0.01/consulta).
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="alert alert-light border mb-0" style="font-size:.78rem">
+          <i class="bi bi-info-circle me-1 text-primary"></i>
+          <b>Requisito:</b> Supabase tiene que estar configurado y sincronizando datos (ver sección más arriba). El bot lee los datos directamente de Supabase.
+        </div>
+      </div>
+    </div>
+
     <!-- WHATSAPP BOT -->
     <div class="card">
       <div class="card-header bg-white fw-bold"><i class="bi bi-whatsapp me-2" style="color:#25D366"></i>WhatsApp Bot</div>
