@@ -332,6 +332,88 @@
       .gest-stat { flex-direction: column; text-align: center; gap: 4px; padding: 10px; }
     }
 
+    /* ─── ASISTENTE MÜÜK ─── */
+    #muuk-assist-btn {
+      position: fixed; bottom: 22px; right: 22px; z-index: 900;
+      width: 54px; height: 54px; border-radius: 50%; border: none;
+      background: linear-gradient(135deg, #E31E24, #c41920);
+      color: #fff; font-size: 1.4rem; cursor: pointer;
+      box-shadow: 0 4px 18px rgba(227,30,36,.4);
+      display: flex; align-items: center; justify-content: center;
+      transition: transform .2s, box-shadow .2s;
+    }
+    #muuk-assist-btn:hover { transform: scale(1.08); box-shadow: 0 6px 24px rgba(227,30,36,.55); }
+    #muuk-assist-panel {
+      display: none; position: fixed; bottom: 86px; right: 22px; z-index: 901;
+      width: min(420px, calc(100vw - 36px)); height: min(520px, 70vh);
+      background: #fff; border-radius: 16px;
+      box-shadow: 0 12px 50px rgba(0,0,0,.22);
+      flex-direction: column; overflow: hidden;
+      animation: assistIn .2s ease-out;
+    }
+    #muuk-assist-panel.open { display: flex; }
+    @keyframes assistIn { from { opacity:0; transform:translateY(12px) scale(.96); } to { opacity:1; transform:none; } }
+    .assist-hdr {
+      background: linear-gradient(135deg, #0f172a, #1e293b);
+      padding: 14px 16px; display: flex; align-items: center; gap: 10px; flex-shrink: 0;
+    }
+    .assist-hdr-logo { display:grid;grid-template-columns:1fr 1fr;gap:2px;width:20px;height:20px;flex-shrink:0; }
+    .assist-hdr-logo div { border-radius:2px; }
+    .assist-hdr h6 { color:#fff; margin:0; font-size:.88rem; font-weight:700; flex:1; }
+    .assist-hdr .assist-close { background:none; border:none; color:#94a3b8; font-size:1.1rem; cursor:pointer; padding:2px 6px; border-radius:6px; }
+    .assist-hdr .assist-close:hover { color:#fff; background:rgba(255,255,255,.1); }
+    .assist-msgs {
+      flex: 1; overflow-y: auto; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px;
+      scrollbar-width: thin; scrollbar-color: rgba(0,0,0,.1) transparent;
+    }
+    .assist-msg { max-width: 92%; padding: 10px 14px; border-radius: 12px; font-size: .82rem; line-height: 1.45; word-break: break-word; }
+    .assist-msg.bot { background: #f1f5f9; color: #1e293b; border-bottom-left-radius: 4px; align-self: flex-start; }
+    .assist-msg.user { background: linear-gradient(135deg,#1d4ed8,#3b82f6); color: #fff; border-bottom-right-radius: 4px; align-self: flex-end; }
+    .assist-msg table { width:100%; border-collapse:collapse; font-size:.76rem; margin:6px 0; }
+    .assist-msg th { background:#e2e8f0; padding:4px 8px; font-size:.68rem; text-transform:uppercase; color:#475569; text-align:left; }
+    .assist-msg td { padding:4px 8px; border-bottom:1px solid #f1f5f9; }
+    .assist-msg .kpi-row { display:flex; gap:8px; flex-wrap:wrap; margin:6px 0; }
+    .assist-msg .kpi { background:#fff; border:1px solid #e2e8f0; border-radius:8px; padding:8px 10px; flex:1; min-width:90px; text-align:center; }
+    .assist-msg .kpi .kv { font-size:.68rem; color:#64748b; margin-bottom:2px; }
+    .assist-msg .kpi .kn { font-size:.92rem; font-weight:700; }
+    .assist-input-bar {
+      display: flex; align-items: center; gap: 8px; padding: 10px 12px;
+      border-top: 1px solid #e2e8f0; flex-shrink: 0; background: #fafbfc;
+    }
+    .assist-input-bar input {
+      flex: 1; border: 1px solid #e2e8f0; border-radius: 10px;
+      padding: 9px 14px; font-size: .84rem; outline: none; background: #fff; color: #1e293b;
+      transition: border-color .2s;
+    }
+    .assist-input-bar input:focus { border-color: #3b82f6; }
+    .assist-input-bar input::placeholder { color: #94a3b8; }
+    .assist-input-bar button {
+      width: 36px; height: 36px; border-radius: 50%; border: none;
+      background: #E31E24; color: #fff; font-size: .9rem; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; flex-shrink:0;
+      transition: background .15s;
+    }
+    .assist-input-bar button:hover { background: #c41920; }
+    .assist-chips { display:flex; gap:6px; flex-wrap:wrap; padding:8px 14px 4px; flex-shrink:0; }
+    .assist-chip {
+      font-size:.7rem; padding:5px 10px; border-radius:20px; cursor:pointer;
+      background:#f1f5f9; color:#475569; border:1px solid #e2e8f0;
+      transition: all .15s; white-space:nowrap;
+    }
+    .assist-chip:hover { background:#dbeafe; color:#1d4ed8; border-color:#93c5fd; }
+    body.dark-mode #muuk-assist-panel { background: var(--bg-card); }
+    body.dark-mode .assist-msg.bot { background: var(--bg); color: var(--text); }
+    body.dark-mode .assist-msg th { background:#334155; color:#94a3b8; }
+    body.dark-mode .assist-msg td { border-color:#334155; color: var(--text); }
+    body.dark-mode .assist-msg .kpi { background: var(--bg); border-color: var(--border); }
+    body.dark-mode .assist-input-bar { background: var(--bg); border-color: var(--border); }
+    body.dark-mode .assist-input-bar input { background: var(--bg-card); border-color: var(--border); color: var(--text); }
+    body.dark-mode .assist-chip { background: var(--bg); color: var(--text-muted); border-color: var(--border); }
+    @media (max-width:768px) {
+      #muuk-assist-panel { bottom:0; right:0; width:100%; height:85vh; border-radius:16px 16px 0 0; }
+      #muuk-assist-btn { bottom:14px; right:14px; width:48px; height:48px; font-size:1.2rem; }
+    }
+
     /* ─── DARK MODE ─── */
     body.dark-mode { --bg: #0f172a; --bg-card: #1e293b; --text: #e2e8f0; --text-muted: #94a3b8; --border: #334155; }
     body.dark-mode { background: var(--bg); color: var(--text); }
@@ -15259,6 +15341,406 @@ function ectaSaveEdit(idx) {
 }
 
 
+/* ═══════════════════════════════════════════
+   MÜÜK ASISTENTE — Motor de Consultas
+═══════════════════════════════════════════ */
+function _assistToggle() {
+  const p = document.getElementById('muuk-assist-panel');
+  p.classList.toggle('open');
+  if (p.classList.contains('open')) {
+    setTimeout(() => document.getElementById('assist-input').focus(), 150);
+  }
+}
+
+function _assistChip(q) { document.getElementById('assist-input').value = q; _assistSend(); }
+
+function _assistSend() {
+  const inp = document.getElementById('assist-input');
+  const q = inp.value.trim();
+  if (!q) return;
+  inp.value = '';
+  _assistAddMsg(q, 'user');
+  const resp = _assistQuery(q);
+  setTimeout(() => _assistAddMsg(resp, 'bot'), 300);
+}
+
+function _assistAddMsg(html, who) {
+  const box = document.getElementById('assist-msgs');
+  const d = document.createElement('div');
+  d.className = 'assist-msg ' + who;
+  d.innerHTML = html;
+  box.appendChild(d);
+  box.scrollTop = box.scrollHeight;
+}
+
+function _assistQuery(text) {
+  const q = text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  try {
+    // ── SALDOS BANCARIOS ──
+    if (_aq(q, ['saldo','banco','bancario','caja','disponible','efectivo','plata','dinero','liquido','liquidez'])) {
+      return _assistSaldos();
+    }
+    // ── VENCIMIENTOS (ARCA + cheques + facturas) ──
+    if (_aq(q, ['vencimiento','vence','arca','impuesto','obligacion','fiscal','afip'])) {
+      return _assistVencimientos();
+    }
+    // ── DEUDAS / ESTADOS DE CUENTA ──
+    if (_aq(q, ['deuda','debe','deudor','estado de cuenta','estados de cuenta','pendiente cobro','moroso','atraso'])) {
+      return _assistDeudas(q);
+    }
+    // ── FACTURAS A COBRAR ──
+    if (_aq(q, ['factura a cobrar','facturas a cobrar','factura cobrar','facturas cobrar','cobrar factura','por cobrar'])) {
+      return _assistFacturasCobrar();
+    }
+    // ── FACTURAS A PAGAR ──
+    if (_aq(q, ['factura a pagar','facturas a pagar','factura pagar','facturas pagar','pagar factura','por pagar'])) {
+      return _assistFacturasPagar();
+    }
+    // ── COMISIONES ──
+    if (_aq(q, ['comision','comisiones','cobro comision','pendiente comision'])) {
+      return _assistComisiones();
+    }
+    // ── STOCK ──
+    if (_aq(q, ['stock','inventario','producto','existencia','deposito','almacen'])) {
+      return _assistStock(q);
+    }
+    // ── LISTAS DE PRECIOS ──
+    if (_aq(q, ['precio','lista','tarifa','cotizacion','lista de precio','listas de precios','precios'])) {
+      return _assistPrecios();
+    }
+    // ── CUENTA SOCIOS ──
+    if (_aq(q, ['socio','socios','cuenta socio','retiro','distribucion','reparto'])) {
+      return _assistSocios();
+    }
+    // ── CHEQUES ──
+    if (_aq(q, ['cheque','echeque','e-cheque','cheques'])) {
+      return _assistCheques();
+    }
+    // ── GESTIÓN COMERCIAL ──
+    if (_aq(q, ['gestion','comercial','operacion','operaciones','cliente','clientes','facturacion'])) {
+      return _assistGestion();
+    }
+    // ── REPORTE PDF ──
+    if (_aq(q, ['reporte','pdf','imprimir','exportar','generar reporte'])) {
+      return _assistReportes();
+    }
+    return 'No encontré una consulta específica. Probá preguntar sobre: <b>saldos</b>, <b>vencimientos</b>, <b>stock</b>, <b>deudas</b>, <b>facturas</b>, <b>comisiones</b>, <b>precios</b>, <b>cheques</b>, <b>socios</b> o <b>gestión</b>.';
+  } catch(e) {
+    console.error('[Assist]', e);
+    return 'Ocurrió un error procesando la consulta. Intentá de nuevo.';
+  }
+}
+
+function _aq(q, terms) { return terms.some(t => q.includes(t)); }
+
+/* ── Respuestas por tipo ── */
+
+function _assistSaldos() {
+  const sB = calcSaldo(ST.cajaBancos || []);
+  const sE = calcSaldo(ST.cajaEfectivo || []);
+  const total = sB + sE;
+  // Desglose por banco
+  const bnk = {};
+  (ST.cajaBancos || []).forEach(m => {
+    const b = m.banco || 'Sin asignar';
+    bnk[b] = (bnk[b] || 0) + (m.tipo === 'ingreso' ? 1 : -1) * +m.monto;
+  });
+  let bankRows = Object.entries(bnk).sort((a,b) => b[1] - a[1])
+    .map(([b,s]) => `<tr><td>${b}</td><td style="text-align:right;font-weight:600;color:${s>=0?'#16a34a':'#dc2626'}">${fmt(s)}</td></tr>`).join('');
+  return `<div class="kpi-row">
+    <div class="kpi" style="border-left:3px solid #3b82f6"><small>Bancos</small><b>${fmt(sB)}</b></div>
+    <div class="kpi" style="border-left:3px solid #f59e0b"><small>Efectivo</small><b>${fmt(sE)}</b></div>
+    <div class="kpi" style="border-left:3px solid #10b981"><small>Total Disponible</small><b>${fmt(total)}</b></div>
+  </div>
+  ${bankRows ? '<table><thead><tr><th>Banco</th><th style="text-align:right">Saldo</th></tr></thead><tbody>' + bankRows + '</tbody></table>' : ''}`;
+}
+
+function _assistVencimientos() {
+  const hoyStr = hoy();
+  let html = '<b>Vencimientos próximos 30 días</b><br>';
+  // ARCA
+  const arca = (ST.arcaVencimientos || []).filter(v => !v.pagado && v.fecha && dHasta(v.fecha) >= 0 && dHasta(v.fecha) <= 30);
+  if (arca.length) {
+    const totalArca = arca.reduce((s,v) => s + (+v.monto || 0), 0);
+    html += `<div style="margin:6px 0"><b style="color:#7c3aed">ARCA/Impuestos:</b> ${arca.length} obligaciones · ${fmt(totalArca)}</div>`;
+    html += '<table><thead><tr><th>Vencimiento</th><th>Concepto</th><th style="text-align:right">Monto</th></tr></thead><tbody>';
+    arca.sort((a,b) => a.fecha.localeCompare(b.fecha)).slice(0, 10).forEach(v => {
+      html += `<tr><td>${fmtF(v.fecha)}</td><td>${v.concepto || v.desc || '–'}</td><td style="text-align:right">${fmt(v.monto)}</td></tr>`;
+    });
+    if (arca.length > 10) html += `<tr><td colspan="3" style="text-align:center;color:#64748b">...y ${arca.length - 10} más</td></tr>`;
+    html += '</tbody></table>';
+  } else {
+    html += '<div style="color:#16a34a">Sin vencimientos ARCA en los próximos 30 días.</div>';
+  }
+  // Cheques por cobrar
+  const chqCobrar = [...(ST.chequesFisicos || []).filter(c => (c.estado === 'en_cartera' || c.estado === 'pendiente') && c.fechaVenc && dHasta(c.fechaVenc) >= 0 && dHasta(c.fechaVenc) <= 30),
+                     ...(ST.eCheques || []).filter(c => c.estado === 'pendiente' && c.fechaVenc && dHasta(c.fechaVenc) >= 0 && dHasta(c.fechaVenc) <= 30)];
+  if (chqCobrar.length) {
+    const tChq = chqCobrar.reduce((s,c) => s + +c.monto, 0);
+    html += `<div style="margin:6px 0"><b style="color:#3b82f6">Cheques a cobrar:</b> ${chqCobrar.length} · ${fmt(tChq)}</div>`;
+  }
+  // Cheques a pagar
+  const chqPagar = (ST.chequesPagar || []).filter(c => c.estado === 'pendiente' && c.fechaVenc && dHasta(c.fechaVenc) >= 0 && dHasta(c.fechaVenc) <= 30);
+  if (chqPagar.length) {
+    const tPagar = chqPagar.reduce((s,c) => s + +c.monto, 0);
+    html += `<div style="margin:6px 0"><b style="color:#dc2626">Cheques a pagar:</b> ${chqPagar.length} · ${fmt(tPagar)}</div>`;
+  }
+  // Facturas próximas
+  const facCob = (ST.facturasACobrar || []).filter(f => f.estado === 'pendiente' && f.fechaVenc && dHasta(f.fechaVenc) >= 0 && dHasta(f.fechaVenc) <= 30);
+  const facPag = (ST.facturasPagar || []).filter(f => f.estado === 'pendiente' && f.fechaVenc && dHasta(f.fechaVenc) >= 0 && dHasta(f.fechaVenc) <= 30);
+  if (facCob.length) html += `<div style="margin:4px 0"><b style="color:#16a34a">Facturas a cobrar prox:</b> ${facCob.length} · ${fmt(facCob.reduce((s,f) => s + +f.monto, 0))}</div>`;
+  if (facPag.length) html += `<div style="margin:4px 0"><b style="color:#f59e0b">Facturas a pagar prox:</b> ${facPag.length} · ${fmt(facPag.reduce((s,f) => s + +f.monto, 0))}</div>`;
+  return html;
+}
+
+function _assistDeudas(q) {
+  // Check if querying a specific client
+  const palabras = q.replace(/[^a-z0-9 ]/g, '').split(/\s+/).filter(w => !['deuda','debe','deudor','estado','de','cuenta','quien','cuanto','pendiente','cobro','el','la','los','las','del','al','que'].includes(w));
+  const clienteFilter = palabras.length ? palabras.join(' ') : null;
+
+  // From facturas a cobrar
+  const facPend = (ST.facturasACobrar || []).filter(f => f.estado === 'pendiente');
+  let deudores = {};
+  facPend.forEach(f => {
+    const c = f.cliente || f.razonSocial || 'Sin nombre';
+    if (clienteFilter && !c.toLowerCase().includes(clienteFilter)) return;
+    if (!deudores[c]) deudores[c] = { total: 0, facturas: 0, vencidas: 0 };
+    deudores[c].total += +f.monto || 0;
+    deudores[c].facturas++;
+    if (f.fechaVenc && dHasta(f.fechaVenc) < 0) deudores[c].vencidas++;
+  });
+
+  // Also from _ectaCache (estados de cuenta)
+  const vendedores = ['Jonathan', 'Gaston', 'Alejandro'];
+  vendedores.forEach(v => {
+    (_ectaCache[v] || []).forEach(c => {
+      const nombre = c.cliente || c.nombre || 'Sin nombre';
+      if (clienteFilter && !nombre.toLowerCase().includes(clienteFilter)) return;
+      const saldo = +c.saldo || +c.deuda || 0;
+      if (saldo > 0) {
+        if (!deudores[nombre]) deudores[nombre] = { total: 0, facturas: 0, vencidas: 0 };
+        deudores[nombre].total = Math.max(deudores[nombre].total, saldo);
+      }
+    });
+  });
+
+  const sorted = Object.entries(deudores).sort((a,b) => b[1].total - a[1].total);
+  if (!sorted.length) return clienteFilter ? `No encontré deudas para "<b>${clienteFilter}</b>".` : 'No hay deudas pendientes registradas.';
+
+  const totalDeuda = sorted.reduce((s,[,d]) => s + d.total, 0);
+  let html = `<div class="kpi-row"><div class="kpi" style="border-left:3px solid #dc2626"><small>Deuda Total</small><b>${fmt(totalDeuda)}</b></div><div class="kpi" style="border-left:3px solid #f59e0b"><small>Deudores</small><b>${sorted.length}</b></div></div>`;
+  html += '<table><thead><tr><th>Cliente</th><th style="text-align:right">Deuda</th><th>Vencidas</th></tr></thead><tbody>';
+  sorted.slice(0, 15).forEach(([c, d]) => {
+    html += `<tr><td>${c}</td><td style="text-align:right;font-weight:600;color:#dc2626">${fmt(d.total)}</td><td style="text-align:center">${d.vencidas > 0 ? '<span style="color:#dc2626">'+d.vencidas+'</span>' : '–'}</td></tr>`;
+  });
+  if (sorted.length > 15) html += `<tr><td colspan="3" style="text-align:center;color:#64748b">...y ${sorted.length - 15} más</td></tr>`;
+  html += '</tbody></table>';
+  return html;
+}
+
+function _assistFacturasCobrar() {
+  const facs = (ST.facturasACobrar || []).filter(f => f.estado === 'pendiente');
+  if (!facs.length) return 'No hay facturas pendientes de cobro.';
+  const total = facs.reduce((s,f) => s + (+f.monto || 0), 0);
+  const vencidas = facs.filter(f => f.fechaVenc && dHasta(f.fechaVenc) < 0);
+  const totalVenc = vencidas.reduce((s,f) => s + (+f.monto || 0), 0);
+  let html = `<div class="kpi-row">
+    <div class="kpi" style="border-left:3px solid #16a34a"><small>Total a Cobrar</small><b>${fmt(total)}</b></div>
+    <div class="kpi" style="border-left:3px solid #dc2626"><small>Vencidas</small><b>${fmt(totalVenc)}</b><small>${vencidas.length} fact.</small></div>
+  </div>`;
+  html += '<table><thead><tr><th>Cliente</th><th>Vence</th><th style="text-align:right">Monto</th></tr></thead><tbody>';
+  facs.sort((a,b) => (a.fechaVenc || '9').localeCompare(b.fechaVenc || '9')).slice(0, 12).forEach(f => {
+    const d = f.fechaVenc ? dHasta(f.fechaVenc) : null;
+    const color = d !== null && d < 0 ? 'color:#dc2626;font-weight:600' : '';
+    html += `<tr><td>${f.cliente || f.razonSocial || '–'}</td><td style="${color}">${fmtF(f.fechaVenc)}</td><td style="text-align:right">${fmt(f.monto)}</td></tr>`;
+  });
+  if (facs.length > 12) html += `<tr><td colspan="3" style="text-align:center;color:#64748b">...y ${facs.length - 12} más</td></tr>`;
+  html += '</tbody></table>';
+  html += `<div style="margin-top:8px"><button onclick="irA('facturasACobrar');_assistToggle()" style="background:#3b82f6;color:#fff;border:none;border-radius:6px;padding:4px 12px;font-size:.75rem;cursor:pointer">Ver todas →</button></div>`;
+  return html;
+}
+
+function _assistFacturasPagar() {
+  const facs = (ST.facturasPagar || []).filter(f => f.estado === 'pendiente');
+  if (!facs.length) return 'No hay facturas pendientes de pago.';
+  const total = facs.reduce((s,f) => s + (+f.monto || 0), 0);
+  const vencidas = facs.filter(f => f.fechaVenc && dHasta(f.fechaVenc) < 0);
+  const totalVenc = vencidas.reduce((s,f) => s + (+f.monto || 0), 0);
+  let html = `<div class="kpi-row">
+    <div class="kpi" style="border-left:3px solid #f59e0b"><small>Total a Pagar</small><b>${fmt(total)}</b></div>
+    <div class="kpi" style="border-left:3px solid #dc2626"><small>Vencidas</small><b>${fmt(totalVenc)}</b><small>${vencidas.length} fact.</small></div>
+  </div>`;
+  html += '<table><thead><tr><th>Proveedor</th><th>Vence</th><th style="text-align:right">Monto</th></tr></thead><tbody>';
+  facs.sort((a,b) => (a.fechaVenc || '9').localeCompare(b.fechaVenc || '9')).slice(0, 12).forEach(f => {
+    const d = f.fechaVenc ? dHasta(f.fechaVenc) : null;
+    const color = d !== null && d < 0 ? 'color:#dc2626;font-weight:600' : '';
+    html += `<tr><td>${f.proveedor || f.razonSocial || '–'}</td><td style="${color}">${fmtF(f.fechaVenc)}</td><td style="text-align:right">${fmt(f.monto)}</td></tr>`;
+  });
+  if (facs.length > 12) html += `<tr><td colspan="3" style="text-align:center;color:#64748b">...y ${facs.length - 12} más</td></tr>`;
+  html += '</tbody></table>';
+  html += `<div style="margin-top:8px"><button onclick="irA('facturasPagar');_assistToggle()" style="background:#f59e0b;color:#fff;border:none;border-radius:6px;padding:4px 12px;font-size:.75rem;cursor:pointer">Ver todas →</button></div>`;
+  return html;
+}
+
+function _assistComisiones() {
+  const resumen = ST.comisionesResumen || [];
+  const total = ST.comisionesTotal || 0;
+  if (!resumen.length && !total) return 'No hay datos de comisiones cargados.';
+  const pendientes = resumen.filter(e => e.saldo > 0);
+  const totalPend = pendientes.reduce((s,e) => s + e.saldo, 0);
+  let html = `<div class="kpi-row">
+    <div class="kpi" style="border-left:3px solid #8b5cf6"><small>Comisiones Totales</small><b>${fmt(total)}</b></div>
+    <div class="kpi" style="border-left:3px solid #dc2626"><small>Pendientes</small><b>${fmt(totalPend)}</b><small>${pendientes.length} emp.</small></div>
+  </div>`;
+  if (pendientes.length) {
+    html += '<table><thead><tr><th>Empresa</th><th style="text-align:right">Pendiente</th></tr></thead><tbody>';
+    pendientes.sort((a,b) => b.saldo - a.saldo).slice(0, 10).forEach(e => {
+      html += `<tr><td>${e.empresa || e.nombre || '–'}</td><td style="text-align:right;font-weight:600;color:#dc2626">${fmt(e.saldo)}</td></tr>`;
+    });
+    html += '</tbody></table>';
+  }
+  html += `<div style="margin-top:8px"><button onclick="irA('comisiones');_assistToggle()" style="background:#8b5cf6;color:#fff;border:none;border-radius:6px;padding:4px 12px;font-size:.75rem;cursor:pointer">Ver detalle →</button></div>`;
+  return html;
+}
+
+function _assistStock(q) {
+  const prods = ST.stockProductos || [];
+  if (!prods.length) return 'No hay productos cargados en stock.';
+  // Check specific product search
+  const palabras = q.replace(/[^a-z0-9 ]/g, '').split(/\s+/).filter(w => !['stock','inventario','producto','productos','existencia','cuanto','hay','del','de','el','la','los'].includes(w));
+  const busq = palabras.join(' ');
+  let filtered = prods;
+  if (busq.length > 1) {
+    filtered = prods.filter(p => (p.nombre || '').toLowerCase().includes(busq) || (p.codigo || '').toLowerCase().includes(busq) || (p.categoria || '').toLowerCase().includes(busq));
+  }
+  if (!filtered.length) filtered = prods;
+  const totalVal = filtered.reduce((s,p) => s + (+p.stockActual || 0) * (+p.precioUnitario || +p.costo || 0), 0);
+  const bajoMin = filtered.filter(p => p.stockMinimo && +p.stockActual <= +p.stockMinimo);
+  let html = `<div class="kpi-row">
+    <div class="kpi" style="border-left:3px solid #3b82f6"><small>Productos</small><b>${filtered.length}</b></div>
+    <div class="kpi" style="border-left:3px solid #10b981"><small>Valor Estimado</small><b>${fmt(totalVal)}</b></div>
+    ${bajoMin.length ? `<div class="kpi" style="border-left:3px solid #dc2626"><small>Bajo Mínimo</small><b style="color:#dc2626">${bajoMin.length}</b></div>` : ''}
+  </div>`;
+  html += '<table><thead><tr><th>Producto</th><th style="text-align:right">Stock</th><th style="text-align:right">Mín</th></tr></thead><tbody>';
+  filtered.sort((a,b) => (+a.stockActual || 0) - (+b.stockActual || 0)).slice(0, 15).forEach(p => {
+    const bajo = p.stockMinimo && +p.stockActual <= +p.stockMinimo;
+    html += `<tr style="${bajo ? 'background:#fef2f2' : ''}"><td>${p.codigo ? p.codigo + ' — ' : ''}${p.nombre || '–'}</td><td style="text-align:right;font-weight:600;${bajo ? 'color:#dc2626' : ''}">${p.stockActual || 0} ${p.unidad || 'u'}</td><td style="text-align:right;color:#64748b">${p.stockMinimo || '–'}</td></tr>`;
+  });
+  if (filtered.length > 15) html += `<tr><td colspan="3" style="text-align:center;color:#64748b">...y ${filtered.length - 15} más</td></tr>`;
+  html += '</tbody></table>';
+  html += `<div style="margin-top:8px"><button onclick="irA('stock');_assistToggle()" style="background:#3b82f6;color:#fff;border:none;border-radius:6px;padding:4px 12px;font-size:.75rem;cursor:pointer">Ver stock →</button></div>`;
+  return html;
+}
+
+function _assistPrecios() {
+  const listas = ST.listasPrecios || [];
+  if (!listas.length) return 'No hay listas de precios cargadas.';
+  let html = `<b>Listas de Precios:</b> ${listas.length} lista${listas.length > 1 ? 's' : ''}`;
+  html += '<table><thead><tr><th>Lista</th><th>Moneda</th><th>Vigencia</th><th>Items</th></tr></thead><tbody>';
+  listas.slice(0, 10).forEach(l => {
+    html += `<tr><td>${l.nombre || '–'}</td><td>${l.moneda || 'ARS'}</td><td>${fmtF(l.fechaVigencia) || '–'}</td><td style="text-align:center">${(l.items || []).length}</td></tr>`;
+  });
+  html += '</tbody></table>';
+  html += `<div style="margin-top:8px"><button onclick="irA('listasPrecios');_assistToggle()" style="background:#10b981;color:#fff;border:none;border-radius:6px;padding:4px 12px;font-size:.75rem;cursor:pointer">Ver listas →</button></div>`;
+  return html;
+}
+
+function _assistSocios() {
+  const socios = ST.socios || [];
+  if (!socios.length) return 'No hay socios configurados.';
+  const allMov = [...(ST.cajaBancos || []), ...(ST.cajaEfectivo || [])];
+  const retiros = {};
+  socios.forEach(s => { retiros[s.id] = 0; });
+  allMov.forEach(m => {
+    if (m.tipo === 'egreso' && m.concepto && m.concepto.toLowerCase().includes('retiro')) {
+      const nombreBuscado = (m.desc || m.concepto || '').toLowerCase();
+      const socio = socios.find(s => nombreBuscado.includes(s.nombre.toLowerCase()));
+      if (socio) retiros[socio.id] += +m.monto || 0;
+    }
+  });
+  const maxRetiro = Math.max(...socios.map(s => retiros[s.id] || 0), 0);
+  let html = '<b>Cuenta Socios</b>';
+  html += '<div class="kpi-row">';
+  socios.forEach(s => {
+    const r = retiros[s.id] || 0;
+    const dif = maxRetiro - r;
+    html += `<div class="kpi" style="border-left:3px solid ${dif > 100 ? '#f59e0b' : '#10b981'}"><small>${s.nombre}</small><b>${fmt(r)}</b>${dif > 100 ? `<small style="color:#dc2626">Falta: ${fmt(dif)}</small>` : '<small style="color:#16a34a">OK</small>'}</div>`;
+  });
+  html += '</div>';
+  html += `<div style="margin-top:8px"><button onclick="irA('cuentaSocios');_assistToggle()" style="background:#8b5cf6;color:#fff;border:none;border-radius:6px;padding:4px 12px;font-size:.75rem;cursor:pointer">Ver detalle →</button></div>`;
+  return html;
+}
+
+function _assistCheques() {
+  const fisicos = (ST.chequesFisicos || []).filter(c => c.estado === 'en_cartera' || c.estado === 'pendiente');
+  const echeques = (ST.eCheques || []).filter(c => c.estado === 'pendiente');
+  const pagar = (ST.chequesPagar || []).filter(c => c.estado === 'pendiente');
+  const tCobrar = [...fisicos, ...echeques].reduce((s,c) => s + +c.monto, 0);
+  const tPagar = pagar.reduce((s,c) => s + +c.monto, 0);
+  let html = `<div class="kpi-row">
+    <div class="kpi" style="border-left:3px solid #3b82f6"><small>A Cobrar</small><b>${fmt(tCobrar)}</b><small>${fisicos.length + echeques.length} cheques</small></div>
+    <div class="kpi" style="border-left:3px solid #dc2626"><small>A Pagar</small><b>${fmt(tPagar)}</b><small>${pagar.length} cheques</small></div>
+    <div class="kpi" style="border-left:3px solid #10b981"><small>Neto</small><b>${fmt(tCobrar - tPagar)}</b></div>
+  </div>`;
+  // Próximos vencimientos
+  const prox = [...fisicos, ...echeques, ...pagar].filter(c => c.fechaVenc && dHasta(c.fechaVenc) >= 0).sort((a,b) => a.fechaVenc.localeCompare(b.fechaVenc));
+  if (prox.length) {
+    html += '<b style="font-size:.78rem">Próximos vencimientos:</b>';
+    html += '<table><thead><tr><th>Fecha</th><th>Tipo</th><th style="text-align:right">Monto</th></tr></thead><tbody>';
+    prox.slice(0, 8).forEach(c => {
+      const tipo = pagar.includes(c) ? '<span style="color:#dc2626">Pagar</span>' : '<span style="color:#3b82f6">Cobrar</span>';
+      html += `<tr><td>${fmtF(c.fechaVenc)}</td><td>${tipo}</td><td style="text-align:right">${fmt(c.monto)}</td></tr>`;
+    });
+    html += '</tbody></table>';
+  }
+  return html;
+}
+
+function _assistGestion() {
+  if (!GESTION_DATA || !GESTION_DATA.rows || !GESTION_DATA.rows.length) {
+    return 'Los datos de Gestión no están cargados. <button onclick="irA(\'gestion\');_assistToggle()" style="background:#3b82f6;color:#fff;border:none;border-radius:6px;padding:4px 12px;font-size:.75rem;cursor:pointer">Ir a Gestión →</button>';
+  }
+  const d = GESTION_DATA;
+  const totalFact = d.rows.reduce((s,r) => s + (+r.monto || 0), 0);
+  const totalOps = d.rows.length;
+  const clientes = d.clientes ? d.clientes.length : new Set(d.rows.map(r => r.cliente)).size;
+  let html = `<div class="kpi-row">
+    <div class="kpi" style="border-left:3px solid #E31E24"><small>Facturación</small><b>${fmt(totalFact)}</b></div>
+    <div class="kpi" style="border-left:3px solid #3b82f6"><small>Operaciones</small><b>${totalOps}</b></div>
+    <div class="kpi" style="border-left:3px solid #10b981"><small>Clientes</small><b>${clientes}</b></div>
+  </div>`;
+  // Last 3 months if available
+  if (d.byMes && d.byMes.length) {
+    const ultimos = d.byMes.slice(-3);
+    html += '<b style="font-size:.78rem">Últimos meses:</b>';
+    html += '<table><thead><tr><th>Mes</th><th style="text-align:right">Facturado</th><th style="text-align:right">Ops</th></tr></thead><tbody>';
+    ultimos.forEach(m => {
+      html += `<tr><td>${m.label || m.mes || '–'}</td><td style="text-align:right">${fmt(m.total || m.monto || 0)}</td><td style="text-align:right">${m.ops || m.cantidad || 0}</td></tr>`;
+    });
+    html += '</tbody></table>';
+  }
+  html += `<div style="margin-top:8px;display:flex;gap:6px"><button onclick="irA('gestion');_assistToggle()" style="background:#3b82f6;color:#fff;border:none;border-radius:6px;padding:4px 12px;font-size:.75rem;cursor:pointer">Ver Gestión →</button><button onclick="printReporteComercial()" style="background:#E31E24;color:#fff;border:none;border-radius:6px;padding:4px 12px;font-size:.75rem;cursor:pointer">PDF Comercial →</button></div>`;
+  return html;
+}
+
+function _assistReportes() {
+  return `<b>Reportes disponibles:</b>
+  <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px">
+    <button onclick="generarReportePDF()" style="background:#dc2626;color:#fff;border:none;border-radius:6px;padding:8px 14px;font-size:.8rem;cursor:pointer;text-align:left"><i class="bi bi-file-earmark-pdf me-2"></i>Reporte General PDF</button>
+    <button onclick="printReporteComercial()" style="background:#3b82f6;color:#fff;border:none;border-radius:6px;padding:8px 14px;font-size:.8rem;cursor:pointer;text-align:left"><i class="bi bi-file-earmark-pdf me-2"></i>Reporte Comercial PDF</button>
+  </div>
+  <div style="margin-top:8px;color:#64748b;font-size:.75rem">Los reportes se abren en nueva ventana para imprimir o guardar como PDF.</div>`;
+}
+
+// ── Keyboard shortcut Ctrl+J ──
+document.addEventListener('keydown', function(e) {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'j') {
+    e.preventDefault();
+    _assistToggle();
+  }
+});
+
+
 </script>
 <!-- ═══ DATALIST BANCOS BCRA ═══ -->
 <datalist id="bcra-banks-list">
@@ -15419,6 +15901,38 @@ function ectaSaveEdit(idx) {
     <div id="search-results" style="max-height:380px;overflow-y:auto;padding:8px 0"></div>
   </div>
 </div>
+<!-- ═══ MÜÜK ASISTENTE ═══ -->
+<button id="muuk-assist-btn" onclick="_assistToggle()" title="Asistente MÜÜK (Ctrl+J)">
+  <i class="bi bi-chat-dots-fill"></i>
+</button>
+<div id="muuk-assist-panel">
+  <div class="assist-hdr">
+    <div style="display:flex;align-items:center;gap:8px">
+      <span style="font-weight:900;font-size:1rem;letter-spacing:.5px">MÜÜK</span>
+      <span style="font-size:.72rem;opacity:.8">Asistente</span>
+    </div>
+    <button onclick="_assistToggle()" style="background:none;border:none;color:#fff;font-size:1.1rem;cursor:pointer"><i class="bi bi-x-lg"></i></button>
+  </div>
+  <div class="assist-chips" id="assist-chips">
+    <button onclick="_assistChip('saldos')">Saldos</button>
+    <button onclick="_assistChip('vencimientos')">Vencimientos</button>
+    <button onclick="_assistChip('stock')">Stock</button>
+    <button onclick="_assistChip('deudas')">Deudas</button>
+    <button onclick="_assistChip('facturas cobrar')">Facturas a Cobrar</button>
+    <button onclick="_assistChip('facturas pagar')">Facturas a Pagar</button>
+    <button onclick="_assistChip('comisiones')">Comisiones</button>
+    <button onclick="_assistChip('socios')">Cta. Socios</button>
+    <button onclick="_assistChip('listas precios')">Precios</button>
+  </div>
+  <div class="assist-msgs" id="assist-msgs">
+    <div class="assist-msg bot">Hola! Soy el asistente de <b>MÜÜK</b>. Consultame sobre saldos, vencimientos, stock, deudas, facturas, comisiones, listas de precios o cuenta socios.</div>
+  </div>
+  <div class="assist-input-bar">
+    <input type="text" id="assist-input" placeholder="Preguntá algo..." onkeydown="if(event.key==='Enter')_assistSend()">
+    <button onclick="_assistSend()"><i class="bi bi-send-fill"></i></button>
+  </div>
+</div>
+
 </div><!-- /app-wrapper -->
 </body>
 </html>
