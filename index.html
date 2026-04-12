@@ -1477,9 +1477,14 @@
   <div id="page-reportes" class="page">
     <div class="page-hdr d-flex align-items-center justify-content-between flex-wrap gap-2">
       <h4 class="mb-0"><i class="bi bi-bar-chart-line-fill me-2 text-primary"></i>Reportes y Análisis</h4>
-      <button class="btn btn-danger" onclick="generarReportePDF()" style="font-size:.88rem;padding:7px 18px;border-radius:8px">
-        <i class="bi bi-file-earmark-pdf me-1"></i>Descargar Reporte PDF
-      </button>
+      <div class="d-flex gap-2 flex-wrap">
+        <button class="btn btn-danger" onclick="generarReportePDF()" style="font-size:.82rem;padding:7px 16px;border-radius:8px">
+          <i class="bi bi-file-earmark-pdf me-1"></i>Reporte General PDF
+        </button>
+        <button class="btn btn-primary" onclick="printReporteComercial()" style="font-size:.82rem;padding:7px 16px;border-radius:8px">
+          <i class="bi bi-graph-up-arrow me-1"></i>Reporte Comercial PDF
+        </button>
+      </div>
     </div>
     <!-- REPORTE MENSUAL -->
     <div class="card p-3 mb-4">
@@ -2495,6 +2500,10 @@ CREATE POLICY "acceso total" ON flujo_caja_versions FOR ALL USING (true) WITH CH
         <li class="nav-item"><button class="nav-link" onclick="gestionTab('cliente',this)"><i class="bi bi-people me-1"></i>Clientes</button></li>
         <li class="nav-item"><button class="nav-link" onclick="gestionTab('detalle',this)"><i class="bi bi-table me-1"></i>Detalle</button></li>
       </ul>
+      <button class="btn btn-sm" onclick="printReporteComercial()"
+        style="background:#1d4ed8;color:#fff;font-size:.68rem;border-radius:6px;padding:3px 8px;white-space:nowrap">
+        <i class="bi bi-file-earmark-pdf me-1"></i>PDF Comercial
+      </button>
       <button class="btn btn-sm" id="btn-gest-sync" onclick="gestionSincronizar()"
         style="background:#16a34a;color:#fff;font-size:.68rem;border-radius:6px;padding:3px 8px;white-space:nowrap">
         <i class="bi bi-arrow-clockwise me-1"></i>Sync
@@ -7997,6 +8006,109 @@ ${Object.keys(byCatCom).length?`
   </tbody>
 </table>`:'<p style="color:#94a3b8;padding:6px 0">Sin comisiones registradas para este año.</p>'}
 
+<h2>Vencimientos ARCA — Próximos 30 días</h2>
+${(()=>{
+  const arcaPend = (ST.arcaVencimientos||[]).filter(v=>!v.pagado);
+  const in30 = new Date(); in30.setDate(in30.getDate()+30);
+  const hoyStr = hoy();
+  const arca30 = arcaPend.filter(v=>v.fecha>=hoyStr && v.fecha<=in30.toISOString().split('T')[0]).sort((a,b)=>a.fecha.localeCompare(b.fecha));
+  const totalArca30 = arca30.reduce((s,v)=>s+(+v.importe||0),0);
+  const arcaVencidas = arcaPend.filter(v=>v.fecha<hoyStr);
+  const totArcaVenc = arcaVencidas.reduce((s,v)=>s+(+v.importe||0),0);
+  if(!arca30.length && !arcaVencidas.length) return '<p style="color:#94a3b8;padding:6px 0">Sin vencimientos ARCA pendientes.</p>';
+  let out = '';
+  if(arcaVencidas.length) out += '<div class="alert-danger" style="margin-bottom:8px">⚠️ <strong>'+arcaVencidas.length+' obligación'+(arcaVencidas.length>1?'es':'')+' vencida'+(arcaVencidas.length>1?'s':'')+'</strong> por '+fmt(totArcaVenc)+'</div>';
+  out += '<div style="display:flex;gap:16px;margin-bottom:8px"><div style="flex:1;background:#ede9fe;border-radius:8px;padding:10px;text-align:center"><div style="font-size:9px;color:#64748b">PRÓXIMOS 30 DÍAS</div><div style="font-weight:700;color:#7c3aed;font-size:14px">'+fmt(totalArca30)+'</div><div style="font-size:8px;color:#94a3b8">'+arca30.length+' obligaciones</div></div><div style="flex:1;background:#f8fafc;border-radius:8px;padding:10px;text-align:center"><div style="font-size:9px;color:#64748b">TOTAL PENDIENTE</div><div style="font-weight:700;color:#0f172a;font-size:14px">'+fmt(arcaPend.reduce((s,v)=>s+(+v.importe||0),0))+'</div><div style="font-size:8px;color:#94a3b8">'+arcaPend.length+' obligaciones</div></div></div>';
+  if(arca30.length) out += '<table><thead><tr><th>Fecha</th><th>Concepto</th><th>Detalle</th><th style="text-align:right">Importe</th><th>Días</th></tr></thead><tbody>'+arca30.map(v=>{
+    const dias = Math.round((new Date(v.fecha+'T00:00:00')-new Date(hoyStr+'T00:00:00'))/86400000);
+    return '<tr><td>'+fmtF(v.fecha)+'</td><td style="font-weight:600">'+v.concepto+'</td><td style="color:#64748b;font-size:9px">'+(v.detalle||'')+'</td><td style="text-align:right;font-weight:700;color:#7c3aed">'+fmt(v.importe)+'</td><td>'+(dias<=3?'<span class="badge bg-danger">'+dias+'d</span>':dias<=7?'<span class="badge bg-warning">'+dias+'d</span>':dias+'d')+'</td></tr>';
+  }).join('')+'</tbody></table>';
+  return out;
+})()}
+
+<h2>Stock — Resumen de Inventario</h2>
+${(()=>{
+  const prods = ST.stockProductos||[];
+  if(!prods.length) return '<p style="color:#94a3b8;padding:6px 0">Sin productos en stock.</p>';
+  const totalCosto = prods.reduce((s,p)=>s+(+p.precio||0)*(+p.stock||0),0);
+  const totalVenta = prods.reduce((s,p)=>s+(+p.precioVenta||0)*(+p.stock||0),0);
+  const bajoMin = prods.filter(p=>(+p.stock||0)>0 && p.stockMin && (+p.stock||0)<=(+p.stockMin||0));
+  const sinStock = prods.filter(p=>(+p.stock||0)<=0);
+  const cats = {};
+  prods.forEach(p=>{const c=p.categoria||'Sin categoría';if(!cats[c])cats[c]={q:0,val:0};cats[c].q+=(+p.stock||0);cats[c].val+=(+p.precioVenta||0)*(+p.stock||0);});
+  let out = '<div style="display:flex;gap:12px;margin-bottom:10px;flex-wrap:wrap">';
+  out += '<div style="flex:1;min-width:100px;background:#eff6ff;border-radius:8px;padding:10px;text-align:center"><div style="font-size:9px;color:#64748b">PRODUCTOS</div><div style="font-weight:700;color:#1d4ed8;font-size:14px">'+prods.length+'</div></div>';
+  out += '<div style="flex:1;min-width:100px;background:#f0fdf4;border-radius:8px;padding:10px;text-align:center"><div style="font-size:9px;color:#64748b">VALOR COSTO</div><div style="font-weight:700;color:#16a34a;font-size:14px">'+fmt(totalCosto)+'</div></div>';
+  out += '<div style="flex:1;min-width:100px;background:#ede9fe;border-radius:8px;padding:10px;text-align:center"><div style="font-size:9px;color:#64748b">VALOR VENTA</div><div style="font-weight:700;color:#7c3aed;font-size:14px">'+fmt(totalVenta)+'</div></div>';
+  out += '<div style="flex:1;min-width:100px;background:'+(bajoMin.length?'#fef3c7':'#f8fafc')+';border-radius:8px;padding:10px;text-align:center"><div style="font-size:9px;color:#64748b">BAJO MÍNIMO</div><div style="font-weight:700;color:'+(bajoMin.length?'#d97706':'#64748b')+';font-size:14px">'+bajoMin.length+'</div></div>';
+  out += '<div style="flex:1;min-width:100px;background:'+(sinStock.length?'#fee2e2':'#f8fafc')+';border-radius:8px;padding:10px;text-align:center"><div style="font-size:9px;color:#64748b">SIN STOCK</div><div style="font-weight:700;color:'+(sinStock.length?'#dc2626':'#64748b')+';font-size:14px">'+sinStock.length+'</div></div>';
+  out += '</div>';
+  if(Object.keys(cats).length) {
+    out += '<h3>Por Categoría</h3><table><thead><tr><th>Categoría</th><th style="text-align:right">Unidades</th><th style="text-align:right">Valor Venta</th></tr></thead><tbody>';
+    Object.entries(cats).sort((a,b)=>b[1].val-a[1].val).forEach(([c,d])=>{ out+='<tr><td style="font-weight:600">'+c+'</td><td style="text-align:right">'+d.q+'</td><td style="text-align:right;font-weight:700">'+fmt(d.val)+'</td></tr>'; });
+    out += '</tbody></table>';
+  }
+  if(bajoMin.length) {
+    out += '<h3 style="color:#d97706">⚠ Productos bajo mínimo</h3><table><thead><tr><th>Producto</th><th style="text-align:right">Stock</th><th style="text-align:right">Mínimo</th></tr></thead><tbody>';
+    bajoMin.forEach(p=>{ out+='<tr><td style="font-weight:600">'+(p.nombre||'–')+'</td><td style="text-align:right;color:#d97706;font-weight:700">'+(+p.stock||0)+'</td><td style="text-align:right">'+(+p.stockMin||0)+'</td></tr>'; });
+    out += '</tbody></table>';
+  }
+  return out;
+})()}
+
+<h2>Comisiones Pendientes</h2>
+${(()=>{
+  const resumen = ST.comisionesResumen||[];
+  const total = ST.comisionesTotal||0;
+  const conSaldo = resumen.filter(e=>e.saldo>0);
+  if(!conSaldo.length && total<=0) return '<p style="color:#94a3b8;padding:6px 0">Sin comisiones pendientes.</p>';
+  let out = '<div style="display:flex;gap:16px;margin-bottom:10px">';
+  out += '<div style="flex:1;background:#ede9fe;border-radius:8px;padding:12px;text-align:center"><div style="font-size:9px;color:#64748b">TOTAL PENDIENTE</div><div style="font-weight:700;color:#7c3aed;font-size:16px">'+fmt(total)+'</div><div style="font-size:8px;color:#94a3b8">'+conSaldo.length+' empresa'+(conSaldo.length!==1?'s':'')+'</div></div>';
+  out += '<div style="flex:1;background:#f8fafc;border-radius:8px;padding:12px;text-align:center"><div style="font-size:9px;color:#64748b">% SOBRE FACTURACIÓN</div><div style="font-weight:700;color:#1d4ed8;font-size:16px">'+(totFacCobPend+totFacCobCobr > 0 ? (total/(totFacCobPend+totFacCobCobr)*100).toFixed(1) : '–')+'%</div><div style="font-size:8px;color:#94a3b8">Ratio comisiones/facturado</div></div>';
+  out += '</div>';
+  if(conSaldo.length) {
+    out += '<table><thead><tr><th>Empresa</th><th style="text-align:right">Saldo Pendiente</th><th>Observaciones</th></tr></thead><tbody>';
+    conSaldo.sort((a,b)=>b.saldo-a.saldo).forEach(e=>{ out+='<tr><td style="font-weight:600">'+e.empresa+'</td><td style="text-align:right;font-weight:700;color:#7c3aed">'+fmt(e.saldo)+'</td><td style="color:#64748b;font-size:9px">'+(e.obs||'')+'</td></tr>'; });
+    out += '<tr style="background:#ede9fe"><td style="font-weight:700">TOTAL</td><td style="text-align:right;font-weight:700;color:#7c3aed">'+fmt(total)+'</td><td></td></tr></tbody></table>';
+  }
+  return out;
+})()}
+
+<h2>Cuenta Socios — Balance de Retiros</h2>
+${(()=>{
+  if(!ST.socios||!ST.socios.length) return '<p style="color:#94a3b8;padding:6px 0">Sin socios registrados.</p>';
+  const allMov = [...ST.cajaBancos,...ST.cajaEfectivo];
+  const retiros = {};
+  ST.socios.forEach(s=>{retiros[s.id]=0;});
+  allMov.filter(m=>(m.concepto||'').startsWith('Retiro ')).forEach(m=>{
+    const nombre = m.concepto.replace('Retiro ','').toLowerCase();
+    const socio = ST.socios.find(s=>s.nombre.toLowerCase().includes(nombre));
+    if(socio) retiros[socio.id]=(retiros[socio.id]||0)+ +m.monto;
+  });
+  const maxRet = Math.max(...ST.socios.map(s=>retiros[s.id]||0));
+  let out = '<div style="display:flex;gap:12px;margin-bottom:10px;flex-wrap:wrap">';
+  ST.socios.forEach(s=>{
+    const ret = retiros[s.id]||0;
+    const falta = maxRet - ret;
+    const bg = falta < 100 ? '#fef2f2' : '#f0fdf4';
+    const color = falta < 100 ? '#dc2626' : '#16a34a';
+    out += '<div style="flex:1;min-width:140px;background:'+bg+';border-radius:8px;padding:12px;text-align:center">';
+    out += '<div style="font-size:10px;font-weight:600;color:#0f172a;margin-bottom:4px">'+s.nombre+'</div>';
+    out += '<div style="font-size:14px;font-weight:700;color:'+color+'">'+fmt(ret)+'</div>';
+    out += '<div style="font-size:8px;color:#64748b;margin-top:2px">'+(falta<100?'Mayor retirador':'Disponible: '+fmt(falta))+'</div>';
+    out += '</div>';
+  });
+  out += '</div>';
+  out += '<table><thead><tr><th>Socio</th><th style="text-align:right">Total Retirado</th><th style="text-align:right">Disponible</th><th>Estado</th></tr></thead><tbody>';
+  ST.socios.forEach(s=>{
+    const ret = retiros[s.id]||0;
+    const falta = maxRet - ret;
+    out += '<tr><td style="font-weight:600">'+s.nombre+'</td><td style="text-align:right;font-weight:700">'+fmt(ret)+'</td><td style="text-align:right;color:#16a34a">'+fmt(falta)+'</td><td>'+(falta<100?'<span class="badge bg-danger">Máximo</span>':'<span class="badge bg-success">Puede retirar</span>')+'</td></tr>';
+  });
+  out += '</tbody></table>';
+  return out;
+})()}
+
 <h2>Movimientos de Caja — Últimos 30 días</h2>
 ${(()=>{
   const d30=new Date(); d30.setDate(d30.getDate()-30);
@@ -8029,6 +8141,241 @@ ${(()=>{
 </body></html>`;
 
   const w = window.open('','_blank','width=950,height=800,scrollbars=yes');
+  w.document.write(html);
+  w.document.close();
+}
+
+/* ═══════════════════════════════════════════
+   REPORTE COMERCIAL PDF
+═══════════════════════════════════════════ */
+function printReporteComercial() {
+  if (!GESTION_DATA || !GESTION_DATA.rows || !GESTION_DATA.rows.length) {
+    toast('No hay datos de Gestión cargados. Sincronizá primero.', 'warning');
+    return;
+  }
+  const d = GESTION_DATA;
+  const f = hoy();
+  const fFmt = fmtF(f);
+
+  // ── KPIs globales ──
+  const totOps = d.rows.length;
+  const totFac = d.byMes.reduce((s,m)=>s+m[2],0);
+  const totSiv = d.byMes.reduce((s,m)=>s+m[3],0);
+  const totCom = d.byMes.reduce((s,m)=>s+m[4],0);
+  const pctRent = totSiv > 0 ? (totCom / totSiv * 100).toFixed(1) : '0.0';
+  const totalClientes = d.clientes.length;
+  const totalEmpresas = d.empresas.length;
+  const ticketPromedio = totOps > 0 ? Math.round(totFac / totOps) : 0;
+
+  // ── Evolución mensual ──
+  const meses = d.byMes;
+  const mesActual = meses.length > 0 ? meses[meses.length - 1] : null;
+  const mesAnterior = meses.length > 1 ? meses[meses.length - 2] : null;
+  const variacionMM = mesActual && mesAnterior && mesAnterior[2] > 0
+    ? ((mesActual[2] - mesAnterior[2]) / mesAnterior[2] * 100).toFixed(1) : null;
+
+  // ── Top clientes ──
+  const topClientes = d.clientes.slice(0, 15);
+  const concentracion5 = topClientes.slice(0,5).reduce((s,c)=>s+c[2],0);
+  const pctConcentra = totFac > 0 ? (concentracion5 / totFac * 100).toFixed(1) : '0';
+
+  // ── Top empresas ──
+  const topEmpresas = d.empresas.slice(0, 12);
+
+  // ── Oportunidades: clientes con pocas operaciones pero alto ticket ──
+  const oportunidades = d.clientes
+    .filter(c => c[1] >= 1 && c[1] <= 3 && c[2] > ticketPromedio)
+    .sort((a,b) => b[2] - a[2]).slice(0, 10);
+
+  // ── Clientes inactivos (1 sola operación) ──
+  const inactivos = d.clientes.filter(c => c[1] === 1).sort((a,b) => b[2] - a[2]).slice(0, 10);
+
+  // ── Distribución de comisiones ──
+  const comByEmp = d.empresas.filter(e => e[4] > 0).slice(0, 10);
+
+  // ── Facturación pendiente de cobro vs comisiones ──
+  const facCobPend = (ST.facturasACobrar||[]).filter(f=>f.estado==='pendiente');
+  const totPendCobro = facCobPend.reduce((s,f)=>s+ +f.total,0);
+  const comPend = ST.comisionesTotal || 0;
+
+  const pdfStyles = `*{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Segoe UI',Arial,sans-serif;font-size:11px;color:#1e293b;background:#fff;padding:28px 32px}
+    h1{font-size:20px;font-weight:700;color:#0f172a;margin-bottom:2px}
+    h2{font-size:13px;font-weight:700;color:#1d4ed8;margin:18px 0 8px;padding-bottom:4px;border-bottom:2px solid #e2e8f0}
+    h3{font-size:11px;font-weight:600;color:#475569;margin:12px 0 6px}
+    .sub{color:#64748b;font-size:10px;margin-bottom:16px}
+    .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:8px}
+    .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:8px}
+    .stat{border-radius:8px;padding:12px 14px;background:#f8fafc;border:1px solid #e2e8f0}
+    .stat .lbl{font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px}
+    .stat .val{font-size:16px;font-weight:700;color:#0f172a}
+    .stat .val.pos{color:#16a34a}.stat .val.neg{color:#dc2626}.stat .val.blue{color:#1d4ed8}.stat .val.teal{color:#0f766e}.stat .val.purple{color:#7c3aed}
+    .stat .sub2{font-size:9px;color:#94a3b8;margin-top:2px}
+    table{width:100%;border-collapse:collapse;font-size:10px;margin-bottom:6px}
+    th{background:#f1f5f9;padding:5px 8px;text-align:left;font-size:9px;text-transform:uppercase;letter-spacing:.04em;color:#64748b;font-weight:600;border-bottom:1px solid #e2e8f0}
+    td{padding:5px 8px;border-bottom:1px solid #f1f5f9;vertical-align:middle}
+    tr:last-child td{border-bottom:none}
+    .badge{display:inline-block;border-radius:20px;padding:2px 7px;font-size:9px;font-weight:600}
+    .bg-success{background:#dcfce7;color:#166534}.bg-warning{background:#fef3c7;color:#92400e}
+    .bg-danger{background:#fee2e2;color:#991b1b}.bg-blue{background:#dbeafe;color:#1e40af}
+    .bg-purple{background:#ede9fe;color:#5b21b6}
+    .opp-box{background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px 14px;margin-bottom:10px}
+    .opp-title{font-size:10px;font-weight:700;color:#92400e;margin-bottom:6px}
+    .bar{height:8px;border-radius:4px;background:#e2e8f0;margin-top:4px;overflow:hidden}
+    .bar-fill{height:100%;border-radius:4px}
+    .footer{margin-top:24px;padding-top:10px;border-top:1px solid #e2e8f0;color:#94a3b8;font-size:9px;text-align:center}
+    .two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+    @media print{body{padding:14px 18px}.no-print{display:none}button{display:none}h2{page-break-after:avoid}}`;
+
+  const html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Reporte Comercial — ${fFmt}</title>
+  <style>${pdfStyles}</style></head><body>
+<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px">
+  <div>
+    <h1>📈 Reporte Comercial — Área de Negocios</h1>
+    <div class="sub">Generado el ${fFmt} · Datos actualizados: ${d.updatedAt || '–'}</div>
+  </div>
+  <div class="no-print" style="display:flex;gap:8px">
+    <button onclick="window.print()" style="background:#1d4ed8;color:#fff;border:none;border-radius:7px;padding:8px 18px;font-size:11px;cursor:pointer;font-weight:600">Imprimir / Guardar PDF</button>
+    <button onclick="window.close()" style="background:#64748b;color:#fff;border:none;border-radius:7px;padding:8px 18px;font-size:11px;cursor:pointer;font-weight:600">Volver</button>
+  </div>
+</div>
+
+<h2>Dashboard Comercial</h2>
+<div class="grid4">
+  <div class="stat"><div class="lbl">Facturación Total</div><div class="val blue">${fmt(totFac)}</div><div class="sub2">${totOps} operaciones</div></div>
+  <div class="stat"><div class="lbl">Facturación Sin IVA</div><div class="val teal">${fmt(totSiv)}</div><div class="sub2">Ticket prom: ${fmt(ticketPromedio)}</div></div>
+  <div class="stat"><div class="lbl">Comisiones Generadas</div><div class="val purple">${fmt(totCom)}</div><div class="sub2">${pctRent}% rentabilidad</div></div>
+  <div class="stat"><div class="lbl">Cartera Comercial</div><div class="val pos">${totalClientes} clientes</div><div class="sub2">${totalEmpresas} empresas</div></div>
+</div>
+${variacionMM !== null ? `<div style="background:${+variacionMM>=0?'#f0fdf4':'#fef2f2'};border-radius:8px;padding:8px 14px;margin-bottom:12px;font-size:10px;display:flex;align-items:center;gap:8px">
+  <span style="font-size:14px">${+variacionMM>=0?'📈':'📉'}</span>
+  <span><strong>Variación mes a mes:</strong> ${+variacionMM>=0?'+':''}${variacionMM}% · ${mesAnterior[0]}: ${fmt(mesAnterior[2])} → ${mesActual[0]}: ${fmt(mesActual[2])}</span>
+</div>` : ''}
+
+<h2>Evolución Mensual de Facturación</h2>
+<table>
+  <thead><tr><th>Mes</th><th>Operaciones</th><th style="text-align:right">Facturado</th><th style="text-align:right">Sin IVA</th><th style="text-align:right">Comisión</th><th style="text-align:right">% Rent</th><th>Tendencia</th></tr></thead>
+  <tbody>${meses.map((m,i) => {
+    const prev = i > 0 ? meses[i-1][2] : m[2];
+    const pct = prev > 0 ? ((m[2]-prev)/prev*100).toFixed(0) : '0';
+    const maxFac = Math.max(...meses.map(x=>x[2]));
+    const barW = maxFac > 0 ? Math.round(m[2]/maxFac*100) : 0;
+    const rentM = m[3] > 0 ? (m[4]/m[3]*100).toFixed(1) : '0.0';
+    return `<tr>
+      <td style="font-weight:600">${m[0]}</td>
+      <td>${m[1]}</td>
+      <td style="text-align:right;font-weight:700">${fmt(m[2])}</td>
+      <td style="text-align:right">${fmt(m[3])}</td>
+      <td style="text-align:right;color:#7c3aed">${fmt(m[4])}</td>
+      <td style="text-align:right">${rentM}%</td>
+      <td style="width:120px"><div class="bar"><div class="bar-fill" style="width:${barW}%;background:${+pct>=0?'#3b82f6':'#ef4444'}"></div></div>
+        <span style="font-size:8px;color:${+pct>=0?'#16a34a':'#dc2626'}">${i>0?(+pct>=0?'+':'')+pct+'%':''}</span></td>
+    </tr>`;
+  }).join('')}
+  <tr style="background:#eff6ff;font-weight:700">
+    <td>TOTAL ACUMULADO</td><td>${totOps}</td>
+    <td style="text-align:right">${fmt(totFac)}</td>
+    <td style="text-align:right">${fmt(totSiv)}</td>
+    <td style="text-align:right;color:#7c3aed">${fmt(totCom)}</td>
+    <td style="text-align:right">${pctRent}%</td><td></td>
+  </tr></tbody>
+</table>
+
+<div class="two-col">
+<div>
+<h2>Top 15 Clientes por Facturación</h2>
+<table>
+  <thead><tr><th>#</th><th>Cliente</th><th>Ops</th><th style="text-align:right">Facturado</th><th style="text-align:right">Comisión</th><th>%</th></tr></thead>
+  <tbody>${topClientes.map((c,i) => {
+    const pctF = totFac > 0 ? (c[2]/totFac*100).toFixed(1) : '0';
+    return `<tr>
+      <td style="font-weight:700;color:#64748b">${i+1}</td>
+      <td style="font-weight:600">${c[0]}</td>
+      <td>${c[1]}</td>
+      <td style="text-align:right;font-weight:700">${fmt(c[2])}</td>
+      <td style="text-align:right;color:#7c3aed">${fmt(c[4])}</td>
+      <td><span class="badge bg-blue">${pctF}%</span></td>
+    </tr>`;
+  }).join('')}</tbody>
+</table>
+<div style="background:#dbeafe;border-radius:6px;padding:8px 12px;font-size:10px;margin-top:4px">
+  <strong>Concentración Top 5:</strong> ${pctConcentra}% de la facturación total (${fmt(concentracion5)})
+</div>
+</div>
+
+<div>
+<h2>Top Empresas</h2>
+<table>
+  <thead><tr><th>#</th><th>Empresa</th><th>Ops</th><th style="text-align:right">Facturado</th><th style="text-align:right">Comisión</th></tr></thead>
+  <tbody>${topEmpresas.map((e,i) => `<tr>
+    <td style="font-weight:700;color:#64748b">${i+1}</td>
+    <td style="font-weight:600">${e[0]}</td>
+    <td>${e[1]}</td>
+    <td style="text-align:right;font-weight:700">${fmt(e[2])}</td>
+    <td style="text-align:right;color:#7c3aed">${fmt(e[4])}</td>
+  </tr>`).join('')}</tbody>
+</table>
+
+<h2 style="margin-top:16px">Comisiones por Empresa</h2>
+<table>
+  <thead><tr><th>Empresa</th><th style="text-align:right">Comisión $</th><th>Barra</th></tr></thead>
+  <tbody>${comByEmp.map(e => {
+    const maxCom = comByEmp[0] ? comByEmp[0][4] : 1;
+    const w = Math.round(e[4] / maxCom * 100);
+    return `<tr>
+      <td style="font-weight:600">${e[0]}</td>
+      <td style="text-align:right;font-weight:700;color:#7c3aed">${fmt(e[4])}</td>
+      <td style="width:100px"><div class="bar"><div class="bar-fill" style="width:${w}%;background:#8b5cf6"></div></div></td>
+    </tr>`;
+  }).join('')}</tbody>
+</table>
+</div>
+</div>
+
+${oportunidades.length ? `
+<h2>🔍 Oportunidades de Negocio</h2>
+<div class="opp-box">
+  <div class="opp-title">Clientes con alto ticket pero pocas operaciones — potencial de crecimiento</div>
+  <table>
+    <thead><tr><th>Cliente</th><th>Operaciones</th><th style="text-align:right">Facturado</th><th style="text-align:right">Ticket Promedio</th><th>Potencial</th></tr></thead>
+    <tbody>${oportunidades.map(c => {
+      const tkt = c[1] > 0 ? Math.round(c[2] / c[1]) : 0;
+      const potencial = tkt > ticketPromedio * 2 ? 'ALTO' : 'MEDIO';
+      return `<tr>
+        <td style="font-weight:600">${c[0]}</td>
+        <td>${c[1]}</td>
+        <td style="text-align:right;font-weight:700">${fmt(c[2])}</td>
+        <td style="text-align:right">${fmt(tkt)}</td>
+        <td><span class="badge ${potencial==='ALTO'?'bg-success':'bg-warning'}">${potencial}</span></td>
+      </tr>`;
+    }).join('')}</tbody>
+  </table>
+</div>` : ''}
+
+${inactivos.length ? `
+<h2>⚠ Clientes con 1 Sola Operación — Riesgo de Pérdida</h2>
+<table>
+  <thead><tr><th>Cliente</th><th style="text-align:right">Facturado</th><th>Acción Sugerida</th></tr></thead>
+  <tbody>${inactivos.map(c => `<tr>
+    <td style="font-weight:600">${c[0]}</td>
+    <td style="text-align:right;font-weight:700">${fmt(c[2])}</td>
+    <td style="font-size:9px;color:#64748b">Contactar para fidelización</td>
+  </tr>`).join('')}</tbody>
+</table>` : ''}
+
+<h2>Resumen Financiero Comercial</h2>
+<div class="grid">
+  <div class="stat"><div class="lbl">Pendiente de Cobro</div><div class="val neg">${fmt(totPendCobro)}</div><div class="sub2">${facCobPend.length} facturas</div></div>
+  <div class="stat"><div class="lbl">Comisiones Pendientes</div><div class="val purple">${fmt(comPend)}</div><div class="sub2">${(ST.comisionesResumen||[]).filter(e=>e.saldo>0).length} empresas</div></div>
+  <div class="stat"><div class="lbl">Ratio Cobro/Facturado</div><div class="val blue">${totFac > 0 ? ((totFac - totPendCobro) / totFac * 100).toFixed(0) : '100'}%</div><div class="sub2">Eficiencia de cobranza</div></div>
+</div>
+
+<div class="footer">Reporte Comercial generado por Flujo de Caja — ${fFmt}</div>
+</body></html>`;
+
+  const w = window.open('','_blank','width=1050,height=850,scrollbars=yes');
   w.document.write(html);
   w.document.close();
 }
