@@ -999,7 +999,7 @@
           </div>
         </div>
         <div class="col-6 col-xl">
-          <div class="stat-card" style="background:linear-gradient(135deg,#7f1d1d,#ef4444);cursor:pointer" onclick="irA('facturasAPagar')">
+          <div class="stat-card" style="background:linear-gradient(135deg,#7f1d1d,#ef4444);cursor:pointer" onclick="irA('facturasPagar')">
             <div class="bg-icon"><i class="bi bi-file-earmark-arrow-up-fill"></i></div>
             <div class="lbl">Facturas a Pagar</div>
             <div class="val" id="stat-fac-pagar">$0</div>
@@ -14685,7 +14685,7 @@ function renderAlertas() {
     const tot=facVencPagar.reduce((s,f)=>s+ +f.total,0);
     alerts.push({type:'danger',icon:'bi-file-earmark-x-fill',
       msg:`${facVencPagar.length} factura${facVencPagar.length>1?'s':''} a pagar vencida${facVencPagar.length>1?'s':''} — ${fmt(tot)}`,
-      action:'facturasAPagar', btn:'Ver Facturas'});
+      action:'facturasPagar', btn:'Ver Facturas'});
   }
 
   // ── Facturas a cobrar próximas (7 días) ───────────────────
