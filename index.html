@@ -821,7 +821,6 @@
 
   <!-- DASHBOARD -->
   <div id="page-dashboard" class="page active">
-  <div id="dash-alertas" class="mb-2"></div>
   <div id="dash-meta-cobranza" class="mb-3"></div>
     <!-- MUUK Logo banner -->
     <div class="card mb-4 border-0" style="background:linear-gradient(120deg,#0f172a 0%,#1e293b 100%);border-radius:16px;overflow:hidden">
@@ -857,19 +856,16 @@
               <span style="font-size:1rem;font-weight:700;color:#F5C400;font-style:italic;margin-left:4px;margin-bottom:6px;align-self:flex-end">srl</span>
             </div>
           </div>
-          <!-- Fecha -->
+          <!-- Fecha + acciones -->
           <div style="text-align:right">
             <div style="color:#fff;font-weight:600;font-size:.9rem" id="fecha-hoy"></div>
             <div id="dash-gest-sync" style="font-size:.62rem;color:#94a3b8;margin-top:3px;opacity:.8"></div>
+            <button onclick="generarReportePDF()" style="margin-top:8px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:8px;padding:5px 12px;font-size:.75rem;cursor:pointer;backdrop-filter:blur(4px)">
+              <i class="bi bi-file-earmark-pdf me-1"></i>Reporte PDF
+            </button>
           </div>
         </div>
       </div>
-    </div>
-    <div class="page-hdr d-flex align-items-center justify-content-between flex-wrap gap-2" style="margin-bottom:14px">
-      <h4 class="mb-0"><i class="bi bi-speedometer2 me-2 text-primary"></i>Dashboard</h4>
-      <button class="btn btn-danger btn-sm" onclick="generarReportePDF()" style="font-size:.85rem;padding:6px 16px;border-radius:8px">
-        <i class="bi bi-file-earmark-pdf me-1"></i>Generar Reporte PDF
-      </button>
     </div>
     <!-- LIQUIDEZ NETA — tarjeta resumen -->
     <div class="row g-3 mb-3">
@@ -890,6 +886,34 @@
         </div>
       </div>
     </div>
+    <!-- ALERTAS URGENTES -->
+    <div id="dash-alertas" class="mb-3"></div>
+
+    <!-- ACCIONES RÁPIDAS -->
+    <div class="mb-4">
+      <div style="font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#94a3b8;margin-bottom:8px">Acciones rápidas</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button onclick="irA('cajaBancos')" style="display:flex;align-items:center;gap:7px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:8px 14px;font-size:.78rem;font-weight:600;color:#0f172a;cursor:pointer;transition:all .15s;box-shadow:0 1px 3px rgba(0,0,0,.06)" onmouseover="this.style.borderColor='#3b82f6';this.style.color='#1d4ed8'" onmouseout="this.style.borderColor='#e2e8f0';this.style.color='#0f172a'">
+          <i class="bi bi-plus-circle-fill" style="color:#3b82f6;font-size:.95rem"></i>Nuevo movimiento
+        </button>
+        <button onclick="abrirModalFactura('cobrar',null)" style="display:flex;align-items:center;gap:7px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:8px 14px;font-size:.78rem;font-weight:600;color:#0f172a;cursor:pointer;transition:all .15s;box-shadow:0 1px 3px rgba(0,0,0,.06)" onmouseover="this.style.borderColor='#16a34a';this.style.color='#166534'" onmouseout="this.style.borderColor='#e2e8f0';this.style.color='#0f172a'">
+          <i class="bi bi-file-earmark-arrow-down-fill" style="color:#16a34a;font-size:.95rem"></i>Nueva factura a cobrar
+        </button>
+        <button onclick="abrirModalFactura('pagar',null)" style="display:flex;align-items:center;gap:7px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:8px 14px;font-size:.78rem;font-weight:600;color:#0f172a;cursor:pointer;transition:all .15s;box-shadow:0 1px 3px rgba(0,0,0,.06)" onmouseover="this.style.borderColor='#dc2626';this.style.color='#991b1b'" onmouseout="this.style.borderColor='#e2e8f0';this.style.color='#0f172a'">
+          <i class="bi bi-file-earmark-arrow-up-fill" style="color:#dc2626;font-size:.95rem"></i>Nueva factura a pagar
+        </button>
+        <button onclick="abrirModalCheque('fisico')" style="display:flex;align-items:center;gap:7px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:8px 14px;font-size:.78rem;font-weight:600;color:#0f172a;cursor:pointer;transition:all .15s;box-shadow:0 1px 3px rgba(0,0,0,.06)" onmouseover="this.style.borderColor='#7c3aed';this.style.color='#5b21b6'" onmouseout="this.style.borderColor='#e2e8f0';this.style.color='#0f172a'">
+          <i class="bi bi-file-earmark-check-fill" style="color:#7c3aed;font-size:.95rem"></i>Agregar cheque
+        </button>
+        <button onclick="irA('panelVencimientos')" style="display:flex;align-items:center;gap:7px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:8px 14px;font-size:.78rem;font-weight:600;color:#0f172a;cursor:pointer;transition:all .15s;box-shadow:0 1px 3px rgba(0,0,0,.06)" onmouseover="this.style.borderColor='#f59e0b';this.style.color='#92400e'" onmouseout="this.style.borderColor='#e2e8f0';this.style.color='#0f172a'">
+          <i class="bi bi-calendar-event-fill" style="color:#f59e0b;font-size:.95rem"></i>Ver vencimientos
+        </button>
+        <button onclick="_assistToggle()" style="display:flex;align-items:center;gap:7px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:8px 14px;font-size:.78rem;font-weight:600;color:#0f172a;cursor:pointer;transition:all .15s;box-shadow:0 1px 3px rgba(0,0,0,.06)" onmouseover="this.style.borderColor='#E31E24';this.style.color='#991b1b'" onmouseout="this.style.borderColor='#e2e8f0';this.style.color='#0f172a'">
+          <i class="bi bi-robot" style="color:#E31E24;font-size:.95rem"></i>Consultar asistente
+        </button>
+      </div>
+    </div>
+
     <!-- METAS MENSUALES -->
     <div class="row g-3 mb-3" id="kpi-metas-row" style="display:none">
       <div class="col-sm-6 col-lg-3">
@@ -933,82 +957,107 @@
         </div>
       </div>
     </div>
-    <div class="row g-3 mb-4">
-      <div class="col-sm-6 col-xl">
-        <div class="stat-card" style="background:linear-gradient(135deg,#1d4ed8,#3b82f6)">
-          <div class="bg-icon"><i class="bi bi-file-earmark-check"></i></div>
-          <div class="lbl">Cheques en Cartera</div>
-          <div class="val" id="stat-cartera">$0</div>
-          <div class="sub" id="stat-cartera-n">0 cheques activos</div>
-        </div>
+    <!-- ── GRUPO: DISPONIBLE ──────────────────────────────── -->
+    <div class="mb-1">
+      <div style="font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#94a3b8;margin-bottom:7px;display:flex;align-items:center;gap:10px">
+        <span style="flex:0 0 auto"><i class="bi bi-bank me-1"></i>Disponible</span>
+        <span style="flex:1;height:1px;background:#e2e8f0;display:block"></span>
       </div>
-      <div class="col-sm-6 col-xl">
-        <div class="stat-card" style="background:linear-gradient(135deg,#b45309,#f59e0b)">
-          <div class="bg-icon"><i class="bi bi-alarm"></i></div>
-          <div class="lbl">Vencen en 7 días</div>
-          <div class="val" id="stat-v7">$0</div>
-          <div class="sub" id="stat-v7-n">0 cheques</div>
+      <div class="row g-3 mb-3">
+        <div class="col-6 col-xl">
+          <div class="stat-card" style="background:linear-gradient(135deg,#065f46,#10b981);cursor:pointer" onclick="irA('cajaBancos')">
+            <div class="bg-icon"><i class="bi bi-bank2"></i></div>
+            <div class="lbl">Saldo Bancos</div>
+            <div class="val" id="stat-bancos">$0</div>
+            <div class="sub">Cuentas bancarias</div>
+          </div>
         </div>
-      </div>
-      <div class="col-sm-6 col-xl">
-        <div class="stat-card" style="background:linear-gradient(135deg,#991b1b,#ef4444)">
-          <div class="bg-icon"><i class="bi bi-file-earmark-minus-fill"></i></div>
-          <div class="lbl">Pendiente a Pagar</div>
-          <div class="val" id="stat-pagar">$0</div>
-          <div class="sub" id="stat-pagar-n">0 cheques pendientes</div>
-        </div>
-      </div>
-      <div class="col-sm-6 col-xl">
-        <div class="stat-card" style="background:linear-gradient(135deg,#065f46,#10b981)">
-          <div class="bg-icon"><i class="bi bi-bank2"></i></div>
-          <div class="lbl">Saldo Bancos</div>
-          <div class="val" id="stat-bancos">$0</div>
-          <div class="sub">Cuentas bancarias</div>
-        </div>
-      </div>
-      <div class="col-sm-6 col-xl">
-        <div class="stat-card" style="background:linear-gradient(135deg,#5b21b6,#8b5cf6)">
-          <div class="bg-icon"><i class="bi bi-cash-coin"></i></div>
-          <div class="lbl">Saldo Efectivo</div>
-          <div class="val" id="stat-efectivo">$0</div>
-          <div class="sub">Caja en mano</div>
-        </div>
-      </div>
-      <div class="col-sm-6 col-xl">
-        <div class="stat-card" style="background:linear-gradient(135deg,#334155,#64748b)">
-          <div class="bg-icon"><i class="bi bi-percent"></i></div>
-          <div class="lbl">Comisiones del Mes</div>
-          <div class="val" id="stat-comisiones">$0</div>
-          <div class="sub" id="stat-comisiones-n">0 registros</div>
-        </div>
-      </div>
-      <div class="col-sm-6 col-xl">
-        <div class="stat-card" style="background:linear-gradient(135deg,#166534,#22c55e)">
-          <div class="bg-icon"><i class="bi bi-file-earmark-arrow-down-fill"></i></div>
-          <div class="lbl">Facturas a Cobrar</div>
-          <div class="val" id="stat-fac-cobrar">$0</div>
-          <div class="sub" id="stat-fac-cobrar-n">0 pendientes</div>
-        </div>
-      </div>
-      <div class="col-sm-6 col-xl">
-        <div class="stat-card" style="background:linear-gradient(135deg,#7f1d1d,#ef4444)">
-          <div class="bg-icon"><i class="bi bi-file-earmark-arrow-up-fill"></i></div>
-          <div class="lbl">Facturas a Pagar</div>
-          <div class="val" id="stat-fac-pagar">$0</div>
-          <div class="sub" id="stat-fac-pagar-n">0 pendientes</div>
-        </div>
-      </div>
-      <div class="col-sm-6 col-xl">
-        <div class="stat-card" style="background:linear-gradient(135deg,#581c87,#a855f7)">
-          <div class="bg-icon"><i class="bi bi-box-seam-fill"></i></div>
-          <div class="lbl">Stock</div>
-          <div class="val" id="stat-stock-valor">$0</div>
-          <div class="sub" id="stat-stock-sub">0 productos</div>
+        <div class="col-6 col-xl">
+          <div class="stat-card" style="background:linear-gradient(135deg,#5b21b6,#8b5cf6);cursor:pointer" onclick="irA('cajaBancos')">
+            <div class="bg-icon"><i class="bi bi-cash-coin"></i></div>
+            <div class="lbl">Saldo Efectivo</div>
+            <div class="val" id="stat-efectivo">$0</div>
+            <div class="sub">Caja en mano</div>
+          </div>
         </div>
       </div>
     </div>
-    <!-- ALERTAS -->
-    <div id="dash-alertas" class="mb-3"></div>
+
+    <!-- ── GRUPO: COBRAR / PAGAR ──────────────────────────── -->
+    <div class="mb-1">
+      <div style="font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#94a3b8;margin-bottom:7px;display:flex;align-items:center;gap:10px">
+        <span style="flex:0 0 auto"><i class="bi bi-arrow-left-right me-1"></i>Cobrar / Pagar</span>
+        <span style="flex:1;height:1px;background:#e2e8f0;display:block"></span>
+      </div>
+      <div class="row g-3 mb-3">
+        <div class="col-6 col-xl">
+          <div class="stat-card" style="background:linear-gradient(135deg,#166534,#22c55e);cursor:pointer" onclick="irA('facturasACobrar')">
+            <div class="bg-icon"><i class="bi bi-file-earmark-arrow-down-fill"></i></div>
+            <div class="lbl">Facturas a Cobrar</div>
+            <div class="val" id="stat-fac-cobrar">$0</div>
+            <div class="sub" id="stat-fac-cobrar-n">0 pendientes</div>
+          </div>
+        </div>
+        <div class="col-6 col-xl">
+          <div class="stat-card" style="background:linear-gradient(135deg,#7f1d1d,#ef4444);cursor:pointer" onclick="irA('facturasAPagar')">
+            <div class="bg-icon"><i class="bi bi-file-earmark-arrow-up-fill"></i></div>
+            <div class="lbl">Facturas a Pagar</div>
+            <div class="val" id="stat-fac-pagar">$0</div>
+            <div class="sub" id="stat-fac-pagar-n">0 pendientes</div>
+          </div>
+        </div>
+        <div class="col-6 col-xl">
+          <div class="stat-card" style="background:linear-gradient(135deg,#1d4ed8,#3b82f6);cursor:pointer" onclick="irA('chequesFisicos')">
+            <div class="bg-icon"><i class="bi bi-file-earmark-check"></i></div>
+            <div class="lbl">Cheques en Cartera</div>
+            <div class="val" id="stat-cartera">$0</div>
+            <div class="sub" id="stat-cartera-n">0 cheques activos</div>
+          </div>
+        </div>
+        <div class="col-6 col-xl">
+          <div class="stat-card" style="background:linear-gradient(135deg,#991b1b,#ef4444);cursor:pointer" onclick="irA('chequesPagar')">
+            <div class="bg-icon"><i class="bi bi-file-earmark-minus-fill"></i></div>
+            <div class="lbl">Cheques a Pagar</div>
+            <div class="val" id="stat-pagar">$0</div>
+            <div class="sub" id="stat-pagar-n">0 cheques pendientes</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── GRUPO: OPERATIVO ───────────────────────────────── -->
+    <div class="mb-4">
+      <div style="font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#94a3b8;margin-bottom:7px;display:flex;align-items:center;gap:10px">
+        <span style="flex:0 0 auto"><i class="bi bi-gear me-1"></i>Operativo</span>
+        <span style="flex:1;height:1px;background:#e2e8f0;display:block"></span>
+      </div>
+      <div class="row g-3">
+        <div class="col-sm-6 col-xl">
+          <div class="stat-card" style="background:linear-gradient(135deg,#334155,#64748b);cursor:pointer" onclick="irA('comisiones')">
+            <div class="bg-icon"><i class="bi bi-percent"></i></div>
+            <div class="lbl">Comisiones del Mes</div>
+            <div class="val" id="stat-comisiones">$0</div>
+            <div class="sub" id="stat-comisiones-n">0 registros</div>
+          </div>
+        </div>
+        <div class="col-sm-6 col-xl">
+          <div class="stat-card" style="background:linear-gradient(135deg,#581c87,#a855f7);cursor:pointer" onclick="irA('stock')">
+            <div class="bg-icon"><i class="bi bi-box-seam-fill"></i></div>
+            <div class="lbl">Stock</div>
+            <div class="val" id="stat-stock-valor">$0</div>
+            <div class="sub" id="stat-stock-sub">0 productos</div>
+          </div>
+        </div>
+        <div class="col-sm-6 col-xl">
+          <div class="stat-card" style="background:linear-gradient(135deg,#b45309,#f59e0b);cursor:pointer" onclick="irA('panelVencimientos')">
+            <div class="bg-icon"><i class="bi bi-alarm"></i></div>
+            <div class="lbl">Vencen en 7 días</div>
+            <div class="val" id="stat-v7">$0</div>
+            <div class="sub" id="stat-v7-n">0 cheques</div>
+          </div>
+        </div>
+      </div>
+    </div>
     <div class="row g-3 mb-4">
       <div class="col-lg-8">
         <div class="card p-3 h-100">
@@ -3373,15 +3422,21 @@ CREATE POLICY "acceso total" ON flujo_caja_versions FOR ALL USING (true) WITH CH
         <div class="row g-3">
           <div class="col-sm-2">
             <label class="form-label small fw-bold">Tipo</label>
-            <select class="form-select form-select-sm" id="mf-tipo">
+            <select class="form-select form-select-sm" id="mf-tipo" onchange="_onTipoFacturaChange()">
               <option value="A">A</option>
               <option value="B" selected>B</option>
               <option value="C">C</option>
+              <option value="M">M</option>
+              <option value="NC">NC — Nota de Crédito</option>
+              <option value="ND">ND — Nota de Débito</option>
               <option value="X">Otro</option>
             </select>
           </div>
+          <div class="col-12" id="mf-nc-info" style="display:none">
+            <div class="alert alert-warning py-2 mb-0" style="font-size:.78rem"></div>
+          </div>
           <div class="col-sm-4">
-            <label class="form-label small fw-bold">N° Factura</label>
+            <label class="form-label small fw-bold">N° Comprobante</label>
             <input type="text" class="form-control form-control-sm" id="mf-numero" placeholder="0001-00001234">
           </div>
           <div class="col-sm-3">
@@ -5898,29 +5953,78 @@ function renderDashboard() {
   // ── METAS MENSUALES (desde Gestión 2026 + histórico) ──
   _renderMetas(comThisMonth);
 
-  // Próximos 15 días
-  const p15 = todosChq
+  // ── Próximos 15 días: cheques + facturas + ARCA ────────────
+  const p15raw = todosChq
     .filter(c=>{const d=dHasta(c.fechaVenc);return d>=0&&d<=15;})
-    .sort((a,b)=>new Date(a.fechaVenc)-new Date(b.fechaVenc));
+    .map(c=>({
+      fecha:c.fechaVenc, monto:+c.monto||0,
+      categoria: ST.chequesFisicos.includes(c)?'cheque-cobrar':ST.eCheques.includes(c)?'cheque-cobrar':'cheque-pagar',
+      desc: (ST.chequesFisicos.includes(c)?'Cheque Físico':ST.eCheques.includes(c)?'E-Cheque':'Cheque Pagar')+
+            (c.banco?' · '+c.banco:'')+(c.numero?' #'+c.numero:''),
+      estado: c.estado, detalle: ''
+    }));
+
+  // Facturas a cobrar
+  (ST.facturasACobrar||[]).filter(f=>f.estado==='pendiente'&&f.fechaVenc).forEach(f=>{
+    const d=dHasta(f.fechaVenc); if(d<0||d>15) return;
+    p15raw.push({fecha:f.fechaVenc, monto:+f.total||0, categoria:'fac-cobrar',
+      desc:`Fact. Cobrar${f.nroFactura?' #'+f.nroFactura:''}${f.razonSocial?' — '+f.razonSocial:''}`,
+      estado:'pendiente', detalle:''});
+  });
+
+  // Facturas a pagar
+  (ST.facturasPagar||[]).filter(f=>f.estado==='pendiente'&&f.fechaVenc).forEach(f=>{
+    const d=dHasta(f.fechaVenc); if(d<0||d>15) return;
+    p15raw.push({fecha:f.fechaVenc, monto:+f.total||0, categoria:'fac-pagar',
+      desc:`Fact. Pagar${f.nroFactura?' #'+f.nroFactura:''}${f.razonSocial?' — '+f.razonSocial:''}`,
+      estado:'pendiente', detalle:''});
+  });
+
+  // ARCA vencimientos
+  (ST.arcaVencimientos||[]).filter(v=>!v.pagado&&v.fecha).forEach(v=>{
+    const d=dHasta(v.fecha); if(d<0||d>15) return;
+    p15raw.push({fecha:v.fecha, monto:+v.importe||0, categoria:'arca',
+      desc:`ARCA — ${v.concepto||'Impuesto'}`, estado:'pendiente', detalle:v.detalle||''});
+  });
+
+  const p15=p15raw.sort((a,b)=>a.fecha.localeCompare(b.fecha));
   const wv=document.getElementById('dash-venc');
   if(!p15.length){
     wv.innerHTML='<div class="empty-state"><i class="bi bi-check2-circle text-success"></i>Sin vencimientos en los próximos 15 días</div>';
   } else {
-    wv.innerHTML=`<div class="table-responsive"><table class="table table-hover mb-0">
-      <thead><tr><th>Vencimiento</th><th>Días</th><th>Tipo</th><th>Banco</th><th>Nro.</th><th>Monto</th><th>Estado</th></tr></thead>
-      <tbody>${p15.map(c=>{
-        const d=dHasta(c.fechaVenc);
-        const tp=ST.chequesFisicos.includes(c)?'Físico':ST.eCheques.includes(c)?'E-Cheque':'A Pagar';
-        return`<tr>
-          <td>${fmtF(c.fechaVenc)}</td>
-          <td><span class="bdg ${d<=3?'bg-danger text-white':d<=7?'bg-warning text-dark':'bg-secondary text-white'}">${d}d</span></td>
-          <td><small>${tp}</small></td><td><small>${c.banco||'–'}</small></td>
-          <td><small>${c.numero||'–'}</small></td>
-          <td class="fw-bold">${fmt(c.monto)}</td>
-          <td>${bdgEstado(c.estado)}</td>
+    const catBadge={
+      'cheque-cobrar':'<span style="background:#1d4ed8;color:#fff;border-radius:5px;padding:1px 7px;font-size:.67rem;font-weight:700">Cheque ↓</span>',
+      'cheque-pagar':'<span style="background:#991b1b;color:#fff;border-radius:5px;padding:1px 7px;font-size:.67rem;font-weight:700">Cheque ↑</span>',
+      'fac-cobrar':'<span style="background:#166534;color:#fff;border-radius:5px;padding:1px 7px;font-size:.67rem;font-weight:700">Fact. ↓</span>',
+      'fac-pagar':'<span style="background:#7f1d1d;color:#fff;border-radius:5px;padding:1px 7px;font-size:.67rem;font-weight:700">Fact. ↑</span>',
+      'arca':'<span style="background:#92400e;color:#fff;border-radius:5px;padding:1px 7px;font-size:.67rem;font-weight:700">ARCA</span>'
+    };
+    const isEgreso=cat=>cat==='cheque-pagar'||cat==='fac-pagar'||cat==='arca';
+    wv.innerHTML=`<div class="table-responsive"><table class="table table-hover mb-0" style="font-size:.8rem">
+      <thead><tr>
+        <th style="width:95px">Fecha</th>
+        <th style="width:50px">Días</th>
+        <th style="width:95px">Categoría</th>
+        <th>Concepto</th>
+        <th style="width:100px;text-align:right">Importe</th>
+      </tr></thead>
+      <tbody>${p15.map(item=>{
+        const d=dHasta(item.fecha);
+        const urgCls=d===0?'table-danger':d<=3?'table-warning':'';
+        const montoColor=isEgreso(item.categoria)?'color:#dc2626':'color:#16a34a';
+        return`<tr class="${urgCls}">
+          <td style="font-weight:600">${fmtF(item.fecha)}</td>
+          <td><span class="bdg ${d===0?'bg-danger text-white':d<=3?'bg-danger text-white':d<=7?'bg-warning text-dark':'bg-secondary text-white'}" style="font-size:.65rem">${d===0?'HOY':d+'d'}</span></td>
+          <td>${catBadge[item.categoria]||item.categoria}</td>
+          <td style="font-size:.75rem;color:#475569">${item.desc}</td>
+          <td style="text-align:right;font-weight:700;${montoColor}">${fmt(item.monto)}</td>
         </tr>`;
       }).join('')}</tbody>
-    </table></div>`;
+    </table></div>
+    <div style="margin-top:8px;font-size:.7rem;color:#94a3b8;display:flex;gap:16px;flex-wrap:wrap">
+      <span>↓ Ingreso (cobrar)&nbsp;&nbsp;↑ Egreso (pagar)</span>
+      <span style="margin-left:auto"><button onclick="irA('panelVencimientos')" style="background:none;border:none;color:#3b82f6;font-size:.72rem;cursor:pointer;padding:0;font-weight:600">Ver panel completo →</button></span>
+    </div>`;
   }
   renderDashCharts(sB,sE,totCartera);
   renderAlertas();
@@ -9094,6 +9198,20 @@ function calcularIVAModal() {
   document.getElementById('mf-total').value = (neto + ivaImp) ? (neto + ivaImp).toFixed(2) : '';
 }
 
+function _onTipoFacturaChange() {
+  const tipo = document.getElementById('mf-tipo').value;
+  const isNC = tipo === 'NC';
+  const isND = tipo === 'ND';
+  // Para NC/ND el IVA generalmente no se recalcula igual, avisamos
+  const infoEl = document.getElementById('mf-nc-info');
+  if (infoEl) {
+    infoEl.style.display = (isNC || isND) ? '' : 'none';
+    infoEl.innerHTML = isNC
+      ? '<i class="bi bi-info-circle me-1"></i><b>Nota de Crédito</b> — Reduce el saldo pendiente. El monto se registrará como negativo.'
+      : '<i class="bi bi-info-circle me-1"></i><b>Nota de Débito</b> — Incrementa el saldo pendiente.';
+  }
+}
+
 // ── Guardar ───────────────────────────────────────
 function guardarFactura() {
   const cat   = document.getElementById('mf-cat').value;
@@ -9192,17 +9310,31 @@ function guardarFactura() {
       const chCust = document.getElementById('mf-chfCustodia')?.value || 'Banco Galicia - Cta. Corriente';
       if (!chVenc) { toast('Ingresá la fecha de vencimiento del cheque','warning'); return; }
       const chId = uid();
-      ST.chequesFisicos.push({
-        id: chId, fecha: obj.fechaPago || hoy(), fechaVenc: chVenc,
-        socioId: '', banco: chBanco, bancoCustodia: chCust,
-        numero: chNro, monto: pagoMonto, estado: esCobro ? 'en cartera' : 'entregado',
-        tipo: '', desc: `${accionLabel} Factura ${facRef}`,
-        cliente: obj.cliente || '', factura: `${obj.tipo||''} ${obj.numero||''}`
-      });
+      if (esCobro) {
+        // Recibimos un cheque → va a cartera de cheques físicos
+        ST.chequesFisicos.push({
+          id: chId, fecha: obj.fechaPago || hoy(), fechaVenc: chVenc,
+          socioId: '', banco: chBanco, bancoCustodia: chCust,
+          numero: chNro, monto: pagoMonto, estado: 'en_cartera',
+          tipo: '', desc: `Cobro Factura ${facRef}`,
+          cliente: obj.cliente || '', factura: `${obj.tipo||''} ${obj.numero||''}`
+        });
+        toast(`✓ Cheque Físico Nro. ${chNro} ingresado en cartera: ${fmt(pagoMonto)}`, 'success');
+      } else {
+        // Emitimos un cheque para pagar → va a Cheques a Pagar
+        if (!ST.chequesPagar) ST.chequesPagar = [];
+        ST.chequesPagar.push({
+          id: chId, fecha: obj.fechaPago || hoy(), fechaVenc: chVenc,
+          socioId: '', banco: chBanco,
+          numero: chNro, monto: pagoMonto, estado: 'pendiente',
+          desc: `Pago Factura ${facRef}`,
+          proveedor: obj.cliente || '', factura: `${obj.tipo||''} ${obj.numero||''}`
+        });
+        toast(`✓ Cheque Físico Nro. ${chNro} registrado en Cheques a Pagar: ${fmt(pagoMonto)}`, 'success');
+      }
       obj.medioPago = 'chequeFisico';
       obj.chequeId = chId;
       obj.medioPagoDetalle = `Cheque ${chNro} — ${chBanco}`;
-      toast(`✓ Cheque Físico Nro. ${chNro} ${esCobro?'ingresado en cartera':'entregado'}: ${fmt(pagoMonto)}`, 'success');
     }
 
     if (medio === 'eCheque') {
@@ -9212,17 +9344,32 @@ function guardarFactura() {
       const echCust = document.getElementById('mf-echCustodia')?.value || 'Banco Galicia - Cta. Corriente';
       if (!echVenc) { toast('Ingresá la fecha de vencimiento del e-cheque','warning'); return; }
       const echId = uid();
-      ST.eCheques.push({
-        id: echId, fecha: obj.fechaPago || hoy(), fechaVenc: echVenc,
-        socioId: '', banco: echBanco, bancoCustodia: echCust,
-        numero: echNro, monto: pagoMonto, estado: esCobro ? 'en cartera' : 'entregado',
-        tipo: '', desc: `${accionLabel} Factura ${facRef}`,
-        cliente: obj.cliente || '', factura: `${obj.tipo||''} ${obj.numero||''}`
-      });
+      if (esCobro) {
+        // Recibimos un e-cheque → va a cartera de e-cheques a cobrar
+        ST.eCheques.push({
+          id: echId, fecha: obj.fechaPago || hoy(), fechaVenc: echVenc,
+          socioId: '', banco: echBanco, bancoCustodia: echCust,
+          numero: echNro, monto: pagoMonto, estado: 'pendiente',
+          tipo: '', desc: `Cobro Factura ${facRef}`,
+          cliente: obj.cliente || '', factura: `${obj.tipo||''} ${obj.numero||''}`
+        });
+        toast(`✓ E-Cheque Nro. ${echNro} ingresado en cartera: ${fmt(pagoMonto)}`, 'success');
+      } else {
+        // Emitimos un e-cheque para pagar → va a Cheques a Pagar
+        if (!ST.chequesPagar) ST.chequesPagar = [];
+        ST.chequesPagar.push({
+          id: echId, fecha: obj.fechaPago || hoy(), fechaVenc: echVenc,
+          socioId: '', banco: echBanco,
+          numero: echNro, monto: pagoMonto, estado: 'pendiente',
+          tipoECheque: true,
+          desc: `Pago Factura ${facRef}`,
+          proveedor: obj.cliente || '', factura: `${obj.tipo||''} ${obj.numero||''}`
+        });
+        toast(`✓ E-Cheque Nro. ${echNro} registrado en Cheques a Pagar: ${fmt(pagoMonto)}`, 'success');
+      }
       obj.medioPago = 'eCheque';
       obj.chequeId = echId;
       obj.medioPagoDetalle = `E-Cheque ${echNro} — ${echBanco}`;
-      toast(`✓ E-Cheque Nro. ${echNro} ${esCobro?'ingresado en cartera':'entregado'}: ${fmt(pagoMonto)}`, 'success');
     }
 
     // Update the saved obj in array
@@ -9276,11 +9423,14 @@ function renderFacturasACobrar() {
   const data = ST.facturasACobrar;
   const pend = data.filter(f=>f.estado==='pendiente');
   const cobr = data.filter(f=>f.estado==='cobrada');
-  const venc = pend.filter(f=>f.fechaVenc && dHasta(f.fechaVenc)<0);
-  _setEl('fac-cobrar-pend',    fmt(pend.reduce((s,f)=>s+ +f.total,0)));
+  const venc = pend.filter(f=>f.fechaVenc && dHasta(f.fechaVenc)<0 && f.tipo!=='NC');
+  const pendFact = pend.filter(f=>f.tipo!=='NC');
+  const pendNC   = pend.filter(f=>f.tipo==='NC');
+  const netoPend = pendFact.reduce((s,f)=>s+ +f.total,0) - pendNC.reduce((s,f)=>s+ +f.total,0);
+  _setEl('fac-cobrar-pend',    fmt(netoPend));
   _setEl('fac-cobrar-cobr',    fmt(cobr.reduce((s,f)=>s+ +f.total,0)));
   _setEl('fac-cobrar-venc',    fmt(venc.reduce((s,f)=>s+ +f.total,0)));
-  _setEl('fac-cobrar-pend-n',  `${pend.length} factura${pend.length!==1?'s':''}`);
+  _setEl('fac-cobrar-pend-n',  `${pendFact.length} fact.${pendNC.length ? ' / '+pendNC.length+' NC' : ''}`);
   _setEl('fac-cobrar-cobr-n',  `${cobr.length} factura${cobr.length!==1?'s':''}`);
   _setEl('fac-cobrar-venc-n',  `${venc.length} vencida${venc.length!==1?'s':''}`);
   if (!data.length) { wrap.innerHTML='<div class="empty-state"><i class="bi bi-file-earmark-text"></i>Sin facturas registradas.<br><small>Usá "Nueva Factura" o "Subir PDF"</small></div>'; return; }
@@ -9305,11 +9455,14 @@ function renderFacturasPagar() {
   const data = ST.facturasPagar;
   const pend = data.filter(f=>f.estado==='pendiente');
   const pag  = data.filter(f=>f.estado==='pagada');
-  const venc = pend.filter(f=>f.fechaVenc && dHasta(f.fechaVenc)<0);
-  _setEl('fac-pagar-pend',   fmt(pend.reduce((s,f)=>s+ +f.total,0)));
+  const venc = pend.filter(f=>f.fechaVenc && dHasta(f.fechaVenc)<0 && f.tipo!=='NC');
+  const pendFact2 = pend.filter(f=>f.tipo!=='NC');
+  const pendNC2   = pend.filter(f=>f.tipo==='NC');
+  const netoPend2 = pendFact2.reduce((s,f)=>s+ +f.total,0) - pendNC2.reduce((s,f)=>s+ +f.total,0);
+  _setEl('fac-pagar-pend',   fmt(netoPend2));
   _setEl('fac-pagar-pag',    fmt(pag.reduce((s,f)=>s+ +f.total,0)));
   _setEl('fac-pagar-venc',   fmt(venc.reduce((s,f)=>s+ +f.total,0)));
-  _setEl('fac-pagar-pend-n', `${pend.length} factura${pend.length!==1?'s':''}`);
+  _setEl('fac-pagar-pend-n', `${pendFact2.length} fact.${pendNC2.length ? ' / '+pendNC2.length+' NC' : ''}`);
   _setEl('fac-pagar-pag-n',  `${pag.length} factura${pag.length!==1?'s':''}`);
   _setEl('fac-pagar-venc-n', `${venc.length} vencida${venc.length!==1?'s':''}`);
   if (!data.length) { wrap.innerHTML='<div class="empty-state"><i class="bi bi-file-earmark-text"></i>Sin facturas registradas.<br><small>Usá "Nueva Factura" o "Subir PDF"</small></div>'; return; }
@@ -9345,19 +9498,26 @@ function _tablaFacturas(list, cat) {
     const tieneDetalle = (f.lineas&&f.lineas.length>0) || (f.impuestos&&f.impuestos.length>0);
     const detId = `fdet-${f.id}`;
 
+    // Badge NC/ND
+    const isNC = f.tipo === 'NC';
+    const isND = f.tipo === 'ND';
+    const ncBadge = isNC ? `<span class="bdg ms-1" style="background:#7c3aed;color:#fff">NC</span>` : isND ? `<span class="bdg ms-1" style="background:#0891b2;color:#fff">ND</span>` : '';
+    const totalDisplay = isNC ? `<strong style="color:#7c3aed">${fmt(f.total)}</strong>` : `<strong>${fmt(f.total)}</strong>`;
+    const rowStyle = isNC ? 'background:#faf5ff' : isND ? 'background:#f0f9ff' : '';
+
     // Fila principal
-    let mainRow = `<tr>
+    let mainRow = `<tr style="${rowStyle}">
       <td>${fmtF(f.fecha)}</td>
-      <td><strong>${f.tipo||''} ${f.numero||'—'}</strong></td>
+      <td><strong>${f.tipo||''} ${f.numero||'—'}</strong>${ncBadge}</td>
       <td>${f.cliente||'—'}<br><small class="text-muted">${f.cuit||''}</small>${f.receptor?`<br><small class="text-muted">→ ${f.receptor}</small>`:''}</td>
       <td>${f.fechaVenc?fmtF(f.fechaVenc):'—'}${vTag}</td>
       <td>${fmt(f.neto)}</td>
       <td>${fmt(f.ivaImporte)}<small class="text-muted ms-1">${f.iva}%</small></td>
-      <td><strong>${fmt(f.total)}</strong></td>
+      <td>${totalDisplay}</td>
       <td>${badges[f.estado]||f.estado}${f.medioPago?`<br><small class="text-muted"><i class="bi bi-${f.medioPago==='transferencia'?'bank':f.medioPago==='efectivo'?'cash-coin':f.medioPago==='chequeFisico'?'file-earmark-check':'credit-card'} me-1"></i>${f.medioPago==='transferencia'?'Transf.':f.medioPago==='efectivo'?'Efectivo':f.medioPago==='chequeFisico'?'Cheque':'E-Cheque'}</small>`:''}${f.fechaPago?`<br><small class="text-muted">${fmtF(f.fechaPago)}</small>`:''}</td>
       <td style="white-space:nowrap">
         ${f.pdfPreview ? `<button class="btn btn-a btn-outline-secondary me-1" onclick="_verPdfPreview('${cat}','${f.id}')" title="Ver factura"><i class="bi bi-file-earmark-image"></i></button>` : ''}
-        ${f.estado==='pendiente' && cat==='cobrar' ? `<button class="btn btn-a btn-outline-success me-1" onclick="_cobrarRapido('${f.id}')" title="Registrar cobro"><i class="bi bi-cash-stack"></i></button>` : ''}
+        ${f.estado==='pendiente' && cat==='cobrar' && !isNC && !isND ? `<button class="btn btn-a btn-outline-success me-1" onclick="_cobrarRapido('${f.id}')" title="Registrar cobro"><i class="bi bi-cash-stack"></i></button>` : ''}
         ${tieneDetalle ? `<button class="btn btn-a btn-outline-info me-1" onclick="_toggleDetFac('${detId}')" title="Ver detalle"><i class="bi bi-list-ul"></i></button>` : ''}
         <button class="btn btn-a btn-outline-primary me-1" onclick="abrirModalFactura('${cat}','${f.id}')"><i class="bi bi-pencil"></i></button>
         <button class="btn btn-a btn-outline-danger" onclick="eliminarFactura('${cat}','${f.id}')"><i class="bi bi-trash"></i></button>
@@ -14475,51 +14635,102 @@ function renderAlertas() {
   const el = document.getElementById('dash-alertas');
   if (!el) return;
   const alerts = [];
-  const hoyD = new Date();
-  const en7 = new Date(hoyD.getTime()+7*86400000);
-  const en3 = new Date(hoyD.getTime()+3*86400000);
+  const hoy = new Date();
+  const hoyStr = hoy.toISOString().split('T')[0];
 
-  // Cheques por vencer
-  let chqVence3=0, chqVence7=0, montoVence=0;
-  ['chequesFisicos','eCheques'].forEach(t=>{
-    (ST[t]||[]).filter(c=>c.estado==='cartera'||c.estado==='en cartera').forEach(c=>{
-      const fv=new Date(c.fechaVto+'T00:00:00');
-      if(fv>=hoyD&&fv<=en3){chqVence3++;montoVence+=+c.monto||0;}
-      else if(fv>=hoyD&&fv<=en7){chqVence7++;montoVence+=+c.monto||0;}
-    });
-  });
-  if(chqVence3>0) alerts.push({type:'danger',icon:'bi-exclamation-triangle-fill',msg:`${chqVence3} cheque${chqVence3>1?'s':''} vence${chqVence3>1?'n':''} en los próximos 3 días — ${fmtARS(montoVence)}`,action:'chequesFisicos'});
-  else if(chqVence7>0) alerts.push({type:'warning',icon:'bi-clock-fill',msg:`${chqVence7} cheque${chqVence7>1?'s':''} vence${chqVence7>1?'n':''} esta semana — ${fmtARS(montoVence)}`,action:'chequesFisicos'});
+  // ── Cheques a cobrar vencidos ─────────────────────────────
+  const chqVencCobrar = [...(ST.chequesFisicos||[]).filter(c=>c.estado==='en_cartera'||c.estado==='cartera'),
+                          ...(ST.eCheques||[]).filter(c=>c.estado==='pendiente'||c.estado==='en_cartera')]
+    .filter(c=>c.fechaVenc&&c.fechaVenc<hoyStr);
+  if(chqVencCobrar.length){
+    const tot=chqVencCobrar.reduce((s,c)=>s+ +c.monto,0);
+    alerts.push({type:'danger',icon:'bi-exclamation-triangle-fill',
+      msg:`${chqVencCobrar.length} cheque${chqVencCobrar.length>1?'s':''} a cobrar vencido${chqVencCobrar.length>1?'s':''} — ${fmt(tot)}`,
+      action:'chequesFisicos', btn:'Ver Cheques'});
+  }
 
-  // Facturas vencidas
-  let facVenc=0, montoFacVenc=0;
-  (ST.facturasCobrar||[]).filter(f=>f.estado!=='cobrada'&&f.fechaVto&&f.fechaVto<hoyD.toISOString().split('T')[0]).forEach(f=>{facVenc++;montoFacVenc+=+f.monto||0;});
-  if(facVenc>0) alerts.push({type:'danger',icon:'bi-file-earmark-x-fill',msg:`${facVenc} factura${facVenc>1?'s':''} a cobrar vencida${facVenc>1?'s':''} — ${fmtARS(montoFacVenc)}`,action:'facturasACobrar'});
+  // ── Cheques a pagar vencidos ──────────────────────────────
+  const chqVencPagar = (ST.chequesPagar||[]).filter(c=>c.estado==='pendiente'&&c.fechaVenc&&c.fechaVenc<hoyStr);
+  if(chqVencPagar.length){
+    const tot=chqVencPagar.reduce((s,c)=>s+ +c.monto,0);
+    alerts.push({type:'danger',icon:'bi-cash-stack',
+      msg:`${chqVencPagar.length} cheque${chqVencPagar.length>1?'s':''} a pagar vencido${chqVencPagar.length>1?'s':''} — ${fmt(tot)}`,
+      action:'chequesPagar', btn:'Ver Cheques'});
+  }
 
-  // Saldo bajo
+  // ── Cheques próximos (3 días) ─────────────────────────────
+  const en3Str = new Date(hoy.getTime()+3*86400000).toISOString().split('T')[0];
+  const chqProx = [...(ST.chequesFisicos||[]).filter(c=>c.estado==='en_cartera'||c.estado==='cartera'),
+                    ...(ST.eCheques||[]).filter(c=>c.estado==='pendiente'||c.estado==='en_cartera')]
+    .filter(c=>c.fechaVenc&&c.fechaVenc>=hoyStr&&c.fechaVenc<=en3Str);
+  if(!chqVencCobrar.length&&chqProx.length){
+    const tot=chqProx.reduce((s,c)=>s+ +c.monto,0);
+    alerts.push({type:'warning',icon:'bi-clock-fill',
+      msg:`${chqProx.length} cheque${chqProx.length>1?'s':''} vence${chqProx.length>1?'n':''} en los próximos 3 días — ${fmt(tot)}`,
+      action:'panelVencimientos', btn:'Ver Vencimientos'});
+  }
+
+  // ── Facturas a cobrar vencidas ────────────────────────────
+  const facVencCobrar = (ST.facturasACobrar||[]).filter(f=>f.estado==='pendiente'&&f.fechaVenc&&f.fechaVenc<hoyStr);
+  if(facVencCobrar.length){
+    const tot=facVencCobrar.reduce((s,f)=>s+ +f.total,0);
+    alerts.push({type:'danger',icon:'bi-file-earmark-x-fill',
+      msg:`${facVencCobrar.length} factura${facVencCobrar.length>1?'s':''} a cobrar vencida${facVencCobrar.length>1?'s':''} — ${fmt(tot)}`,
+      action:'facturasACobrar', btn:'Ver Facturas'});
+  }
+
+  // ── Facturas a pagar vencidas ─────────────────────────────
+  const facVencPagar = (ST.facturasPagar||[]).filter(f=>f.estado==='pendiente'&&f.fechaVenc&&f.fechaVenc<hoyStr);
+  if(facVencPagar.length){
+    const tot=facVencPagar.reduce((s,f)=>s+ +f.total,0);
+    alerts.push({type:'danger',icon:'bi-file-earmark-x-fill',
+      msg:`${facVencPagar.length} factura${facVencPagar.length>1?'s':''} a pagar vencida${facVencPagar.length>1?'s':''} — ${fmt(tot)}`,
+      action:'facturasAPagar', btn:'Ver Facturas'});
+  }
+
+  // ── Facturas a cobrar próximas (7 días) ───────────────────
+  const en7Str = new Date(hoy.getTime()+7*86400000).toISOString().split('T')[0];
+  const facProx7 = (ST.facturasACobrar||[]).filter(f=>f.estado==='pendiente'&&f.fechaVenc&&f.fechaVenc>=hoyStr&&f.fechaVenc<=en7Str);
+  if(!facVencCobrar.length&&facProx7.length){
+    const tot=facProx7.reduce((s,f)=>s+ +f.total,0);
+    alerts.push({type:'info',icon:'bi-calendar-event',
+      msg:`${facProx7.length} factura${facProx7.length>1?'s':''} a cobrar vence${facProx7.length>1?'n':''} esta semana — ${fmt(tot)}`,
+      action:'facturasACobrar', btn:'Ver Facturas'});
+  }
+
+  // ── Saldo bancario negativo ───────────────────────────────
   if(ST.cajaBancos){
     const saldo=calcSaldo(ST.cajaBancos);
-    if(saldo<0) alerts.push({type:'danger',icon:'bi-bank',msg:`Saldo Bancos negativo: ${fmtARS(saldo)}`,action:'cajaBancos'});
-  }
-  if(ST.cajaEfectivo){
-    const saldo=calcSaldo(ST.cajaEfectivo);
-    if(saldo<0) alerts.push({type:'warning',icon:'bi-cash',msg:`Saldo Efectivo negativo: ${fmtARS(saldo)}`,action:'cajaEfectivo'});
+    if(saldo<0) alerts.push({type:'danger',icon:'bi-bank',
+      msg:`Saldo Bancos negativo: ${fmt(saldo)}`,action:'cajaBancos', btn:'Ver Caja'});
   }
 
-  // Scoring de cobranza — clientes críticos
+  // ── Stock bajo mínimo ─────────────────────────────────────
+  const stockBajo = (ST.stock||[]).filter(p=>p.stockMinimo&&+p.stockActual<=+p.stockMinimo);
+  if(stockBajo.length){
+    alerts.push({type:'warning',icon:'bi-box-seam-fill',
+      msg:`${stockBajo.length} producto${stockBajo.length>1?'s':''} bajo stock mínimo`,
+      action:'stock', btn:'Ver Stock'});
+  }
+
+  // ── Scoring CRÍTICO ───────────────────────────────────────
   if(typeof _calcClienteScoring==='function'){
     try{
-      const scoringAll=_calcClienteScoring();
-      scoringAll.filter(s=>s.nivel==='CRÍTICO').slice(0,3).forEach(sc=>{
-        alerts.push({type:'danger',icon:'bi-shield-exclamation',msg:`Scoring CRÍTICO: ${sc.nombre} — ${sc.score} pts (${sc.facVencidas} fact. vencidas, ${typeof fmtARS==='function'?fmtARS(sc.montoExpuesto):fmt(sc.montoExpuesto)} expuesto)`,action:'rentabilidad'});
+      const criticos=_calcClienteScoring().filter(s=>s.nivel==='CRÍTICO').slice(0,2);
+      criticos.forEach(sc=>{
+        alerts.push({type:'danger',icon:'bi-shield-exclamation',
+          msg:`Scoring CRÍTICO: ${sc.nombre} — ${sc.facVencidas} fact. vencidas, ${fmt(sc.montoExpuesto)} expuesto`,
+          action:'rentabilidad', btn:'Ver Ranking'});
       });
     }catch(e){console.warn('Scoring alerts error:',e);}
   }
 
   if(!alerts.length){el.innerHTML='';return;}
-  el.innerHTML=alerts.map(a=>`<div class="dash-alert dash-alert-${a.type}" style="cursor:${a.action?'pointer':'default'}" onclick="${a.action?`"irA('${a.action}')"`:''}" >
-    <i class="bi ${a.icon}"></i><span>${a.msg}</span>
-    ${a.action?'<i class="bi bi-chevron-right ms-auto"></i>':''}
+  const btnStyle='flex-shrink:0;background:rgba(255,255,255,.6);border:1px solid currentColor;border-radius:6px;padding:2px 10px;font-size:.7rem;font-weight:700;cursor:pointer;white-space:nowrap;color:inherit';
+  el.innerHTML=alerts.map(a=>`<div class="dash-alert dash-alert-${a.type}" style="cursor:pointer" onclick="irA('${a.action||''}')">
+    <i class="bi ${a.icon}"></i>
+    <span style="flex:1">${a.msg}</span>
+    ${a.btn?`<button style="${btnStyle}" onclick="event.stopPropagation();irA('${a.action||''}')">${a.btn} <i class="bi bi-arrow-right"></i></button>`:''}
   </div>`).join('');
 }
 
