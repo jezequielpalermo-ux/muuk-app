@@ -3837,6 +3837,19 @@ CREATE POLICY "acceso total" ON flujo_caja_versions FOR ALL USING (true) WITH CH
                   </div>
                 </div>
               </div>
+
+              <!-- ── Auto-generación de documento ── -->
+              <div class="mt-3 pt-2 border-top" style="border-color:#bbf7d0!important" id="mf-gendoc-wrap">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="mf-generar-doc" checked>
+                  <label class="form-check-label fw-semibold" for="mf-generar-doc" id="mf-generar-doc-label" style="font-size:.82rem">
+                    <i class="bi bi-file-earmark-text me-1"></i>Generar Recibo de Cobranza PDF al guardar
+                  </label>
+                </div>
+                <div style="font-size:.7rem;color:#64748b;margin-top:2px;padding-left:24px">
+                  Los datos de la factura se completarán automáticamente
+                </div>
+              </div>
             </div>
           </div>
           <div class="col-12">
@@ -8975,6 +8988,134 @@ function generarReciboCobranza() {
 }
 
 /* ═══════════════════════════════════════════
+   AUTO-GENERACIÓN DE DOCUMENTO DESDE FACTURA
+═══════════════════════════════════════════ */
+function _generarDocFactura(cat, obj, monto) {
+  if (!ST.contadores) ST.contadores = {};
+
+  // Leer medio de pago y referencia desde los campos del modal (ya están llenos al momento de guardar)
+  const medioEl  = document.getElementById('mf-medioPago');
+  const medio    = medioEl ? medioEl.value : '';
+  const medioLbl = { transferencia: 'Transferencia bancaria', efectivo: 'Efectivo',
+                     chequeFisico: 'Cheque físico', eCheque: 'E-Cheque' }[medio] || medio || '—';
+
+  // Referencia: banco de transf, nro cheque, etc.
+  let ref = '—';
+  if (medio === 'transferencia') {
+    const r = (document.getElementById('mf-transfRef')?.value || '').trim();
+    const b = (document.getElementById('mf-transfBanco')?.value || '').trim();
+    ref = [b, r].filter(Boolean).join(' / ') || '—';
+  } else if (medio === 'chequeFisico') {
+    const n = (document.getElementById('mf-chfNro')?.value || '').trim();
+    const b = (document.getElementById('mf-chfBanco')?.value || '').trim();
+    ref = [n ? 'N° ' + n : '', b].filter(Boolean).join(' — ') || '—';
+  } else if (medio === 'eCheque') {
+    const n = (document.getElementById('mf-echNro')?.value || '').trim();
+    const b = (document.getElementById('mf-echBanco')?.value || '').trim();
+    ref = [n ? 'N° ' + n : '', b].filter(Boolean).join(' — ') || '—';
+  }
+
+  const fechaPago = obj.fechaPago || hoy();
+  const importeNum = monto > 0 ? monto : (obj.total || 0);
+  const importeFmt = Number(importeNum).toLocaleString('es-AR', {minimumFractionDigits:2, maximumFractionDigits:2});
+  const concepto  = `Fact. ${obj.tipo || ''} N° ${obj.numero || ''} — ${obj.desc || obj.cliente || ''}`.trim();
+  const obs       = obj.desc || '';
+
+  if (cat === 'pagar') {
+    // ── ORDEN DE PAGO ──────────────────────────────────
+    ST.contadores.ordenPago = (ST.contadores.ordenPago || 0) + 1;
+    const nro   = ST.contadores.ordenPago;
+    const color = '#1d4ed8';
+    const html  = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Orden de Pago N° ${String(nro).padStart(4,'0')}</title>
+${_docPDFStyles(color)}
+</head><body>
+<div class="watermark">MÜÜK SRL</div>
+<div class="content">
+<div class="no-print" style="margin-bottom:20px;display:flex;gap:10px">
+  <button onclick="window.print()" style="background:${color};color:#fff;border:none;border-radius:7px;padding:9px 20px;font-size:12px;cursor:pointer;font-weight:700">⎙ Imprimir / Guardar PDF</button>
+  <button onclick="window.close()" style="background:#64748b;color:#fff;border:none;border-radius:7px;padding:9px 16px;font-size:12px;cursor:pointer">Cerrar</button>
+</div>
+${_docPDFHeader('Orden de Pago', nro, fmtF(fechaPago), color)}
+<span class="badge-tipo">Egreso — Pago a proveedor</span>
+<div class="doc-grid">
+  <div class="doc-field"><div class="doc-label">Beneficiario</div><div class="doc-value">${obj.cliente || '—'}</div></div>
+  <div class="doc-field"><div class="doc-label">CUIT / CUIL</div><div class="doc-value">${obj.cuit || '—'}</div></div>
+</div>
+<div class="doc-field"><div class="doc-label">Concepto / Descripción</div><div class="doc-value">${concepto}</div></div>
+<div class="doc-grid">
+  <div class="doc-field"><div class="doc-label">Comprobante</div><div class="doc-value">${obj.tipo || ''} N° ${obj.numero || ''}</div></div>
+  <div class="doc-field"><div class="doc-label">Fecha de factura</div><div class="doc-value">${fmtF(obj.fecha)}</div></div>
+</div>
+<div class="doc-grid">
+  <div class="doc-field"><div class="doc-label">Forma de pago</div><div class="doc-value">${medioLbl}</div></div>
+  <div class="doc-field"><div class="doc-label">Banco / Referencia</div><div class="doc-value">${ref}</div></div>
+</div>
+${obs ? `<div class="doc-field"><div class="doc-label">Observaciones</div><div class="doc-value">${obs}</div></div>` : ''}
+<div class="importe-box">
+  <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#64748b;margin-bottom:6px">Importe pagado</div>
+  <div class="importe-num">$ ${importeFmt}</div>
+  <div class="importe-letras">Son: PESOS ${_numToLetras(importeNum)}</div>
+</div>
+<div class="firma-grid">
+  <div><div class="firma-box">Firma y aclaración<br><br>Autorizado por</div></div>
+  <div><div class="firma-box">Firma y sello<br><br>Conformidad del beneficiario</div></div>
+</div>
+<div class="footer">MÜÜK SRL · Documento interno · Orden de Pago N° ${String(nro).padStart(4,'0')} · Generado el ${fmtF(hoy())}</div>
+</div></body></html>`;
+    save();
+    const w = window.open('','_blank','width=860,height=1100');
+    w.document.write(html); w.document.close();
+    toast(`Orden de Pago N° ${String(nro).padStart(4,'0')} generada`, 'success');
+
+  } else {
+    // ── RECIBO DE COBRANZA ──────────────────────────────
+    ST.contadores.reciboCobranza = (ST.contadores.reciboCobranza || 0) + 1;
+    const nro   = ST.contadores.reciboCobranza;
+    const color = '#16a34a';
+    const html  = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Recibo de Cobranza N° ${String(nro).padStart(4,'0')}</title>
+${_docPDFStyles(color)}
+</head><body>
+<div class="watermark">MÜÜK SRL</div>
+<div class="content">
+<div class="no-print" style="margin-bottom:20px;display:flex;gap:10px">
+  <button onclick="window.print()" style="background:${color};color:#fff;border:none;border-radius:7px;padding:9px 20px;font-size:12px;cursor:pointer;font-weight:700">⎙ Imprimir / Guardar PDF</button>
+  <button onclick="window.close()" style="background:#64748b;color:#fff;border:none;border-radius:7px;padding:9px 16px;font-size:12px;cursor:pointer">Cerrar</button>
+</div>
+${_docPDFHeader('Recibo de Cobranza', nro, fmtF(fechaPago), color)}
+<span class="badge-tipo">Ingreso — Cobro a cliente</span>
+<div class="doc-grid">
+  <div class="doc-field"><div class="doc-label">Recibido de</div><div class="doc-value">${obj.cliente || '—'}</div></div>
+  <div class="doc-field"><div class="doc-label">CUIT / CUIL</div><div class="doc-value">${obj.cuit || '—'}</div></div>
+</div>
+<div class="doc-field"><div class="doc-label">En concepto de</div><div class="doc-value">${concepto}</div></div>
+<div class="doc-grid">
+  <div class="doc-field"><div class="doc-label">Comprobante</div><div class="doc-value">${obj.tipo || ''} N° ${obj.numero || ''}</div></div>
+  <div class="doc-field"><div class="doc-label">Fecha de factura</div><div class="doc-value">${fmtF(obj.fecha)}</div></div>
+</div>
+<div class="doc-grid">
+  <div class="doc-field"><div class="doc-label">Forma de cobro</div><div class="doc-value">${medioLbl}</div></div>
+  <div class="doc-field"><div class="doc-label">N° Cheque / Referencia</div><div class="doc-value">${ref}</div></div>
+</div>
+${obs ? `<div class="doc-field"><div class="doc-label">Observaciones</div><div class="doc-value">${obs}</div></div>` : ''}
+<div class="importe-box">
+  <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#64748b;margin-bottom:6px">Importe cobrado</div>
+  <div class="importe-num">$ ${importeFmt}</div>
+  <div class="importe-letras">Son: PESOS ${_numToLetras(importeNum)}</div>
+</div>
+<div class="firma-grid">
+  <div><div class="firma-box">Firma y aclaración<br><br>Recibido por</div></div>
+  <div><div class="firma-box">Firma y aclaración<br><br>Conforme el cliente</div></div>
+</div>
+<div class="footer">MÜÜK SRL · Documento interno · Recibo de Cobranza N° ${String(nro).padStart(4,'0')} · Generado el ${fmtF(hoy())}</div>
+</div></body></html>`;
+    save();
+    const w = window.open('','_blank','width=860,height=1100');
+    w.document.write(html); w.document.close();
+    toast(`Recibo de Cobranza N° ${String(nro).padStart(4,'0')} generado`, 'success');
+  }
+}
+
+/* ═══════════════════════════════════════════
    REPORTE COMERCIAL PDF
 ═══════════════════════════════════════════ */
 function printReporteComercial() {
@@ -9698,6 +9839,16 @@ function _togglePagoSection() {
     const mp = document.getElementById('mf-pagoMonto');
     if (mp && !mp.value) mp.value = tot;
   }
+  // Update auto-doc checkbox label based on factura category
+  const lbl = document.getElementById('mf-generar-doc-label');
+  if (lbl) {
+    const cat = document.getElementById('mf-cat') ? document.getElementById('mf-cat').value : '';
+    if (cat === 'pagar') {
+      lbl.innerHTML = '<i class="bi bi-file-earmark-arrow-up me-1"></i>Generar Orden de Pago PDF al guardar';
+    } else {
+      lbl.innerHTML = '<i class="bi bi-file-earmark-arrow-down me-1"></i>Generar Recibo de Cobranza PDF al guardar';
+    }
+  }
 }
 
 function _toggleMedioPagoFields() {
@@ -9900,6 +10051,12 @@ function guardarFactura() {
   }
 
   save();
+
+  // ── Auto-generar documento si el checkbox está marcado ──
+  const _genDocCb = document.getElementById('mf-generar-doc');
+  const _genDocMonto = parseFloat(document.getElementById('mf-pagoMonto')?.value) || obj.total;
+  const _debeGenDoc = _genDocCb && _genDocCb.checked && (obj.estado === 'cobrada' || obj.estado === 'pagada');
+
   bootstrap.Modal.getInstance(document.getElementById('modalFactura')).hide();
   if (cat === 'cobrar') renderFacturasACobrar(); else renderFacturasPagar();
   // Refresh related sections
@@ -9909,6 +10066,11 @@ function guardarFactura() {
   try { renderCheques('eCheques'); } catch(e) {}
   try { renderDashboard(); } catch(e) {}
   toast('Factura guardada ✓');
+
+  if (_debeGenDoc) {
+    // Small delay so the modal closes first and popup isn't blocked by it
+    setTimeout(() => _generarDocFactura(cat, obj, _genDocMonto), 300);
+  }
 }
 
 // ── Eliminar ──────────────────────────────────────
