@@ -2265,7 +2265,7 @@
     </div>
 
     <!-- Acceso rápido a carpeta raíz -->
-    <div class="card p-3">
+    <div class="card p-3 mb-4">
       <div style="display:flex;align-items:center;gap:10px">
         <i class="bi bi-google" style="font-size:1.2rem;color:#4285f4"></i>
         <div style="flex:1">
@@ -2277,11 +2277,183 @@
         </a>
       </div>
     </div>
-  </div>
+
+    <!-- ═══════════════════════════════════════════
+         GENERADOR DE DOCUMENTOS
+    ═══════════════════════════════════════════ -->
+    <div class="card mb-3">
+      <div class="card-header bg-white" style="border-bottom:2px solid #e2e8f0">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,#1d4ed8,#3b82f6);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+            <i class="bi bi-file-earmark-text-fill" style="color:#fff;font-size:.95rem"></i>
+          </div>
+          <div>
+            <div style="font-weight:700;font-size:.95rem;color:#0f172a">Generador de Documentos</div>
+            <div style="font-size:.68rem;color:#64748b">Orden de Pago · Recibo de Cobranza — impresión / PDF A4</div>
+          </div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="row g-4">
+
+          <!-- ── ORDEN DE PAGO ────────────────────────────── -->
+          <div class="col-lg-6">
+            <div style="border:1.5px solid #dbeafe;border-radius:12px;padding:18px;background:#f8faff">
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+                <div style="width:36px;height:36px;border-radius:9px;background:#eff6ff;display:flex;align-items:center;justify-content:center;flex-shrink:0;border:1px solid #bfdbfe">
+                  <i class="bi bi-file-earmark-arrow-up-fill" style="font-size:1rem;color:#1d4ed8"></i>
+                </div>
+                <div>
+                  <div style="font-weight:700;font-size:.9rem;color:#1e3a8a">Orden de Pago</div>
+                  <div style="font-size:.67rem;color:#64748b">Autorización de pago a proveedor</div>
+                </div>
+                <span id="op-nro-preview" style="margin-left:auto;font-size:.7rem;font-weight:700;color:#3b82f6;background:#dbeafe;border-radius:6px;padding:2px 8px">N° ...</span>
+              </div>
+              <div class="row g-2">
+                <div class="col-12">
+                  <label style="font-size:.71rem;font-weight:600;color:#64748b;display:block;margin-bottom:2px">Beneficiario <span style="color:#dc2626">*</span></label>
+                  <input type="text" class="form-control form-control-sm" id="op-beneficiario" placeholder="Nombre o razón social del proveedor">
+                </div>
+                <div class="col-sm-6">
+                  <label style="font-size:.71rem;font-weight:600;color:#64748b;display:block;margin-bottom:2px">CUIT / CUIL</label>
+                  <input type="text" class="form-control form-control-sm" id="op-cuit" placeholder="20-12345678-9">
+                </div>
+                <div class="col-sm-6">
+                  <label style="font-size:.71rem;font-weight:600;color:#64748b;display:block;margin-bottom:2px">Fecha <span style="color:#dc2626">*</span></label>
+                  <input type="date" class="form-control form-control-sm" id="op-fecha">
+                </div>
+                <div class="col-12">
+                  <label style="font-size:.71rem;font-weight:600;color:#64748b;display:block;margin-bottom:2px">Concepto / Descripción <span style="color:#dc2626">*</span></label>
+                  <input type="text" class="form-control form-control-sm" id="op-concepto" placeholder="Ej: Pago factura B-001-00123 — servicios marzo">
+                </div>
+                <div class="col-sm-6">
+                  <label style="font-size:.71rem;font-weight:600;color:#64748b;display:block;margin-bottom:2px">Forma de pago <span style="color:#dc2626">*</span></label>
+                  <select class="form-select form-select-sm" id="op-medio">
+                    <option value="Transferencia bancaria">Transferencia bancaria</option>
+                    <option value="E-Cheque (ECHEQ)">E-Cheque (ECHEQ)</option>
+                    <option value="Cheque físico">Cheque físico</option>
+                    <option value="Efectivo">Efectivo</option>
+                    <option value="Otro">Otro</option>
+                  </select>
+                </div>
+                <div class="col-sm-6">
+                  <label style="font-size:.71rem;font-weight:600;color:#64748b;display:block;margin-bottom:2px">Banco / Referencia</label>
+                  <input type="text" class="form-control form-control-sm" id="op-banco" placeholder="Ej: Galicia / N° cheque">
+                </div>
+                <div class="col-sm-6">
+                  <label style="font-size:.71rem;font-weight:600;color:#64748b;display:block;margin-bottom:2px">Importe (ARS) <span style="color:#dc2626">*</span></label>
+                  <input type="number" class="form-control form-control-sm" id="op-importe" placeholder="0.00" step="0.01" min="0">
+                </div>
+                <div class="col-sm-6">
+                  <label style="font-size:.71rem;font-weight:600;color:#64748b;display:block;margin-bottom:2px">Autorizado por</label>
+                  <select class="form-select form-select-sm" id="op-autorizado">
+                    <option value="">— seleccionar —</option>
+                  </select>
+                </div>
+                <div class="col-12">
+                  <label style="font-size:.71rem;font-weight:600;color:#64748b;display:block;margin-bottom:2px">Observaciones</label>
+                  <input type="text" class="form-control form-control-sm" id="op-obs" placeholder="Opcional">
+                </div>
+              </div>
+              <button onclick="generarOrdenPago()" class="btn btn-primary btn-sm mt-3 w-100" style="border-radius:9px;font-weight:700;letter-spacing:.02em;padding:9px">
+                <i class="bi bi-file-earmark-pdf-fill me-2"></i>Generar Orden de Pago — Imprimir / PDF
+              </button>
+            </div>
+          </div>
+
+          <!-- ── RECIBO DE COBRANZA ───────────────────────── -->
+          <div class="col-lg-6">
+            <div style="border:1.5px solid #bbf7d0;border-radius:12px;padding:18px;background:#f0fdf8">
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+                <div style="width:36px;height:36px;border-radius:9px;background:#f0fdf4;display:flex;align-items:center;justify-content:center;flex-shrink:0;border:1px solid #86efac">
+                  <i class="bi bi-file-earmark-arrow-down-fill" style="font-size:1rem;color:#16a34a"></i>
+                </div>
+                <div>
+                  <div style="font-weight:700;font-size:.9rem;color:#14532d">Recibo de Cobranza</div>
+                  <div style="font-size:.67rem;color:#64748b">Comprobante de cobro a cliente</div>
+                </div>
+                <span id="rc-nro-preview" style="margin-left:auto;font-size:.7rem;font-weight:700;color:#16a34a;background:#dcfce7;border-radius:6px;padding:2px 8px">N° ...</span>
+              </div>
+              <div class="row g-2">
+                <div class="col-12">
+                  <label style="font-size:.71rem;font-weight:600;color:#64748b;display:block;margin-bottom:2px">Recibido de <span style="color:#dc2626">*</span></label>
+                  <input type="text" class="form-control form-control-sm" id="rc-cliente" placeholder="Nombre o razón social del cliente">
+                </div>
+                <div class="col-sm-6">
+                  <label style="font-size:.71rem;font-weight:600;color:#64748b;display:block;margin-bottom:2px">CUIT / CUIL</label>
+                  <input type="text" class="form-control form-control-sm" id="rc-cuit" placeholder="20-12345678-9">
+                </div>
+                <div class="col-sm-6">
+                  <label style="font-size:.71rem;font-weight:600;color:#64748b;display:block;margin-bottom:2px">Fecha <span style="color:#dc2626">*</span></label>
+                  <input type="date" class="form-control form-control-sm" id="rc-fecha">
+                </div>
+                <div class="col-12">
+                  <label style="font-size:.71rem;font-weight:600;color:#64748b;display:block;margin-bottom:2px">En concepto de <span style="color:#dc2626">*</span></label>
+                  <input type="text" class="form-control form-control-sm" id="rc-concepto" placeholder="Ej: Cobro factura A-001-00456 — servicios marzo">
+                </div>
+                <div class="col-sm-6">
+                  <label style="font-size:.71rem;font-weight:600;color:#64748b;display:block;margin-bottom:2px">Forma de cobro <span style="color:#dc2626">*</span></label>
+                  <select class="form-select form-select-sm" id="rc-medio">
+                    <option value="Transferencia bancaria">Transferencia bancaria</option>
+                    <option value="E-Cheque (ECHEQ)">E-Cheque (ECHEQ)</option>
+                    <option value="Cheque físico">Cheque físico</option>
+                    <option value="Efectivo">Efectivo</option>
+                    <option value="Otro">Otro</option>
+                  </select>
+                </div>
+                <div class="col-sm-6">
+                  <label style="font-size:.71rem;font-weight:600;color:#64748b;display:block;margin-bottom:2px">N° Cheque / Referencia</label>
+                  <input type="text" class="form-control form-control-sm" id="rc-ref" placeholder="Opcional">
+                </div>
+                <div class="col-sm-6">
+                  <label style="font-size:.71rem;font-weight:600;color:#64748b;display:block;margin-bottom:2px">Importe (ARS) <span style="color:#dc2626">*</span></label>
+                  <input type="number" class="form-control form-control-sm" id="rc-importe" placeholder="0.00" step="0.01" min="0">
+                </div>
+                <div class="col-sm-6">
+                  <label style="font-size:.71rem;font-weight:600;color:#64748b;display:block;margin-bottom:2px">Recibido por</label>
+                  <select class="form-select form-select-sm" id="rc-receptor">
+                    <option value="">— seleccionar —</option>
+                  </select>
+                </div>
+                <div class="col-12">
+                  <label style="font-size:.71rem;font-weight:600;color:#64748b;display:block;margin-bottom:2px">Observaciones</label>
+                  <input type="text" class="form-control form-control-sm" id="rc-obs" placeholder="Opcional">
+                </div>
+              </div>
+              <button onclick="generarReciboCobranza()" class="btn btn-success btn-sm mt-3 w-100" style="border-radius:9px;font-weight:700;letter-spacing:.02em;padding:9px">
+                <i class="bi bi-file-earmark-pdf-fill me-2"></i>Generar Recibo de Cobranza — Imprimir / PDF
+              </button>
+            </div>
+          </div>
+
+        </div><!-- /row -->
+      </div><!-- /card-body -->
+    </div><!-- /card generador -->
+  </div><!-- /page-documentos -->
 
   <!-- CONFIGURACIÓN -->
   <div id="page-config" class="page">
     <div class="page-hdr"><h4><i class="bi bi-gear-fill me-2"></i>Configuración</h4></div>
+
+    <!-- CONCEPTOS -->
+    <div class="card mb-4">
+      <div class="card-header bg-white fw-bold"><i class="bi bi-building me-2 text-primary"></i>Datos de la Empresa</div>
+      <div class="card-body">
+        <p class="text-muted small mb-3">Estos datos aparecen en las cabeceras de los documentos generados (Orden de Pago, Recibo de Cobranza).</p>
+        <div class="row g-3" style="max-width:520px">
+          <div class="col-sm-6">
+            <label class="form-label small fw-bold">CUIT de la empresa</label>
+            <input type="text" class="form-control form-control-sm" id="cfg-cuit-empresa" placeholder="30-XXXXXXXXX-X"
+              oninput="if(!ST.config)ST.config={};ST.config.cuitEmpresa=this.value;save()">
+          </div>
+          <div class="col-sm-6">
+            <label class="form-label small fw-bold">Dirección (opcional)</label>
+            <input type="text" class="form-control form-control-sm" id="cfg-dir-empresa" placeholder="Av. Corrientes 1234, CABA"
+              oninput="if(!ST.config)ST.config={};ST.config.dirEmpresa=this.value;save()">
+          </div>
+        </div>
+      </div>
+    </div>
 
     <!-- CONCEPTOS -->
     <div class="card mb-4">
@@ -4438,6 +4610,7 @@ function reRenderActivo() {
     case 'calendarioARCA': renderCalendarioARCA(); break;
     case 'contabilidad': renderContabilidad(); break;
     case 'tesoreria': renderTesoreria(); break;
+    case 'documentos': _initDocumentosPage(); break;
   }
 }
 const fmtF = d  => { if(!d) return '–'; const[y,m,v]=d.split('-'); return`${v}/${m}/${y}`; };
@@ -5559,6 +5732,13 @@ function initApp() {
   updateBreadcrumb('dashboard');
   renderTodo();
   _aiRestoreConfig();
+  // Restaurar datos empresa en config
+  (function(){
+    const cuitEl = document.getElementById('cfg-cuit-empresa');
+    const dirEl  = document.getElementById('cfg-dir-empresa');
+    if (cuitEl && ST.config && ST.config.cuitEmpresa) cuitEl.value = ST.config.cuitEmpresa;
+    if (dirEl  && ST.config && ST.config.dirEmpresa)  dirEl.value  = ST.config.dirEmpresa;
+  })();
   // Service Worker para modo offline
   if(typeof _registerServiceWorker==='function') _registerServiceWorker();
 }
@@ -8450,6 +8630,269 @@ ${(()=>{
   const w = window.open('','_blank','width=950,height=800,scrollbars=yes');
   w.document.write(html);
   w.document.close();
+}
+
+/* ═══════════════════════════════════════════
+   HELPERS: NÚMERO EN LETRAS (ARS)
+═══════════════════════════════════════════ */
+function _numToLetras(n) {
+  const num = Math.round(+n * 100) / 100;
+  if (isNaN(num) || num < 0) return '';
+  const entero = Math.floor(num);
+  const cents  = Math.round((num - entero) * 100);
+  const uni = ['','uno','dos','tres','cuatro','cinco','seis','siete','ocho','nueve',
+               'diez','once','doce','trece','catorce','quince','dieciséis','diecisiete',
+               'dieciocho','diecinueve'];
+  const dec = ['','','veinte','treinta','cuarenta','cincuenta','sesenta','setenta','ochenta','noventa'];
+  const cen = ['','cien','doscientos','trescientos','cuatrocientos','quinientos',
+               'seiscientos','setecientos','ochocientos','novecientos'];
+  function _m3(n) {
+    if (n === 0) return '';
+    if (n === 100) return 'cien';
+    let s = '';
+    if (n >= 100) { s += cen[Math.floor(n/100)] + ' '; n %= 100; }
+    if (n >= 20)  { s += dec[Math.floor(n/10)]; if (n%10) s += ' y ' + uni[n%10]; }
+    else if (n > 0) s += uni[n];
+    return s.trim();
+  }
+  function _millon(n) {
+    if (n === 1) return 'un millón';
+    return _m3(n) + ' millones';
+  }
+  function _miles(n) {
+    const mil = Math.floor(n / 1000);
+    const r   = n % 1000;
+    let s = '';
+    if (mil === 1) s = 'mil';
+    else if (mil > 1) s = _m3(mil) + ' mil';
+    if (r > 0) s += (s?' ':'')+_m3(r);
+    return s.trim();
+  }
+  let s = '';
+  if (entero === 0) { s = 'cero'; }
+  else {
+    const mill = Math.floor(entero / 1000000);
+    const r    = entero % 1000000;
+    if (mill > 0) s += _millon(mill) + (r > 0 ? ' ' : '');
+    if (r   > 0)  s += _miles(r);
+  }
+  // Capitalizar primera letra
+  s = s.charAt(0).toUpperCase() + s.slice(1);
+  return `${s} con ${String(cents).padStart(2,'0')}/100`;
+}
+
+/* ═══════════════════════════════════════════
+   GENERADOR: ORDEN DE PAGO
+═══════════════════════════════════════════ */
+function _initDocumentosPage() {
+  // Llenar selects de socios
+  const socios = (ST.socios || []).map(s => `<option value="${s.nombre}">${s.nombre}</option>`).join('');
+  ['op-autorizado','rc-receptor'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = '<option value="">— seleccionar —</option>' + socios;
+  });
+  // Setear fechas de hoy
+  const h = hoy();
+  if (!document.getElementById('op-fecha').value) document.getElementById('op-fecha').value = h;
+  if (!document.getElementById('rc-fecha').value) document.getElementById('rc-fecha').value = h;
+  // Mostrar próximos números
+  if (!ST.contadores) ST.contadores = {};
+  const nOP = (ST.contadores.ordenPago || 0) + 1;
+  const nRC = (ST.contadores.reciboCobranza || 0) + 1;
+  const elOP = document.getElementById('op-nro-preview');
+  const elRC = document.getElementById('rc-nro-preview');
+  if (elOP) elOP.textContent = 'N° ' + String(nOP).padStart(4,'0');
+  if (elRC) elRC.textContent = 'N° ' + String(nRC).padStart(4,'0');
+}
+
+function _docPDFHeader(tipo, nro, fecha, color) {
+  return `
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid ${color};padding-bottom:14px;margin-bottom:18px">
+      <div style="display:flex;align-items:center;gap:14px">
+        <!-- Logo MÜÜK -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:3px;width:36px;height:36px;flex-shrink:0">
+          <div style="background:#E31E24;border-radius:3px"></div>
+          <div style="background:#F5C400;border-radius:3px"></div>
+          <div style="background:#F5C400;border-radius:3px"></div>
+          <div style="background:#E31E24;border-radius:3px"></div>
+        </div>
+        <div>
+          <div style="font-size:22px;font-weight:900;color:#E31E24;font-family:Arial Black,Impact,sans-serif;line-height:1">MÜÜK SRL</div>
+          <div style="font-size:9px;color:#64748b;margin-top:1px">CUIT: ${(ST.config && ST.config.cuitEmpresa) || '30-XXXXXXXXX-X'}</div>
+          ${(ST.config && ST.config.dirEmpresa) ? `<div style="font-size:9px;color:#64748b">${ST.config.dirEmpresa}</div>` : ''}
+        </div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:18px;font-weight:800;color:${color};text-transform:uppercase;letter-spacing:.04em">${tipo}</div>
+        <div style="font-size:22px;font-weight:900;color:#0f172a;font-family:monospace">N° ${String(nro).padStart(4,'0')}</div>
+        <div style="font-size:11px;color:#64748b;margin-top:2px">${fecha}</div>
+      </div>
+    </div>`;
+}
+
+function _docPDFStyles(color) {
+  return `
+    <style>
+      * { margin:0; padding:0; box-sizing:border-box; }
+      body { font-family: Arial, sans-serif; font-size: 11px; color: #1e293b; background:#fff; padding: 32px 40px; }
+      .doc-field { margin-bottom: 14px; }
+      .doc-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: #64748b; margin-bottom: 3px; }
+      .doc-value { font-size: 13px; font-weight: 600; color: #0f172a; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; min-height: 22px; }
+      .doc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 24px; }
+      .doc-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0 18px; }
+      .importe-box { border: 2px solid ${color}; border-radius: 8px; padding: 14px 18px; margin: 20px 0; background: #f8faff; }
+      .importe-num { font-size: 26px; font-weight: 900; color: ${color}; font-family: monospace; }
+      .importe-letras { font-size: 11px; color: #475569; margin-top: 6px; font-style: italic; }
+      .firma-box { border-top: 1.5px solid #cbd5e1; margin-top: 40px; padding-top: 8px; text-align: center; font-size: 9px; color: #94a3b8; text-transform: uppercase; letter-spacing: .08em; }
+      .firma-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 36px; }
+      .footer { margin-top: 32px; font-size: 8.5px; color: #94a3b8; text-align: center; border-top: 1px solid #f1f5f9; padding-top: 8px; }
+      .badge-tipo { display: inline-block; background: ${color}; color: #fff; border-radius: 4px; padding: 2px 10px; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 12px; }
+      .watermark { position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%) rotate(-30deg); font-size: 80px; font-weight: 900; color: rgba(0,0,0,.03); white-space: nowrap; pointer-events: none; z-index: 0; }
+      .content { position: relative; z-index: 1; }
+      @media print {
+        body { padding: 18px 28px; }
+        .no-print { display: none !important; }
+        @page { size: A4; margin: 12mm 16mm; }
+      }
+    </style>`;
+}
+
+function generarOrdenPago() {
+  const beneficiario = (document.getElementById('op-beneficiario').value || '').trim();
+  const importe      = parseFloat(document.getElementById('op-importe').value) || 0;
+  const concepto     = (document.getElementById('op-concepto').value || '').trim();
+  const fecha        = document.getElementById('op-fecha').value || hoy();
+  if (!beneficiario || !concepto || importe <= 0) {
+    toast('Completá: Beneficiario, Concepto e Importe.', 'warning'); return;
+  }
+  if (!ST.contadores) ST.contadores = {};
+  ST.contadores.ordenPago = (ST.contadores.ordenPago || 0) + 1;
+  const nro        = ST.contadores.ordenPago;
+  const cuit       = (document.getElementById('op-cuit').value || '').trim();
+  const medio      = document.getElementById('op-medio').value;
+  const banco      = (document.getElementById('op-banco').value || '').trim();
+  const autorizado = document.getElementById('op-autorizado').value;
+  const obs        = (document.getElementById('op-obs').value || '').trim();
+  save();
+
+  const color  = '#1d4ed8';
+  const html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Orden de Pago N° ${String(nro).padStart(4,'0')}</title>
+  ${_docPDFStyles(color)}
+  </head><body>
+  <div class="watermark">MÜÜK SRL</div>
+  <div class="content">
+  <div class="no-print" style="margin-bottom:20px;display:flex;gap:10px">
+    <button onclick="window.print()" style="background:${color};color:#fff;border:none;border-radius:7px;padding:9px 20px;font-size:12px;cursor:pointer;font-weight:700"><i>⎙</i> Imprimir / Guardar PDF</button>
+    <button onclick="window.close()" style="background:#64748b;color:#fff;border:none;border-radius:7px;padding:9px 16px;font-size:12px;cursor:pointer">Cerrar</button>
+  </div>
+  ${_docPDFHeader('Orden de Pago', nro, fmtF(fecha), color)}
+  <span class="badge-tipo">Egreso — Pago a proveedor</span>
+  <div class="doc-grid">
+    <div class="doc-field"><div class="doc-label">Beneficiario</div><div class="doc-value">${beneficiario}</div></div>
+    <div class="doc-field"><div class="doc-label">CUIT / CUIL</div><div class="doc-value">${cuit || '—'}</div></div>
+  </div>
+  <div class="doc-field"><div class="doc-label">Concepto / Descripción</div><div class="doc-value">${concepto}</div></div>
+  <div class="doc-grid">
+    <div class="doc-field"><div class="doc-label">Forma de pago</div><div class="doc-value">${medio}</div></div>
+    <div class="doc-field"><div class="doc-label">Banco / Referencia</div><div class="doc-value">${banco || '—'}</div></div>
+  </div>
+  ${obs ? `<div class="doc-field"><div class="doc-label">Observaciones</div><div class="doc-value">${obs}</div></div>` : ''}
+  <div class="importe-box">
+    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#64748b;margin-bottom:6px">Importe total</div>
+    <div class="importe-num">$ ${Number(importe).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
+    <div class="importe-letras">Son: PESOS ${_numToLetras(importe)}</div>
+  </div>
+  <div class="firma-grid">
+    <div>
+      <div class="firma-box">${autorizado || 'Firma y aclaración'}<br><br>Autorizado por</div>
+    </div>
+    <div>
+      <div class="firma-box">Firma y sello<br><br>Conformidad del beneficiario</div>
+    </div>
+  </div>
+  <div class="footer">
+    MÜÜK SRL · Documento interno · Orden de Pago N° ${String(nro).padStart(4,'0')} · Generado el ${fmtF(hoy())}
+  </div>
+  </div></body></html>`;
+
+  const w = window.open('','_blank','width=860,height=1100');
+  w.document.write(html);
+  w.document.close();
+
+  // Actualizar preview del número
+  const elOP = document.getElementById('op-nro-preview');
+  if (elOP) elOP.textContent = 'N° ' + String(nro + 1).padStart(4,'0');
+  toast(`Orden de Pago N° ${String(nro).padStart(4,'0')} generada`, 'success');
+}
+
+/* ═══════════════════════════════════════════
+   GENERADOR: RECIBO DE COBRANZA
+═══════════════════════════════════════════ */
+function generarReciboCobranza() {
+  const cliente  = (document.getElementById('rc-cliente').value || '').trim();
+  const importe  = parseFloat(document.getElementById('rc-importe').value) || 0;
+  const concepto = (document.getElementById('rc-concepto').value || '').trim();
+  const fecha    = document.getElementById('rc-fecha').value || hoy();
+  if (!cliente || !concepto || importe <= 0) {
+    toast('Completá: Recibido de, Concepto e Importe.', 'warning'); return;
+  }
+  if (!ST.contadores) ST.contadores = {};
+  ST.contadores.reciboCobranza = (ST.contadores.reciboCobranza || 0) + 1;
+  const nro      = ST.contadores.reciboCobranza;
+  const cuit     = (document.getElementById('rc-cuit').value || '').trim();
+  const medio    = document.getElementById('rc-medio').value;
+  const ref      = (document.getElementById('rc-ref').value || '').trim();
+  const receptor = document.getElementById('rc-receptor').value;
+  const obs      = (document.getElementById('rc-obs').value || '').trim();
+  save();
+
+  const color = '#16a34a';
+  const html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Recibo de Cobranza N° ${String(nro).padStart(4,'0')}</title>
+  ${_docPDFStyles(color)}
+  </head><body>
+  <div class="watermark">MÜÜK SRL</div>
+  <div class="content">
+  <div class="no-print" style="margin-bottom:20px;display:flex;gap:10px">
+    <button onclick="window.print()" style="background:${color};color:#fff;border:none;border-radius:7px;padding:9px 20px;font-size:12px;cursor:pointer;font-weight:700"><i>⎙</i> Imprimir / Guardar PDF</button>
+    <button onclick="window.close()" style="background:#64748b;color:#fff;border:none;border-radius:7px;padding:9px 16px;font-size:12px;cursor:pointer">Cerrar</button>
+  </div>
+  ${_docPDFHeader('Recibo de Cobranza', nro, fmtF(fecha), color)}
+  <span class="badge-tipo">Ingreso — Cobro a cliente</span>
+  <div class="doc-grid">
+    <div class="doc-field"><div class="doc-label">Recibido de</div><div class="doc-value">${cliente}</div></div>
+    <div class="doc-field"><div class="doc-label">CUIT / CUIL</div><div class="doc-value">${cuit || '—'}</div></div>
+  </div>
+  <div class="doc-field"><div class="doc-label">En concepto de</div><div class="doc-value">${concepto}</div></div>
+  <div class="doc-grid">
+    <div class="doc-field"><div class="doc-label">Forma de cobro</div><div class="doc-value">${medio}</div></div>
+    <div class="doc-field"><div class="doc-label">N° Cheque / Referencia</div><div class="doc-value">${ref || '—'}</div></div>
+  </div>
+  ${obs ? `<div class="doc-field"><div class="doc-label">Observaciones</div><div class="doc-value">${obs}</div></div>` : ''}
+  <div class="importe-box">
+    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#64748b;margin-bottom:6px">Importe total</div>
+    <div class="importe-num">$ ${Number(importe).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
+    <div class="importe-letras">Son: PESOS ${_numToLetras(importe)}</div>
+  </div>
+  <div class="firma-grid">
+    <div>
+      <div class="firma-box">${receptor || 'Firma y aclaración'}<br><br>Recibido por</div>
+    </div>
+    <div>
+      <div class="firma-box">Firma y aclaración<br><br>Conforme el cliente</div>
+    </div>
+  </div>
+  <div class="footer">
+    MÜÜK SRL · Documento interno · Recibo de Cobranza N° ${String(nro).padStart(4,'0')} · Generado el ${fmtF(hoy())}
+  </div>
+  </div></body></html>`;
+
+  const w = window.open('','_blank','width=860,height=1100');
+  w.document.write(html);
+  w.document.close();
+
+  const elRC = document.getElementById('rc-nro-preview');
+  if (elRC) elRC.textContent = 'N° ' + String(nro + 1).padStart(4,'0');
+  toast(`Recibo de Cobranza N° ${String(nro).padStart(4,'0')} generado`, 'success');
 }
 
 /* ═══════════════════════════════════════════
