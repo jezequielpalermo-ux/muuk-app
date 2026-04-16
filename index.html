@@ -7511,8 +7511,14 @@ function _comBuildPDFSaldoEmpresa(empresaName, saldoResumen, details, isFull) {
   const totImporte  = pendientes.reduce((s,r) => s + (r.importe||0), 0);
   const totComision = pendientes.reduce((s,r) => s + (r.comision||0), 0);
   const totPagos    = pendientes.reduce((s,r) => s + (r.pagos||0), 0);
-  const totSaldo    = pendientes.reduce((s,r) => s + (r.saldo||0), 0);
-  const saldoMostrar = totSaldo > 0 ? totSaldo : saldoResumen;
+
+  // Saldo = último valor de la columna saldo (balance corrido, no suma)
+  const saldoMostrar = pendientes.length > 0
+    ? (pendientes[pendientes.length - 1].saldo || saldoResumen)
+    : saldoResumen;
+
+  const nFacturas = pendientes.filter(r => r.fca || r.importe || r.comision).length;
+  const nPagos    = pendientes.filter(r => r.pagos > 0 && !r.fca && !r.importe).length;
 
   const ultimoPagoHTML = ultimoPago
     ? `<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px 18px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center">
@@ -7524,7 +7530,7 @@ function _comBuildPDFSaldoEmpresa(empresaName, saldoResumen, details, isFull) {
     : '';
 
   const colSpanNombre = hasCliente ? 2 : 1;
-  const colSpanTotal  = colSpanNombre + 1; /* fecha + nombre(s) + fca */
+  const colSpanTotal  = colSpanNombre + 1;
 
   const html = `<!DOCTYPE html><html lang="es"><head><meta charset="utf-8">
 <title>Saldo Pendiente — ${empresaName}</title>
@@ -7546,9 +7552,12 @@ function _comBuildPDFSaldoEmpresa(empresaName, saldoResumen, details, isFull) {
   th.r { text-align:right; }
   td { padding:5px 10px; border-bottom:1px solid #f1f5f9; vertical-align:middle; }
   td.r { text-align:right; font-variant-numeric:tabular-nums; }
-  tr:nth-child(even) { background:rgba(0,0,0,.018); }
+  tr.fila-fac:nth-child(even) { background:rgba(0,0,0,.018); }
+  tr.fila-pago { background:#f0fdf4 !important; }
+  tr.fila-pago td { border-bottom:1px solid #dcfce7; color:#166534; }
   .total-row td { font-weight:700; border-top:2px solid #dc2626; background:#fff5f5; padding:8px 10px; }
   .nc-badge { background:#dbeafe;color:#1e40af;font-size:8px;padding:1px 5px;border-radius:3px;font-weight:700;margin-left:3px; }
+  .pago-badge { background:#16a34a;color:#fff;font-size:8px;padding:2px 7px;border-radius:3px;font-weight:700;letter-spacing:.04em; }
   .footer { text-align:center; margin-top:16px; font-size:9px; color:#94a3b8; padding-top:8px; border-top:1px solid #f1f5f9; }
   .print-btn { position:fixed; top:16px; right:16px; background:#dc2626; color:#fff; border:none; padding:10px 20px; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; box-shadow:0 4px 12px rgba(0,0,0,.2); }
   .watermark { position:fixed; bottom:30px; right:30px; font-size:48px; font-weight:900; color:rgba(0,0,0,.04); pointer-events:none; letter-spacing:-2px; }
@@ -7569,18 +7578,18 @@ function _comBuildPDFSaldoEmpresa(empresaName, saldoResumen, details, isFull) {
   </div>
   <div style="text-align:right">
     <div style="font-size:11px;opacity:.85">${hoyStr}</div>
-    <div style="font-size:10px;opacity:.65">${pendientes.length} factura${pendientes.length !== 1 ? 's' : ''} con saldo impago</div>
+    <div style="font-size:10px;opacity:.65">${nFacturas} factura${nFacturas !== 1 ? 's' : ''}${nPagos > 0 ? ' · '+nPagos+' pago'+( nPagos !== 1 ? 's' : '') : ''}</div>
   </div>
 </div>
 
 <div class="saldo-box">
   <div>
     <div class="empresa">${empresaName}</div>
-    <div class="sub">${pendientes.length} factura${pendientes.length !== 1 ? 's' : ''} con comisión pendiente de cobro</div>
+    <div class="sub">${nFacturas} factura${nFacturas !== 1 ? 's' : ''} pendiente${nFacturas !== 1 ? 's' : ''}${nPagos > 0 ? ' · '+nPagos+' pago'+( nPagos !== 1 ? 's' : '')+' parcial'+( nPagos !== 1 ? 'es' : '') : ''}</div>
   </div>
   <div style="text-align:right">
     <div class="monto">$${_f(saldoMostrar)}</div>
-    <div class="sub">Saldo a cobrar</div>
+    <div class="sub">Saldo a cobrar (última línea)</div>
   </div>
 </div>
 
@@ -7593,19 +7602,31 @@ ${ultimoPagoHTML}
     <th>Factura (FCA)</th>
     <th class="r">Importe</th>
     ${hasComision ? '<th class="r">Comisión</th>' : ''}
-    <th class="r">Pagos</th>
+    <th class="r">Pago</th>
     <th class="r">Saldo</th>
   </tr></thead>
   <tbody>
     ${pendientes.map((r,i) => {
-      const isNC = (r.fca||'').toLowerCase().includes('nc');
-      return `<tr>
+      const esPago = r.pagos > 0 && !r.fca && !r.importe && !r.comision;
+      const isNC   = (r.fca||'').toLowerCase().includes('nc');
+      if (esPago) {
+        const colspan = (hasCliente ? 2 : 1) + 1 + (hasComision ? 2 : 1); /* fecha+cliente+fca+importe+[comision] */
+        return `<tr class="fila-pago">
+          <td>${r.fecha || '–'}</td>
+          <td colspan="${colspan}" style="font-style:italic">
+            <span class="pago-badge">PAGO</span>&nbsp;${r.cliente || 'Pago recibido'}
+          </td>
+          <td class="r" style="font-weight:700;color:#16a34a">– $${_f(r.pagos)}</td>
+          <td class="r" style="font-weight:700">$${_f(r.saldo)}</td>
+        </tr>`;
+      }
+      return `<tr class="fila-fac">
         <td>${r.fecha || '–'}</td>
         ${hasCliente ? `<td style="font-weight:600">${r.cliente || '–'}</td>` : ''}
         <td>${r.fca || '–'}${isNC ? '<span class="nc-badge">NC</span>' : ''}</td>
         <td class="r">${r.importe ? '$'+_f(r.importe) : '–'}</td>
         ${hasComision ? `<td class="r" style="color:#d97706;font-weight:600">${r.comision ? '$'+_f(r.comision) : '–'}</td>` : ''}
-        <td class="r" style="color:${r.pagos > 0 ? '#16a34a' : '#94a3b8'}">${r.pagos ? '$'+_f(r.pagos) : '–'}</td>
+        <td class="r" style="color:#94a3b8">–</td>
         <td class="r" style="color:#dc2626;font-weight:700">$${_f(r.saldo)}</td>
       </tr>`;
     }).join('')}
@@ -7613,14 +7634,14 @@ ${ultimoPagoHTML}
       <td colspan="${colSpanTotal}" style="color:#7f1d1d">TOTAL — ${empresaName}</td>
       <td class="r">$${_f(totImporte)}</td>
       ${hasComision ? `<td class="r" style="color:#d97706">$${_f(totComision)}</td>` : ''}
-      <td class="r" style="color:#16a34a">$${totPagos > 0 ? '$'+_f(totPagos) : '–'}</td>
+      <td class="r" style="color:#16a34a">${totPagos > 0 ? '– $'+_f(totPagos) : '–'}</td>
       <td class="r" style="color:#dc2626;font-size:13px;font-weight:800">$${_f(saldoMostrar)}</td>
     </tr>
   </tbody>
 </table>
 
 <div class="footer">
-  MÜÜK SRL · Saldo pendiente generado el ${hoyStr} · Solo facturas con comisión impaga · ${empresaName}
+  MÜÜK SRL · Generado el ${hoyStr} · Período desde último saldo $0 · ${empresaName}
 </div>
 </body></html>`;
 
