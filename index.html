@@ -4135,12 +4135,32 @@ CREATE POLICY "acceso total" ON flujo_caja_versions FOR ALL USING (true) WITH CH
         <input type="hidden" id="ch-id">
         <input type="hidden" id="ch-cat">
         <div class="row g-3">
+
+          <!-- ── Instrumento (solo Cheques a Pagar) ── -->
+          <div class="col-12" id="ch-instrumento-wrap" style="display:none">
+            <label class="form-label fw-bold small">Instrumento de pago</label>
+            <div class="d-flex gap-2 flex-wrap">
+              <div class="form-check form-check-inline">
+                <input class="form-check-input" type="radio" name="ch-instrumento" id="ch-inst-cheque" value="cheque" checked onchange="_chToggleInstrumento()">
+                <label class="form-check-label" for="ch-inst-cheque"><i class="bi bi-file-earmark-check me-1 text-primary"></i>Cheque Físico</label>
+              </div>
+              <div class="form-check form-check-inline">
+                <input class="form-check-input" type="radio" name="ch-instrumento" id="ch-inst-echeque" value="echeque" onchange="_chToggleInstrumento()">
+                <label class="form-check-label" for="ch-inst-echeque"><i class="bi bi-credit-card me-1" style="color:#7B2D8B"></i>E-Cheque</label>
+              </div>
+              <div class="form-check form-check-inline">
+                <input class="form-check-input" type="radio" name="ch-instrumento" id="ch-inst-transf" value="transferencia" onchange="_chToggleInstrumento()">
+                <label class="form-check-label" for="ch-inst-transf"><i class="bi bi-arrow-left-right me-1 text-success"></i>Transferencia Programada</label>
+              </div>
+            </div>
+          </div>
+
           <div class="col-md-6">
-            <label class="form-label fw-bold small">Fecha de Emisión <span class="text-danger">*</span></label>
+            <label class="form-label fw-bold small" id="ch-fecha-label">Fecha de Emisión <span class="text-danger">*</span></label>
             <input type="date" class="form-control form-control-sm" id="ch-fecha">
           </div>
           <div class="col-md-6">
-            <label class="form-label fw-bold small">Fecha de Vencimiento <span class="text-danger">*</span></label>
+            <label class="form-label fw-bold small" id="ch-fechaVenc-label">Fecha de Vencimiento <span class="text-danger">*</span></label>
             <input type="date" class="form-control form-control-sm" id="ch-fechaVenc">
           </div>
           <div class="col-md-6">
@@ -4148,15 +4168,15 @@ CREATE POLICY "acceso total" ON flujo_caja_versions FOR ALL USING (true) WITH CH
             <select class="form-select form-select-sm" id="ch-socio"></select>
           </div>
           <div class="col-md-6">
-            <label class="form-label fw-bold small">Banco Emisor <span class="text-danger">*</span></label>
+            <label class="form-label fw-bold small" id="ch-banco-label">Banco Emisor <span class="text-danger">*</span></label>
             <input list="bcra-banks-list" class="form-control form-control-sm" id="ch-banco" placeholder="Escribí para buscar banco…" autocomplete="off">
           </div>
           <div class="col-md-6" id="ch-bancoCustodia-wrap">
             <label class="form-label fw-bold small">Banco en Custodia <span class="text-muted">(donde se acredita)</span></label>
             <input type="text" class="form-control form-control-sm" id="ch-bancoCustodia" placeholder="Ej: Banco Galicia - Cta. Corriente">
           </div>
-          <div class="col-md-6">
-            <label class="form-label fw-bold small">Número de Cheque</label>
+          <div class="col-md-6" id="ch-numero-wrap">
+            <label class="form-label fw-bold small" id="ch-numero-label">Número de Cheque</label>
             <input type="text" class="form-control form-control-sm" id="ch-numero" placeholder="000000">
           </div>
           <div class="col-md-6">
@@ -4170,7 +4190,7 @@ CREATE POLICY "acceso total" ON flujo_caja_versions FOR ALL USING (true) WITH CH
             <label class="form-label fw-bold small">Estado</label>
             <select class="form-select form-select-sm" id="ch-estado"></select>
           </div>
-          <div class="col-md-3">
+          <div class="col-md-3" id="ch-tipo-wrap">
             <label class="form-label fw-bold small">Tipo</label>
             <select class="form-select form-select-sm" id="ch-tipo">
               <option value="">–</option>
@@ -4179,11 +4199,11 @@ CREATE POLICY "acceso total" ON flujo_caja_versions FOR ALL USING (true) WITH CH
             </select>
           </div>
           <div class="col-md-6">
-            <label class="form-label fw-bold small">Cliente <span class="text-muted">(quién lo entregó)</span></label>
+            <label class="form-label fw-bold small" id="ch-cliente-label">Cliente <span class="text-muted" id="ch-cliente-sub">(quién lo entregó)</span></label>
             <input type="text" class="form-control form-control-sm" id="ch-cliente" placeholder="Ej: Distribuidora El Triunfo">
           </div>
           <div class="col-md-6">
-            <label class="form-label fw-bold small">Factura / Remito</label>
+            <label class="form-label fw-bold small" id="ch-factura-label">Factura / Remito</label>
             <input type="text" class="form-control form-control-sm" id="ch-factura" placeholder="Ej: FC-A 0001-00000123">
           </div>
           <div class="col-12">
@@ -7685,7 +7705,7 @@ function renderCheques(cat){
       <span class="text-danger fw-bold" style="font-size:.95rem">
         <i class="bi bi-exclamation-circle me-1"></i>Total pendiente de pago: ${fmt(totPend)}
       </span>
-      <span class="text-muted">${pend.length} cheque${pend.length!==1?'s':''} pendiente${pend.length!==1?'s':''}</span>
+      <span class="text-muted">${pend.length} pago${pend.length!==1?'s':''} pendiente${pend.length!==1?'s':''}</span>
       ${vencidos.length>0?`<span class="badge bg-danger px-2 py-1">
           <i class="bi bi-alarm-fill me-1"></i>${vencidos.length} vencido${vencidos.length!==1?'s':''} · ${fmt(vencidos.reduce((a,c)=>a+ +c.monto,0))}
         </span>`:''}
@@ -7706,13 +7726,20 @@ function renderCheques(cat){
   }
 
   // ── Tabla ────────────────────────────────────────────────────────────────
+  // Instrumento badge para pagar
+  const instrBadge = inst => ({
+    cheque:       '<span class="badge bg-primary" style="font-size:.65rem">Cheque</span>',
+    echeque:      '<span class="badge text-white" style="background:#7B2D8B;font-size:.65rem">E-Cheque</span>',
+    transferencia:'<span class="badge bg-success" style="font-size:.65rem"><i class="bi bi-arrow-left-right me-1"></i>Transfer.</span>'
+  }[inst] || '<span class="badge bg-secondary" style="font-size:.65rem">Cheque</span>');
+
   wrap.innerHTML=headerExtra+filterTag+`<div class="table-responsive"><table class="table table-hover mb-0">
-    <thead><tr><th class="ps-3">Emisión</th><th>Vencimiento</th>
-      ${isPagar?'<th>Destinatario</th>':''}
-      <th>Banco Emisor</th>
+    <thead><tr><th class="ps-3">Emisión</th><th>${isPagar?'Fecha de pago':'Vencimiento'}</th>
+      ${isPagar?'<th>Instrumento</th><th>Proveedor</th><th>Factura</th>':''}
+      <th>${isPagar?'Banco origen':'Banco Emisor'}</th>
       ${isECh?'<th>Custodia</th><th>Cliente</th><th>Factura</th>':''}
       ${isFisico?'<th>Tipo</th>':''}
-      <th>Nro.</th><th>Monto</th><th>Estado</th><th>Acciones</th></tr></thead>
+      <th>${isPagar?'Nro. / Ref.':'Nro.'}</th><th>Monto</th><th>Estado</th><th>Acciones</th></tr></thead>
     <tbody>${s.map(c=>{
       const d=c.fechaVenc?dHasta(c.fechaVenc):null;
 
@@ -7746,7 +7773,11 @@ function renderCheques(cat){
       return`<tr ${trClass?`class="${trClass}"`:''}>
         <td class="ps-3"><small>${fmtF(c.fecha)}</small></td>
         <td>${fmtF(c.fechaVenc)} ${vencTag}</td>
-        ${isPagar?`<td><small class="fw-semibold">${c.desc||'–'}</small></td>`:''}
+        ${isPagar?`
+          <td>${instrBadge(c.instrumento||'cheque')}</td>
+          <td><span class="fw-semibold" style="font-size:.82rem">${c.cliente||'–'}</span></td>
+          <td><small class="text-muted">${c.factura||'–'}</small></td>
+        `:''}
         <td><small>${c.banco||'–'}</small></td>
         ${isECh?`
           <td><small class="text-primary fw-semibold">${c.bancoCustodia||'–'}</small></td>
@@ -7779,6 +7810,42 @@ function poblarEstados(cat){
   if(prev && [...sel.options].some(o=>o.value===prev)) sel.value=prev;
 }
 
+function _chSetPagarMode(isPagar) {
+  document.getElementById('ch-instrumento-wrap').style.display = isPagar ? '' : 'none';
+  document.getElementById('ch-bancoCustodia-wrap').style.display = isPagar ? 'none' : '';
+  if (isPagar) {
+    document.getElementById('ch-cliente-label').innerHTML = 'Proveedor que recibe el pago';
+    document.getElementById('ch-cliente').placeholder = 'Ej: Toyota Argentina';
+    document.getElementById('ch-factura-label').innerHTML = 'Factura que se paga <span class="text-muted" style="font-weight:400">(opcional)</span>';
+    document.getElementById('ch-factura').placeholder = 'Ej: FC-A 0001-00000456';
+    document.getElementById('ch-fecha-label').innerHTML = 'Fecha de emisión <span class="text-danger">*</span>';
+    document.getElementById('ch-fechaVenc-label').innerHTML = 'Fecha de pago <span class="text-danger">*</span>';
+  } else {
+    document.getElementById('ch-cliente-label').innerHTML = 'Cliente <span class="text-muted" id="ch-cliente-sub">(quién lo entregó)</span>';
+    document.getElementById('ch-cliente').placeholder = 'Ej: Distribuidora El Triunfo';
+    document.getElementById('ch-factura-label').innerHTML = 'Factura / Remito';
+    document.getElementById('ch-factura').placeholder = 'Ej: FC-A 0001-00000123';
+    document.getElementById('ch-fecha-label').innerHTML = 'Fecha de Emisión <span class="text-danger">*</span>';
+    document.getElementById('ch-fechaVenc-label').innerHTML = 'Fecha de Vencimiento <span class="text-danger">*</span>';
+  }
+}
+function _chToggleInstrumento() {
+  const val = document.querySelector('input[name="ch-instrumento"]:checked')?.value || 'cheque';
+  const isTransf = val === 'transferencia';
+  document.getElementById('ch-numero-wrap').style.display = '';
+  document.getElementById('ch-tipo-wrap').style.display = isTransf ? 'none' : '';
+  if (isTransf) {
+    document.getElementById('ch-banco-label').innerHTML = 'Banco de origen <span class="text-danger">*</span>';
+    document.getElementById('ch-banco').placeholder = 'Banco desde donde se transfiere';
+    document.getElementById('ch-numero-label').textContent = 'CBU / Referencia de transferencia';
+    document.getElementById('ch-numero').placeholder = 'CBU destino o N° de operación';
+  } else {
+    document.getElementById('ch-banco-label').innerHTML = 'Banco Emisor <span class="text-danger">*</span>';
+    document.getElementById('ch-banco').placeholder = 'Escribí para buscar banco…';
+    document.getElementById('ch-numero-label').textContent = 'Número de Cheque';
+    document.getElementById('ch-numero').placeholder = '000000';
+  }
+}
 function abrirModalCheque(cat){
   document.getElementById('ch-id').value='';
   document.getElementById('ch-cat').value=cat;
@@ -7793,6 +7860,11 @@ function abrirModalCheque(cat){
   if(cat==='echeque') document.getElementById('ch-bancoCustodia').value='Banco Galicia - Cta. Corriente';
   actualizarSelects();
   document.getElementById('ch-socio').value='';
+  // Instrumento default
+  const instrEl = document.getElementById('ch-inst-cheque');
+  if (instrEl) instrEl.checked = true;
+  _chSetPagarMode(cat === 'pagar');
+  _chToggleInstrumento();
   document.getElementById('modalCheque-title').textContent=TTL_CH[cat]||'Cheque';
   new bootstrap.Modal(document.getElementById('modalCheque')).show();
 }
@@ -7815,6 +7887,13 @@ function editarCheque(cat,id){
   document.getElementById('ch-factura').value=c.factura||'';
   actualizarSelects();
   document.getElementById('ch-socio').value=c.socioId||'';
+  // Instrumento (solo para pagar)
+  const instrVal = c.instrumento || 'cheque';
+  const instrEl = document.getElementById('ch-inst-'+instrVal);
+  if (instrEl) instrEl.checked = true;
+  else { const def = document.getElementById('ch-inst-cheque'); if(def) def.checked=true; }
+  _chSetPagarMode(catK === 'pagar');
+  _chToggleInstrumento();
   document.getElementById('modalCheque-title').textContent=TTL_CH[catK]||'Cheque';
   new bootstrap.Modal(document.getElementById('modalCheque')).show();
 }
@@ -7836,7 +7915,8 @@ function guardarCheque(){
     tipo:document.getElementById('ch-tipo').value,
     desc:document.getElementById('ch-desc').value,
     cliente:document.getElementById('ch-cliente').value,
-    factura:document.getElementById('ch-factura').value
+    factura:document.getElementById('ch-factura').value,
+    instrumento: (document.querySelector('input[name="ch-instrumento"]:checked')?.value) || ''
   };
   const idx=ST[cat].findIndex(x=>x.id===obj.id);
   if(idx>=0)ST[cat][idx]=obj;else ST[cat].push(obj);
