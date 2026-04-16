@@ -736,6 +736,7 @@
     </div>
     <div class="sl-items" id="sg-archivos">
       <li><a class="nav-link" data-page="documentos"><i class="bi bi-folder2-open"></i>Documentos</a></li>
+      <li><a class="nav-link" data-page="cuentasBancarias"><i class="bi bi-bank2"></i>Cuentas Bancarias</a></li>
       <li><a class="nav-link" data-page="config"><i class="bi bi-gear-fill"></i>Configuración</a></li>
     </div>
 
@@ -2829,6 +2830,233 @@ CREATE POLICY "acceso total" ON flujo_caja_versions FOR ALL USING (true) WITH CH
   </div>
 
 
+  <!-- CUENTAS BANCARIAS -->
+  <div id="page-cuentasBancarias" class="page">
+    <div class="page-hdr">
+      <h4><i class="bi bi-bank2 me-2"></i>Cuentas Bancarias</h4>
+      <button class="btn btn-sm btn-outline-secondary" onclick="window.print()" style="font-size:.78rem;border-radius:8px">
+        <i class="bi bi-printer me-1"></i>Imprimir
+      </button>
+    </div>
+
+    <style>
+      @media print {
+        body > *:not(#app) { display:none!important; }
+        #app .sidebar, #app .topbar, .page-hdr button, .no-print { display:none!important; }
+        #page-cuentasBancarias { display:block!important; padding:0!important; }
+        .cb-card { break-inside:avoid; box-shadow:none!important; border:1px solid #cbd5e1!important; }
+        .cb-bank-badge { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+      }
+      .cb-section-title {
+        font-size:.65rem; font-weight:800; letter-spacing:.1em; text-transform:uppercase;
+        color:#94a3b8; display:flex; align-items:center; gap:10px; margin-bottom:12px;
+      }
+      .cb-section-title span.line { flex:1; height:1px; background:#e2e8f0; }
+      .cb-card {
+        background:#fff; border-radius:12px; border:1px solid #e2e8f0;
+        box-shadow:0 1px 4px rgba(0,0,0,.06); padding:16px 18px; margin-bottom:12px;
+      }
+      .cb-card-header { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+      .cb-bank-badge {
+        font-size:.68rem; font-weight:700; padding:3px 10px; border-radius:20px;
+        color:#fff; letter-spacing:.03em; white-space:nowrap;
+      }
+      .cb-person { font-size:.82rem; font-weight:700; color:#1e293b; }
+      .cb-table { width:100%; font-size:.78rem; border-collapse:collapse; }
+      .cb-table td { padding:3px 0; vertical-align:top; }
+      .cb-table td:first-child { color:#64748b; font-weight:600; width:155px; padding-right:8px; }
+      .cb-table td:last-child { color:#1e293b; font-family:monospace; font-size:.76rem; word-break:break-all; }
+      .cb-usd-badge { font-size:.6rem; background:#d97706; color:#fff; padding:1px 6px; border-radius:10px; font-weight:700; vertical-align:middle; margin-left:4px; }
+    </style>
+
+    <div style="max-width:900px">
+
+      <!-- ── EMPRESA ── -->
+      <div class="cb-section-title"><span>Empresa</span><span class="line"></span></div>
+
+      <!-- Müük SRL - Galicia -->
+      <div class="cb-card">
+        <div class="cb-card-header">
+          <span class="cb-bank-badge" style="background:#e31937">Banco Galicia</span>
+          <span class="cb-person">Müük S.R.L</span>
+        </div>
+        <table class="cb-table">
+          <tr><td>Razón Social</td><td>M K S.R.L</td></tr>
+          <tr><td>CUIT</td><td>30-71761791-2</td></tr>
+          <tr><td>N° de cuenta</td><td>0005533-8 035-6</td></tr>
+          <tr><td>CBU</td><td>0070035120000005533860</td></tr>
+          <tr><td>Alias</td><td>muuk.galicia</td></tr>
+        </table>
+      </div>
+
+      <!-- ── SOCIOS / PERSONAL ── -->
+      <div class="cb-section-title mt-3"><span>Socios &amp; Personal</span><span class="line"></span></div>
+
+      <!-- Jonathan Palermo – 4 cuentas -->
+      <div class="cb-card">
+        <div class="cb-card-header">
+          <span class="cb-bank-badge" style="background:#7B2D8B">Brubank</span>
+          <span class="cb-person">Jonathan Palermo</span>
+        </div>
+        <table class="cb-table">
+          <tr><td>Nombre completo</td><td>Jonathan Palermo</td></tr>
+          <tr><td>CUIT</td><td>20-36156735-9</td></tr>
+          <tr><td>N° de cuenta</td><td>1300061128001</td></tr>
+          <tr><td>CBU</td><td>1430001713000611280017</td></tr>
+          <tr><td>Alias</td><td>jonathanpalermo.bru</td></tr>
+        </table>
+      </div>
+
+      <div class="cb-card">
+        <div class="cb-card-header">
+          <span class="cb-bank-badge" style="background:#e31937">Banco Galicia</span>
+          <span class="cb-person">Jonathan Palermo</span>
+          <span style="font-size:.72rem;color:#64748b">Cta. Corriente $</span>
+        </div>
+        <table class="cb-table">
+          <tr><td>Nombre completo</td><td>Jonathan Ezequiel</td></tr>
+          <tr><td>CUIL</td><td>20-36156735-9</td></tr>
+          <tr><td>N° de cuenta</td><td>4032068-4 035-3</td></tr>
+          <tr><td>CBU</td><td>0070035130004032068433</td></tr>
+          <tr><td>Alias</td><td>TIA.GANCHO.DECENA</td></tr>
+        </table>
+      </div>
+
+      <div class="cb-card">
+        <div class="cb-card-header">
+          <span class="cb-bank-badge" style="background:#b91c1c">Galicia USD</span>
+          <span class="cb-person">Jonathan Palermo</span>
+          <span class="cb-usd-badge">USD</span>
+        </div>
+        <table class="cb-table">
+          <tr><td>Nombre completo</td><td>Jonathan Ezequiel</td></tr>
+          <tr><td>CUIL</td><td>20-36156735-9</td></tr>
+          <tr><td>N° de cuenta</td><td>4030935-4 017-3</td></tr>
+          <tr><td>CBU</td><td>00700177-31004030935437</td></tr>
+          <tr><td>Alias</td><td>ACTRIZ.LAPIZ.GENIA</td></tr>
+        </table>
+      </div>
+
+      <div class="cb-card">
+        <div class="cb-card-header">
+          <span class="cb-bank-badge" style="background:#1a6640">Utoppia / Lineage Bank</span>
+          <span class="cb-person">Jonathan Palermo</span>
+          <span class="cb-usd-badge">USD · USA</span>
+        </div>
+        <table class="cb-table">
+          <tr><td>Beneficiary</td><td>Jonathan Palermo</td></tr>
+          <tr><td>Address (ARG)</td><td>5347 Avenida Mendoza, Comuna 12, Buenos Aires C1431, AR</td></tr>
+          <tr><td>Address (USA)</td><td>120 5th Ave N, Franklin, TN 37064, United States</td></tr>
+          <tr><td>Account Number</td><td>489954679240</td></tr>
+          <tr><td>Account Type</td><td>Checking account</td></tr>
+          <tr><td>Routing (ABA)</td><td>064109565</td></tr>
+          <tr><td>Bank Name</td><td>Lineage Bank</td></tr>
+          <tr><td>Bank Address</td><td>120 5th Ave N, Franklin, TN 37064, United States</td></tr>
+        </table>
+      </div>
+
+      <!-- Rocio Benito -->
+      <div class="cb-card">
+        <div class="cb-card-header">
+          <span class="cb-bank-badge" style="background:#004481">BBVA</span>
+          <span class="cb-person">Rocío Benito</span>
+        </div>
+        <table class="cb-table">
+          <tr><td>D.N.I.</td><td>37.931.690</td></tr>
+          <tr><td>Tipo de cuenta</td><td>Caja de Ahorro en Pesos</td></tr>
+          <tr><td>N° de cuenta</td><td>339-657094/8</td></tr>
+          <tr><td>CBU</td><td>0170339740000065709489</td></tr>
+          <tr><td>Banco</td><td>Banco BBVA Argentina S.A.</td></tr>
+        </table>
+      </div>
+
+      <!-- Teresa Nistico -->
+      <div class="cb-card">
+        <div class="cb-card-header">
+          <span class="cb-bank-badge" style="background:#0055a5">Banco Ciudad</span>
+          <span class="cb-person">Teresa Alejandra Nistico</span>
+        </div>
+        <table class="cb-table">
+          <tr><td>CUIT/CUIL</td><td>27-20356667-6</td></tr>
+          <tr><td>Tipo de cuenta</td><td>Caja de Ahorro en Pesos</td></tr>
+          <tr><td>N° de cuenta</td><td>000000200200242707</td></tr>
+          <tr><td>CBU</td><td>0290020910000002427075</td></tr>
+          <tr><td>Alias</td><td>TIMON.CLON.MANI</td></tr>
+        </table>
+      </div>
+
+      <!-- Alberto Palermo -->
+      <div class="cb-card">
+        <div class="cb-card-header">
+          <span class="cb-bank-badge" style="background:#c8102e">ICBC</span>
+          <span class="cb-person">Alberto Palermo</span>
+        </div>
+        <table class="cb-table">
+          <tr><td>Nombre completo</td><td>Alberto José Palermo</td></tr>
+          <tr><td>CUIL/CUIT</td><td>20-14901225-8</td></tr>
+          <tr><td>Tipo de cuenta</td><td>Caja de Ahorro $</td></tr>
+          <tr><td>N° de cuenta</td><td>0541/01124058/98</td></tr>
+          <tr><td>CBU</td><td>0150541201000124058980</td></tr>
+          <tr><td>Alias</td><td>LADO.PALMA.MOZO</td></tr>
+        </table>
+      </div>
+
+      <div class="cb-card">
+        <div class="cb-card-header">
+          <span class="cb-bank-badge" style="background:#7B2D8B">Brubank</span>
+          <span class="cb-person">Alberto Palermo</span>
+        </div>
+        <table class="cb-table">
+          <tr><td>Nombre completo</td><td>Alberto Jose Palermo</td></tr>
+          <tr><td>CUIT</td><td>20-14901225-8</td></tr>
+          <tr><td>N° de cuenta</td><td>1300931274001</td></tr>
+          <tr><td>CBU</td><td>1430001713009312740017</td></tr>
+          <tr><td>Alias</td><td>DIENTE.BALON.PIERNA</td></tr>
+        </table>
+      </div>
+
+      <!-- Ricardo Bodini -->
+      <div class="cb-card">
+        <div class="cb-card-header">
+          <span class="cb-bank-badge" style="background:#ec0000">Santander</span>
+          <span class="cb-person">Ricardo Bodini</span>
+        </div>
+        <table class="cb-table">
+          <tr><td>N° de cuenta</td><td>000-050310</td></tr>
+          <tr><td>CBU</td><td>0720000788000005031036</td></tr>
+          <tr><td>Alias</td><td>MARTE.CUMBIA.PODER</td></tr>
+        </table>
+      </div>
+
+      <!-- Paula Spinelli -->
+      <div class="cb-card">
+        <div class="cb-card-header">
+          <span class="cb-bank-badge" style="background:#e31937">Banco Galicia</span>
+          <span class="cb-person">Paula Spinelli</span>
+        </div>
+        <table class="cb-table">
+          <tr><td>D.U.</td><td>31208023</td></tr>
+          <tr><td>CUIL</td><td>27-31208023-6</td></tr>
+          <tr><td>N° de cuenta</td><td>4008629-0 029-0</td></tr>
+          <tr><td>CBU</td><td>0070029030004008629002</td></tr>
+          <tr><td>Alias</td><td>JAPON.MONTE.CENTRO</td></tr>
+        </table>
+      </div>
+
+      <!-- Agustin Galie -->
+      <div class="cb-card">
+        <div class="cb-card-header">
+          <span class="cb-bank-badge" style="background:#003087">Banco Provincia</span>
+          <span class="cb-person">Agustin Galie</span>
+        </div>
+        <table class="cb-table">
+          <tr><td>CBU</td><td>0140076203502152582944</td></tr>
+        </table>
+      </div>
+
+    </div><!-- /max-width -->
+  </div><!-- /page-cuentasBancarias -->
+
   <!-- FACTURAS A COBRAR -->
   <div id="page-facturasACobrar" class="page">
     <div class="page-hdr">
@@ -4703,6 +4931,7 @@ function reRenderActivo() {
     case 'contabilidad': renderContabilidad(); break;
     case 'tesoreria': renderTesoreria(); break;
     case 'documentos': _initDocumentosPage(); break;
+    case 'cuentasBancarias': break; /* static page, no init needed */
   }
 }
 const fmtF = d  => { if(!d) return '–'; const[y,m,v]=d.split('-'); return`${v}/${m}/${y}`; };
@@ -5843,7 +6072,7 @@ const _SB_GROUPS = {
   caja:     ['cajaBancos','cajaEfectivo','chequesFisicos','eCheques','chequesPagar','kilometraje'],
   gestion:  ['comisiones','bcra','calendarioARCA','contabilidad','facturasACobrar','facturasPagar','estadosCuenta','stock','listasPrecios'],
   analisis: ['tesoreria','flujoProyectado','panelVencimientos','rentabilidad','gestion','reportes','historial','estrategicos'],
-  archivos: ['documentos','config'],
+  archivos: ['documentos','cuentasBancarias','config'],
 };
 
 function toggleSBGroup(group) {
