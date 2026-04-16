@@ -7056,7 +7056,7 @@ async function comPdfSaldos() {
       const _fc = (kw) => headers.findIndex(h => h.length < 40 && kw.some(k => h.includes(k)));
       const iFecha = _fc(['fecha']);
       const iCliente = _fc(['cliente']);
-      const iFca = headers.findIndex(h => h === 'fca');
+      const iFca = headers.findIndex(h => h === 'fca' || h === 'n° fca' || h === 'nro. fca' || h === 'nro fca' || h === 'n fca' || (h.includes('fca') && h.length <= 12));
       const iImporte = headers.findIndex(h => h.length < 40 && h.includes('importe') && !h.includes('sin') && !h.includes('s/i'));
       const iSinIVA = _fc(['sin iva','sin imp','s/imp','s/iva']);
       const iComision = _fc(['comisi']);
@@ -7075,17 +7075,22 @@ async function comPdfSaldos() {
         const pagos = iPagos >= 0 ? comParseMonto(r[iPagos]) : 0;
         const saldo = iSaldo >= 0 ? comParseMonto(r[iSaldo]) : 0;
         const fecha = iFecha >= 0 ? (r[iFecha]||'').trim() : '';
-        const estado = iEstado >= 0 ? (r[iEstado]||'').trim().toLowerCase() : '';
 
-        if (!cliente && !fca && !importe && !comision) continue;
-
-        // Exclude fully paid rows (saldo 0 or estado contains "pagado"/"cobrado")
-        const isPaid = saldo === 0 || estado.includes('pagad') || estado.includes('cobrad');
-        if (isPaid) continue;
-
+        if (!cliente && !fca && !importe && !comision && !pagos && !saldo) continue;
         detail.push({ fecha, cliente, fca, importe, sinIVA, comision, pagos, saldo });
       }
-      empresaDetails.push({ empresa: emp.empresa, saldo: emp.saldo, rows: detail });
+
+      // ── Tomar solo filas DESPUÉS del último saldo = 0 (período actual) ──
+      let lastZeroIdx = -1;
+      for (let i = detail.length - 1; i >= 0; i--) {
+        if (detail[i].saldo === 0 && (detail[i].fca || detail[i].importe || detail[i].comision || detail[i].cliente)) {
+          lastZeroIdx = i; break;
+        }
+      }
+      const filtrado = (lastZeroIdx >= 0 ? detail.slice(lastZeroIdx + 1) : detail)
+        .filter(r => r.fca || r.importe || r.comision || r.cliente || r.pagos);
+
+      empresaDetails.push({ empresa: emp.empresa, saldo: emp.saldo, rows: filtrado });
     } catch(e) {
       empresaDetails.push({ empresa: emp.empresa, saldo: emp.saldo, rows: [] });
     }
@@ -7248,7 +7253,7 @@ async function cargarComisionDetalle(sheetTab, empresaName) {
     const _findCol = (keywords) => headers.findIndex(h => h.length < 40 && keywords.some(k => h.includes(k)));
     const iFecha   = _findCol(['fecha']);
     const iCliente = _findCol(['cliente']);
-    const iFca     = headers.findIndex(h => h === 'fca');
+    const iFca     = headers.findIndex(h => h === 'fca' || h === 'n° fca' || h === 'nro. fca' || h === 'nro fca' || h === 'n fca' || (h.includes('fca') && h.length <= 12));
     const iImporte = headers.findIndex(h => h.length < 40 && h.includes('importe') && !h.includes('sin') && !h.includes('s/i'));
     const iSinIVA  = _findCol(['sin iva', 'sin imp', 's/imp', 's/iva']);
     const iComision= _findCol(['comisi']);
@@ -7435,7 +7440,7 @@ async function comImprimirSaldoEmpresa(sheetTab, empresaName, saldo) {
     const _fc = (kw) => headers.findIndex(h => h.length < 40 && kw.some(k => h.includes(k)));
     const iFecha    = _fc(['fecha']);
     const iCliente  = _fc(['cliente']);
-    const iFca      = headers.findIndex(h => h === 'fca');
+    const iFca      = headers.findIndex(h => h === 'fca' || h === 'n° fca' || h === 'nro. fca' || h === 'nro fca' || h === 'n fca' || (h.includes('fca') && h.length <= 12));
     const iImporte  = headers.findIndex(h => h.length < 40 && h.includes('importe') && !h.includes('sin') && !h.includes('s/i'));
     const iSinIVA   = _fc(['sin iva','sin imp','s/imp','s/iva']);
     const iComision = _fc(['comisi']);
@@ -7453,13 +7458,14 @@ async function comImprimirSaldoEmpresa(sheetTab, empresaName, saldo) {
       const importe  = iImporte  >= 0 ? comParseMonto(r[iImporte]) : 0;
       const comision = iComision >= 0 ? comParseMonto(r[iComision]): 0;
       const pagos    = iPagos    >= 0 ? comParseMonto(r[iPagos])   : 0;
-      if (!cliente && !fca && !importe && !comision && !pagos) continue;
+      const saldoRow = iSaldo    >= 0 ? comParseMonto(r[iSaldo])  : 0;
+      if (!cliente && !fca && !importe && !comision && !pagos && !saldoRow) continue;
       details.push({
         fecha:        iFecha   >= 0 ? (r[iFecha]||'').trim()   : '–',
         cliente,  fca,  importe,
         importeSinIVA: iSinIVA >= 0 ? comParseMonto(r[iSinIVA]) : 0,
         comision,  pagos,
-        saldo:        iSaldo   >= 0 ? comParseMonto(r[iSaldo])  : 0,
+        saldo:        saldoRow,
         estado:       iEstado  >= 0 ? (r[iEstado]||'').trim().toLowerCase() : '',
         obs:          iObs     >= 0 ? (r[iObs]||'').trim()     : '',
         type:         isFull ? 'full' : 'simple'
@@ -7473,20 +7479,25 @@ async function comImprimirSaldoEmpresa(sheetTab, empresaName, saldo) {
 
 // Generador compartido del PDF de saldo pendiente por empresa
 function _comBuildPDFSaldoEmpresa(empresaName, saldoResumen, details, isFull) {
-  // ── Filtrar solo facturas con saldo impago ──
-  const pendientes = details.filter(r => {
-    const isPaid = r.saldo === 0
-      || (r.estado||'').includes('pagad')
-      || (r.estado||'').includes('cobrad');
-    return !isPaid && (r.saldo > 0 || r.comision > 0 || r.importe > 0);
-  });
+  // ── Encontrar el último punto donde el saldo fue 0 (último corte/saldo) ──
+  let lastZeroIdx = -1;
+  for (let i = details.length - 1; i >= 0; i--) {
+    const r = details[i];
+    if (r.saldo === 0 && (r.fca || r.importe || r.comision || r.cliente || r.pagos)) {
+      lastZeroIdx = i; break;
+    }
+  }
+
+  // ── Solo las filas DESPUÉS del último saldo 0 (el período actual adeudado) ──
+  const pendientes = (lastZeroIdx >= 0 ? details.slice(lastZeroIdx + 1) : details)
+    .filter(r => r.fca || r.importe || r.comision || r.cliente || r.pagos);
 
   if (!pendientes.length) {
     toast('No hay facturas con saldo pendiente para ' + empresaName, 'info');
     return;
   }
 
-  // ── Último pago recibido ──
+  // ── Último pago recibido (buscado en TODO el historial) ──
   let ultimoPago = null;
   for (let i = details.length - 1; i >= 0; i--) {
     if (details[i].pagos > 0) { ultimoPago = details[i]; break; }
