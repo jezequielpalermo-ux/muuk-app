@@ -1665,12 +1665,15 @@
 
     <!-- Detalle de empresa (inicialmente oculto) -->
     <div id="com-detalle-wrapper" style="display:none">
-      <div class="d-flex align-items-center mb-3 pb-2 border-bottom">
-        <button class="btn btn-sm btn-outline-secondary me-3" onclick="renderComisiones()"><i class="bi bi-arrow-left me-1"></i>Volver</button>
-        <div>
+      <div class="d-flex align-items-center flex-wrap gap-2 mb-3 pb-2 border-bottom">
+        <button class="btn btn-sm btn-outline-secondary" onclick="renderComisiones()"><i class="bi bi-arrow-left me-1"></i>Volver</button>
+        <div class="flex-grow-1">
           <h5 class="mb-0" id="com-detalle-empresa"></h5>
           <small class="text-muted" id="com-detalle-saldo"></small>
         </div>
+        <button class="btn btn-sm btn-outline-danger" onclick="comImprimirSaldoDesdeDetalle()" title="Imprime solo facturas con saldo de comisión impago">
+          <i class="bi bi-printer me-1"></i>Imprimir saldo pendiente
+        </button>
       </div>
       <div class="card">
         <div class="card-body p-0" id="com-detalle-tabla"></div>
@@ -6992,10 +6995,16 @@ function renderComResumen() {
           </div>
           <div class="fs-4 fw-bold" style="color: ${borderColor}">${fmt(item.saldo)}</div>
           <small class="text-muted" style="font-size:.7rem">Saldo pendiente</small>
-          <div class="mt-2 pt-2 border-top">
+          <div class="mt-2 pt-2 border-top d-flex justify-content-between align-items-center">
             <small class="text-primary d-flex align-items-center gap-1" style="font-size:.72rem">
               <i class="bi bi-table me-1"></i>Ver detalle de cuenta
             </small>
+            ${item.saldo > 0 ? `<button
+              style="font-size:.65rem;padding:2px 9px;border-radius:5px;border:1px solid #dc2626;color:#dc2626;background:transparent;cursor:pointer;font-weight:600;white-space:nowrap"
+              onclick="event.stopPropagation();comImprimirSaldoEmpresa('${sheetTab.replace(/'/g,"\\'")}','${item.empresa.replace(/'/g,"\\'")}',${item.saldo})"
+              title="Imprimir saldo pendiente de ${item.empresa}">
+              <i class="bi bi-printer me-1"></i>Imprimir saldo
+            </button>` : ''}
           </div>
         </div>
       </div>
@@ -7300,12 +7309,15 @@ async function cargarComisionDetalle(sheetTab, empresaName) {
     const saldoEl = document.getElementById('com-detalle-saldo');
     const tableEl = document.getElementById('com-detalle-tabla');
     const grid = document.getElementById('com-resumen-grid');
-    
+
     if (empresaEl) empresaEl.textContent = empresaName;
-    
+
     // Get saldo from resumen
     const resumenItem = ST.comisionesResumen.find(r => r.empresa === empresaName);
     if (saldoEl) saldoEl.textContent = resumenItem ? `Saldo: ${fmt(resumenItem.saldo)}` : 'Saldo: —';
+
+    // Save detail data for direct printing (comImprimirSaldoDesdeDetalle)
+    _comLastDetail = { empresaName, saldo: resumenItem?.saldo || 0, details, isFull };
     
     // Calculate summary totals
     const totImporte = details.reduce((s,d) => s + (d.importe||0), 0);
@@ -7393,6 +7405,218 @@ async function cargarComisionDetalle(sheetTab, empresaName) {
     const loading = document.getElementById('com-loading');
     if (loading) loading.style.display = 'none';
   }
+}
+
+/* ═══════════════════════════════════════════
+   IMPRIMIR SALDO PENDIENTE — POR EMPRESA
+   Muestra solo facturas con comisión impaga,
+   con referencia al último pago recibido
+═══════════════════════════════════════════ */
+
+// Llamado desde el botón en el detalle (datos ya en memoria)
+function comImprimirSaldoDesdeDetalle() {
+  if (!_comLastDetail) { toast('Abrí el detalle de la empresa primero', 'warning'); return; }
+  const { empresaName, saldo, details, isFull } = _comLastDetail;
+  _comBuildPDFSaldoEmpresa(empresaName, saldo, details, isFull);
+}
+
+// Llamado desde el botón en la card del resumen (re-fetchea los datos)
+async function comImprimirSaldoEmpresa(sheetTab, empresaName, saldo) {
+  toast('Cargando datos de ' + empresaName + '...', 'info');
+  try {
+    const rows = await comFetchSheet(sheetTab);
+    if (rows.length < 2) { toast('Sin datos disponibles', 'warning'); return; }
+
+    const headers = rows[0].map(h => (h||'').trim().toLowerCase());
+    if (headers[0] && headers[0].includes('comisiones:')) {
+      const m = headers[0].match(/\b(fecha\b.*)/i);
+      headers[0] = m ? m[1] : '';
+    }
+    const _fc = (kw) => headers.findIndex(h => h.length < 40 && kw.some(k => h.includes(k)));
+    const iFecha    = _fc(['fecha']);
+    const iCliente  = _fc(['cliente']);
+    const iFca      = headers.findIndex(h => h === 'fca');
+    const iImporte  = headers.findIndex(h => h.length < 40 && h.includes('importe') && !h.includes('sin') && !h.includes('s/i'));
+    const iSinIVA   = _fc(['sin iva','sin imp','s/imp','s/iva']);
+    const iComision = _fc(['comisi']);
+    const iEstado   = _fc(['estado','facturado']);
+    const iPagos    = headers.findIndex(h => h.length < 40 && (h.includes('pagos') || h.includes('retiro')));
+    const iSaldo    = _fc(['saldo']);
+    const iObs      = _fc(['obs','observ']);
+    const isFull    = iComision >= 0 || iSinIVA >= 0;
+
+    const details = [];
+    for (let i = 1; i < rows.length; i++) {
+      const r = rows[i];
+      const cliente  = iCliente  >= 0 ? (r[iCliente]||'').trim()  : '';
+      const fca      = iFca      >= 0 ? (r[iFca]||'').trim()      : '';
+      const importe  = iImporte  >= 0 ? comParseMonto(r[iImporte]) : 0;
+      const comision = iComision >= 0 ? comParseMonto(r[iComision]): 0;
+      const pagos    = iPagos    >= 0 ? comParseMonto(r[iPagos])   : 0;
+      if (!cliente && !fca && !importe && !comision && !pagos) continue;
+      details.push({
+        fecha:        iFecha   >= 0 ? (r[iFecha]||'').trim()   : '–',
+        cliente,  fca,  importe,
+        importeSinIVA: iSinIVA >= 0 ? comParseMonto(r[iSinIVA]) : 0,
+        comision,  pagos,
+        saldo:        iSaldo   >= 0 ? comParseMonto(r[iSaldo])  : 0,
+        estado:       iEstado  >= 0 ? (r[iEstado]||'').trim().toLowerCase() : '',
+        obs:          iObs     >= 0 ? (r[iObs]||'').trim()     : '',
+        type:         isFull ? 'full' : 'simple'
+      });
+    }
+    _comBuildPDFSaldoEmpresa(empresaName, saldo, details, isFull);
+  } catch(e) {
+    toast('Error al generar PDF: ' + e.message, 'danger');
+  }
+}
+
+// Generador compartido del PDF de saldo pendiente por empresa
+function _comBuildPDFSaldoEmpresa(empresaName, saldoResumen, details, isFull) {
+  // ── Filtrar solo facturas con saldo impago ──
+  const pendientes = details.filter(r => {
+    const isPaid = r.saldo === 0
+      || (r.estado||'').includes('pagad')
+      || (r.estado||'').includes('cobrad');
+    return !isPaid && (r.saldo > 0 || r.comision > 0 || r.importe > 0);
+  });
+
+  if (!pendientes.length) {
+    toast('No hay facturas con saldo pendiente para ' + empresaName, 'info');
+    return;
+  }
+
+  // ── Último pago recibido ──
+  let ultimoPago = null;
+  for (let i = details.length - 1; i >= 0; i--) {
+    if (details[i].pagos > 0) { ultimoPago = details[i]; break; }
+  }
+
+  const hoyStr = new Date().toLocaleDateString('es-AR', { year:'numeric', month:'long', day:'numeric' });
+  const _f = n => Number(n||0).toLocaleString('es-AR', { minimumFractionDigits:2, maximumFractionDigits:2 });
+  const hasCliente  = pendientes.some(r => r.cliente);
+  const hasComision = pendientes.some(r => r.comision > 0);
+
+  const totImporte  = pendientes.reduce((s,r) => s + (r.importe||0), 0);
+  const totComision = pendientes.reduce((s,r) => s + (r.comision||0), 0);
+  const totPagos    = pendientes.reduce((s,r) => s + (r.pagos||0), 0);
+  const totSaldo    = pendientes.reduce((s,r) => s + (r.saldo||0), 0);
+  const saldoMostrar = totSaldo > 0 ? totSaldo : saldoResumen;
+
+  const ultimoPagoHTML = ultimoPago
+    ? `<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px 18px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:11px;color:#166534;font-weight:600">
+          <i class="bi bi-check-circle-fill"></i>&nbsp;Último pago recibido: ${ultimoPago.fecha}
+        </span>
+        <span style="font-size:14px;font-weight:800;color:#16a34a">$${_f(ultimoPago.pagos)}</span>
+       </div>`
+    : '';
+
+  const colSpanNombre = hasCliente ? 2 : 1;
+  const colSpanTotal  = colSpanNombre + 1; /* fecha + nombre(s) + fca */
+
+  const html = `<!DOCTYPE html><html lang="es"><head><meta charset="utf-8">
+<title>Saldo Pendiente — ${empresaName}</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<style>
+  @page { size:A4; margin:12mm 15mm; }
+  @media print { .no-print{display:none!important;} }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:'Segoe UI',system-ui,sans-serif; color:#1e293b; font-size:12px; line-height:1.45; }
+  .doc-header { background:linear-gradient(135deg,#7f1d1d,#dc2626); color:#fff; padding:18px 24px; border-radius:12px; margin-bottom:14px; display:flex; justify-content:space-between; align-items:center; }
+  .logo-grid { display:grid; grid-template-columns:1fr 1fr; gap:3px; width:26px; height:26px; }
+  .logo-grid div { border-radius:2px; }
+  .saldo-box { background:#fef2f2; border:2px solid #dc2626; border-radius:10px; padding:14px 20px; margin-bottom:14px; display:flex; justify-content:space-between; align-items:center; }
+  .saldo-box .empresa { font-size:15px; font-weight:800; color:#7f1d1d; }
+  .saldo-box .monto   { font-size:22px; font-weight:800; color:#dc2626; }
+  .saldo-box .sub     { font-size:10px; color:#64748b; margin-top:2px; }
+  table { width:100%; border-collapse:collapse; font-size:11px; }
+  th { background:#f8fafc; font-size:9px; text-transform:uppercase; letter-spacing:.06em; color:#64748b; font-weight:700; padding:6px 10px; text-align:left; border-bottom:2px solid #e2e8f0; }
+  th.r { text-align:right; }
+  td { padding:5px 10px; border-bottom:1px solid #f1f5f9; vertical-align:middle; }
+  td.r { text-align:right; font-variant-numeric:tabular-nums; }
+  tr:nth-child(even) { background:rgba(0,0,0,.018); }
+  .total-row td { font-weight:700; border-top:2px solid #dc2626; background:#fff5f5; padding:8px 10px; }
+  .nc-badge { background:#dbeafe;color:#1e40af;font-size:8px;padding:1px 5px;border-radius:3px;font-weight:700;margin-left:3px; }
+  .footer { text-align:center; margin-top:16px; font-size:9px; color:#94a3b8; padding-top:8px; border-top:1px solid #f1f5f9; }
+  .print-btn { position:fixed; top:16px; right:16px; background:#dc2626; color:#fff; border:none; padding:10px 20px; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; box-shadow:0 4px 12px rgba(0,0,0,.2); }
+  .watermark { position:fixed; bottom:30px; right:30px; font-size:48px; font-weight:900; color:rgba(0,0,0,.04); pointer-events:none; letter-spacing:-2px; }
+</style></head><body>
+<div class="watermark">MÜÜK</div>
+<button class="print-btn no-print" onclick="window.print()"><i class="bi bi-printer me-1"></i>Imprimir / Guardar PDF</button>
+
+<div class="doc-header">
+  <div style="display:flex;align-items:center;gap:12px">
+    <div class="logo-grid">
+      <div style="background:#E31E24"></div><div style="background:#F5C400"></div>
+      <div style="background:#F5C400"></div><div style="background:#E31E24"></div>
+    </div>
+    <div>
+      <div style="font-size:16px;font-weight:800;letter-spacing:-.5px">MÜÜK</div>
+      <div style="font-size:10px;opacity:.75">Comisiones — Saldo Pendiente</div>
+    </div>
+  </div>
+  <div style="text-align:right">
+    <div style="font-size:11px;opacity:.85">${hoyStr}</div>
+    <div style="font-size:10px;opacity:.65">${pendientes.length} factura${pendientes.length !== 1 ? 's' : ''} con saldo impago</div>
+  </div>
+</div>
+
+<div class="saldo-box">
+  <div>
+    <div class="empresa">${empresaName}</div>
+    <div class="sub">${pendientes.length} factura${pendientes.length !== 1 ? 's' : ''} con comisión pendiente de cobro</div>
+  </div>
+  <div style="text-align:right">
+    <div class="monto">$${_f(saldoMostrar)}</div>
+    <div class="sub">Saldo a cobrar</div>
+  </div>
+</div>
+
+${ultimoPagoHTML}
+
+<table>
+  <thead><tr>
+    <th>Fecha</th>
+    ${hasCliente ? '<th>Cliente</th>' : ''}
+    <th>Factura (FCA)</th>
+    <th class="r">Importe</th>
+    ${hasComision ? '<th class="r">Comisión</th>' : ''}
+    <th class="r">Pagos</th>
+    <th class="r">Saldo</th>
+  </tr></thead>
+  <tbody>
+    ${pendientes.map((r,i) => {
+      const isNC = (r.fca||'').toLowerCase().includes('nc');
+      return `<tr>
+        <td>${r.fecha || '–'}</td>
+        ${hasCliente ? `<td style="font-weight:600">${r.cliente || '–'}</td>` : ''}
+        <td>${r.fca || '–'}${isNC ? '<span class="nc-badge">NC</span>' : ''}</td>
+        <td class="r">${r.importe ? '$'+_f(r.importe) : '–'}</td>
+        ${hasComision ? `<td class="r" style="color:#d97706;font-weight:600">${r.comision ? '$'+_f(r.comision) : '–'}</td>` : ''}
+        <td class="r" style="color:${r.pagos > 0 ? '#16a34a' : '#94a3b8'}">${r.pagos ? '$'+_f(r.pagos) : '–'}</td>
+        <td class="r" style="color:#dc2626;font-weight:700">$${_f(r.saldo)}</td>
+      </tr>`;
+    }).join('')}
+    <tr class="total-row">
+      <td colspan="${colSpanTotal}" style="color:#7f1d1d">TOTAL — ${empresaName}</td>
+      <td class="r">$${_f(totImporte)}</td>
+      ${hasComision ? `<td class="r" style="color:#d97706">$${_f(totComision)}</td>` : ''}
+      <td class="r" style="color:#16a34a">$${totPagos > 0 ? '$'+_f(totPagos) : '–'}</td>
+      <td class="r" style="color:#dc2626;font-size:13px;font-weight:800">$${_f(saldoMostrar)}</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="footer">
+  MÜÜK SRL · Saldo pendiente generado el ${hoyStr} · Solo facturas con comisión impaga · ${empresaName}
+</div>
+</body></html>`;
+
+  const w = window.open('', '_blank', 'width=900,height=1100');
+  w.document.write(html);
+  w.document.close();
+  toast('PDF de ' + empresaName + ' generado', 'success');
 }
 
 // Render the main comisiones page (called by irA and renderTodo)
@@ -9756,6 +9980,9 @@ function parsearImporteAFIP(s) {
   // Fallback
   return parseFloat(s.replace(/\./g,'').replace(',','.')) || 0;
 }
+
+// Último detalle de empresa cargado en Comisiones (para imprimir desde el detalle sin re-fetch)
+let _comLastDetail = null;
 
 // Cache de líneas e impuestos del último PDF parseado (se usa al guardar)
 let _factLineas = [];
