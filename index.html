@@ -974,7 +974,7 @@
           </div>
         </div>
         <div class="col-6 col-xl">
-          <div class="stat-card" style="background:linear-gradient(135deg,#5b21b6,#8b5cf6);cursor:pointer" onclick="irA('cajaBancos')">
+          <div class="stat-card" style="background:linear-gradient(135deg,#5b21b6,#8b5cf6);cursor:pointer" onclick="irA('cajaEfectivo')">
             <div class="bg-icon"><i class="bi bi-cash-coin"></i></div>
             <div class="lbl">Saldo Efectivo</div>
             <div class="val" id="stat-efectivo">$0</div>
@@ -2844,9 +2844,12 @@ CREATE POLICY "acceso total" ON flujo_caja_versions FOR ALL USING (true) WITH CH
 
     <style>
       @media print {
-        body > *:not(#app) { display:none!important; }
-        #app .sidebar, #app .topbar, .page-hdr button, .no-print { display:none!important; }
+        body > *:not(#app-wrapper) { display:none!important; }
+        .sidebar, .hamburger-btn, .sidebar-overlay, #tc-bar, #breadcrumb-bar,
+        .page-hdr button, .no-print { display:none!important; }
+        .main-content { margin-left:0!important; padding:0!important; }
         #page-cuentasBancarias { display:block!important; padding:0!important; }
+        .page:not(#page-cuentasBancarias) { display:none!important; }
         .cb-card { break-inside:avoid; box-shadow:none!important; border:1px solid #cbd5e1!important; }
         .cb-bank-badge { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
       }
@@ -3930,16 +3933,16 @@ CREATE POLICY "acceso total" ON flujo_caja_versions FOR ALL USING (true) WITH CH
             <input type="date" class="form-control form-control-sm" id="mf-fechaVenc">
           </div>
           <div class="col-sm-5">
-            <label class="form-label small fw-bold">Emisor (Razón Social)</label>
-            <input type="text" class="form-control form-control-sm" id="mf-cliente" placeholder="Quién emite la factura">
+            <label class="form-label small fw-bold" id="mf-cliente-label">Cliente <span class="text-danger">*</span></label>
+            <input type="text" class="form-control form-control-sm" id="mf-cliente" placeholder="Razón social del cliente">
           </div>
           <div class="col-sm-3">
-            <label class="form-label small fw-bold">CUIT Emisor</label>
+            <label class="form-label small fw-bold" id="mf-cuit-label">CUIT del Cliente</label>
             <input type="text" class="form-control form-control-sm" id="mf-cuit" placeholder="20-12345678-9">
           </div>
           <div class="col-sm-4">
-            <label class="form-label small fw-bold" id="mf-cat-label">Cliente / Receptor</label>
-            <input type="text" class="form-control form-control-sm" id="mf-receptor" placeholder="A quién va dirigida">
+            <label class="form-label small fw-bold" id="mf-cat-label">Receptor (nuestro nombre en la factura)</label>
+            <input type="text" class="form-control form-control-sm" id="mf-receptor" placeholder="Razón social receptora">
           </div>
           <div class="col-sm-3">
             <label class="form-label small fw-bold">Neto Gravado</label>
@@ -3998,7 +4001,7 @@ CREATE POLICY "acceso total" ON flujo_caja_versions FOR ALL USING (true) WITH CH
                   </select>
                 </div>
                 <div class="col-sm-4" id="mf-pago-monto-wrap">
-                  <label class="form-label small fw-bold mb-0">Monto cobrado</label>
+                  <label class="form-label small fw-bold mb-0" id="mf-pago-monto-label">Monto cobrado</label>
                   <div class="input-group input-group-sm">
                     <span class="input-group-text">$</span>
                     <input type="number" class="form-control" id="mf-pagoMonto" placeholder="Igual al total" step="0.01">
@@ -6158,7 +6161,7 @@ const _PAGE_LABELS = {
   tesoreria:'Tesorería Integral', flujoProyectado:'Flujo Proyectado',
   panelVencimientos:'Vencimientos', rentabilidad:'Rentabilidad',
   gestion:'Gestión', reportes:'Reportes', historial:'Historial',
-  estrategicos:'Estratégicos', documentos:'Documentos', config:'Configuración'
+  estrategicos:'Estratégicos', documentos:'Documentos', cuentasBancarias:'Cuentas Bancarias', config:'Configuración'
 };
 const _GROUP_LABELS = {
   empresa:'Empresa', caja:'Caja', gestion:'Gestión', analisis:'Análisis', archivos:'Archivos'
@@ -6999,12 +7002,21 @@ function renderComResumen() {
             <small class="text-primary d-flex align-items-center gap-1" style="font-size:.72rem">
               <i class="bi bi-table me-1"></i>Ver detalle de cuenta
             </small>
-            ${item.saldo > 0 ? `<button
-              style="font-size:.65rem;padding:2px 9px;border-radius:5px;border:1px solid #dc2626;color:#dc2626;background:transparent;cursor:pointer;font-weight:600;white-space:nowrap"
-              onclick="event.stopPropagation();comImprimirSaldoEmpresa('${sheetTab.replace(/'/g,"\\'")}','${item.empresa.replace(/'/g,"\\'")}',${item.saldo})"
-              title="Imprimir saldo pendiente de ${item.empresa}">
-              <i class="bi bi-printer me-1"></i>Imprimir saldo
-            </button>` : ''}
+            ${item.saldo > 0
+              ? `<button
+                  style="font-size:.65rem;padding:2px 9px;border-radius:5px;border:1px solid #dc2626;color:#dc2626;background:transparent;cursor:pointer;font-weight:600;white-space:nowrap"
+                  onclick="event.stopPropagation();comImprimirSaldoEmpresa('${sheetTab.replace(/'/g,"\\'")}','${item.empresa.replace(/'/g,"\\'")}',${item.saldo})"
+                  title="Imprimir saldo pendiente de ${item.empresa}">
+                  <i class="bi bi-printer me-1"></i>Imprimir saldo
+                </button>`
+              : `<button
+                  disabled
+                  style="font-size:.65rem;padding:2px 9px;border-radius:5px;border:1px solid #d1d5db;color:#9ca3af;background:transparent;cursor:not-allowed;font-weight:600;white-space:nowrap;opacity:.6"
+                  title="Sin saldo pendiente — la cuenta está al día"
+                  onclick="event.stopPropagation()">
+                  <i class="bi bi-printer me-1"></i>Sin saldo
+                </button>`
+            }
           </div>
         </div>
       </div>
@@ -7610,7 +7622,7 @@ ${ultimoPagoHTML}
       const esPago = r.pagos > 0 && !r.fca && !r.importe && !r.comision;
       const isNC   = (r.fca||'').toLowerCase().includes('nc');
       if (esPago) {
-        const colspan = (hasCliente ? 2 : 1) + 1 + (hasComision ? 2 : 1); /* fecha+cliente+fca+importe+[comision] */
+        const colspan = 2 + (hasCliente ? 1 : 0) + (hasComision ? 1 : 0); /* [cliente]+fca+importe+[comision] */
         return `<tr class="fila-pago">
           <td>${r.fecha || '–'}</td>
           <td colspan="${colspan}" style="font-style:italic">
@@ -8093,8 +8105,8 @@ function _chToggleInstrumento() {
   if (isTransf) {
     document.getElementById('ch-banco-label').innerHTML = 'Banco de origen <span class="text-danger">*</span>';
     document.getElementById('ch-banco').placeholder = 'Banco desde donde se transfiere';
-    document.getElementById('ch-numero-label').textContent = 'CBU / Referencia de transferencia';
-    document.getElementById('ch-numero').placeholder = 'CBU destino o N° de operación';
+    document.getElementById('ch-numero-label').textContent = 'CBU destino / N° de operación';
+    document.getElementById('ch-numero').placeholder = 'CBU de destino o referencia del pago';
   } else {
     document.getElementById('ch-banco-label').innerHTML = 'Banco Emisor <span class="text-danger">*</span>';
     document.getElementById('ch-banco').placeholder = 'Escribí para buscar banco…';
@@ -10328,7 +10340,23 @@ function abrirModalFactura(cat, id) {
   if (!id) { _factLineas = []; _factImpuestos = []; }
   document.getElementById('mf-id').value          = id || '';
   document.getElementById('mf-cat').value         = cat;
-  document.getElementById('mf-cat-label').textContent = cat === 'cobrar' ? 'Cliente *' : 'Proveedor *';
+  // Labels dinámicos según cobrar/pagar
+  const clienteLbl = document.getElementById('mf-cliente-label');
+  const cuitLbl    = document.getElementById('mf-cuit-label');
+  const catLbl     = document.getElementById('mf-cat-label');
+  if (cat === 'cobrar') {
+    if (clienteLbl) clienteLbl.innerHTML = 'Cliente <span class="text-danger">*</span>';
+    if (cuitLbl)    cuitLbl.textContent  = 'CUIT del Cliente';
+    if (catLbl)     catLbl.textContent   = 'Receptor (nuestro nombre en la factura)';
+    document.getElementById('mf-cliente').placeholder = 'Razón social del cliente';
+    document.getElementById('mf-receptor').placeholder = 'Müük SRL o tu nombre';
+  } else {
+    if (clienteLbl) clienteLbl.innerHTML = 'Proveedor / Emisor <span class="text-danger">*</span>';
+    if (cuitLbl)    cuitLbl.textContent  = 'CUIT del Proveedor';
+    if (catLbl)     catLbl.textContent   = 'Destinatario del pago (opcional)';
+    document.getElementById('mf-cliente').placeholder = 'Razón social del proveedor';
+    document.getElementById('mf-receptor').placeholder = 'Müük SRL (si aplica)';
+  }
   document.getElementById('modalFactura-title').textContent = (id ? 'Editar' : 'Nueva') + ' Factura — ' + (cat==='cobrar'?'a Cobrar':'a Pagar');
   document.getElementById('mf-fecha').value       = f?.fecha || hoy();
   document.getElementById('mf-fechaVenc').value   = f?.fechaVenc || '';
@@ -10407,16 +10435,18 @@ function _togglePagoSection() {
     const mp = document.getElementById('mf-pagoMonto');
     if (mp && !mp.value) mp.value = tot;
   }
-  // Update auto-doc checkbox label based on factura category
+  // Update auto-doc checkbox label and monto label based on factura category
+  const cat2 = document.getElementById('mf-cat') ? document.getElementById('mf-cat').value : '';
   const lbl = document.getElementById('mf-generar-doc-label');
   if (lbl) {
-    const cat = document.getElementById('mf-cat') ? document.getElementById('mf-cat').value : '';
-    if (cat === 'pagar') {
+    if (cat2 === 'pagar') {
       lbl.innerHTML = '<i class="bi bi-file-earmark-arrow-up me-1"></i>Generar Orden de Pago PDF al guardar';
     } else {
       lbl.innerHTML = '<i class="bi bi-file-earmark-arrow-down me-1"></i>Generar Recibo de Cobranza PDF al guardar';
     }
   }
+  const montoLbl = document.getElementById('mf-pago-monto-label');
+  if (montoLbl) montoLbl.textContent = cat2 === 'pagar' ? 'Monto pagado' : 'Monto cobrado';
 }
 
 function _toggleMedioPagoFields() {
