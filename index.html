@@ -3723,7 +3723,7 @@ CREATE POLICY "acceso total" ON flujo_caja_versions FOR ALL USING (true) WITH CH
         <button class="btn btn-outline-secondary btn-sm" onclick="document.getElementById('lp-upload-file').click()" style="font-size:.75rem">
           <i class="bi bi-cloud-arrow-up me-1"></i>Subir Archivo
         </button>
-        <input type="file" id="lp-upload-file" accept=".xlsx,.xls,.pdf,.docx,.doc,.csv" style="display:none" onchange="lpUploadArchivo(event)">
+        <input type="file" id="lp-upload-file" accept=".xlsx,.xls,.pdf,.docx,.doc,.csv,.jpg,.jpeg,.png" style="display:none" onchange="lpUploadArchivo(event)">
         <button class="btn btn-primary btn-sm" onclick="abrirModalListaPrecio(null)" style="font-size:.75rem"><i class="bi bi-plus-lg me-1"></i>Nueva Lista</button>
       </div>
     </div>
@@ -3900,9 +3900,9 @@ CREATE POLICY "acceso total" ON flujo_caja_versions FOR ALL USING (true) WITH CH
               <strong style="font-size:.82rem;color:#1d4ed8"><i class="bi bi-file-earmark-arrow-up me-1"></i>Archivo de Lista de Precios</strong>
               <div class="mt-2 d-flex gap-2 align-items-center flex-wrap">
                 <button class="btn btn-sm btn-outline-primary" onclick="document.getElementById('lp-modal-file').click()" style="font-size:.72rem;border-radius:6px">
-                  <i class="bi bi-upload me-1"></i>Subir archivo (Excel, PDF, Word)
+                  <i class="bi bi-upload me-1"></i>Subir archivo (Excel, PDF, Word, Imagen)
                 </button>
-                <input type="file" id="lp-modal-file" accept=".xlsx,.xls,.pdf,.docx,.doc,.csv" style="display:none" onchange="lpModalFileSelected(event)">
+                <input type="file" id="lp-modal-file" accept=".xlsx,.xls,.pdf,.docx,.doc,.csv,.jpg,.jpeg,.png" style="display:none" onchange="lpModalFileSelected(event)">
                 <span class="text-muted" style="font-size:.78rem" id="lp-modal-file-name">Sin archivo</span>
                 <span id="lp-modal-file-badge"></span>
               </div>
@@ -12208,10 +12208,10 @@ function lpVerDetalle(id) {
     </table>`;
   }
 
-  const fileIcons = { xlsx:'bi-file-earmark-spreadsheet', xls:'bi-file-earmark-spreadsheet', csv:'bi-file-earmark-spreadsheet', pdf:'bi-file-earmark-pdf', docx:'bi-file-earmark-word', doc:'bi-file-earmark-word' };
+  const fileIcons = { xlsx:'bi-file-earmark-spreadsheet', xls:'bi-file-earmark-spreadsheet', csv:'bi-file-earmark-spreadsheet', pdf:'bi-file-earmark-pdf', docx:'bi-file-earmark-word', doc:'bi-file-earmark-word', jpg:'bi-file-earmark-image', jpeg:'bi-file-earmark-image', png:'bi-file-earmark-image' };
   const ext = l.archivo?.nombre ? l.archivo.nombre.split('.').pop().toLowerCase() : '';
   const fileIcon = fileIcons[ext] || 'bi-file-earmark';
-  const canPreview = l.archivo?.dataB64 && ['xlsx','xls','csv','pdf'].includes(ext);
+  const canPreview = l.archivo?.dataB64 && ['xlsx','xls','csv','pdf','jpg','jpeg','png'].includes(ext);
 
   // Comentarios HTML
   const comentariosHtml = _lpRenderComentarios(l);
@@ -12344,6 +12344,7 @@ function lpToggleViewer(id) {
   if (['xlsx','xls'].includes(ext)) _lpViewExcel(l);
   else if (ext === 'csv') _lpViewCSV(l);
   else if (ext === 'pdf') _lpViewPDF(l);
+  else if (['jpg','jpeg','png'].includes(ext)) _lpViewImage(l);
   else content.innerHTML = '<div class="text-muted text-center py-3">Formato no soportado para vista previa</div>';
 }
 
@@ -12433,6 +12434,26 @@ function _lpViewCSV(l) {
   } catch(e) {
     content.innerHTML = `<div class="text-danger text-center py-3">Error: ${e.message}</div>`;
   }
+}
+
+function _lpViewImage(l) {
+  const content = document.getElementById('lp-viewer-content');
+  document.getElementById('lp-viewer-sheet').style.display = 'none';
+  const ext = l.archivo.nombre.split('.').pop().toLowerCase();
+  const mimeMap = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png' };
+  const mime = mimeMap[ext] || 'image/*';
+  // Ensure data URL has correct mime (re-encode if needed)
+  let src = l.archivo.dataB64;
+  if (src && !src.startsWith('data:image')) {
+    const b64data = src.includes(',') ? src.split(',')[1] : src;
+    src = `data:${mime};base64,${b64data}`;
+  }
+  content.innerHTML = `
+    <div style="text-align:center;padding:12px">
+      <img src="${src}" alt="${l.archivo.nombre}"
+           style="max-width:100%;max-height:70vh;border-radius:6px;box-shadow:0 2px 12px rgba(0,0,0,.15)">
+      <div style="font-size:.72rem;color:#64748b;margin-top:8px">${l.archivo.nombre} · ${l.archivo.size ? (l.archivo.size/1024).toFixed(0)+' KB' : ''}</div>
+    </div>`;
 }
 
 function _lpViewPDF(l) {
