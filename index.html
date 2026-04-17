@@ -880,12 +880,25 @@
             <div>
               <div style="font-size:.68rem;opacity:.7;text-transform:uppercase;letter-spacing:.08em;margin-bottom:2px"><i class="bi bi-shield-check me-1"></i>Liquidez Neta Estimada</div>
               <div id="kpi-liquidez" style="font-size:1.8rem;font-weight:800;letter-spacing:-.5px">$0</div>
+              <div id="kpi-salud-label" style="font-size:.65rem;font-weight:700;margin-top:3px;letter-spacing:.04em"></div>
             </div>
             <div style="display:flex;flex-wrap:wrap;gap:6px 18px;font-size:.72rem;opacity:.8" id="kpi-liquidez-detail">
               <span><i class="bi bi-bank me-1"></i>Bancos: <b id="kpi-liq-bancos">$0</b></span>
               <span><i class="bi bi-cash me-1"></i>Efectivo: <b id="kpi-liq-efectivo">$0</b></span>
               <span><i class="bi bi-file-check me-1"></i>Cartera: <b id="kpi-liq-cartera">$0</b></span>
               <span style="color:#fca5a5"><i class="bi bi-dash-circle me-1"></i>A Pagar: <b id="kpi-liq-pagar">$0</b></span>
+            </div>
+          </div>
+          <!-- Barra de salud financiera -->
+          <div style="margin-top:14px">
+            <div style="display:flex;justify-content:space-between;font-size:.6rem;opacity:.6;margin-bottom:4px">
+              <span>Crítico</span><span>Moderado</span><span>Saludable</span>
+            </div>
+            <div style="position:relative;height:8px;border-radius:4px;overflow:hidden;background:linear-gradient(90deg,#ef4444 0%,#f59e0b 45%,#22c55e 80%)">
+              <div id="kpi-salud-marker" style="position:absolute;top:-3px;width:14px;height:14px;border-radius:50%;background:#fff;border:2px solid #0f172a;box-shadow:0 0 6px rgba(0,0,0,.4);transform:translateX(-50%);transition:left .6s ease;left:50%"></div>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:.58rem;opacity:.5;margin-top:3px">
+              <span>0%</span><span>Cobertura de obligaciones</span><span>100%+</span>
             </div>
           </div>
         </div>
@@ -916,6 +929,38 @@
         <button onclick="_assistToggle()" style="display:flex;align-items:center;gap:7px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:8px 14px;font-size:.78rem;font-weight:600;color:#0f172a;cursor:pointer;transition:all .15s;box-shadow:0 1px 3px rgba(0,0,0,.06)" onmouseover="this.style.borderColor='#E31E24';this.style.color='#991b1b'" onmouseout="this.style.borderColor='#e2e8f0';this.style.color='#0f172a'">
           <i class="bi bi-robot" style="color:#E31E24;font-size:.95rem"></i>Consultar asistente
         </button>
+      </div>
+    </div>
+
+    <!-- RESUMEN DEL MES -->
+    <div class="mb-4" id="dash-resumen-mes">
+      <div style="font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#94a3b8;margin-bottom:7px;display:flex;align-items:center;gap:10px">
+        <span style="flex:0 0 auto"><i class="bi bi-calendar3 me-1"></i>Resumen del mes</span>
+        <span id="dash-mes-label" style="color:#64748b;font-size:.65rem;font-weight:600;text-transform:none;letter-spacing:0"></span>
+        <span style="flex:1;height:1px;background:#e2e8f0;display:block"></span>
+      </div>
+      <div class="row g-3">
+        <div class="col-sm-4">
+          <div class="card p-3" style="border-left:4px solid #16a34a">
+            <div style="font-size:.62rem;color:#64748b;font-weight:600;text-transform:uppercase;margin-bottom:4px"><i class="bi bi-arrow-down-circle me-1 text-success"></i>Cobrado este mes</div>
+            <div id="dash-mes-cobrado" style="font-size:1.25rem;font-weight:800;color:#16a34a">$0</div>
+            <div id="dash-mes-cobrado-sub" style="font-size:.68rem;color:#94a3b8;margin-top:2px">0 facturas · 0 mov. caja</div>
+          </div>
+        </div>
+        <div class="col-sm-4">
+          <div class="card p-3" style="border-left:4px solid #dc2626">
+            <div style="font-size:.62rem;color:#64748b;font-weight:600;text-transform:uppercase;margin-bottom:4px"><i class="bi bi-arrow-up-circle me-1 text-danger"></i>Pagado este mes</div>
+            <div id="dash-mes-pagado" style="font-size:1.25rem;font-weight:800;color:#dc2626">$0</div>
+            <div id="dash-mes-pagado-sub" style="font-size:.68rem;color:#94a3b8;margin-top:2px">0 facturas · 0 mov. caja</div>
+          </div>
+        </div>
+        <div class="col-sm-4">
+          <div class="card p-3" id="dash-mes-resultado-card" style="border-left:4px solid #64748b">
+            <div style="font-size:.62rem;color:#64748b;font-weight:600;text-transform:uppercase;margin-bottom:4px"><i class="bi bi-calculator me-1"></i>Resultado neto</div>
+            <div id="dash-mes-neto" style="font-size:1.25rem;font-weight:800;color:#64748b">$0</div>
+            <div id="dash-mes-neto-sub" style="font-size:.68rem;color:#94a3b8;margin-top:2px">Cobrado − Pagado del mes</div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -1066,7 +1111,14 @@
     <div class="row g-3 mb-4">
       <div class="col-lg-8">
         <div class="card p-3 h-100">
-          <h6 class="fw-bold mb-3">Movimientos Diarios — Últimos 30 días</h6>
+          <div class="d-flex align-items-center justify-content-between mb-3">
+            <h6 class="fw-bold mb-0">Movimientos Diarios</h6>
+            <div class="btn-group btn-group-sm" id="flujo-rango-btns">
+              <button class="btn btn-outline-secondary" style="font-size:.68rem;padding:2px 8px" onclick="setFlujoDays(7)"  id="flujo-btn-7">7d</button>
+              <button class="btn btn-primary"           style="font-size:.68rem;padding:2px 8px" onclick="setFlujoDays(30)" id="flujo-btn-30">30d</button>
+              <button class="btn btn-outline-secondary" style="font-size:.68rem;padding:2px 8px" onclick="setFlujoDays(90)" id="flujo-btn-90">90d</button>
+            </div>
+          </div>
           <canvas id="ch-flujo" height="110"></canvas>
         </div>
       </div>
@@ -1085,6 +1137,14 @@
     <div class="card p-3 mt-3">
       <h6 class="fw-bold mb-3"><i class="bi bi-graph-up text-info me-2"></i>Proyección de Flujo — Próximos 30 días</h6>
       <canvas id="ch-proyeccion" height="120"></canvas>
+    </div>
+    <!-- ACTIVIDAD RECIENTE -->
+    <div class="card p-3 mt-3">
+      <div class="d-flex align-items-center justify-content-between mb-3">
+        <h6 class="fw-bold mb-0"><i class="bi bi-clock-history me-2 text-secondary"></i>Actividad Reciente</h6>
+        <span style="font-size:.68rem;color:#94a3b8">Últimos movimientos en todas las secciones</span>
+      </div>
+      <div id="dash-actividad-reciente"></div>
     </div>
   </div>
 
@@ -6497,6 +6557,16 @@ function renderTodo() {
 /* ═══════════════════════════════════════════
    DASHBOARD
 ═══════════════════════════════════════════ */
+// Helper: devuelve HTML de badge tendencial ▲/▼ comparando actual vs anterior
+function _trendBadge(current, prev) {
+  if (!prev || prev === 0) return '';
+  const pct = ((current - prev) / prev) * 100;
+  const up = pct >= 0;
+  const col = up ? '#16a34a' : '#dc2626';
+  const arrow = up ? '▲' : '▼';
+  return ` <span style="font-size:.62rem;font-weight:700;color:${col}">${arrow}${Math.abs(pct).toFixed(1)}%</span>`;
+}
+
 function renderDashboard() {
   const cartera = [...ST.chequesFisicos.filter(c=>c.estado==='en_cartera'||c.estado==='pendiente'),...ST.eCheques.filter(c=>c.estado==='pendiente')];
   const totCartera = cartera.reduce((s,c)=>s+ +c.monto,0);
@@ -6521,6 +6591,9 @@ function renderDashboard() {
   document.getElementById('saldo-efectivo-total').textContent = fmt(sE);
 
   const mesActual=hoy().slice(0,7);
+  // Mes anterior ISO (YYYY-MM)
+  const _dMesAnt=(function(){ const d=new Date(); d.setMonth(d.getMonth()-1); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); })();
+
   const comMes=(ST.comisiones||[]).filter(c=>c.fecha&&c.fecha.startsWith(mesActual));
   document.getElementById('stat-comisiones').textContent = fmt(comMes.reduce((s,c)=>s+ +c.monto,0));
   document.getElementById('stat-comisiones-n').textContent = `${comMes.length} registro${comMes.length!==1?'s':''} este mes`;
@@ -6528,10 +6601,17 @@ function renderDashboard() {
   // Facturas stat cards en Dashboard
   const facCobPend = (ST.facturasACobrar||[]).filter(f=>f.estado==='pendiente');
   const facPagPend = (ST.facturasPagar||[]).filter(f=>f.estado==='pendiente');
-  _setEl('stat-fac-cobrar', fmt(facCobPend.reduce((s,f)=>s+ +f.total,0)));
-  _setEl('stat-fac-cobrar-n', `${facCobPend.length} pendiente${facCobPend.length!==1?'s':''}`);
-  _setEl('stat-fac-pagar', fmt(facPagPend.reduce((s,f)=>s+ +f.total,0)));
-  _setEl('stat-fac-pagar-n', `${facPagPend.length} pendiente${facPagPend.length!==1?'s':''}`);
+  const facCobMonto = facCobPend.reduce((s,f)=>s+ +f.total,0);
+  const facPagMonto = facPagPend.reduce((s,f)=>s+ +f.total,0);
+  // Facturas pendientes del mes anterior (cobradas ese mes)
+  const facCobAntMonto = (ST.facturasACobrar||[]).filter(f=>f.estado==='cobrada'&&f.fechaCobro&&f.fechaCobro.startsWith(_dMesAnt)).reduce((s,f)=>s+ +f.total,0);
+  const facPagAntMonto = (ST.facturasPagar||[]).filter(f=>f.estado==='pagada'&&f.fechaPago&&f.fechaPago.startsWith(_dMesAnt)).reduce((s,f)=>s+ +f.total,0);
+  _setEl('stat-fac-cobrar', fmt(facCobMonto));
+  const elFacCobN = document.getElementById('stat-fac-cobrar-n');
+  if(elFacCobN) elFacCobN.innerHTML = `${facCobPend.length} pendiente${facCobPend.length!==1?'s':''}${_trendBadge(facCobMonto, facCobAntMonto)}`;
+  _setEl('stat-fac-pagar', fmt(facPagMonto));
+  const elFacPagN = document.getElementById('stat-fac-pagar-n');
+  if(elFacPagN) elFacPagN.innerHTML = `${facPagPend.length} pendiente${facPagPend.length!==1?'s':''}${_trendBadge(facPagMonto, facPagAntMonto)}`;
 
   // Stock
   const stkProds = ST.stockProductos || [];
@@ -6541,9 +6621,39 @@ function renderDashboard() {
   const stkSubEl = document.getElementById('stat-stock-sub');
   if (stkSubEl) stkSubEl.innerHTML = `${stkProds.length} producto${stkProds.length!==1?'s':''}${stkBajo>0?' · <span style="color:#fca5a5;font-weight:700">'+stkBajo+' bajo mín.</span>':''}`;
 
+  // ── RESUMEN DEL MES ──
+  (function(){
+    const now = new Date();
+    const mesIso = hoy().slice(0,7);
+    const mesNombre = now.toLocaleDateString('es-AR',{month:'long',year:'numeric'});
+    _setEl('dash-mes-label', mesNombre.charAt(0).toUpperCase()+mesNombre.slice(1));
+    // Movimientos de caja del mes
+    const movMes = [...ST.cajaBancos, ...ST.cajaEfectivo].filter(m=>m.fecha&&m.fecha.startsWith(mesIso));
+    const cajaCobrado = movMes.filter(m=>m.tipo==='ingreso').reduce((s,m)=>s+ +m.monto,0);
+    const cajaPagado  = movMes.filter(m=>m.tipo==='egreso').reduce((s,m)=>s+ +m.monto,0);
+    // Facturas cobradas/pagadas el mes
+    const facCobMes = (ST.facturasACobrar||[]).filter(f=>f.estado==='cobrada'&&f.fechaCobro&&f.fechaCobro.startsWith(mesIso));
+    const facPagMes = (ST.facturasPagar||[]).filter(f=>f.estado==='pagada'&&f.fechaPago&&f.fechaPago.startsWith(mesIso));
+    const facCobMonto = facCobMes.reduce((s,f)=>s+ +f.total,0);
+    const facPagMonto = facPagMes.reduce((s,f)=>s+ +f.total,0);
+    const totalCobrado = cajaCobrado + facCobMonto;
+    const totalPagado  = cajaPagado  + facPagMonto;
+    const neto = totalCobrado - totalPagado;
+    _setEl('dash-mes-cobrado', fmt(totalCobrado));
+    _setEl('dash-mes-cobrado-sub', `${facCobMes.length} factura${facCobMes.length!==1?'s':''} · ${movMes.filter(m=>m.tipo==='ingreso').length} mov. caja`);
+    _setEl('dash-mes-pagado',  fmt(totalPagado));
+    _setEl('dash-mes-pagado-sub',  `${facPagMes.length} factura${facPagMes.length!==1?'s':''} · ${movMes.filter(m=>m.tipo==='egreso').length} mov. caja`);
+    const elNeto = document.getElementById('dash-mes-neto');
+    const elCard = document.getElementById('dash-mes-resultado-card');
+    if (elNeto) { elNeto.textContent = (neto>=0?'+':'')+fmt(neto); elNeto.style.color = neto>=0?'#16a34a':'#dc2626'; }
+    if (elCard) elCard.style.borderLeftColor = neto>=0?'#16a34a':'#dc2626';
+  })();
+
   // ── LIQUIDEZ NETA ──
   const totFacPagar = facPagPend.reduce((s,f)=>s+ +f.total,0);
-  const liquidez = sB + sE + totCartera - totPagar - totFacPagar;
+  const totObligaciones = totPagar + totFacPagar;
+  const totalActivos = sB + sE + totCartera;
+  const liquidez = totalActivos - totObligaciones;
   const elLiq = document.getElementById('kpi-liquidez');
   if (elLiq) {
     elLiq.textContent = fmt(liquidez);
@@ -6552,23 +6662,47 @@ function renderDashboard() {
   _setEl('kpi-liq-bancos', fmt(sB));
   _setEl('kpi-liq-efectivo', fmt(sE));
   _setEl('kpi-liq-cartera', fmt(totCartera));
-  _setEl('kpi-liq-pagar', fmt(totPagar + totFacPagar));
-
-  // ── VARIACIÓN MENSUAL (comisiones: mes actual vs anterior) ──
-  const comThisMonth = comMes.reduce((s,c)=>s+ +c.monto,0);
-  const mesAnterior = (function(){
-    const d=new Date(); d.setMonth(d.getMonth()-1);
-    return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+  _setEl('kpi-liq-pagar', fmt(totObligaciones));
+  // Barra de salud: cobertura = activos / obligaciones (0→crítico, 1→moderado, 2+→saludable)
+  (function(){
+    const marker = document.getElementById('kpi-salud-marker');
+    const label  = document.getElementById('kpi-salud-label');
+    if (!marker || !label) return;
+    let pct, txt, col;
+    if (totObligaciones <= 0) {
+      pct = 100; txt = '✓ Sin obligaciones pendientes'; col = '#4ade80';
+    } else {
+      const ratio = totalActivos / totObligaciones; // 0→crítico, 1=break-even, 2+=holgado
+      pct = Math.min(100, Math.max(0, (ratio / 2) * 100)); // mapear 0-2x a 0-100%
+      if (ratio < 0.5)      { txt = '⚠ Liquidez crítica';   col = '#fca5a5'; }
+      else if (ratio < 1.0) { txt = '◐ Liquidez ajustada';  col = '#fde68a'; }
+      else if (ratio < 1.5) { txt = '● Posición moderada';  col = '#86efac'; }
+      else                  { txt = '✓ Posición saludable';  col = '#4ade80'; }
+    }
+    marker.style.left = pct + '%';
+    label.textContent = txt;
+    label.style.color = col;
   })();
-  const comPrevMonth = (ST.comisiones||[]).filter(c=>c.fecha&&c.fecha.startsWith(mesAnterior)).reduce((s,c)=>s+ +c.monto,0);
-  if (comPrevMonth > 0) {
-    const deltaPct = ((comThisMonth - comPrevMonth)/comPrevMonth*100);
-    const up = deltaPct >= 0;
-    const arrow = up ? '▲' : '▼';
-    const color = up ? '#4ade80' : '#fca5a5';
-    const el = document.getElementById('stat-comisiones-n');
-    if (el) el.innerHTML = `${comMes.length} registro${comMes.length!==1?'s':''} · <span style="color:${color};font-weight:700">${arrow}${Math.abs(deltaPct).toFixed(1)}% vs mes ant.</span>`;
-  }
+
+  // ── VARIACIÓN MENSUAL ──
+  const comThisMonth = comMes.reduce((s,c)=>s+ +c.monto,0);
+  const comPrevMonth = (ST.comisiones||[]).filter(c=>c.fecha&&c.fecha.startsWith(_dMesAnt)).reduce((s,c)=>s+ +c.monto,0);
+  const elComN = document.getElementById('stat-comisiones-n');
+  if(elComN) elComN.innerHTML = `${comMes.length} registro${comMes.length!==1?'s':''} este mes${_trendBadge(comThisMonth, comPrevMonth)}`;
+
+  // Tendencia bancos y efectivo: ingresos netos del mes actual vs mes anterior
+  const _cajaMesIng = (arr, mes) => arr.filter(m=>m.fecha&&m.fecha.startsWith(mes)&&m.tipo==='ingreso').reduce((s,m)=>s+ +m.monto,0);
+  const _cajaMesEgr = (arr, mes) => arr.filter(m=>m.fecha&&m.fecha.startsWith(mes)&&m.tipo==='egreso').reduce((s,m)=>s+ +m.monto,0);
+  const cajaTodas = [...ST.cajaBancos, ...ST.cajaEfectivo];
+  const netMesAct = _cajaMesIng(cajaTodas,mesActual) - _cajaMesEgr(cajaTodas,mesActual);
+  const netMesAnt = _cajaMesIng(cajaTodas,_dMesAnt)  - _cajaMesEgr(cajaTodas,_dMesAnt);
+  const elBancosN  = document.getElementById('stat-bancos');
+  const elEfectivoN = document.getElementById('stat-efectivo');
+  // Subtítulos con tendencia
+  const elBancosSub  = document.querySelector('#stat-bancos')?.closest('.stat-card')?.querySelector('.sub');
+  const elEfectivoSub = document.querySelector('#stat-efectivo')?.closest('.stat-card')?.querySelector('.sub');
+  if(elBancosSub && netMesAnt!==0)   elBancosSub.innerHTML  = `Cuentas bancarias${_trendBadge(netMesAct, netMesAnt)}`;
+  if(elEfectivoSub && netMesAnt!==0) elEfectivoSub.innerHTML = `Caja en mano${_trendBadge(netMesAct, netMesAnt)}`;
 
   // ── METAS MENSUALES (desde Gestión 2026 + histórico) ──
   _renderMetas(comThisMonth);
@@ -6630,25 +6764,45 @@ function renderDashboard() {
       </tr></thead>
       <tbody>${p15.map(item=>{
         const d=dHasta(item.fecha);
-        const urgCls=d===0?'table-danger':d<=3?'table-warning':'';
+        // Urgencia: 4 niveles
+        let rowBg='', diagBg='', diagColor='', urgLabel='', urgIcon='';
+        if(d===0){
+          rowBg='background:#fef2f2'; diagBg='#dc2626'; diagColor='#fff';
+          urgLabel='HOY'; urgIcon='🔴';
+        } else if(d<=2){
+          rowBg='background:#fef2f2'; diagBg='#ef4444'; diagColor='#fff';
+          urgLabel=d+'d'; urgIcon='🔴';
+        } else if(d<=5){
+          rowBg='background:#fff7ed'; diagBg='#f97316'; diagColor='#fff';
+          urgLabel=d+'d'; urgIcon='🟠';
+        } else if(d<=10){
+          rowBg='background:#fefce8'; diagBg='#eab308'; diagColor='#1e293b';
+          urgLabel=d+'d'; urgIcon='🟡';
+        } else {
+          rowBg=''; diagBg='#94a3b8'; diagColor='#fff';
+          urgLabel=d+'d'; urgIcon='';
+        }
         const montoColor=isEgreso(item.categoria)?'color:#dc2626':'color:#16a34a';
-        return`<tr class="${urgCls}">
+        return`<tr style="${rowBg}">
           <td style="font-weight:600">${fmtF(item.fecha)}</td>
-          <td><span class="bdg ${d===0?'bg-danger text-white':d<=3?'bg-danger text-white':d<=7?'bg-warning text-dark':'bg-secondary text-white'}" style="font-size:.65rem">${d===0?'HOY':d+'d'}</span></td>
+          <td><span style="display:inline-block;background:${diagBg};color:${diagColor};border-radius:5px;padding:1px 8px;font-size:.65rem;font-weight:700;min-width:36px;text-align:center">${urgLabel}</span></td>
           <td>${catBadge[item.categoria]||item.categoria}</td>
-          <td style="font-size:.75rem;color:#475569">${item.desc}</td>
+          <td style="font-size:.75rem;color:#475569">${urgIcon?urgIcon+' ':''}<span style="font-weight:${d<=5?'600':'400'}">${item.desc}</span></td>
           <td style="text-align:right;font-weight:700;${montoColor}">${fmt(item.monto)}</td>
         </tr>`;
       }).join('')}</tbody>
     </table></div>
-    <div style="margin-top:8px;font-size:.7rem;color:#94a3b8;display:flex;gap:16px;flex-wrap:wrap">
-      <span>↓ Ingreso (cobrar)&nbsp;&nbsp;↑ Egreso (pagar)</span>
+    <div style="margin-top:8px;font-size:.7rem;color:#94a3b8;display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px">
+      <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#dc2626;margin-right:3px"></span>≤2d urgente</span>
+      <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#f97316;margin-right:3px"></span>≤5d próximo</span>
+      <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#eab308;margin-right:3px"></span>≤10d en vista</span>
       <span style="margin-left:auto"><button onclick="irA('panelVencimientos')" style="background:none;border:none;color:#3b82f6;font-size:.72rem;cursor:pointer;padding:0;font-weight:600">Ver panel completo →</button></span>
     </div>`;
   }
   renderDashCharts(sB,sE,totCartera);
   renderAlertas();
   renderProyeccion();
+  renderActividadReciente();
   if(typeof _renderMetaCobranza==='function') _renderMetaCobranza();
 
   // ── Sync Gestión en header ──
@@ -6668,13 +6822,116 @@ function bdgEstado(e) {
   return `<span class="badge bg-${clr[e]||'secondary'}">${lbl[e]||e}</span>`;
 }
 
+function renderActividadReciente() {
+  const wrap = document.getElementById('dash-actividad-reciente');
+  if (!wrap) return;
+
+  // Recolectar eventos de todas las secciones con fecha y tipo
+  const eventos = [];
+
+  // Movimientos de caja
+  [...ST.cajaBancos, ...ST.cajaEfectivo].forEach(m => {
+    if (!m.fecha) return;
+    const esBanco = ST.cajaBancos.includes(m);
+    eventos.push({
+      fecha: m.fecha, ts: m.fecha + (m.id||''),
+      icon: m.tipo==='ingreso' ? 'bi-arrow-down-circle-fill' : 'bi-arrow-up-circle-fill',
+      iconColor: m.tipo==='ingreso' ? '#16a34a' : '#dc2626',
+      titulo: (m.tipo==='ingreso'?'Ingreso':'Egreso') + (esBanco?' — Banco':' — Efectivo'),
+      subtitulo: (m.concepto||'') + (m.desc?' · '+m.desc:''),
+      monto: m.monto, isEgreso: m.tipo==='egreso', tipo:'caja'
+    });
+  });
+
+  // Facturas cobradas recientemente
+  (ST.facturasACobrar||[]).forEach(f => {
+    const fechaRef = f.fechaCobro || f.fechaEmision;
+    if (!fechaRef) return;
+    eventos.push({
+      fecha: fechaRef, ts: fechaRef + (f.id||''),
+      icon: 'bi-file-earmark-check-fill', iconColor: '#2563eb',
+      titulo: f.estado==='cobrada' ? 'Factura cobrada' : 'Factura a cobrar',
+      subtitulo: (f.razonSocial||f.cliente||'') + (f.nroFactura?' #'+f.nroFactura:''),
+      monto: f.total, isEgreso: false, tipo:'factura'
+    });
+  });
+
+  // Facturas pagadas recientemente
+  (ST.facturasPagar||[]).forEach(f => {
+    const fechaRef = f.fechaPago || f.fechaEmision;
+    if (!fechaRef) return;
+    eventos.push({
+      fecha: fechaRef, ts: fechaRef + (f.id||''),
+      icon: 'bi-file-earmark-x-fill', iconColor: '#dc2626',
+      titulo: f.estado==='pagada' ? 'Factura pagada' : 'Factura a pagar',
+      subtitulo: (f.razonSocial||f.proveedor||'') + (f.nroFactura?' #'+f.nroFactura:''),
+      monto: f.total, isEgreso: true, tipo:'factura'
+    });
+  });
+
+  // Cheques recientes
+  [...(ST.chequesFisicos||[]), ...(ST.eCheques||[])].forEach(c => {
+    if (!c.fechaIngreso && !c.fechaEmision) return;
+    const fechaRef = c.fechaIngreso || c.fechaEmision;
+    eventos.push({
+      fecha: fechaRef, ts: fechaRef + (c.id||''),
+      icon: 'bi-file-earmark-check', iconColor: '#7c3aed',
+      titulo: 'Cheque en cartera',
+      subtitulo: (c.banco||'') + (c.numero?' #'+c.numero:'') + (c.nombre?' · '+c.nombre:''),
+      monto: c.monto, isEgreso: false, tipo:'cheque'
+    });
+  });
+
+  if (!eventos.length) {
+    wrap.innerHTML = '<div class="text-muted" style="font-size:.82rem;padding:8px 0">Sin actividad registrada.</div>';
+    return;
+  }
+
+  // Ordenar por fecha desc y tomar los 8 más recientes
+  const recientes = eventos.sort((a,b)=>b.ts.localeCompare(a.ts)).slice(0,8);
+
+  wrap.innerHTML = `<div style="display:flex;flex-direction:column;gap:0">
+    ${recientes.map((e,i)=>`
+    <div style="display:flex;align-items:flex-start;gap:12px;padding:9px 4px;${i<recientes.length-1?'border-bottom:1px solid #f1f5f9':''}">
+      <div style="flex-shrink:0;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:${e.iconColor}18">
+        <i class="bi ${e.icon}" style="color:${e.iconColor};font-size:.85rem"></i>
+      </div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:.78rem;font-weight:600;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${e.titulo}</div>
+        <div style="font-size:.68rem;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${e.subtitulo||'—'}</div>
+      </div>
+      <div style="text-align:right;flex-shrink:0">
+        <div style="font-size:.8rem;font-weight:700;color:${e.isEgreso?'#dc2626':'#16a34a'}">${e.isEgreso?'-':'+'}${fmt(e.monto)}</div>
+        <div style="font-size:.65rem;color:#cbd5e1">${fmtF(e.fecha)}</div>
+      </div>
+    </div>`).join('')}
+  </div>`;
+}
+
+let _flujoDays = 30;
+function setFlujoDays(d) {
+  _flujoDays = d;
+  ['7','30','90'].forEach(n => {
+    const b = document.getElementById('flujo-btn-'+n);
+    if(b){ b.className = n==String(d) ? 'btn btn-primary' : 'btn btn-outline-secondary'; b.style.fontSize='.68rem'; b.style.padding='2px 8px'; }
+  });
+  // Re-renderizar solo el gráfico de flujo
+  const sB=calcSaldo(ST.cajaBancos), sE=calcSaldo(ST.cajaEfectivo);
+  const cartera=[...ST.chequesFisicos.filter(c=>c.estado==='en_cartera'||c.estado==='pendiente'),...ST.eCheques.filter(c=>c.estado==='pendiente')];
+  renderDashCharts(sB, sE, cartera.reduce((s,c)=>s+ +c.monto,0));
+}
+
 function renderDashCharts(sB,sE,sC) {
+  const days = _flujoDays || 30;
   const labels=[],ing=[],eg=[];
   const h0=new Date(); h0.setHours(0,0,0,0);
-  for(let i=29;i>=0;i--){
+  for(let i=days-1;i>=0;i--){
     const d=new Date(h0); d.setDate(d.getDate()-i);
     const ds=d.toISOString().split('T')[0];
-    labels.push(d.toLocaleDateString('es-AR',{month:'short',day:'numeric'}));
+    const fmt_lbl = days <= 30
+      ? d.toLocaleDateString('es-AR',{month:'short',day:'numeric'})
+      : d.toLocaleDateString('es-AR',{month:'short',day:'numeric'});
+    labels.push(fmt_lbl);
     const ms=[...ST.cajaBancos,...ST.cajaEfectivo].filter(m=>m.fecha===ds);
     ing.push(ms.filter(m=>m.tipo==='ingreso').reduce((s,m)=>s+ +m.monto,0));
     eg.push( ms.filter(m=>m.tipo==='egreso' ).reduce((s,m)=>s+ +m.monto,0));
@@ -6685,7 +6942,7 @@ function renderDashCharts(sB,sE,sC) {
     {label:'Ingresos',data:ing,backgroundColor:'rgba(16,185,129,.75)',borderRadius:4},
     {label:'Egresos', data:eg, backgroundColor:'rgba(239,68,68,.75)', borderRadius:4}
   ]},options:{responsive:true,plugins:{legend:{position:'top',labels:{boxWidth:10,font:{size:10}}}},
-    scales:{y:{ticks:{callback:v=>fmt(v),font:{size:9}},grid:{color:'#f1f5f9'}},x:{ticks:{font:{size:9}}}}}});
+    scales:{y:{ticks:{callback:v=>fmt(v),font:{size:9}},grid:{color:'#f1f5f9'}},x:{ticks:{font:{size:9},maxRotation:45}}}}});
 
   if(CHARTS.d)CHARTS.d.destroy();
   const c2=document.getElementById('ch-dist');
