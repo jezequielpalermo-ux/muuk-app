@@ -1295,6 +1295,15 @@
     <!-- FILTROS -->
     <div class="card mb-2 border-0 bg-light" id="filtros-cajaBancos">
       <div class="card-body py-2 px-3">
+        <!-- Atajos de período -->
+        <div class="mb-2 d-flex flex-wrap gap-1 align-items-center">
+          <span style="font-size:.68rem;color:#64748b;font-weight:600">PERÍODO:</span>
+          <button class="btn btn-xs btn-outline-secondary" style="font-size:.68rem;padding:1px 7px" onclick="cajaPeriodo('cajaBancos','hoy')">Hoy</button>
+          <button class="btn btn-xs btn-outline-secondary" style="font-size:.68rem;padding:1px 7px" onclick="cajaPeriodo('cajaBancos','semana')">Esta semana</button>
+          <button class="btn btn-xs btn-outline-secondary" style="font-size:.68rem;padding:1px 7px" onclick="cajaPeriodo('cajaBancos','mes')">Este mes</button>
+          <button class="btn btn-xs btn-outline-secondary" style="font-size:.68rem;padding:1px 7px" onclick="cajaPeriodo('cajaBancos','mesAnterior')">Mes anterior</button>
+          <button class="btn btn-xs btn-outline-secondary" style="font-size:.68rem;padding:1px 7px" onclick="cajaPeriodo('cajaBancos','anio')">Este año</button>
+        </div>
         <div class="row g-2 align-items-end">
           <div class="col-6 col-sm-3">
             <label class="form-label small mb-0 fw-bold" style="font-size:.7rem">Buscar</label>
@@ -1340,16 +1349,48 @@
       <h4><i class="bi bi-cash-coin me-2"></i>Caja — Efectivo</h4>
       <button class="btn btn-primary btn-sm" onclick="abrirModalMov('efectivo')"><i class="bi bi-plus-lg me-1"></i>Nuevo Movimiento</button>
     </div>
-    <div class="card p-3 mb-3">
-      Saldo en Efectivo: <strong id="saldo-efectivo-total" class="text-success ms-2 fs-5">$0</strong>
+    <div class="row g-3 mb-3">
+      <div class="col-sm-4">
+        <div class="stat-card" style="background:linear-gradient(135deg,#065f46,#10b981)">
+          <div class="bg-icon"><i class="bi bi-cash-coin"></i></div>
+          <div class="lbl">Saldo en Efectivo</div>
+          <div class="val" id="saldo-efectivo-total">$0</div>
+          <div class="sub">Disponible en caja</div>
+        </div>
+      </div>
+      <div class="col-sm-4">
+        <div class="stat-card" style="background:linear-gradient(135deg,#166534,#22c55e)">
+          <div class="bg-icon"><i class="bi bi-arrow-down-circle"></i></div>
+          <div class="lbl">Total Ingresos</div>
+          <div class="val" id="saldo-efectivo-ing">$0</div>
+          <div class="sub" id="saldo-efectivo-ing-cnt">0 movimientos</div>
+        </div>
+      </div>
+      <div class="col-sm-4">
+        <div class="stat-card" style="background:linear-gradient(135deg,#7f1d1d,#ef4444)">
+          <div class="bg-icon"><i class="bi bi-arrow-up-circle"></i></div>
+          <div class="lbl">Total Egresos</div>
+          <div class="val" id="saldo-efectivo-egr">$0</div>
+          <div class="sub" id="saldo-efectivo-egr-cnt">0 movimientos</div>
+        </div>
+      </div>
     </div>
     <!-- FILTROS -->
     <div class="card mb-2 border-0 bg-light" id="filtros-cajaEfectivo">
       <div class="card-body py-2 px-3">
+        <!-- Atajos de período -->
+        <div class="mb-2 d-flex flex-wrap gap-1 align-items-center">
+          <span style="font-size:.68rem;color:#64748b;font-weight:600">PERÍODO:</span>
+          <button class="btn btn-xs btn-outline-secondary" style="font-size:.68rem;padding:1px 7px" onclick="cajaPeriodo('cajaEfectivo','hoy')">Hoy</button>
+          <button class="btn btn-xs btn-outline-secondary" style="font-size:.68rem;padding:1px 7px" onclick="cajaPeriodo('cajaEfectivo','semana')">Esta semana</button>
+          <button class="btn btn-xs btn-outline-secondary" style="font-size:.68rem;padding:1px 7px" onclick="cajaPeriodo('cajaEfectivo','mes')">Este mes</button>
+          <button class="btn btn-xs btn-outline-secondary" style="font-size:.68rem;padding:1px 7px" onclick="cajaPeriodo('cajaEfectivo','mesAnterior')">Mes anterior</button>
+          <button class="btn btn-xs btn-outline-secondary" style="font-size:.68rem;padding:1px 7px" onclick="cajaPeriodo('cajaEfectivo','anio')">Este año</button>
+        </div>
         <div class="row g-2 align-items-end">
           <div class="col-6 col-sm-3">
             <label class="form-label small mb-0 fw-bold" style="font-size:.7rem">Buscar</label>
-            <input type="text" class="form-control form-control-sm" id="filtro-buscar-cajaEfectivo" placeholder="Descripción, banco..."
+            <input type="text" class="form-control form-control-sm" id="filtro-buscar-cajaEfectivo" placeholder="Descripción, concepto..."
                    oninput="dRenderCajaEfectivo()">
           </div>
           <div class="col-6 col-sm-2">
@@ -8313,6 +8354,34 @@ function limpiarFiltrosCaja(cat) {
   renderMovimientos(cat);
 }
 
+function cajaPeriodo(cat, periodo) {
+  const d = new Date();
+  let desde = '', hasta = '';
+  const iso = dt => dt.toISOString().split('T')[0];
+  if (periodo === 'hoy') {
+    desde = hasta = iso(d);
+  } else if (periodo === 'semana') {
+    const dow = d.getDay() || 7; // lunes=1
+    const lun = new Date(d); lun.setDate(d.getDate() - dow + 1);
+    const dom = new Date(lun); dom.setDate(lun.getDate() + 6);
+    desde = iso(lun); hasta = iso(dom);
+  } else if (periodo === 'mes') {
+    desde = iso(new Date(d.getFullYear(), d.getMonth(), 1));
+    hasta = iso(new Date(d.getFullYear(), d.getMonth() + 1, 0));
+  } else if (periodo === 'mesAnterior') {
+    desde = iso(new Date(d.getFullYear(), d.getMonth() - 1, 1));
+    hasta = iso(new Date(d.getFullYear(), d.getMonth(), 0));
+  } else if (periodo === 'anio') {
+    desde = iso(new Date(d.getFullYear(), 0, 1));
+    hasta = iso(new Date(d.getFullYear(), 11, 31));
+  }
+  const setV = (id, v) => { const e = document.getElementById(id+cat); if(e) e.value = v; };
+  setV('filtro-desde-', desde);
+  setV('filtro-hasta-', hasta);
+  _saveFilters(cat);
+  renderMovimientos(cat);
+}
+
 function poblarFiltroConcepto(cat) {
   const sel = document.getElementById('filtro-concepto-'+cat);
   if (!sel) return;
@@ -8346,51 +8415,105 @@ function aplicarFiltrosCaja(cat, data) {
   return filtered;
 }
 
+// Paleta de colores para badges de conceptos en Caja
+const _CAJA_CONCEPTO_COLORS = [
+  {bg:'#dbeafe',color:'#1d4ed8'}, // azul
+  {bg:'#dcfce7',color:'#166534'}, // verde
+  {bg:'#fef9c3',color:'#854d0e'}, // amarillo
+  {bg:'#fce7f3',color:'#9d174d'}, // rosa
+  {bg:'#ede9fe',color:'#5b21b6'}, // violeta
+  {bg:'#ffedd5',color:'#9a3412'}, // naranja
+  {bg:'#cffafe',color:'#164e63'}, // cian
+  {bg:'#f1f5f9',color:'#334155'}, // gris pizarra
+];
+const _cajaConceptoColorCache = {};
+function _cajaBadgeConcepto(concepto) {
+  if (!concepto) return '<span class="badge-concepto" style="background:#f1f5f9;color:#64748b">—</span>';
+  if (!_cajaConceptoColorCache[concepto]) {
+    // hash simple para asignar color consistente por nombre
+    let h = 0;
+    for (let i = 0; i < concepto.length; i++) h = (h * 31 + concepto.charCodeAt(i)) & 0xffff;
+    _cajaConceptoColorCache[concepto] = _CAJA_CONCEPTO_COLORS[h % _CAJA_CONCEPTO_COLORS.length];
+  }
+  const {bg, color} = _cajaConceptoColorCache[concepto];
+  return `<span style="display:inline-block;padding:2px 8px;border-radius:20px;font-size:.72rem;font-weight:600;background:${bg};color:${color}">${concepto}</span>`;
+}
+
 function renderMovimientos(cat){
   const wrap=document.getElementById('wrap-'+cat);if(!wrap)return;
   const data=ST[cat];
-  if(cat==='cajaEfectivo') document.getElementById('saldo-efectivo-total').textContent=fmt(calcSaldo(data));
+  if(cat==='cajaEfectivo'){
+    document.getElementById('saldo-efectivo-total').textContent=fmt(calcSaldo(data));
+    const ing=data.filter(m=>m.tipo==='ingreso'); const egr=data.filter(m=>m.tipo==='egreso');
+    const setEl=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
+    setEl('saldo-efectivo-ing', fmt(ing.reduce((a,m)=>a+ +m.monto,0)));
+    setEl('saldo-efectivo-egr', fmt(egr.reduce((a,m)=>a+ +m.monto,0)));
+    setEl('saldo-efectivo-ing-cnt', `${ing.length} movimiento${ing.length!==1?'s':''}`);
+    setEl('saldo-efectivo-egr-cnt', `${egr.length} movimiento${egr.length!==1?'s':''}`);
+  }
   if(cat==='cajaBancos') renderSaldosBancos();
   poblarFiltroConcepto(cat);
   if(!data.length){wrap.innerHTML='<div class="empty-state"><i class="bi bi-inbox"></i>Sin movimientos registrados.</div>';return;}
   const filtered = aplicarFiltrosCaja(cat, data);
-  const anyFilter = (document.getElementById('filtro-buscar-'+cat)||{}).value ||
-                    (document.getElementById('filtro-concepto-'+cat)||{}).value ||
-                    (document.getElementById('filtro-tipo-'+cat)||{}).value ||
-                    (document.getElementById('filtro-desde-'+cat)||{}).value ||
-                    (document.getElementById('filtro-hasta-'+cat)||{}).value;
+  const hasFilter = !!(
+    (document.getElementById('filtro-buscar-'+cat)||{}).value ||
+    (document.getElementById('filtro-concepto-'+cat)||{}).value ||
+    (document.getElementById('filtro-tipo-'+cat)||{}).value ||
+    (document.getElementById('filtro-desde-'+cat)||{}).value ||
+    (document.getElementById('filtro-hasta-'+cat)||{}).value
+  );
   if(!filtered.length){
-    wrap.innerHTML='<div class="empty-state"><i class="bi bi-funnel"></i>'+(anyFilter?'Sin resultados para los filtros aplicados.':'Sin movimientos registrados.')+'</div>';
+    wrap.innerHTML='<div class="empty-state"><i class="bi bi-funnel"></i>'+(hasFilter?'Sin resultados para los filtros aplicados.':'Sin movimientos registrados.')+'</div>';
     return;
   }
+  // Ordenar: más reciente primero (para mostrar), pero calcular saldo de más antiguo → nuevo
   const s=[...filtered].sort((a,b)=>new Date(b.fecha)-new Date(a.fecha));
   const esBanco=cat==='cajaBancos';
   const totalCount = data.length;
   const filteredCount = s.length;
-  let filterTag = '';
-  if (totalCount !== filteredCount) {
-    filterTag = `<div class="px-3 py-1 border-bottom bg-white" style="font-size:.75rem">
-      <i class="bi bi-funnel-fill me-1 text-primary"></i>Mostrando <strong>${filteredCount}</strong> de ${totalCount} movimientos
-      — Subtotal filtrado: <strong class="text-success">${fmt(s.filter(m=>m.tipo==='ingreso').reduce((a,m)=>a+ +m.monto,0))}</strong> ingr.
-      / <strong class="text-danger">${fmt(s.filter(m=>m.tipo==='egreso').reduce((a,m)=>a+ +m.monto,0))}</strong> egr.
-    </div>`;
-  }
-  wrap.innerHTML=filterTag+`<div class="table-responsive"><table class="table table-hover mb-0">
+
+  // ─── Totales del conjunto visible (siempre) ───
+  const ingTotal  = s.filter(m=>m.tipo==='ingreso').reduce((a,m)=>a+ +m.monto,0);
+  const egrTotal  = s.filter(m=>m.tipo==='egreso').reduce((a,m)=>a+ +m.monto,0);
+  const neto      = ingTotal - egrTotal;
+  const filterLabel = hasFilter
+    ? `<i class="bi bi-funnel-fill me-1 text-primary"></i>Mostrando <strong>${filteredCount}</strong> de ${totalCount} —`
+    : `<i class="bi bi-list-ul me-1 text-secondary"></i><strong>${filteredCount}</strong> movimientos —`;
+  const summaryBar = `<div class="px-3 py-2 border-bottom bg-light d-flex flex-wrap gap-3 align-items-center" style="font-size:.76rem">
+    ${filterLabel}
+    <span><i class="bi bi-arrow-down-circle me-1 text-success"></i>Ingresos: <strong class="text-success">${fmt(ingTotal)}</strong></span>
+    <span><i class="bi bi-arrow-up-circle me-1 text-danger"></i>Egresos: <strong class="text-danger">${fmt(egrTotal)}</strong></span>
+    <span style="font-weight:700;color:${neto>=0?'#16a34a':'#dc2626'}"><i class="bi bi-calculator me-1"></i>Neto: ${neto>=0?'+':''}${fmt(neto)}</span>
+  </div>`;
+
+  // ─── Saldo acumulado: calcular de más antiguo a más nuevo ───
+  // Usamos todo `data` (no solo filtered) para que el saldo sea el real de la cuenta
+  const cronologico = [...data].sort((a,b)=>new Date(a.fecha)-new Date(b.fecha)||(a.id>b.id?1:-1));
+  const saldoPorId = {};
+  let acc = 0;
+  cronologico.forEach(m => {
+    acc += (m.tipo==='ingreso'?1:-1)* +m.monto;
+    saldoPorId[m.id] = acc;
+  });
+
+  wrap.innerHTML = summaryBar + `<div class="table-responsive"><table class="table table-hover mb-0">
     <thead><tr>
       <th class="ps-3">Fecha</th><th>Socio</th>
       ${esBanco?'<th>Banco</th>':''}
-      <th>Tipo</th><th>Concepto</th><th>Monto</th><th>Descripción</th><th>Acciones</th>
+      <th>Tipo</th><th>Concepto</th><th>Monto</th><th style="color:#0369a1">Saldo</th><th>Descripción</th><th>Acciones</th>
     </tr></thead>
     <tbody>${s.map(m=>{
       const sN=m.socioId?(ST.socios.find(x=>x.id===m.socioId)?.nombre||'–'):'–';
       const isIng=m.tipo==='ingreso';
+      const saldoAcc = saldoPorId[m.id];
       return`<tr>
         <td class="ps-3"><small>${fmtF(m.fecha)}</small></td>
         <td><small>${sN}</small></td>
         ${esBanco?`<td><small>${m.banco||'–'}</small></td>`:''}
         <td><span class="badge ${isIng?'bg-success':'bg-danger'}">${isIng?'↑ Ingreso':'↓ Egreso'}</span></td>
-        <td><span class="badge-concepto">${m.concepto||'–'}</span></td>
+        <td>${_cajaBadgeConcepto(m.concepto)}</td>
         <td class="fw-bold ${isIng?'text-success':'text-danger'}">${isIng?'+':'-'}${fmt(m.monto)}</td>
+        <td class="fw-semibold" style="font-size:.8rem;color:${saldoAcc>=0?'#0369a1':'#dc2626'}">${fmt(saldoAcc)}</td>
         <td><small class="text-muted">${m.desc||'–'}</small></td>
         <td>
           <button class="btn btn-outline-primary btn-a me-1" onclick="editarMov('${cat}','${m.id}')"><i class="bi bi-pencil"></i></button>
