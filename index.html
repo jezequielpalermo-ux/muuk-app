@@ -808,6 +808,10 @@
 
   <!-- BARRA TIPO DE CAMBIO -->
   <div id="tc-bar" class="d-flex align-items-center justify-content-end gap-2 mb-2" style="font-size:.82rem">
+    <!-- Indicador de sync: 3 estados — guardado, guardando, sin conexión -->
+    <span id="sync-indicator" style="font-size:.68rem;padding:2px 8px;border-radius:10px;display:inline-flex;align-items:center;gap:4px;transition:all .3s;background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0">
+      <i class="bi bi-cloud-check-fill"></i><span id="sync-label">Guardado</span>
+    </span>
     <span id="tc-info" class="text-muted" style="font-size:.75rem"></span>
     <button onclick="toggleSearch()" style="font-size:.78rem;padding:2px 10px;border-radius:20px" class="btn btn-sm btn-outline-secondary">
       <i class="bi bi-search me-1"></i><span style="font-size:.7rem">Buscar <kbd style="font-size:.6rem;opacity:.6">Ctrl+K</kbd></span>
@@ -1152,7 +1156,7 @@
           <div class="col-6 col-sm-3">
             <label class="form-label small mb-0 fw-bold" style="font-size:.7rem">Buscar</label>
             <input type="text" class="form-control form-control-sm" id="filtro-buscar-chequesFisicos" placeholder="Nro, banco, nombre..."
-                   oninput="renderCheques('chequesFisicos')">
+                   oninput="dRenderChequesF()">
           </div>
           <div class="col-6 col-sm-2">
             <label class="form-label small mb-0 fw-bold" style="font-size:.7rem">Estado</label>
@@ -1172,7 +1176,7 @@
           <div class="col-6 col-sm-2">
             <label class="form-label small mb-0 fw-bold" style="font-size:.7rem">Monto mín.</label>
             <input type="number" class="form-control form-control-sm" id="filtro-monto-chequesFisicos" placeholder="$0" min="0"
-                   oninput="renderCheques('chequesFisicos')">
+                   oninput="dRenderChequesF()">
           </div>
           <div class="col-6 col-sm-1 d-flex align-items-end">
             <button class="btn btn-sm btn-outline-secondary w-100" onclick="limpiarFiltros('chequesFisicos')" title="Limpiar filtros" style="font-size:.72rem">
@@ -1198,7 +1202,7 @@
           <div class="col-6 col-sm-3">
             <label class="form-label small mb-0 fw-bold" style="font-size:.7rem">Buscar</label>
             <input type="text" class="form-control form-control-sm" id="filtro-buscar-eCheques" placeholder="Nro, banco, nombre..."
-                   oninput="renderCheques('eCheques')">
+                   oninput="dRenderChequesE()">
           </div>
           <div class="col-6 col-sm-2">
             <label class="form-label small mb-0 fw-bold" style="font-size:.7rem">Estado</label>
@@ -1218,7 +1222,7 @@
           <div class="col-6 col-sm-2">
             <label class="form-label small mb-0 fw-bold" style="font-size:.7rem">Monto mín.</label>
             <input type="number" class="form-control form-control-sm" id="filtro-monto-eCheques" placeholder="$0" min="0"
-                   oninput="renderCheques('eCheques')">
+                   oninput="dRenderChequesE()">
           </div>
           <div class="col-6 col-sm-1 d-flex align-items-end">
             <button class="btn btn-sm btn-outline-secondary w-100" onclick="limpiarFiltros('eCheques')" title="Limpiar filtros" style="font-size:.72rem">
@@ -1244,7 +1248,7 @@
           <div class="col-6 col-sm-3">
             <label class="form-label small mb-0 fw-bold" style="font-size:.7rem">Buscar</label>
             <input type="text" class="form-control form-control-sm" id="filtro-buscar-chequesPagar" placeholder="Nro, banco, nombre..."
-                   oninput="renderCheques('chequesPagar')">
+                   oninput="dRenderChequesP()">
           </div>
           <div class="col-6 col-sm-2">
             <label class="form-label small mb-0 fw-bold" style="font-size:.7rem">Estado</label>
@@ -1264,7 +1268,7 @@
           <div class="col-6 col-sm-2">
             <label class="form-label small mb-0 fw-bold" style="font-size:.7rem">Monto mín.</label>
             <input type="number" class="form-control form-control-sm" id="filtro-monto-chequesPagar" placeholder="$0" min="0"
-                   oninput="renderCheques('chequesPagar')">
+                   oninput="dRenderChequesP()">
           </div>
           <div class="col-6 col-sm-1 d-flex align-items-end">
             <button class="btn btn-sm btn-outline-secondary w-100" onclick="limpiarFiltros('chequesPagar')" title="Limpiar filtros" style="font-size:.72rem">
@@ -1295,7 +1299,7 @@
           <div class="col-6 col-sm-3">
             <label class="form-label small mb-0 fw-bold" style="font-size:.7rem">Buscar</label>
             <input type="text" class="form-control form-control-sm" id="filtro-buscar-cajaBancos" placeholder="Descripción, banco..."
-                   oninput="renderMovimientos('cajaBancos')">
+                   oninput="dRenderCajaBancos()">
           </div>
           <div class="col-6 col-sm-2">
             <label class="form-label small mb-0 fw-bold" style="font-size:.7rem">Concepto</label>
@@ -1346,7 +1350,7 @@
           <div class="col-6 col-sm-3">
             <label class="form-label small mb-0 fw-bold" style="font-size:.7rem">Buscar</label>
             <input type="text" class="form-control form-control-sm" id="filtro-buscar-cajaEfectivo" placeholder="Descripción, banco..."
-                   oninput="renderMovimientos('cajaEfectivo')">
+                   oninput="dRenderCajaEfectivo()">
           </div>
           <div class="col-6 col-sm-2">
             <label class="form-label small mb-0 fw-bold" style="font-size:.7rem">Concepto</label>
@@ -1646,7 +1650,7 @@
         <div class="position-relative" style="flex:1;min-width:160px;max-width:280px">
           <i class="bi bi-search position-absolute" style="left:9px;top:50%;transform:translateY(-50%);color:#94a3b8;font-size:.78rem"></i>
           <input type="text" id="com-fil-buscar" class="form-control form-control-sm ps-4"
-            placeholder="Buscar empresa..." oninput="renderComResumen()" style="font-size:.8rem">
+            placeholder="Buscar empresa..." oninput="dRenderComResumen()" style="font-size:.8rem">
         </div>
         <select id="com-fil-estado" class="form-select form-select-sm" style="max-width:150px;font-size:.8rem" onchange="renderComResumen()">
           <option value="">Todos los estados</option>
@@ -1789,7 +1793,7 @@
         <div class="row g-2 align-items-end">
           <div class="col-6 col-sm-3">
             <label class="form-label small mb-0 fw-bold" style="font-size:.7rem">Buscar</label>
-            <input type="text" class="form-control form-control-sm" id="hist-buscar" placeholder="Banco, nro, descripción..." oninput="renderHistorial()">
+            <input type="text" class="form-control form-control-sm" id="hist-buscar" placeholder="Banco, nro, descripción..." oninput="dRenderHistorial()">
           </div>
           <div class="col-6 col-sm-2">
             <label class="form-label small mb-0 fw-bold" style="font-size:.7rem">Tipo</label>
@@ -1812,7 +1816,7 @@
           </div>
           <div class="col-6 col-sm-2">
             <label class="form-label small mb-0 fw-bold" style="font-size:.7rem">Monto mín.</label>
-            <input type="number" class="form-control form-control-sm" id="hist-monto" placeholder="$0" oninput="renderHistorial()">
+            <input type="number" class="form-control form-control-sm" id="hist-monto" placeholder="$0" oninput="dRenderHistorial()">
           </div>
           <div class="col-6 col-sm-1 d-flex align-items-end">
             <button class="btn btn-sm btn-outline-secondary w-100" onclick="limpiarHistorial()" style="font-size:.72rem"><i class="bi bi-x-lg"></i></button>
@@ -4572,6 +4576,24 @@ CREATE POLICY "acceso total" ON flujo_caja_versions FOR ALL USING (true) WITH CH
   </div>
 </div>
 
+<!-- ── Modal de confirmación genérico ── -->
+<div class="modal fade" id="modalConfirm" tabindex="-1" data-bs-backdrop="static">
+  <div class="modal-dialog modal-dialog-centered" style="max-width:380px">
+    <div class="modal-content" style="border-radius:14px;overflow:hidden">
+      <div class="modal-header" id="mconf-header" style="background:linear-gradient(135deg,#dc2626,#ef4444);color:#fff;border:none;padding:14px 18px">
+        <h6 class="modal-title mb-0"><i class="bi bi-exclamation-triangle-fill me-2" id="mconf-icon"></i><span id="mconf-title">Confirmar acción</span></h6>
+      </div>
+      <div class="modal-body" style="padding:18px 20px">
+        <p id="mconf-msg" class="mb-0" style="font-size:.92rem"></p>
+      </div>
+      <div class="modal-footer" style="border:none;padding:10px 18px 16px;gap:8px">
+        <button class="btn btn-outline-secondary btn-sm px-4" data-bs-dismiss="modal">Cancelar</button>
+        <button class="btn btn-danger btn-sm px-4" id="mconf-ok"><i class="bi bi-trash me-1" id="mconf-btn-icon"></i><span id="mconf-btn-lbl">Eliminar</span></button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="position-fixed bottom-0 end-0 p-3" style="z-index:9999">
   <div id="toast" class="toast align-items-center text-white border-0" role="alert">
     <div class="d-flex">
@@ -4668,10 +4690,53 @@ function debounced(fn, delay=250) {
   };
 }
 // Pre-built debounced versions of heavy render functions
-const dRenderStock = debounced(renderStock, 200);
-const dRenderListasPrecios = debounced(renderListasPrecios, 200);
-const dRenderFactACobrar = debounced(renderFacturasACobrar, 200);
-const dRenderFactAPagar = debounced(renderFacturasPagar, 200);
+const dRenderStock        = debounced(renderStock, 200);
+const dRenderListasPrecios= debounced(renderListasPrecios, 200);
+const dRenderFactACobrar  = debounced(renderFacturasACobrar, 200);
+const dRenderFactAPagar   = debounced(renderFacturasPagar, 200);
+const dRenderChequesF     = debounced(() => renderCheques('chequesFisicos'), 220);
+const dRenderChequesE     = debounced(() => renderCheques('eCheques'), 220);
+const dRenderChequesP     = debounced(() => renderCheques('chequesPagar'), 220);
+const dRenderCajaBancos   = debounced(() => renderMovimientos('cajaBancos'), 220);
+const dRenderCajaEfectivo = debounced(() => renderMovimientos('cajaEfectivo'), 220);
+const dRenderComResumen   = debounced(renderComResumen, 220);
+const dRenderHistorial    = debounced(renderHistorial, 220);
+
+// ── Filtros persistentes: guarda/restaura valores de filtro en sessionStorage ──
+const _FL_IDS = {
+  chequesFisicos:  ['filtro-buscar-chequesFisicos','filtro-estado-chequesFisicos','filtro-desde-chequesFisicos','filtro-hasta-chequesFisicos','filtro-monto-chequesFisicos'],
+  eCheques:        ['filtro-buscar-eCheques','filtro-estado-eCheques','filtro-desde-eCheques','filtro-hasta-eCheques','filtro-monto-eCheques'],
+  chequesPagar:    ['filtro-buscar-chequesPagar','filtro-estado-chequesPagar','filtro-desde-chequesPagar','filtro-hasta-chequesPagar','filtro-monto-chequesPagar'],
+  cajaBancos:      ['filtro-buscar-cajaBancos','filtro-concepto-cajaBancos','filtro-tipo-cajaBancos','filtro-desde-cajaBancos','filtro-hasta-cajaBancos'],
+  cajaEfectivo:    ['filtro-buscar-cajaEfectivo','filtro-concepto-cajaEfectivo','filtro-tipo-cajaEfectivo','filtro-desde-cajaEfectivo','filtro-hasta-cajaEfectivo'],
+  comisiones:      ['com-fil-buscar','com-fil-estado'],
+  historial:       ['hist-buscar','hist-tipo','hist-monto','hist-desde','hist-hasta'],
+  facturasACobrar: ['fac-buscar-cobrar','fac-estado-cobrar','fac-desde-cobrar','fac-hasta-cobrar'],
+  facturasPagar:   ['fac-buscar-pagar','fac-estado-pagar','fac-desde-pagar','fac-hasta-pagar'],
+};
+// Conjunto plano id→page para lookup rápido en event delegation
+const _FL_ID_MAP = {};
+Object.entries(_FL_IDS).forEach(([page, ids]) => ids.forEach(id => { _FL_ID_MAP[id] = page; }));
+
+function _saveFilters(page) {
+  const ids = _FL_IDS[page]; if (!ids) return;
+  const vals = {};
+  ids.forEach(id => { const el = document.getElementById(id); if (el) vals[id] = el.value; });
+  try { sessionStorage.setItem('fl_' + page, JSON.stringify(vals)); } catch(e) {}
+}
+
+function _restoreFilters(page) {
+  const ids = _FL_IDS[page]; if (!ids) return;
+  try {
+    const raw = sessionStorage.getItem('fl_' + page); if (!raw) return;
+    const vals = JSON.parse(raw);
+    ids.forEach(id => { const el = document.getElementById(id); if (el && vals[id] != null) el.value = vals[id]; });
+  } catch(e) {}
+}
+
+// Event delegation: guarda filtros automáticamente en cualquier cambio del usuario
+document.addEventListener('input',  function(e) { const p = _FL_ID_MAP[e.target?.id]; if (p) _saveFilters(p); });
+document.addEventListener('change', function(e) { const p = _FL_ID_MAP[e.target?.id]; if (p) _saveFilters(p); });
 
 /* ─── MOBILE SIDEBAR ─── */
 function toggleSidebar() {
@@ -4972,11 +5037,59 @@ function toast(msg, tipo='success') {
   bootstrap.Toast.getOrCreateInstance(t,{delay:2800}).show();
 }
 
+// ── Modal de confirmación reutilizable ────────────────────────────────────────
+let _mconfCb = null;
+function _confirmar(msg, cb, { title='Confirmar', btnLabel='Eliminar', btnIcon='trash', danger=true } = {}) {
+  _mconfCb = cb;
+  document.getElementById('mconf-msg').textContent = msg;
+  document.getElementById('mconf-title').textContent = title;
+  document.getElementById('mconf-btn-lbl').textContent = btnLabel;
+  document.getElementById('mconf-btn-icon').className = `bi bi-${btnIcon} me-1`;
+  const okBtn = document.getElementById('mconf-ok');
+  okBtn.className = `btn btn-sm px-4 ${danger ? 'btn-danger' : 'btn-warning'}`;
+  const header = document.getElementById('mconf-header');
+  header.style.background = danger ? 'linear-gradient(135deg,#dc2626,#ef4444)' : 'linear-gradient(135deg,#d97706,#f59e0b)';
+  bootstrap.Modal.getOrCreateInstance(document.getElementById('modalConfirm')).show();
+}
+document.addEventListener('DOMContentLoaded', () => {
+  const btn = document.getElementById('mconf-ok');
+  if (btn) btn.addEventListener('click', () => {
+    bootstrap.Modal.getInstance(document.getElementById('modalConfirm'))?.hide();
+    if (typeof _mconfCb === 'function') { _mconfCb(); _mconfCb = null; }
+  });
+});
+
 /* ═══════════════════════════════════════════
    PERSISTENCIA
 ═══════════════════════════════════════════ */
+// ── Sync indicator helpers ────────────────────────────────────────────────────
+let _syncOkTimer = null;
+function _syncSet(state) {
+  const el = document.getElementById('sync-indicator');
+  const lbl = document.getElementById('sync-label');
+  if (!el || !lbl) return;
+  clearTimeout(_syncOkTimer);
+  if (state === 'saving') {
+    el.style.cssText = 'font-size:.68rem;padding:2px 8px;border-radius:10px;display:inline-flex;align-items:center;gap:4px;transition:all .3s;background:#fffbeb;color:#d97706;border:1px solid #fde68a';
+    el.querySelector('i').className = 'bi bi-cloud-arrow-up';
+    lbl.textContent = 'Guardando…';
+  } else if (state === 'ok') {
+    el.style.cssText = 'font-size:.68rem;padding:2px 8px;border-radius:10px;display:inline-flex;align-items:center;gap:4px;transition:all .3s;background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0';
+    el.querySelector('i').className = 'bi bi-cloud-check-fill';
+    lbl.textContent = 'Guardado ✓';
+  } else if (state === 'offline') {
+    el.style.cssText = 'font-size:.68rem;padding:2px 8px;border-radius:10px;display:inline-flex;align-items:center;gap:4px;transition:all .3s;background:#fef2f2;color:#dc2626;border:1px solid #fecaca';
+    el.querySelector('i').className = 'bi bi-cloud-slash';
+    lbl.textContent = 'Sin conexión';
+  } else if (state === 'local') {
+    el.style.cssText = 'font-size:.68rem;padding:2px 8px;border-radius:10px;display:inline-flex;align-items:center;gap:4px;transition:all .3s;background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0';
+    el.querySelector('i').className = 'bi bi-cloud-check';
+    lbl.textContent = 'Guardado (local)';
+  }
+}
 function save() {
   ST._syncTs = Date.now();
+  _syncSet('saving');
   // Excluir datos live de Google Sheets del localStorage (siempre se cargan frescos)
   const {comisionesResumen, comisionesTotal, comisionesTimestamp, ...persistData} = ST;
   // Strip base64 file data from listas de precios to avoid localStorage quota overflow
@@ -4993,6 +5106,12 @@ function save() {
   } catch(e) {
     console.error('[SAVE] localStorage quota exceeded:', e);
     toast('⚠ Error guardando datos: almacenamiento lleno. Descargá un backup.', 'danger');
+    _syncSet('offline');
+    return;
+  }
+  // Si Supabase no está configurado, mostrar "guardado local"
+  if (!sbReady()) {
+    _syncOkTimer = setTimeout(() => _syncSet('local'), 400);
   }
   pushRemoto();
 }
@@ -5076,6 +5195,9 @@ function setSyncStatus(status, msg) {
     none:    'Sin base de datos configurada'
   };
   el.innerHTML = '<i class="bi ' + icon + ' me-1"></i>' + texts[status];
+  // También actualizar el indicador del topbar
+  const topMap = { ok:'ok', syncing:'saving', error:'offline', offline:'offline', none:'local' };
+  if (typeof _syncSet === 'function') _syncSet(topMap[status] || 'local');
   el.className = status === 'ok' ? 'sync-status-ok' : status === 'syncing' ? 'sync-status-syncing' : 'sync-status-error';
 }
 
@@ -5251,103 +5373,6 @@ function importarBackupJSON() {
     }
   };
   input.click();
-}
-
-/* ═══════════════════════════════════════════
-   ALERTAS DASHBOARD
-═══════════════════════════════════════════ */
-function renderAlertas() {
-  const el = document.getElementById('dash-alertas');
-  if (!el) return;
-  const alertas = [];
-  const todosChq = [...ST.chequesFisicos.filter(c=>c.estado==='en_cartera'||c.estado==='pendiente'),
-                     ...ST.eCheques.filter(c=>c.estado==='pendiente'),
-                     ...ST.chequesPagar.filter(c=>c.estado==='pendiente')];
-  
-  const vencidosCobrar = [...ST.chequesFisicos.filter(c=>(c.estado==='en_cartera'||c.estado==='pendiente')&&dHasta(c.fechaVenc)<0),
-                           ...ST.eCheques.filter(c=>c.estado==='pendiente'&&dHasta(c.fechaVenc)<0)];
-  const vencidosPagar = ST.chequesPagar.filter(c=>c.estado==='pendiente'&&dHasta(c.fechaVenc)<0);
-  const hoyVencen = todosChq.filter(c=>dHasta(c.fechaVenc)===0);
-  const mananaVencen = todosChq.filter(c=>dHasta(c.fechaVenc)===1);
-  
-  if (vencidosCobrar.length > 0) {
-    const tot = vencidosCobrar.reduce((s,c)=>s+ +c.monto,0);
-    alertas.push(`<div class="alert alert-danger py-2 mb-2 d-flex align-items-center" style="font-size:.85rem">
-      <i class="bi bi-exclamation-triangle-fill me-2" style="font-size:1.1rem"></i>
-      <div><strong>${vencidosCobrar.length} cheque${vencidosCobrar.length>1?'s':''} a cobrar VENCIDO${vencidosCobrar.length>1?'S':''}:</strong> ${fmt(tot)} — Requieren atención inmediata</div>
-    </div>`);
-  }
-  if (vencidosPagar.length > 0) {
-    const tot = vencidosPagar.reduce((s,c)=>s+ +c.monto,0);
-    alertas.push(`<div class="alert alert-danger py-2 mb-2 d-flex align-items-center" style="font-size:.85rem">
-      <i class="bi bi-exclamation-triangle-fill me-2" style="font-size:1.1rem"></i>
-      <div><strong>${vencidosPagar.length} cheque${vencidosPagar.length>1?'s':''} a pagar VENCIDO${vencidosPagar.length>1?'S':''}:</strong> ${fmt(tot)} — Pago atrasado</div>
-    </div>`);
-  }
-  if (hoyVencen.length > 0) {
-    const tot = hoyVencen.reduce((s,c)=>s+ +c.monto,0);
-    alertas.push(`<div class="alert alert-warning py-2 mb-2 d-flex align-items-center" style="font-size:.85rem">
-      <i class="bi bi-alarm-fill me-2" style="font-size:1.1rem"></i>
-      <div><strong>${hoyVencen.length} cheque${hoyVencen.length>1?'s':''} vence${hoyVencen.length>1?'n':''} HOY:</strong> ${fmt(tot)}</div>
-    </div>`);
-  }
-  if (mananaVencen.length > 0) {
-    const tot = mananaVencen.reduce((s,c)=>s+ +c.monto,0);
-    alertas.push(`<div class="alert alert-info py-2 mb-2 d-flex align-items-center" style="font-size:.85rem">
-      <i class="bi bi-clock me-2" style="font-size:1.1rem"></i>
-      <div><strong>${mananaVencen.length} cheque${mananaVencen.length>1?'s':''} vence${mananaVencen.length>1?'n':''} MAÑANA:</strong> ${fmt(tot)}</div>
-    </div>`);
-  }
-  // Alertas de facturas
-  const facVencCobrar = (ST.facturasACobrar||[]).filter(f=>f.estado==='pendiente' && f.fechaVenc && dHasta(f.fechaVenc)<0);
-  const facVencPagar  = (ST.facturasPagar||[]).filter(f=>f.estado==='pendiente' && f.fechaVenc && dHasta(f.fechaVenc)<0);
-  const facHoyCobrar  = (ST.facturasACobrar||[]).filter(f=>f.estado==='pendiente' && f.fechaVenc && dHasta(f.fechaVenc)===0);
-  const facHoyPagar   = (ST.facturasPagar||[]).filter(f=>f.estado==='pendiente' && f.fechaVenc && dHasta(f.fechaVenc)===0);
-  if (facVencCobrar.length) {
-    const tot = facVencCobrar.reduce((s,f)=>s+ +f.total,0);
-    alertas.push(`<div class="alert alert-danger py-2 mb-2 d-flex align-items-center" style="font-size:.85rem">
-      <i class="bi bi-file-earmark-x-fill me-2" style="font-size:1.1rem"></i>
-      <div><strong>${facVencCobrar.length} factura${facVencCobrar.length>1?'s':''} a cobrar VENCIDA${facVencCobrar.length>1?'S':''}:</strong> ${fmt(tot)} — Requieren atención inmediata</div>
-    </div>`);
-  }
-  if (facVencPagar.length) {
-    const tot = facVencPagar.reduce((s,f)=>s+ +f.total,0);
-    alertas.push(`<div class="alert alert-danger py-2 mb-2 d-flex align-items-center" style="font-size:.85rem">
-      <i class="bi bi-file-earmark-x-fill me-2" style="font-size:1.1rem"></i>
-      <div><strong>${facVencPagar.length} factura${facVencPagar.length>1?'s':''} a pagar VENCIDA${facVencPagar.length>1?'S':''}:</strong> ${fmt(tot)} — Requieren atención inmediata</div>
-    </div>`);
-  }
-  if (facHoyCobrar.length || facHoyPagar.length) {
-    const tot = [...facHoyCobrar,...facHoyPagar].reduce((s,f)=>s+ +f.total,0);
-    alertas.push(`<div class="alert alert-warning py-2 mb-2 d-flex align-items-center" style="font-size:.85rem">
-      <i class="bi bi-file-earmark-exclamation me-2" style="font-size:1.1rem"></i>
-      <div><strong>${facHoyCobrar.length+facHoyPagar.length} factura${(facHoyCobrar.length+facHoyPagar.length)>1?'s':''} vence${(facHoyCobrar.length+facHoyPagar.length)>1?'n':''} HOY:</strong> ${fmt(tot)}</div>
-    </div>`);
-  }
-
-  // ── Facturas próximas a vencer (7 días) ──
-  const en7dias = (ST.facturasACobrar||[]).filter(f => f.estado==='pendiente' && f.fechaVenc && dHasta(f.fechaVenc)>0 && dHasta(f.fechaVenc)<=7);
-  if (en7dias.length > 0) {
-    const tot = en7dias.reduce((s,f)=>s+ +f.total,0);
-    alertas.push(`<div class="alert alert-info py-2 mb-2 d-flex align-items-center" style="font-size:.85rem">
-      <i class="bi bi-calendar-event me-2" style="font-size:1.1rem"></i>
-      <div><strong>${en7dias.length} factura${en7dias.length>1?'s':''} a cobrar vence${en7dias.length>1?'n':''} en los próximos 7 días:</strong> ${fmt(tot)}</div>
-    </div>`);
-  }
-
-  // ── Comisiones pendientes significativas ──
-  if (ST.comisionesTotal && ST.comisionesTotal > 0) {
-    const empPend = (ST.comisionesResumen||[]).filter(e=>e.saldo>0).length;
-    if (empPend > 0) {
-      alertas.push(`<div class="alert alert-warning py-2 mb-2 d-flex align-items-center justify-content-between" style="font-size:.85rem">
-        <div><i class="bi bi-percent me-2" style="font-size:1.1rem"></i>
-        <strong>Comisiones pendientes de cobro:</strong> ${fmt(ST.comisionesTotal)} en ${empPend} empresa${empPend>1?'s':''}</div>
-        <button class="btn btn-sm btn-outline-warning ms-2" style="font-size:.73rem;padding:2px 8px;border-radius:6px;white-space:nowrap" onclick="irA('comisiones')">Ver <i class="bi bi-arrow-right"></i></button>
-      </div>`);
-    }
-  }
-
-  el.innerHTML = alertas.join('');
 }
 
 /* ═══════════════════════════════════════════
@@ -6362,43 +6387,44 @@ function irA(p) {
   document.getElementById('page-'+p).classList.add('active');
   updateBreadcrumb(p);
   window.scrollTo({top:0, behavior:'smooth'});
-  if (p==='dashboard')     renderDashboard();
-  if (p==='reportes')      renderReportes();
-  if (p==='cuentaSocios')  renderCuentaSocios();
-  if (p==='cajaBancos')    renderSaldosBancos();
-  if (p==='comisiones')    renderComisiones();
-  if (p==='bcra')             renderBCRA();
-  if (p==='historial')        renderHistorial();
-  if (p==='facturasACobrar')  renderFacturasACobrar();
-  if (p==='facturasPagar')    renderFacturasPagar();
-  if (p==='config')           renderListaConceptos();
-  if (p==='gestion')          renderGestion();
-  if (p==='estrategicos')     renderEstrategicos();
-  if (p==='estadosCuenta')   renderEstadosCuenta();
-  if (p==='stock')            renderStock();
-  if (p==='listasPrecios')    renderListasPrecios();
-  if (p==='tesoreria')        renderTesoreria();
+  // Restaurar filtros ANTES de renderizar (persistencia entre recargas)
+  _restoreFilters(p === 'comisiones' ? 'comisiones' : p);
+
+  // Lazy rendering: cada sección se renderiza al navegar a ella
+  if (p==='dashboard')         renderDashboard();
+  if (p==='socios')            renderSocios();
+  if (p==='chequesFisicos')    renderCheques('chequesFisicos');
+  if (p==='eCheques')          renderCheques('eCheques');
+  if (p==='chequesPagar')      renderCheques('chequesPagar');
+  if (p==='cajaBancos')        { renderMovimientos('cajaBancos');   renderSaldosBancos(); }
+  if (p==='cajaEfectivo')      renderMovimientos('cajaEfectivo');
+  if (p==='reportes')          renderReportes();
+  if (p==='cuentaSocios')      renderCuentaSocios();
+  if (p==='comisiones')        renderComisiones();
+  if (p==='bcra')              renderBCRA();
+  if (p==='historial')         renderHistorial();
+  if (p==='facturasACobrar')   renderFacturasACobrar();
+  if (p==='facturasPagar')     renderFacturasPagar();
+  if (p==='config')            renderListaConceptos();
+  if (p==='gestion')           renderGestion();
+  if (p==='estrategicos')      renderEstrategicos();
+  if (p==='estadosCuenta')     renderEstadosCuenta();
+  if (p==='stock')             renderStock();
+  if (p==='listasPrecios')     renderListasPrecios();
+  if (p==='tesoreria')         renderTesoreria();
   if (p==='panelVencimientos') renderPanelVencimientos();
-  if (p==='rentabilidad')     renderRentabilidad();
-  if (p==='flujoProyectado')  renderFlujoProyectado();
-  if (p==='contabilidad')     renderContabilidad();
-  if (p==='calendarioARCA')   renderCalendarioARCA();
-  if (p==='kilometraje')      kmRender();
+  if (p==='rentabilidad')      renderRentabilidad();
+  if (p==='flujoProyectado')   renderFlujoProyectado();
+  if (p==='contabilidad')      renderContabilidad();
+  if (p==='calendarioARCA')    renderCalendarioARCA();
+  if (p==='kilometraje')       kmRender();
 }
 
 function renderTodo() {
+  // Lazy rendering: solo renderizar dashboard (página inicial) y selects de modales.
+  // El resto se renderiza en irA() cuando el usuario navega a cada sección.
   renderDashboard();
-  renderSocios();
-  renderCheques('chequesFisicos');
-  renderCheques('eCheques');
-  renderCheques('chequesPagar');
-  renderMovimientos('cajaBancos');
-  renderMovimientos('cajaEfectivo');
-  renderComisiones();
-  renderFacturasACobrar();
-  renderFacturasPagar();
-  actualizarSelects();
-  renderListaConceptos();
+  actualizarSelects(); // debe estar listo al inicio para los modales
 }
 
 /* ═══════════════════════════════════════════
@@ -7073,8 +7099,9 @@ async function comPdfSaldos() {
       const iSinIVA = _fc(['sin iva','sin imp','s/imp','s/iva']);
       const iComision = _fc(['comisi']);
       const iEstado = _fc(['estado','facturado']);
-      const iPagos = headers.findIndex(h => h.length < 40 && (h.includes('pagos') || h.includes('retiro')));
+      const iPagos = headers.findIndex(h => h.length < 40 && (h.includes('pagos') || h.includes('retiro') || h.includes('cobros') || h.includes('abonos')));
       const iSaldo = _fc(['saldo']);
+      const hasSaldo = iSaldo >= 0;
 
       const detail = [];
       for (let i = 1; i < rows.length; i++) {
@@ -7092,11 +7119,14 @@ async function comPdfSaldos() {
         detail.push({ fecha, cliente, fca, importe, sinIVA, comision, pagos, saldo });
       }
 
-      // ── Tomar solo filas DESPUÉS del último saldo = 0 (período actual) ──
+      // ── Tomar solo filas DESPUÉS del último saldo ≈ 0 (período actual) ──
+      // Solo si la columna saldo fue encontrada; de lo contrario usar todo el historial.
       let lastZeroIdx = -1;
-      for (let i = detail.length - 1; i >= 0; i--) {
-        if (detail[i].saldo === 0 && (detail[i].fca || detail[i].importe || detail[i].comision || detail[i].cliente)) {
-          lastZeroIdx = i; break;
+      if (hasSaldo) {
+        for (let i = detail.length - 1; i >= 0; i--) {
+          if (Math.abs(detail[i].saldo) < 0.01 && (detail[i].fca || detail[i].importe || detail[i].comision || detail[i].cliente || detail[i].pagos)) {
+            lastZeroIdx = i; break;
+          }
         }
       }
       const filtrado = (lastZeroIdx >= 0 ? detail.slice(lastZeroIdx + 1) : detail)
@@ -7192,17 +7222,30 @@ async function comPdfSaldos() {
         totImporte += r.importe;
         totComision += r.comision;
         totPagos += r.pagos;
-        totSaldo += r.saldo;
-        const isNC = (r.fca||'').toLowerCase().includes('nc');
-        html += `<tr class="${ri%2?'row-alt':''}">
-          <td>${r.fecha}</td>
-          ${hasCliente ? `<td>${r.cliente}</td>` : ''}
-          <td>${r.fca}${isNC?' <span style="background:#dbeafe;color:#1e40af;font-size:8px;padding:1px 4px;border-radius:3px;font-weight:700">NC</span>':''}</td>
-          <td class="num">$${_f(r.importe)}</td>
-          ${hasComision ? `<td class="num" style="color:#d97706;font-weight:600">$${_f(r.comision)}</td>` : ''}
-          <td class="num" style="color:${r.pagos>0?'#16a34a':'#94a3b8'}">$${_f(r.pagos)}</td>
-          <td class="num" style="color:#dc2626;font-weight:700">$${_f(r.saldo)}</td>
-        </tr>`;
+        totSaldo = r.saldo; // saldo corrido: usar último valor, no sumar
+        const isNC   = (r.fca||'').toLowerCase().includes('nc');
+        const esPago = r.pagos > 0 && !r.fca && !r.importe && !r.comision;
+        if (esPago) {
+          html += `<tr style="background:#f0fdf4">
+            <td style="color:#166534">${r.fecha}</td>
+            ${hasCliente ? `<td style="color:#166534;font-style:italic">${r.cliente || 'Pago recibido'}</td>` : ''}
+            <td><span style="background:#16a34a;color:#fff;font-size:8px;padding:2px 7px;border-radius:3px;font-weight:700;letter-spacing:.04em">PAGO</span></td>
+            <td class="num" style="color:#94a3b8">–</td>
+            ${hasComision ? `<td class="num" style="color:#94a3b8">–</td>` : ''}
+            <td class="num" style="color:#16a34a;font-weight:700">– $${_f(r.pagos)}</td>
+            <td class="num" style="color:#dc2626;font-weight:700">$${_f(r.saldo)}</td>
+          </tr>`;
+        } else {
+          html += `<tr class="${ri%2?'row-alt':''}">
+            <td>${r.fecha}</td>
+            ${hasCliente ? `<td style="font-weight:600">${r.cliente || '–'}</td>` : ''}
+            <td>${r.fca || '–'}${isNC?' <span style="background:#dbeafe;color:#1e40af;font-size:8px;padding:1px 4px;border-radius:3px;font-weight:700">NC</span>':''}</td>
+            <td class="num">${r.importe ? '$'+_f(r.importe) : '–'}</td>
+            ${hasComision ? `<td class="num" style="color:#d97706;font-weight:600">${r.comision ? '$'+_f(r.comision) : '–'}</td>` : ''}
+            <td class="num" style="color:#94a3b8">–</td>
+            <td class="num" style="color:#dc2626;font-weight:700">$${_f(r.saldo)}</td>
+          </tr>`;
+        }
       });
 
       html += `<tr class="total-row" style="border-color:${c.border};background:${c.bg}">
@@ -7276,7 +7319,8 @@ async function cargarComisionDetalle(sheetTab, empresaName) {
     // "Pago" column (payment type: E-cheq, Fisico, etc.) — distinct from "Pagos/Retiros" (amounts)
     const iPagoTipo = headers.findIndex((h,idx) => idx !== iPagos && (h === 'pago' || h === 'tipo pago' || h === 'forma pago'));
 
-    const isFull = iComision >= 0 || iSinIVA >= 0;
+    const isFull   = iComision >= 0 || iSinIVA >= 0;
+    const hasSaldo = iSaldo >= 0;
 
     // Parse detail rows
     const details = [];
@@ -7334,7 +7378,7 @@ async function cargarComisionDetalle(sheetTab, empresaName) {
     if (saldoEl) saldoEl.textContent = resumenItem ? `Saldo: ${fmt(resumenItem.saldo)}` : 'Saldo: —';
 
     // Save detail data for direct printing (comImprimirSaldoDesdeDetalle)
-    _comLastDetail = { empresaName, saldo: resumenItem?.saldo || 0, details, isFull };
+    _comLastDetail = { empresaName, saldo: resumenItem?.saldo || 0, details, isFull, hasSaldo };
     
     // Calculate summary totals
     const totImporte = details.reduce((s,d) => s + (d.importe||0), 0);
@@ -7433,8 +7477,8 @@ async function cargarComisionDetalle(sheetTab, empresaName) {
 // Llamado desde el botón en el detalle (datos ya en memoria)
 function comImprimirSaldoDesdeDetalle() {
   if (!_comLastDetail) { toast('Abrí el detalle de la empresa primero', 'warning'); return; }
-  const { empresaName, saldo, details, isFull } = _comLastDetail;
-  _comBuildPDFSaldoEmpresa(empresaName, saldo, details, isFull);
+  const { empresaName, saldo, details, isFull, hasSaldo = true } = _comLastDetail;
+  _comBuildPDFSaldoEmpresa(empresaName, saldo, details, isFull, hasSaldo);
 }
 
 // Llamado desde el botón en la card del resumen (re-fetchea los datos)
@@ -7457,10 +7501,11 @@ async function comImprimirSaldoEmpresa(sheetTab, empresaName, saldo) {
     const iSinIVA   = _fc(['sin iva','sin imp','s/imp','s/iva']);
     const iComision = _fc(['comisi']);
     const iEstado   = _fc(['estado','facturado']);
-    const iPagos    = headers.findIndex(h => h.length < 40 && (h.includes('pagos') || h.includes('retiro')));
+    const iPagos    = headers.findIndex(h => h.length < 40 && (h.includes('pagos') || h.includes('retiro') || h.includes('cobros') || h.includes('abonos')));
     const iSaldo    = _fc(['saldo']);
     const iObs      = _fc(['obs','observ']);
     const isFull    = iComision >= 0 || iSinIVA >= 0;
+    const hasSaldo  = iSaldo >= 0; // flag para evitar falsos negativos cuando la columna no se encontró
 
     const details = [];
     for (let i = 1; i < rows.length; i++) {
@@ -7483,20 +7528,23 @@ async function comImprimirSaldoEmpresa(sheetTab, empresaName, saldo) {
         type:         isFull ? 'full' : 'simple'
       });
     }
-    _comBuildPDFSaldoEmpresa(empresaName, saldo, details, isFull);
+    _comBuildPDFSaldoEmpresa(empresaName, saldo, details, isFull, hasSaldo);
   } catch(e) {
     toast('Error al generar PDF: ' + e.message, 'danger');
   }
 }
 
 // Generador compartido del PDF de saldo pendiente por empresa
-function _comBuildPDFSaldoEmpresa(empresaName, saldoResumen, details, isFull) {
+function _comBuildPDFSaldoEmpresa(empresaName, saldoResumen, details, isFull, hasSaldo = true) {
   // ── Encontrar el último punto donde el saldo fue 0 (último corte/saldo) ──
+  // Solo buscar si la columna saldo fue encontrada en el sheet; si no, usar todos los detalles.
   let lastZeroIdx = -1;
-  for (let i = details.length - 1; i >= 0; i--) {
-    const r = details[i];
-    if (r.saldo === 0 && (r.fca || r.importe || r.comision || r.cliente || r.pagos)) {
-      lastZeroIdx = i; break;
+  if (hasSaldo) {
+    for (let i = details.length - 1; i >= 0; i--) {
+      const r = details[i];
+      if (Math.abs(r.saldo) < 0.01 && (r.fca || r.importe || r.comision || r.cliente || r.pagos)) {
+        lastZeroIdx = i; break;
+      }
     }
   }
 
@@ -7747,7 +7795,7 @@ function editarSocio(id){
 }
 function guardarSocio(){
   const nombre=document.getElementById('s-nombre').value.trim();
-  if(!nombre){alert('Ingresá el nombre.');return;}
+  if(!nombre){toast('Ingresá el nombre del socio','warning');return;}
   const id=document.getElementById('s-id').value;
   if(id){const s=ST.socios.find(x=>x.id===id);if(s)s.nombre=nombre;}
   else ST.socios.push({id:uid(),nombre});
@@ -7756,9 +7804,12 @@ function guardarSocio(){
   toast('Socio guardado');
 }
 function eliminarSocio(id){
-  if(!confirm('¿Eliminar socio?'))return;
-  ST.socios=ST.socios.filter(x=>x.id!==id);
-  save();renderSocios();actualizarSelects();toast('Socio eliminado','warning');
+  const s = (ST.socios||[]).find(x=>x.id===id);
+  const nombre = s ? s.nombre : 'este socio';
+  _confirmar(`¿Eliminar a ${nombre}? Esta acción no se puede deshacer.`, ()=>{
+    ST.socios=ST.socios.filter(x=>x.id!==id);
+    save();renderSocios();actualizarSelects();toast('Socio eliminado','warning');
+  }, { title:'Eliminar socio', btnLabel:'Eliminar' });
 }
 
 /* ═══════════════════════════════════════════
@@ -7784,8 +7835,10 @@ function agregarConceptoConfig(){
   inp.value='';
 }
 function eliminarConcepto(i){
-  if(!confirm(`¿Eliminar concepto "${ST.conceptos[i]}"?`))return;
-  ST.conceptos.splice(i,1);save();renderListaConceptos();actualizarSelectConceptos();toast('Concepto eliminado','warning');
+  const nombre = ST.conceptos[i] || 'este concepto';
+  _confirmar(`¿Eliminar el concepto "${nombre}"?`, ()=>{
+    ST.conceptos.splice(i,1);save();renderListaConceptos();actualizarSelectConceptos();toast('Concepto eliminado','warning');
+  }, { title:'Eliminar concepto', btnLabel:'Eliminar' });
 }
 
 // Desde el modal de movimiento
@@ -7820,6 +7873,7 @@ const TTL_CH={fisico:'Cheque Físico',echeque:'E-Cheque',pagar:'Cheque a Pagar'}
 function limpiarFiltros(cat) {
   const ids = ['filtro-buscar-','filtro-estado-','filtro-desde-','filtro-hasta-','filtro-monto-'];
   ids.forEach(id => { const el = document.getElementById(id+cat); if(el) el.value = ''; });
+  _saveFilters(cat);
   renderCheques(cat);
 }
 
@@ -8171,7 +8225,7 @@ function guardarCheque(){
   const fecha=document.getElementById('ch-fecha').value;
   const fechaVenc=document.getElementById('ch-fechaVenc').value;
   const monto=parseFloat(document.getElementById('ch-monto').value);
-  if(!fecha||!fechaVenc||isNaN(monto)||monto<=0){alert('Completá los campos obligatorios.');return;}
+  if(!fecha||!fechaVenc||isNaN(monto)||monto<=0){toast('Completá fecha, vencimiento y monto','warning');return;}
   const obj={
     id:document.getElementById('ch-id').value||uid(),
     fecha,fechaVenc,
@@ -8216,9 +8270,10 @@ function depositarECheque(id){
   toast(`✓ E-Cheque Nro. ${c.numero} depositado en ${banco}`);
 }
 function eliminarCheque(cat,id){
-  if(!confirm('¿Eliminar?'))return;
-  ST[cat]=ST[cat].filter(x=>x.id!==id);
-  save();renderCheques(cat);renderDashboard();toast('Eliminado','warning');
+  _confirmar('¿Eliminar este cheque? Esta acción no se puede deshacer.', ()=>{
+    ST[cat]=ST[cat].filter(x=>x.id!==id);
+    save();renderCheques(cat);renderDashboard();toast('Cheque eliminado','warning');
+  }, { title:'Eliminar cheque', btnLabel:'Eliminar' });
 }
 
 /* ═══════════════════════════════════════════
@@ -8228,6 +8283,7 @@ function limpiarFiltrosCaja(cat) {
   ['filtro-buscar-','filtro-concepto-','filtro-tipo-','filtro-desde-','filtro-hasta-'].forEach(id => {
     const el = document.getElementById(id+cat); if(el) el.value = '';
   });
+  _saveFilters(cat);
   renderMovimientos(cat);
 }
 
@@ -8521,8 +8577,8 @@ function guardarMov(){
   const fecha=document.getElementById('mv-fecha').value;
   const monto=parseFloat(document.getElementById('mv-monto').value);
   const concepto=document.getElementById('mv-concepto').value;
-  if(!fecha||isNaN(monto)||monto<=0){alert('Completá los campos obligatorios.');return;}
-  if(!concepto||concepto==='__nuevo__'){alert('Seleccioná un concepto.');return;}
+  if(!fecha||isNaN(monto)||monto<=0){toast('Completá fecha y monto','warning');return;}
+  if(!concepto||concepto==='__nuevo__'){toast('Seleccioná un concepto de la lista','warning');return;}
   const obj={
     id:document.getElementById('mv-id').value||uid(),
     fecha,monto,concepto,
@@ -8538,9 +8594,10 @@ function guardarMov(){
   toast('Movimiento guardado');
 }
 function eliminarMov(cat,id){
-  if(!confirm('¿Eliminar?'))return;
-  ST[cat]=ST[cat].filter(x=>x.id!==id);
-  save();renderMovimientos(cat);renderDashboard();toast('Eliminado','warning');
+  _confirmar('¿Eliminar este movimiento? Esta acción no se puede deshacer.', ()=>{
+    ST[cat]=ST[cat].filter(x=>x.id!==id);
+    save();renderMovimientos(cat);renderDashboard();toast('Movimiento eliminado','warning');
+  }, { title:'Eliminar movimiento', btnLabel:'Eliminar' });
 }
 
 /* ═══════════════════════════════════════════
@@ -9939,18 +9996,19 @@ function importarJSON(ev){
   const f=ev.target.files[0];if(!f)return;
   const r=new FileReader();r.onload=e=>{
     try{Object.assign(ST,JSON.parse(e.target.result));save();renderTodo();toast('Datos importados ✓');}
-    catch{alert('Error al leer el JSON.');}
+    catch{toast('Error al importar: archivo inválido','danger');}
   };r.readAsText(f);
 }
 function confirmarLimpiar(){
-  if(!confirm('¿Borrar TODOS los datos? Esta acción es irreversible.'))return;
-  ['socios','conceptos','chequesFisicos','eCheques','chequesPagar','cajaBancos','cajaEfectivo','comisiones','facturasACobrar','facturasPagar','kilometraje','kmTarifas']
-    .forEach(k=>ST[k]=[]);
-  ST.socios=SOCIOS_DEFAULT.map(s=>({...s}));
-  ST.conceptos=[...CONCEPTOS_DEFAULT];
-  ST.kmTarifas=[{id:'kmt_base',desde:'2025-04-01',valor:1200,motivo:'Tarifa inicial acordada'}];
-  ST.metaCobranza=0;
-  save();renderTodo();toast('Datos reiniciados','warning');
+  _confirmar('¿Borrar TODOS los datos? Esta acción es irreversible y no se puede deshacer.', ()=>{
+    ['socios','conceptos','chequesFisicos','eCheques','chequesPagar','cajaBancos','cajaEfectivo','comisiones','facturasACobrar','facturasPagar','kilometraje','kmTarifas']
+      .forEach(k=>ST[k]=[]);
+    ST.socios=SOCIOS_DEFAULT.map(s=>({...s}));
+    ST.conceptos=[...CONCEPTOS_DEFAULT];
+    ST.kmTarifas=[{id:'kmt_base',desde:'2025-04-01',valor:1200,motivo:'Tarifa inicial acordada'}];
+    ST.metaCobranza=0;
+    save();renderTodo();toast('Datos reiniciados','warning');
+  }, { title:'⚠ Borrar todos los datos', btnLabel:'Borrar todo', btnIcon:'exclamation-triangle' });
 }
 
 /* ═══════════════════════════════════════════
@@ -10673,12 +10731,16 @@ function guardarFactura() {
 
 // ── Eliminar ──────────────────────────────────────
 function eliminarFactura(cat, id) {
-  if (!confirm('¿Eliminar esta factura?')) return;
-  if (cat === 'cobrar') ST.facturasACobrar = (ST.facturasACobrar||[]).filter(f=>f.id!==id);
-  else                  ST.facturasPagar   = (ST.facturasPagar||[]).filter(f=>f.id!==id);
-  save();
-  if (cat === 'cobrar') renderFacturasACobrar(); else renderFacturasPagar();
-  toast('Factura eliminada');
+  const arr = cat === 'cobrar' ? (ST.facturasACobrar||[]) : (ST.facturasPagar||[]);
+  const f = arr.find(x=>x.id===id);
+  const desc = f ? `${f.tipo||'Factura'} ${f.numero||''} — ${f.cliente||''}`.trim() : 'esta factura';
+  _confirmar(`¿Eliminar ${desc}? Esta acción no se puede deshacer.`, ()=>{
+    if (cat === 'cobrar') ST.facturasACobrar = (ST.facturasACobrar||[]).filter(f=>f.id!==id);
+    else                  ST.facturasPagar   = (ST.facturasPagar||[]).filter(f=>f.id!==id);
+    save();
+    if (cat === 'cobrar') renderFacturasACobrar(); else renderFacturasPagar();
+    toast('Factura eliminada');
+  }, { title:'Eliminar factura', btnLabel:'Eliminar' });
 }
 
 function _cobrarRapido(id) {
@@ -10695,6 +10757,7 @@ function limpiarFiltrosFactura(cat) {
   ['fac-buscar-','fac-estado-','fac-desde-','fac-hasta-'].forEach(p => {
     const el = document.getElementById(p+cat); if(el) el.value='';
   });
+  _saveFilters(cat === 'cobrar' ? 'facturasACobrar' : 'facturasPagar');
   if (cat==='cobrar') renderFacturasACobrar(); else renderFacturasPagar();
 }
 
@@ -10764,13 +10827,18 @@ function renderFacturasPagar() {
 
 function _setEl(id, val) { const el=document.getElementById(id); if(el) el.textContent=val; }
 
+function _diasBadge(f) {
+  if (!f.fechaVenc || f.estado === 'cobrada' || f.estado === 'pagada') return '<span class="text-muted">—</span>';
+  const dv = dHasta(f.fechaVenc);
+  if (dv < 0)   return `<span class="badge rounded-pill bg-danger" style="font-size:.72rem">Vencida</span>`;
+  if (dv === 0) return `<span class="badge rounded-pill bg-danger" style="font-size:.72rem">Hoy</span>`;
+  if (dv <= 7)  return `<span class="badge rounded-pill bg-warning text-dark" style="font-size:.72rem">${dv}d</span>`;
+  return `<span class="badge rounded-pill bg-success text-white" style="font-size:.72rem">${dv}d</span>`;
+}
+
 function _tablaFacturas(list, cat) {
   const lbl = cat==='cobrar' ? 'Cliente' : 'Proveedor';
   const rows = list.map(f=>{
-    const dv = f.fechaVenc ? dHasta(f.fechaVenc) : null;
-    const vTag = dv!==null && f.estado==='pendiente'
-      ? dv<0  ? `<span class="bdg bg-danger text-white ms-1">Vencida</span>`
-      : dv<=3 ? `<span class="bdg bg-warning text-dark ms-1">${dv}d</span>` : '' : '';
     const badges = {
       pendiente:`<span class="bdg bg-warning text-dark">Pendiente</span>`,
       cobrada:`<span class="bdg bg-success text-white">Cobrada</span>`,
@@ -10792,7 +10860,8 @@ function _tablaFacturas(list, cat) {
       <td>${fmtF(f.fecha)}</td>
       <td><strong>${f.tipo||''} ${f.numero||'—'}</strong>${ncBadge}</td>
       <td>${f.cliente||'—'}<br><small class="text-muted">${f.cuit||''}</small>${f.receptor?`<br><small class="text-muted">→ ${f.receptor}</small>`:''}</td>
-      <td>${f.fechaVenc?fmtF(f.fechaVenc):'—'}${vTag}</td>
+      <td>${f.fechaVenc?fmtF(f.fechaVenc):'—'}</td>
+      <td>${_diasBadge(f)}</td>
       <td>${fmt(f.neto)}</td>
       <td>${fmt(f.ivaImporte)}<small class="text-muted ms-1">${f.iva}%</small></td>
       <td>${totalDisplay}</td>
@@ -10808,7 +10877,7 @@ function _tablaFacturas(list, cat) {
 
     // Fila de detalle (colapsable)
     if (tieneDetalle) {
-      let detHtml = `<tr id="${detId}" style="display:none;background:#f8fafc"><td colspan="9" style="padding:0">
+      let detHtml = `<tr id="${detId}" style="display:none;background:#f8fafc"><td colspan="10" style="padding:0">
         <div style="padding:10px 16px;border-top:2px solid #0ea5e9">`;
 
       // Líneas de productos
@@ -10850,7 +10919,7 @@ function _tablaFacturas(list, cat) {
   return `<div class="table-responsive"><table class="table table-hover mb-0">
     <thead><tr>
       <th>Fecha</th><th>N° Factura</th><th>${lbl}</th>
-      <th>Vencimiento</th><th>Neto</th><th>IVA</th><th>Total</th>
+      <th>Vencimiento</th><th>Días</th><th>Neto</th><th>IVA</th><th>Total</th>
       <th>Estado</th><th></th>
     </tr></thead><tbody>
     ${rows}
@@ -11215,9 +11284,10 @@ function guardarStockProd() {
 function eliminarStockProd(id) {
   const p = (ST.stockProductos||[]).find(x=>x.id===id);
   if (!p) return;
-  if (!confirm(`¿Eliminar "${p.nombre}" (${p.codigo})? Se mantendrán los movimientos históricos.`)) return;
-  ST.stockProductos = ST.stockProductos.filter(x=>x.id!==id);
-  save(); renderStock(); toast('Producto eliminado','warning');
+  _confirmar(`¿Eliminar "${p.nombre}" (${p.codigo})? Se conservarán los movimientos históricos.`, ()=>{
+    ST.stockProductos = ST.stockProductos.filter(x=>x.id!==id);
+    save(); renderStock(); toast('Producto eliminado','warning');
+  }, { title:'Eliminar producto', btnLabel:'Eliminar' });
 }
 
 /* ─ Modal movimiento de stock ─ */
@@ -11616,11 +11686,14 @@ function guardarListaPrecio() {
 }
 
 function lpEliminar(id) {
-  if (!confirm('¿Eliminar esta lista de precios?')) return;
-  ST.listasPrecios = (ST.listasPrecios||[]).filter(l => l.id !== id);
-  save();
-  renderListasPrecios();
-  toast('Lista eliminada');
+  const lp = (ST.listasPrecios||[]).find(l=>l.id===id);
+  const nombre = lp ? `"${lp.nombre}"` : 'esta lista de precios';
+  _confirmar(`¿Eliminar ${nombre}? Esta acción no se puede deshacer.`, ()=>{
+    ST.listasPrecios = (ST.listasPrecios||[]).filter(l => l.id !== id);
+    save();
+    renderListasPrecios();
+    toast('Lista eliminada');
+  }, { title:'Eliminar lista de precios', btnLabel:'Eliminar' });
 }
 
 // Track current detail list for printing
@@ -14035,7 +14108,7 @@ function kmGuardar() {
   const obs = document.getElementById('km-obs').value;
   const customVal = parseFloat(document.getElementById('km-tarifa-custom').value);
 
-  if (!fecha || isNaN(km) || km <= 0) { alert('Completá fecha y kilómetros.'); return; }
+  if (!fecha || isNaN(km) || km <= 0) { toast('Completá fecha y kilómetros','warning'); return; }
 
   const tarifaPeriodo = kmTarifaParaFecha(fecha);
   const tarifaCustom = customVal > 0;
@@ -14086,16 +14159,16 @@ function kmPagarRegistro(id) {
 }
 
 function kmEliminar(id) {
-  if (!confirm('¿Eliminar este registro de kilometraje?')) return;
-  const r = (ST.kilometraje || []).find(x => x.id === id);
-  // If it was paid, also remove the caja movement
-  if (r && r.pagado && r.pagoId) {
-    ST.cajaEfectivo = ST.cajaEfectivo.filter(x => x.id !== r.pagoId);
-  }
-  ST.kilometraje = (ST.kilometraje || []).filter(x => x.id !== id);
-  save();
-  kmRender();
-  toast('Registro eliminado', 'warning');
+  _confirmar('¿Eliminar este registro de kilometraje? Si fue pagado, también se revertirá el movimiento en Caja.', ()=>{
+    const r = (ST.kilometraje || []).find(x => x.id === id);
+    if (r && r.pagado && r.pagoId) {
+      ST.cajaEfectivo = ST.cajaEfectivo.filter(x => x.id !== r.pagoId);
+    }
+    ST.kilometraje = (ST.kilometraje || []).filter(x => x.id !== id);
+    save();
+    kmRender();
+    toast('Registro eliminado', 'warning');
+  }, { title:'Eliminar registro', btnLabel:'Eliminar' });
 }
 
 // Pay a full month to Caja Efectivo
@@ -14204,18 +14277,19 @@ function kmGuardarPagoParcial() {
 }
 
 function kmEliminarPagoParcial(id) {
-  if (!confirm('¿Eliminar este pago parcial?\nSe revertirá también el movimiento en Caja.')) return;
-  if (!ST.kmPagosParciales) return;
-  const pp = ST.kmPagosParciales.find(p => p.id === id);
-  if (pp && pp.cajaId) {
-    ST.cajaBancos  = ST.cajaBancos.filter(m => m.id !== pp.cajaId);
-    ST.cajaEfectivo = ST.cajaEfectivo.filter(m => m.id !== pp.cajaId);
-  }
-  ST.kmPagosParciales = ST.kmPagosParciales.filter(p => p.id !== id);
-  save();
-  kmRender();
-  renderDashboard();
-  toast('Pago parcial eliminado', 'warning');
+  _confirmar('¿Eliminar este pago parcial? Se revertirá el movimiento en Caja asociado.', ()=>{
+    if (!ST.kmPagosParciales) return;
+    const pp = ST.kmPagosParciales.find(p => p.id === id);
+    if (pp && pp.cajaId) {
+      ST.cajaBancos  = ST.cajaBancos.filter(m => m.id !== pp.cajaId);
+      ST.cajaEfectivo = ST.cajaEfectivo.filter(m => m.id !== pp.cajaId);
+    }
+    ST.kmPagosParciales = ST.kmPagosParciales.filter(p => p.id !== id);
+    save();
+    kmRender();
+    renderDashboard();
+    toast('Pago parcial eliminado', 'warning');
+  }, { title:'Eliminar pago parcial', btnLabel:'Eliminar' });
 }
 
 // Tarifa management
@@ -14231,7 +14305,7 @@ function kmGuardarTarifa() {
   const valor = parseFloat(document.getElementById('kmt-valor').value);
   const motivo = document.getElementById('kmt-motivo').value;
 
-  if (!desde || isNaN(valor) || valor <= 0) { alert('Completá fecha y valor.'); return; }
+  if (!desde || isNaN(valor) || valor <= 0) { toast('Completá fecha y valor','warning'); return; }
 
   if (!ST.kmTarifas) ST.kmTarifas = [];
   ST.kmTarifas.push({ id: uid(), desde, valor, motivo });
@@ -14252,11 +14326,12 @@ function kmGuardarTarifa() {
 }
 
 function kmEliminarTarifa(id) {
-  if (!confirm('¿Eliminar este ajuste de tarifa?')) return;
-  ST.kmTarifas = (ST.kmTarifas || []).filter(t => t.id !== id);
-  save();
-  kmRender();
-  toast('Tarifa eliminada', 'warning');
+  _confirmar('¿Eliminar este ajuste de tarifa? Esta acción no se puede deshacer.', ()=>{
+    ST.kmTarifas = (ST.kmTarifas || []).filter(t => t.id !== id);
+    save();
+    kmRender();
+    toast('Tarifa eliminada', 'warning');
+  }, { title:'Eliminar tarifa', btnLabel:'Eliminar' });
 }
 
 /* ═══════════════════════════════════════════
@@ -14655,10 +14730,11 @@ function guardarARCAVenc() {
 }
 
 function eliminarARCAVenc(id) {
-  if (!confirm('¿Eliminar este vencimiento?')) return;
-  ST.arcaVencimientos = (ST.arcaVencimientos || []).filter(x => x.id !== id);
-  save();
-  renderCalendarioARCA();
+  _confirmar('¿Eliminar este vencimiento impositivo? Esta acción no se puede deshacer.', ()=>{
+    ST.arcaVencimientos = (ST.arcaVencimientos || []).filter(x => x.id !== id);
+    save();
+    renderCalendarioARCA();
+  }, { title:'Eliminar vencimiento', btnLabel:'Eliminar' });
 }
 
 function togglePagadoARCA(id) {
@@ -16081,6 +16157,26 @@ function renderAlertas() {
       action:'facturasACobrar', btn:'Ver Facturas'});
   }
 
+  // ── Facturas a pagar próximas (7 días) ────────────────────
+  const facPagarProx7 = (ST.facturasPagar||[]).filter(f=>f.estado==='pendiente'&&f.fechaVenc&&f.fechaVenc>=hoyStr&&f.fechaVenc<=en7Str);
+  if(!facVencPagar.length&&facPagarProx7.length){
+    const tot=facPagarProx7.reduce((s,f)=>s+ +f.total,0);
+    alerts.push({type:'warning',icon:'bi-calendar2-event',
+      msg:`${facPagarProx7.length} factura${facPagarProx7.length>1?'s':''} a pagar vence${facPagarProx7.length>1?'n':''} esta semana — ${fmt(tot)}`,
+      action:'facturasPagar', btn:'Ver Facturas'});
+  }
+
+  // ── ARCA: vencimientos impositivos próximos (7 días) ──────
+  const arcaProx = (ST.arcaVencimientos||[]).filter(v=>!v.pagado&&v.fecha&&v.fecha>=hoyStr&&v.fecha<=en7Str);
+  if(arcaProx.length){
+    const conMonto = arcaProx.filter(v=>v.importe>0);
+    const tot = conMonto.reduce((s,v)=>s+ +v.importe,0);
+    const resumen = arcaProx.slice(0,2).map(v=>v.concepto||'Impuesto').join(', ');
+    alerts.push({type:'warning',icon:'bi-receipt-cutoff',
+      msg:`${arcaProx.length} vencimiento${arcaProx.length>1?'s':''} ARCA esta semana${tot>0?' — '+fmt(tot):''}${arcaProx.length<=2?' ('+resumen+')':''}`,
+      action:'calendarioARCA', btn:'Ver ARCA'});
+  }
+
   // ── Saldo bancario negativo ───────────────────────────────
   if(ST.cajaBancos){
     const saldo=calcSaldo(ST.cajaBancos);
@@ -16089,11 +16185,21 @@ function renderAlertas() {
   }
 
   // ── Stock bajo mínimo ─────────────────────────────────────
-  const stockBajo = (ST.stock||[]).filter(p=>p.stockMinimo&&+p.stockActual<=+p.stockMinimo);
+  const stockBajo = (ST.stockProductos||[]).filter(p=>p.stockMin>0&&p.stockActual<p.stockMin);
   if(stockBajo.length){
     alerts.push({type:'warning',icon:'bi-box-seam-fill',
       msg:`${stockBajo.length} producto${stockBajo.length>1?'s':''} bajo stock mínimo`,
       action:'stock', btn:'Ver Stock'});
+  }
+
+  // ── Comisiones pendientes de cobro ────────────────────────
+  if(ST.comisionesTotal && ST.comisionesTotal > 0){
+    const empPend = (ST.comisionesResumen||[]).filter(e=>e.saldo>0).length;
+    if(empPend > 0){
+      alerts.push({type:'info',icon:'bi-percent',
+        msg:`Comisiones pendientes: ${fmt(ST.comisionesTotal)} en ${empPend} empresa${empPend>1?'s':''}`,
+        action:'comisiones', btn:'Ver Comisiones'});
+    }
   }
 
   // ── Scoring CRÍTICO ───────────────────────────────────────
@@ -16106,6 +16212,19 @@ function renderAlertas() {
           action:'rentabilidad', btn:'Ver Ranking'});
       });
     }catch(e){console.warn('Scoring alerts error:',e);}
+  }
+
+  // ── Actualizar badge en sidebar ───────────────────────────
+  const dangerCount = alerts.filter(a=>a.type==='danger').length;
+  const totalCount  = alerts.length;
+  const navDash = document.querySelector('.nav-link[data-page="dashboard"]');
+  if(navDash){
+    let badge = navDash.querySelector('.alert-badge');
+    if(totalCount > 0){
+      if(!badge){ badge = document.createElement('span'); badge.className='alert-badge'; navDash.appendChild(badge); }
+      badge.textContent = totalCount;
+      badge.style.cssText = `display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;font-size:.6rem;font-weight:700;margin-left:auto;flex-shrink:0;background:${dangerCount>0?'#ef4444':'#f59e0b'};color:#fff`;
+    } else if(badge){ badge.remove(); }
   }
 
   if(!alerts.length){el.innerHTML='';return;}
