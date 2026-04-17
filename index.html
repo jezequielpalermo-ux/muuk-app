@@ -16848,22 +16848,22 @@ function ectaPdfCliente(idx) {
   const clientes = _ectaCache[_ectaCurrentVendedor] || [];
   const c = clientes[idx];
   if (!c) return;
+
+  if (!c.pendientes.length) {
+    toast(`${c.nombre} no tiene facturas pendientes de pago`, 'info');
+    return;
+  }
+
   const hoyStr = new Date().toLocaleDateString('es-AR', { year:'numeric', month:'long', day:'numeric' });
 
   let pendRows = '';
   for (const f of c.pendientes) {
     const isNC = /\bNC\b/i.test(f.factura);
-    pendRows += `<tr><td>${f.empresa}</td><td>${f.fecha}</td><td>${f.factura}${isNC ? ' (NC)' : ''}</td><td style="text-align:right;font-weight:600">${f.importe}</td><td>${f.fechaPago || '-'}</td></tr>`;
-  }
-
-  let cobRows = '';
-  for (const f of c.cobradas) {
-    const isNC = /\bNC\b/i.test(f.factura);
-    cobRows += `<tr><td>${f.empresa}</td><td>${f.fecha}</td><td>${f.factura}${isNC ? ' (NC)' : ''}</td><td style="text-align:right">${f.importe}</td></tr>`;
+    pendRows += `<tr><td>${f.empresa}</td><td>${f.fecha}</td><td>${f.factura}${isNC ? ' <em>(NC)</em>' : ''}</td><td style="text-align:right;font-weight:600;color:#dc2626">${f.importe}</td><td>${f.fechaPago || '-'}</td></tr>`;
   }
 
   const w = window.open('', '_blank');
-  w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Estado de Cuenta - ${c.nombre}</title>
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Facturas Pendientes - ${c.nombre}</title>
 <style>
   @page { size: A4; margin: 15mm 18mm; }
   @media print { .no-print { display:none!important; } }
@@ -16871,66 +16871,61 @@ function ectaPdfCliente(idx) {
   body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; font-size:11px; color:#1e293b; line-height:1.4; }
   .header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:18px; padding-bottom:12px; border-bottom:2px solid #334155; }
   .doc-title { font-size:16px; font-weight:800; color:#0f172a; }
-  .doc-subtitle { font-size:9px; color:#64748b; text-transform:uppercase; letter-spacing:.5px; }
+  .doc-subtitle { font-size:9px; color:#64748b; text-transform:uppercase; letter-spacing:.5px; margin-top:2px; }
   .doc-info { text-align:right; font-size:9px; color:#64748b; }
-  .client-box { background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:10px 14px; margin-bottom:16px; }
+  .client-box { background:#fef2f2; border:1px solid #fecaca; border-radius:6px; padding:10px 14px; margin-bottom:16px; }
   .client-name { font-size:14px; font-weight:700; color:#0f172a; }
   .client-meta { font-size:9px; color:#64748b; margin-top:2px; }
-  h2 { font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; margin:14px 0 8px; padding:4px 8px; border-radius:4px; }
-  h2.pend { background:#fef2f2; color:#dc2626; }
-  h2.cob { background:#f0fdf4; color:#16a34a; }
+  .total-box { background:#dc2626; color:#fff; border-radius:8px; padding:10px 16px; margin-bottom:16px; display:flex; align-items:center; justify-content:space-between; }
+  .total-label { font-size:9px; text-transform:uppercase; letter-spacing:.06em; opacity:.85; }
+  .total-val { font-size:20px; font-weight:900; }
   table { width:100%; border-collapse:collapse; font-size:10px; margin-bottom:12px; }
-  th { background:#f1f5f9; font-weight:700; text-align:left; padding:5px 8px; border-bottom:1px solid #cbd5e1; font-size:9px; text-transform:uppercase; letter-spacing:.04em; }
-  td { padding:4px 8px; border-bottom:1px solid #f1f5f9; }
-  .total-row { background:#f8fafc; font-weight:700; border-top:2px solid #cbd5e1; }
-  .total-row.pend td { color:#dc2626; }
-  .total-row.cob td { color:#16a34a; }
-  .summary-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-bottom:16px; }
-  .summary-card { background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:8px; text-align:center; }
-  .summary-label { font-size:8px; color:#64748b; text-transform:uppercase; letter-spacing:.04em; }
-  .summary-val { font-size:14px; font-weight:800; margin-top:2px; }
+  th { background:#f1f5f9; font-weight:700; text-align:left; padding:5px 8px; border-bottom:2px solid #cbd5e1; font-size:9px; text-transform:uppercase; letter-spacing:.04em; }
+  td { padding:5px 8px; border-bottom:1px solid #f1f5f9; }
+  tr:last-child td { border-bottom:none; }
+  .total-row td { background:#fef2f2; font-weight:700; border-top:2px solid #dc2626; color:#dc2626; padding:6px 8px; }
   .footer { margin-top:20px; padding-top:10px; border-top:1px solid #e2e8f0; font-size:8px; color:#94a3b8; text-align:center; }
+  .notice { background:#fffbeb; border:1px solid #fde68a; border-radius:5px; padding:7px 12px; font-size:9px; color:#92400e; margin-bottom:14px; }
 </style></head><body>
 <div class="header">
-  <div><div class="doc-title">Estado de Cuenta</div><div class="doc-subtitle">Detalle por cliente</div></div>
+  <div>
+    <div class="doc-title">Facturas Pendientes de Pago</div>
+    <div class="doc-subtitle">Resumen de deuda para enviar al cliente</div>
+  </div>
   <div class="doc-info">
-    <div>Fecha: ${hoyStr}</div>
-    <div>Vendedor: ${_ectaCurrentVendedor}</div>
-    <div class="no-print" style="display:flex;gap:6px;margin-top:6px">
-      <button onclick="window.print()" style="background:#334155;color:#fff;border:none;border-radius:5px;padding:5px 14px;font-size:10px;cursor:pointer;font-weight:600">Imprimir / Guardar PDF</button>
-      <button onclick="window.close()" style="background:#64748b;color:#fff;border:none;border-radius:5px;padding:5px 14px;font-size:10px;cursor:pointer;font-weight:600">Volver</button>
+    <div>Fecha de emisión: <strong>${hoyStr}</strong></div>
+    <div style="margin-top:2px">Vendedor: ${_ectaCurrentVendedor}</div>
+    <div class="no-print" style="display:flex;gap:6px;margin-top:8px">
+      <button onclick="window.print()" style="background:#dc2626;color:#fff;border:none;border-radius:5px;padding:5px 14px;font-size:10px;cursor:pointer;font-weight:600">Imprimir / Guardar PDF</button>
+      <button onclick="window.close()" style="background:#64748b;color:#fff;border:none;border-radius:5px;padding:5px 14px;font-size:10px;cursor:pointer;font-weight:600">Cerrar</button>
     </div>
   </div>
 </div>
 
 <div class="client-box">
   <div class="client-name">${c.nombre}</div>
-  <div class="client-meta">${c.cobradas.length + c.pendientes.length} facturas registradas &middot; ${c.pendientes.length} pendientes</div>
+  <div class="client-meta">${c.pendientes.length} factura${c.pendientes.length !== 1 ? 's' : ''} pendiente${c.pendientes.length !== 1 ? 's' : ''} de pago</div>
 </div>
 
-<div class="summary-grid">
-  <div class="summary-card"><div class="summary-label">Total Cobrado</div><div class="summary-val" style="color:#16a34a">${_ectaFmt(c.totalCobrado)}</div></div>
-  <div class="summary-card"><div class="summary-label">Total Pendiente</div><div class="summary-val" style="color:#dc2626">${_ectaFmt(c.totalPendiente)}</div></div>
-  <div class="summary-card"><div class="summary-label">Saldo Neto</div><div class="summary-val" style="color:${c.totalPendiente > 0 ? '#dc2626' : '#16a34a'}">${_ectaFmt(c.totalPendiente)}</div></div>
+<div class="total-box">
+  <div>
+    <div class="total-label">Total a cobrar</div>
+    <div class="total-val">${_ectaFmt(c.totalPendiente)}</div>
+  </div>
+  <div style="font-size:28px;opacity:.4">&#9783;</div>
 </div>
 
-${c.pendientes.length > 0 ? `<h2 class="pend">Facturas Pendientes de Cobro</h2>
-<table>
-  <thead><tr><th>Empresa</th><th>Fecha</th><th>Factura</th><th style="text-align:right">Importe</th><th>Vto. Pago</th></tr></thead>
-  <tbody>${pendRows}
-    <tr class="total-row pend"><td colspan="3"><strong>TOTAL PENDIENTE</strong></td><td style="text-align:right"><strong>${_ectaFmt(c.totalPendiente)}</strong></td><td></td></tr>
-  </tbody>
-</table>` : '<p style="color:#16a34a;font-weight:600;text-align:center;margin:12px 0">Sin facturas pendientes de cobro</p>'}
+<div class="notice">Por favor regularizar el pago de las siguientes facturas. Para consultas comunicarse con su vendedor asignado.</div>
 
-${c.cobradas.length > 0 ? `<h2 class="cob">Historial de Facturas Cobradas</h2>
 <table>
-  <thead><tr><th>Empresa</th><th>Fecha</th><th>Factura</th><th style="text-align:right">Importe</th></tr></thead>
-  <tbody>${cobRows}
-    <tr class="total-row cob"><td colspan="3"><strong>TOTAL COBRADO</strong></td><td style="text-align:right"><strong>${_ectaFmt(c.totalCobrado)}</strong></td></tr>
+  <thead><tr><th>Empresa</th><th>Fecha</th><th>N° Factura</th><th style="text-align:right">Importe</th><th>Vto. de Pago</th></tr></thead>
+  <tbody>
+    ${pendRows}
+    <tr class="total-row"><td colspan="3"><strong>TOTAL A ABONAR</strong></td><td style="text-align:right"><strong>${_ectaFmt(c.totalPendiente)}</strong></td><td></td></tr>
   </tbody>
-</table>` : ''}
+</table>
 
-<div class="footer">Documento generado el ${hoyStr} &middot; Este estado de cuenta es informativo</div>
+<div class="footer">Documento generado el ${hoyStr} &middot; Válido como notificación de deuda pendiente</div>
 </body></html>`);
   w.document.close();
 }
