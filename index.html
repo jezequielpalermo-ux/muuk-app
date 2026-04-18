@@ -162,9 +162,9 @@
       position: relative; overflow: hidden;
     }
     .stat-card .bg-icon { position: absolute; right: -6px; top: -6px; font-size: 4.5rem; opacity: .12; line-height: 1; }
-    .stat-card .lbl { font-size: .75rem; opacity: .82; margin-bottom: 3px; }
-    .stat-card .val { font-size: 1.45rem; font-weight: 700; }
-    .stat-card .sub { font-size: .7rem; opacity: .72; margin-top: 5px; }
+    .stat-card .lbl { font-size: .62rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; opacity: .75; margin-bottom: 4px; }
+    .stat-card .val { font-size: 1.65rem; font-weight: 800; line-height: 1.1; letter-spacing: -.02em; }
+    .stat-card .sub { font-size: .67rem; opacity: .65; margin-top: 6px; font-weight: 500; }
 
     /* TABLES */
     .table { font-size: .855rem; }
@@ -254,7 +254,7 @@
       }
       #breadcrumb-bar { font-size: .7rem; margin-bottom: 6px; }
       .stat-card { padding: 16px; }
-      .stat-card .val { font-size: 1.15rem; }
+      .stat-card .val { font-size: 1.3rem; }
       .stat-card .bg-icon { font-size: 3rem; }
       .stat-card:hover { transform: none; box-shadow: none; }
       .card:hover { box-shadow: 0 1px 4px rgba(0,0,0,.09); transform: none; }
@@ -322,8 +322,8 @@
     @media (max-width: 480px) {
       .main-content { padding: 56px 10px 20px !important; }
       .row.g-3 > .col-sm-6 { flex: 0 0 100%; max-width: 100%; }
-      .stat-card .val { font-size: 1.05rem; }
-      .stat-card .lbl { font-size: .72rem; }
+      .stat-card .val { font-size: 1.15rem; }
+      .stat-card .lbl { font-size: .6rem; }
       .table { font-size: .74rem; }
       .table th { font-size: .64rem; }
       .btn { font-size: .76rem; min-height: 36px; }
@@ -827,50 +827,28 @@
   <!-- DASHBOARD -->
   <div id="page-dashboard" class="page active">
   <div id="dash-meta-cobranza" class="mb-3"></div>
-    <!-- MUUK Logo banner -->
-    <div class="card mb-4 border-0" style="background:linear-gradient(120deg,#0f172a 0%,#1e293b 100%);border-radius:16px;overflow:hidden">
-      <div class="card-body p-0">
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 28px">
-          <!-- Logo grande -->
-          <div style="display:flex;align-items:center;gap:16px">
-            <!-- Grid icon grande -->
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;width:56px;height:56px;flex-shrink:0">
-              <div style="background:#E31E24;border-radius:4px"></div>
-              <div style="background:#F5C400;border-radius:4px"></div>
-              <div style="background:#F5C400;border-radius:4px"></div>
-              <div style="background:#E31E24;border-radius:4px"></div>
-            </div>
-            <!-- müük srl grande -->
-            <div style="line-height:1;display:flex;align-items:flex-end;gap:0">
-              <span style="font-size:3.2rem;font-weight:900;color:#E31E24;font-family:'Arial Black','Impact',sans-serif;letter-spacing:-1px">m</span>
-              <span style="display:inline-flex;flex-direction:column;align-items:center;gap:3px">
-                <span style="display:flex;gap:5px">
-                  <span style="width:11px;height:14px;background:#E31E24;border-radius:2px;display:inline-block"></span>
-                  <span style="width:11px;height:14px;background:#F5C400;border-radius:2px;display:inline-block"></span>
-                </span>
-                <span style="font-size:3.2rem;font-weight:900;color:#E31E24;font-family:'Arial Black','Impact',sans-serif;line-height:.82">u</span>
-              </span>
-              <span style="display:inline-flex;flex-direction:column;align-items:center;gap:3px">
-                <span style="display:flex;gap:5px">
-                  <span style="width:11px;height:14px;background:#E31E24;border-radius:2px;display:inline-block"></span>
-                  <span style="width:11px;height:14px;background:#F5C400;border-radius:2px;display:inline-block"></span>
-                </span>
-                <span style="font-size:3.2rem;font-weight:900;color:#E31E24;font-family:'Arial Black','Impact',sans-serif;line-height:.82">u</span>
-              </span>
-              <span style="font-size:3.2rem;font-weight:900;color:#E31E24;font-family:'Arial Black','Impact',sans-serif;letter-spacing:-1px">k</span>
-              <span style="font-size:1rem;font-weight:700;color:#F5C400;font-style:italic;margin-left:4px;margin-bottom:6px;align-self:flex-end">srl</span>
-            </div>
-          </div>
-          <!-- Fecha + acciones -->
-          <div style="text-align:right">
-            <div style="color:#fff;font-weight:600;font-size:.9rem" id="fecha-hoy"></div>
-            <div id="dash-gest-sync" style="font-size:.62rem;color:#94a3b8;margin-top:3px;opacity:.8"></div>
-            <button onclick="generarReportePDF()" style="margin-top:8px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:8px;padding:5px 12px;font-size:.75rem;cursor:pointer;backdrop-filter:blur(4px)">
-              <i class="bi bi-file-earmark-pdf me-1"></i>Reporte PDF
-            </button>
-          </div>
-        </div>
+    <!-- MUUK Logo banner — compacto -->
+    <div class="mb-3" style="background:linear-gradient(120deg,#0f172a 0%,#1e293b 100%);border-radius:12px;padding:10px 18px;display:flex;align-items:center;gap:12px">
+      <!-- Logo pequeño -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:3px;width:26px;height:26px;flex-shrink:0">
+        <div style="background:#E31E24;border-radius:2px"></div>
+        <div style="background:#F5C400;border-radius:2px"></div>
+        <div style="background:#F5C400;border-radius:2px"></div>
+        <div style="background:#E31E24;border-radius:2px"></div>
       </div>
+      <span style="font-size:1.05rem;font-weight:900;color:#E31E24;font-family:'Arial Black','Impact',sans-serif;letter-spacing:-.5px">müük</span>
+      <span style="font-size:.75rem;font-weight:700;color:#F5C400;font-style:italic">srl</span>
+      <div style="width:1px;height:24px;background:rgba(255,255,255,.15);margin:0 4px"></div>
+      <div style="flex:1;min-width:0">
+        <div style="color:#e2e8f0;font-weight:600;font-size:.8rem" id="fecha-hoy"></div>
+        <div id="dash-gest-sync" style="font-size:.6rem;color:#64748b;margin-top:1px"></div>
+      </div>
+      <button onclick="generarReportePDF()" style="flex-shrink:0;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);color:#e2e8f0;border-radius:7px;padding:5px 12px;font-size:.72rem;cursor:pointer;white-space:nowrap">
+        <i class="bi bi-file-earmark-pdf me-1"></i>Reporte PDF
+      </button>
+    </div>
+    <!-- (filler div para compatibilidad) -->
+    <div style="display:none"><div class="card-body p-0"></div>
     </div>
     <!-- LIQUIDEZ NETA — tarjeta resumen -->
     <div class="row g-3 mb-3">
@@ -882,11 +860,12 @@
               <div id="kpi-liquidez" style="font-size:1.8rem;font-weight:800;letter-spacing:-.5px">$0</div>
               <div id="kpi-salud-label" style="font-size:.65rem;font-weight:700;margin-top:3px;letter-spacing:.04em"></div>
             </div>
-            <div style="display:flex;flex-wrap:wrap;gap:6px 18px;font-size:.72rem;opacity:.8" id="kpi-liquidez-detail">
-              <span><i class="bi bi-bank me-1"></i>Bancos: <b id="kpi-liq-bancos">$0</b></span>
-              <span><i class="bi bi-cash me-1"></i>Efectivo: <b id="kpi-liq-efectivo">$0</b></span>
-              <span><i class="bi bi-file-check me-1"></i>Cartera: <b id="kpi-liq-cartera">$0</b></span>
-              <span style="color:#fca5a5"><i class="bi bi-dash-circle me-1"></i>A Pagar: <b id="kpi-liq-pagar">$0</b></span>
+            <div style="display:flex;flex-wrap:wrap;gap:6px" id="kpi-liquidez-detail">
+              <span style="display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,.1);border-radius:20px;padding:3px 10px;font-size:.7rem"><i class="bi bi-bank" style="opacity:.7"></i><span style="opacity:.7">Bancos</span> <b id="kpi-liq-bancos">$0</b></span>
+              <span style="display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,.1);border-radius:20px;padding:3px 10px;font-size:.7rem"><i class="bi bi-cash" style="opacity:.7"></i><span style="opacity:.7">Efectivo</span> <b id="kpi-liq-efectivo">$0</b></span>
+              <span style="display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,.1);border-radius:20px;padding:3px 10px;font-size:.7rem"><i class="bi bi-file-check" style="opacity:.7"></i><span style="opacity:.7">Cartera</span> <b id="kpi-liq-cartera">$0</b></span>
+              <span style="display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,.1);border-radius:20px;padding:3px 10px;font-size:.7rem"><i class="bi bi-percent" style="opacity:.7"></i><span style="opacity:.7">Comisiones</span> <b id="kpi-liq-comisiones">$0</b></span>
+              <span style="display:inline-flex;align-items:center;gap:5px;background:rgba(220,38,38,.25);border:1px solid rgba(252,165,165,.3);border-radius:20px;padding:3px 10px;font-size:.7rem;color:#fca5a5"><i class="bi bi-dash-circle"></i><span>A Pagar</span> <b id="kpi-liq-pagar">$0</b></span>
             </div>
           </div>
           <!-- Barra de salud financiera -->
@@ -967,43 +946,43 @@
     <!-- METAS MENSUALES -->
     <div class="row g-3 mb-3" id="kpi-metas-row" style="display:none">
       <div class="col-sm-6 col-lg-3">
-        <div class="card p-2 px-3" style="border-left:3px solid #16a34a">
-          <div style="font-size:.62rem;color:#64748b;font-weight:600;text-transform:uppercase">Meta Comisiones</div>
-          <div style="display:flex;align-items:center;gap:8px;margin-top:3px">
-            <div style="flex:1;height:8px;background:#e2e8f0;border-radius:4px;overflow:hidden"><div id="kpi-meta-com-bar" style="height:100%;background:#16a34a;border-radius:4px;width:0%;transition:width .6s"></div></div>
-            <span id="kpi-meta-com-pct" style="font-size:.78rem;font-weight:700;color:#16a34a">0%</span>
+        <div class="card p-3" id="kpi-meta-com-card" style="border-radius:10px;transition:background .4s">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start">
+            <div style="font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#64748b">Meta Comisiones</div>
+            <span id="kpi-meta-com-pct" style="font-size:1.5rem;font-weight:900;line-height:1;color:#16a34a">0%</span>
           </div>
-          <div style="font-size:.62rem;color:#94a3b8;margin-top:2px"><span id="kpi-meta-com-actual">$0</span> / <span id="kpi-meta-com-target">$0</span></div>
+          <div style="margin:8px 0 4px;height:6px;background:rgba(0,0,0,.08);border-radius:3px;overflow:hidden"><div id="kpi-meta-com-bar" style="height:100%;background:#16a34a;border-radius:3px;width:0%;transition:width .7s ease"></div></div>
+          <div style="font-size:.62rem;color:#64748b"><span id="kpi-meta-com-actual">$0</span> <span style="opacity:.5">/ <span id="kpi-meta-com-target">$0</span></span></div>
         </div>
       </div>
       <div class="col-sm-6 col-lg-3">
-        <div class="card p-2 px-3" style="border-left:3px solid #1d4ed8">
-          <div style="font-size:.62rem;color:#64748b;font-weight:600;text-transform:uppercase">Meta Facturación</div>
-          <div style="display:flex;align-items:center;gap:8px;margin-top:3px">
-            <div style="flex:1;height:8px;background:#e2e8f0;border-radius:4px;overflow:hidden"><div id="kpi-meta-fac-bar" style="height:100%;background:#1d4ed8;border-radius:4px;width:0%;transition:width .6s"></div></div>
-            <span id="kpi-meta-fac-pct" style="font-size:.78rem;font-weight:700;color:#1d4ed8">0%</span>
+        <div class="card p-3" id="kpi-meta-fac-card" style="border-radius:10px;transition:background .4s">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start">
+            <div style="font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#64748b">Meta Facturación</div>
+            <span id="kpi-meta-fac-pct" style="font-size:1.5rem;font-weight:900;line-height:1;color:#1d4ed8">0%</span>
           </div>
-          <div style="font-size:.62rem;color:#94a3b8;margin-top:2px"><span id="kpi-meta-fac-actual">$0</span> / <span id="kpi-meta-fac-target">$0</span></div>
+          <div style="margin:8px 0 4px;height:6px;background:rgba(0,0,0,.08);border-radius:3px;overflow:hidden"><div id="kpi-meta-fac-bar" style="height:100%;background:#1d4ed8;border-radius:3px;width:0%;transition:width .7s ease"></div></div>
+          <div style="font-size:.62rem;color:#64748b"><span id="kpi-meta-fac-actual">$0</span> <span style="opacity:.5">/ <span id="kpi-meta-fac-target">$0</span></span></div>
         </div>
       </div>
       <div class="col-sm-6 col-lg-3">
-        <div class="card p-2 px-3" style="border-left:3px solid #d97706">
-          <div style="font-size:.62rem;color:#64748b;font-weight:600;text-transform:uppercase">Meta Operaciones</div>
-          <div style="display:flex;align-items:center;gap:8px;margin-top:3px">
-            <div style="flex:1;height:8px;background:#e2e8f0;border-radius:4px;overflow:hidden"><div id="kpi-meta-ops-bar" style="height:100%;background:#d97706;border-radius:4px;width:0%;transition:width .6s"></div></div>
-            <span id="kpi-meta-ops-pct" style="font-size:.78rem;font-weight:700;color:#d97706">0%</span>
+        <div class="card p-3" id="kpi-meta-ops-card" style="border-radius:10px;transition:background .4s">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start">
+            <div style="font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#64748b">Meta Operaciones</div>
+            <span id="kpi-meta-ops-pct" style="font-size:1.5rem;font-weight:900;line-height:1;color:#d97706">0%</span>
           </div>
-          <div style="font-size:.62rem;color:#94a3b8;margin-top:2px"><span id="kpi-meta-ops-actual">0</span> / <span id="kpi-meta-ops-target">0</span></div>
+          <div style="margin:8px 0 4px;height:6px;background:rgba(0,0,0,.08);border-radius:3px;overflow:hidden"><div id="kpi-meta-ops-bar" style="height:100%;background:#d97706;border-radius:3px;width:0%;transition:width .7s ease"></div></div>
+          <div style="font-size:.62rem;color:#64748b"><span id="kpi-meta-ops-actual">0</span> <span style="opacity:.5">/ <span id="kpi-meta-ops-target">0</span></span></div>
         </div>
       </div>
       <div class="col-sm-6 col-lg-3">
-        <div class="card p-2 px-3" style="border-left:3px solid #7c3aed">
-          <div style="font-size:.62rem;color:#64748b;font-weight:600;text-transform:uppercase">Meta Clientes</div>
-          <div style="display:flex;align-items:center;gap:8px;margin-top:3px">
-            <div style="flex:1;height:8px;background:#e2e8f0;border-radius:4px;overflow:hidden"><div id="kpi-meta-cli-bar" style="height:100%;background:#7c3aed;border-radius:4px;width:0%;transition:width .6s"></div></div>
-            <span id="kpi-meta-cli-pct" style="font-size:.78rem;font-weight:700;color:#7c3aed">0%</span>
+        <div class="card p-3" id="kpi-meta-cli-card" style="border-radius:10px;transition:background .4s">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start">
+            <div style="font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#64748b">Meta Clientes</div>
+            <span id="kpi-meta-cli-pct" style="font-size:1.5rem;font-weight:900;line-height:1;color:#7c3aed">0%</span>
           </div>
-          <div style="font-size:.62rem;color:#94a3b8;margin-top:2px"><span id="kpi-meta-cli-actual">0</span> / <span id="kpi-meta-cli-target">0</span></div>
+          <div style="margin:8px 0 4px;height:6px;background:rgba(0,0,0,.08);border-radius:3px;overflow:hidden"><div id="kpi-meta-cli-bar" style="height:100%;background:#7c3aed;border-radius:3px;width:0%;transition:width .7s ease"></div></div>
+          <div style="font-size:.62rem;color:#64748b"><span id="kpi-meta-cli-actual">0</span> <span style="opacity:.5">/ <span id="kpi-meta-cli-target">0</span></span></div>
         </div>
       </div>
     </div>
@@ -6703,7 +6682,9 @@ function renderDashboard() {
   // ── LIQUIDEZ NETA ──
   const totFacPagar = facPagPend.reduce((s,f)=>s+ +f.total,0);
   const totObligaciones = totPagar + totFacPagar;
-  const totalActivos = sB + sE + totCartera;
+  // Comisiones pendientes de cobro (todas las registradas en ST.comisiones)
+  const totComisiones = (ST.comisiones||[]).reduce((s,c)=>s+ +c.monto,0);
+  const totalActivos = sB + sE + totCartera + totComisiones;
   const liquidez = totalActivos - totObligaciones;
   const elLiq = document.getElementById('kpi-liquidez');
   if (elLiq) {
@@ -6713,6 +6694,7 @@ function renderDashboard() {
   _setEl('kpi-liq-bancos', fmt(sB));
   _setEl('kpi-liq-efectivo', fmt(sE));
   _setEl('kpi-liq-cartera', fmt(totCartera));
+  _setEl('kpi-liq-comisiones', fmt(totComisiones));
   _setEl('kpi-liq-pagar', fmt(totObligaciones));
   // Barra de salud: cobertura = activos / obligaciones (0→crítico, 1→moderado, 2+→saludable)
   (function(){
@@ -7550,9 +7532,12 @@ async function comPdfSaldos() {
   .footer { text-align:center; margin-top:16px; font-size:9px; color:#94a3b8; }
   .print-btn { position:fixed; top:16px; right:16px; z-index:100; background:#dc2626; color:#fff; border:none; padding:10px 20px; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; box-shadow:0 4px 12px rgba(0,0,0,.2); }
   .print-btn:hover { background:#b91c1c; }
+  .back-btn { position:fixed; top:16px; right:190px; z-index:100; background:#475569; color:#fff; border:none; padding:10px 18px; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; box-shadow:0 4px 12px rgba(0,0,0,.2); }
+  .back-btn:hover { background:#334155; }
   .no-detail { padding:12px 16px; font-size:11px; color:#94a3b8; font-style:italic; }
 </style></head><body>
 <button class="print-btn no-print" onclick="window.print()"><i class="bi bi-printer me-1"></i>Imprimir PDF</button>
+<button class="back-btn no-print" onclick="window.close()">← Volver</button>
 
 <div class="header">
   <div style="display:flex;align-items:center;gap:12px">
@@ -7976,8 +7961,6 @@ function _comBuildPDFSaldoEmpresa(empresaName, saldoResumen, details, isFull, ha
   * { box-sizing:border-box; margin:0; padding:0; }
   body { font-family:'Segoe UI',system-ui,sans-serif; color:#1e293b; font-size:12px; line-height:1.45; }
   .doc-header { background:linear-gradient(135deg,#7f1d1d,#dc2626); color:#fff; padding:18px 24px; border-radius:12px; margin-bottom:14px; display:flex; justify-content:space-between; align-items:center; }
-  .logo-grid { display:grid; grid-template-columns:1fr 1fr; gap:3px; width:26px; height:26px; }
-  .logo-grid div { border-radius:2px; }
   .saldo-box { background:#fef2f2; border:2px solid #dc2626; border-radius:10px; padding:14px 20px; margin-bottom:14px; display:flex; justify-content:space-between; align-items:center; }
   .saldo-box .empresa { font-size:15px; font-weight:800; color:#7f1d1d; }
   .saldo-box .monto   { font-size:22px; font-weight:800; color:#dc2626; }
@@ -7995,25 +7978,19 @@ function _comBuildPDFSaldoEmpresa(empresaName, saldoResumen, details, isFull, ha
   .pago-badge { background:#16a34a;color:#fff;font-size:8px;padding:2px 7px;border-radius:3px;font-weight:700;letter-spacing:.04em; }
   .footer { text-align:center; margin-top:16px; font-size:9px; color:#94a3b8; padding-top:8px; border-top:1px solid #f1f5f9; }
   .print-btn { position:fixed; top:16px; right:16px; background:#dc2626; color:#fff; border:none; padding:10px 20px; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; box-shadow:0 4px 12px rgba(0,0,0,.2); }
-  .watermark { position:fixed; bottom:30px; right:30px; font-size:48px; font-weight:900; color:rgba(0,0,0,.04); pointer-events:none; letter-spacing:-2px; }
+  .back-btn { position:fixed; top:16px; right:210px; background:#475569; color:#fff; border:none; padding:10px 18px; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; box-shadow:0 4px 12px rgba(0,0,0,.2); }
+  .back-btn:hover { background:#334155; }
 </style></head><body>
-<div class="watermark">MÜÜK</div>
 <button class="print-btn no-print" onclick="window.print()"><i class="bi bi-printer me-1"></i>Imprimir / Guardar PDF</button>
+<button class="back-btn no-print" onclick="window.close()">← Volver</button>
 
 <div class="doc-header">
-  <div style="display:flex;align-items:center;gap:12px">
-    <div class="logo-grid">
-      <div style="background:#E31E24"></div><div style="background:#F5C400"></div>
-      <div style="background:#F5C400"></div><div style="background:#E31E24"></div>
-    </div>
-    <div>
-      <div style="font-size:16px;font-weight:800;letter-spacing:-.5px">MÜÜK</div>
-      <div style="font-size:10px;opacity:.75">Comisiones — Saldo Pendiente</div>
-    </div>
+  <div>
+    <div style="font-size:16px;font-weight:800;letter-spacing:-.5px">Comisiones — Saldo Pendiente</div>
+    <div style="font-size:10px;opacity:.75">${nFacturas} factura${nFacturas !== 1 ? 's' : ''}${nPagos > 0 ? ' · '+nPagos+' pago'+( nPagos !== 1 ? 's' : '') : ''}</div>
   </div>
   <div style="text-align:right">
     <div style="font-size:11px;opacity:.85">${hoyStr}</div>
-    <div style="font-size:10px;opacity:.65">${nFacturas} factura${nFacturas !== 1 ? 's' : ''}${nPagos > 0 ? ' · '+nPagos+' pago'+( nPagos !== 1 ? 's' : '') : ''}</div>
   </div>
 </div>
 
@@ -8328,7 +8305,6 @@ function _renderMetas(comThisMonth) {
     const pct = target > 0 ? Math.min((actual/target)*100, 150) : 0;
     const pctDisplay = target > 0 ? Math.round((actual/target)*100) : 0;
     const color = pctDisplay >= 100 ? '#16a34a' : pctDisplay >= 70 ? '#d97706' : '#dc2626';
-    _setEl(prefix+'-bar', ''); // just update width
     const bar = document.getElementById(prefix+'-bar');
     if (bar) { bar.style.width = Math.min(pct,100)+'%'; bar.style.background = color; }
     _setEl(prefix+'-pct', pctDisplay+'%');
@@ -8336,6 +8312,13 @@ function _renderMetas(comThisMonth) {
     if (pctEl) pctEl.style.color = color;
     _setEl(prefix+'-actual', isMoney ? fmt(actual) : String(actual));
     _setEl(prefix+'-target', isMoney ? fmt(target) : String(target));
+    const card = document.getElementById(prefix+'-card');
+    if (card) {
+      const bg = pctDisplay >= 100 ? '#f0fdf4' : pctDisplay >= 70 ? '#fffbeb' : '#fef2f2';
+      const border = pctDisplay >= 100 ? '#bbf7d0' : pctDisplay >= 70 ? '#fde68a' : '#fecaca';
+      card.style.background = bg;
+      card.style.borderLeft = '3px solid ' + border;
+    }
   }
 
   setMeta('kpi-meta-com', comThisMonth, metaCom, true);
@@ -11421,9 +11404,20 @@ function _verPdfPreview(cat, id) {
   if (!f?.pdfPreview) { toast('Sin vista previa disponible','warning'); return; }
   const w = window.open('','_blank','width=800,height=1000');
   w.document.write(`<!DOCTYPE html><html><head><title>Factura ${f.tipo||''} ${f.numero||''}</title>
-    <style>body{margin:0;display:flex;justify-content:center;align-items:flex-start;background:#333;min-height:100vh}
-    img{max-width:100%;height:auto;box-shadow:0 4px 20px rgba(0,0,0,.5)}</style></head>
-    <body><img src="${f.pdfPreview}" alt="Vista previa"></body></html>`);
+    <style>body{margin:0;display:flex;flex-direction:column;align-items:center;background:#333;min-height:100vh;padding-top:54px}
+    img{max-width:100%;height:auto;box-shadow:0 4px 20px rgba(0,0,0,.5)}
+    .toolbar{position:fixed;top:0;left:0;right:0;height:46px;background:#1e293b;display:flex;align-items:center;padding:0 16px;gap:10px;z-index:10}
+    .toolbar span{color:#cbd5e1;font-size:13px;font-family:system-ui;flex:1}
+    .toolbar button{border:none;border-radius:6px;padding:6px 16px;font-size:12px;font-weight:600;cursor:pointer}
+    .btn-print{background:#2563eb;color:#fff}.btn-back{background:#475569;color:#fff}
+    @media print{.toolbar{display:none!important}}</style></head>
+    <body>
+    <div class="toolbar">
+      <span>Factura ${f.tipo||''} ${f.numero||''}</span>
+      <button class="btn-print" onclick="window.print()">⎙ Imprimir</button>
+      <button class="btn-back" onclick="window.close()">← Volver</button>
+    </div>
+    <img src="${f.pdfPreview}" alt="Vista previa"></body></html>`);
   w.document.close();
 }
 
@@ -11494,6 +11488,10 @@ function printReportePendientes(cat) {
       @media print { body { padding: 0; } }
     </style>
   </head><body>
+    <div class="no-print" style="display:flex;gap:8px;justify-content:flex-end;margin-bottom:12px">
+      <button onclick="window.print()" style="background:#0369a1;color:#fff;border:none;border-radius:6px;padding:6px 16px;font-size:11px;cursor:pointer;font-weight:600">⎙ Imprimir / Guardar PDF</button>
+      <button onclick="window.close()" style="background:#475569;color:#fff;border:none;border-radius:6px;padding:6px 16px;font-size:11px;cursor:pointer;font-weight:600">← Volver</button>
+    </div>
     <h1>${titulo}</h1>
     <div class="fecha">Generado: ${hoyStr}</div>
     <div class="kpis">
@@ -13743,8 +13741,12 @@ function printCrossSellPDF() {
   .matrix-table td { padding:2px 3px; }
   .matrix-table th { font-size:7px; padding:3px 2px; text-align:center; }
   .footer { margin-top:10px; font-size:8px; color:#94a3b8; text-align:center; border-top:1px solid #e2e8f0; padding-top:6px; }
-  @media print { body { -webkit-print-color-adjust:exact; print-color-adjust:exact; } }
+  @media print { body { -webkit-print-color-adjust:exact; print-color-adjust:exact; } .no-print{display:none!important} }
 </style></head><body>
+<div class="no-print" style="display:flex;gap:8px;justify-content:flex-end;margin-bottom:10px">
+  <button onclick="window.print()" style="background:#7c3aed;color:#fff;border:none;border-radius:6px;padding:6px 16px;font-size:11px;cursor:pointer;font-weight:600">⎙ Imprimir / Guardar PDF</button>
+  <button onclick="window.close()" style="background:#475569;color:#fff;border:none;border-radius:6px;padding:6px 16px;font-size:11px;cursor:pointer;font-weight:600">← Volver</button>
+</div>
 <h1>Oportunidades de Venta Cruzada</h1>
 <div class="subtitle">Período: <b>${periodoLabel}</b> · Generado: ${now} · ${rows.length} operaciones</div>
 
@@ -16499,15 +16501,32 @@ function _renderMetaCobranza() {
   const pct=meta>0?Math.min(100,Math.round((cobradoMes/meta)*100)):0;
   const color=pct>=100?'#16a34a':pct>=70?'#d97706':'#dc2626';
 
-  el.innerHTML=`<div class="card p-3 mb-3" style="border-radius:10px;border-left:4px solid ${color}">
+  const bgCard = pct < 30 ? '#fef2f2' : pct < 70 ? '#fffbeb' : '#f0fdf4';
+  const borderCard = pct < 30 ? '#fecaca' : pct < 70 ? '#fde68a' : '#bbf7d0';
+  const badge = pct < 40
+    ? `<span style="background:#dc2626;color:#fff;font-size:.6rem;font-weight:800;letter-spacing:.05em;padding:2px 8px;border-radius:20px;text-transform:uppercase">⚠ EN RIESGO</span>`
+    : pct < 70
+    ? `<span style="background:#d97706;color:#fff;font-size:.6rem;font-weight:800;letter-spacing:.05em;padding:2px 8px;border-radius:20px;text-transform:uppercase">EN PROGRESO</span>`
+    : `<span style="background:#16a34a;color:#fff;font-size:.6rem;font-weight:800;letter-spacing:.05em;padding:2px 8px;border-radius:20px;text-transform:uppercase">✓ ${pct>=100?'CUMPLIDA':'ENCAMINADO'}</span>`;
+
+  el.innerHTML=`<div class="card p-3 mb-3" style="border-radius:10px;border:1px solid ${borderCard};background:${bgCard}">
     <div class="d-flex justify-content-between align-items-center mb-2">
-      <div style="font-size:.82rem;font-weight:700;color:#0f172a"><i class="bi bi-target me-1"></i>Meta Cobranza Mensual</div>
-      <div style="font-size:.78rem;color:#64748b">Meta: ${fmt(meta)} <i class="bi bi-pencil-square" style="cursor:pointer;margin-left:4px" onclick="const v=prompt('Nueva Meta de Cobranza Mensual ($):',ST.metaCobranza);if(v&&!isNaN(v)&&+v>0){ST.metaCobranza=+v;save();_renderMetaCobranza();}else if(v==='0'){ST.metaCobranza=0;save();_renderMetaCobranza();}"></i></div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:.78rem;font-weight:700;color:#0f172a"><i class="bi bi-target me-1"></i>Meta Cobranza Mensual</span>
+        ${badge}
+      </div>
+      <div style="font-size:.72rem;color:#64748b;display:flex;align-items:center;gap:4px">
+        ${fmt(meta)} <i class="bi bi-pencil-square" style="cursor:pointer;opacity:.6" onclick="const v=prompt('Nueva Meta de Cobranza Mensual ($):',ST.metaCobranza);if(v&&!isNaN(v)&&+v>0){ST.metaCobranza=+v;save();_renderMetaCobranza();}else if(v==='0'){ST.metaCobranza=0;save();_renderMetaCobranza();}"></i>
+      </div>
     </div>
-    <div style="background:#f1f5f9;border-radius:8px;height:24px;overflow:hidden;position:relative">
-      <div style="background:${color};height:100%;width:${pct}%;border-radius:8px;transition:width .5s"></div>
-      <div style="position:absolute;top:0;left:0;right:0;height:100%;display:flex;align-items:center;justify-content:center;font-size:.76rem;font-weight:700;color:#0f172a">${fmt(cobradoMes)} / ${fmt(meta)} (${pct}%)</div>
+    <div style="display:flex;align-items:center;gap:12px">
+      <div style="flex:1;background:rgba(0,0,0,.06);border-radius:8px;height:20px;overflow:hidden;position:relative">
+        <div style="background:${color};height:100%;width:${pct}%;border-radius:8px;transition:width .7s ease"></div>
+        <div style="position:absolute;inset:0;display:flex;align-items:center;padding:0 10px;font-size:.7rem;font-weight:700;color:${pct>20?'#0f172a':'#0f172a'}">${fmt(cobradoMes)}</div>
+      </div>
+      <div style="font-size:1.5rem;font-weight:900;color:${color};min-width:52px;text-align:right;line-height:1">${pct}%</div>
     </div>
+    <div style="font-size:.62rem;color:#64748b;margin-top:4px;text-align:right">Cobrado ${fmt(cobradoMes)} de ${fmt(meta)} — faltan ${fmt(Math.max(0,meta-cobradoMes))}</div>
   </div>`;
 }
 
@@ -16889,18 +16908,46 @@ function renderAlertas() {
     }catch(e){console.warn('Scoring alerts error:',e);}
   }
 
-  // ── Actualizar badge en sidebar ───────────────────────────
+  // ── Actualizar badges en sidebar ─────────────────────────
   const dangerCount = alerts.filter(a=>a.type==='danger').length;
   const totalCount  = alerts.length;
-  const navDash = document.querySelector('.nav-link[data-page="dashboard"]');
-  if(navDash){
-    let badge = navDash.querySelector('.alert-badge');
-    if(totalCount > 0){
-      if(!badge){ badge = document.createElement('span'); badge.className='alert-badge'; navDash.appendChild(badge); }
-      badge.textContent = totalCount;
-      badge.style.cssText = `display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;font-size:.6rem;font-weight:700;margin-left:auto;flex-shrink:0;background:${dangerCount>0?'#ef4444':'#f59e0b'};color:#fff`;
-    } else if(badge){ badge.remove(); }
+
+  // Helper para set/clear badge en un nav-link
+  function _setSidebarBadge(page, count, isDanger) {
+    const navEl = document.querySelector(`.nav-link[data-page="${page}"]`);
+    if (!navEl) return;
+    let badge = navEl.querySelector('.alert-badge');
+    if (count > 0) {
+      if (!badge) { badge = document.createElement('span'); badge.className='alert-badge'; navEl.appendChild(badge); }
+      badge.textContent = count;
+      badge.style.cssText = `display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;border-radius:9px;font-size:.6rem;font-weight:700;margin-left:auto;flex-shrink:0;padding:0 3px;background:${isDanger?'#ef4444':'#f59e0b'};color:#fff`;
+    } else if (badge) { badge.remove(); }
   }
+
+  // Dashboard: total de alertas
+  _setSidebarBadge('dashboard', totalCount, dangerCount > 0);
+
+  // Cheques Físicos: cheques a cobrar vencidos
+  _setSidebarBadge('chequesFisicos', chqVencCobrar.length, true);
+
+  // E-Cheques: contar e-cheques vencidos dentro de chqVencCobrar
+  const eChqVenc = (ST.eCheques||[]).filter(c=>(c.estado==='pendiente'||c.estado==='en_cartera')&&c.fechaVenc&&c.fechaVenc<hoyStr);
+  _setSidebarBadge('eCheques', eChqVenc.length, eChqVenc.length > 0);
+
+  // Cheques a Pagar: cheques a pagar vencidos
+  _setSidebarBadge('chequesPagar', chqVencPagar.length, true);
+
+  // Facturas a Cobrar: vencidas + próximas 7 días
+  const facACobrarTotal = facVencCobrar.length + (!facVencCobrar.length ? facProx7.length : 0);
+  _setSidebarBadge('facturasACobrar', facACobrarTotal, facVencCobrar.length > 0);
+
+  // Facturas a Pagar: vencidas + próximas 7 días
+  const facAPagarTotal = facVencPagar.length + (!facVencPagar.length ? facPagarProx7.length : 0);
+  _setSidebarBadge('facturasPagar', facAPagarTotal, facVencPagar.length > 0);
+
+  // Panel Vencimientos: suma de cheques próximos + facturas próximas (sin duplicar urgentes)
+  const proxTot = chqProx.length + (arcaProx||[]).length;
+  _setSidebarBadge('panelVencimientos', proxTot, false);
 
   if(!alerts.length){el.innerHTML='';return;}
   const btnStyle='flex-shrink:0;background:rgba(255,255,255,.6);border:1px solid currentColor;border-radius:6px;padding:2px 10px;font-size:.7rem;font-weight:700;cursor:pointer;white-space:nowrap;color:inherit';
