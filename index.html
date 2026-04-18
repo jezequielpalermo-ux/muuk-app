@@ -1112,11 +1112,6 @@
       <h6 class="fw-bold mb-3"><i class="bi bi-calendar-event text-warning me-2"></i>Próximos Vencimientos — 15 días</h6>
       <div id="dash-venc"></div>
     </div>
-    <!-- PROYECCION 30 DIAS -->
-    <div class="card p-3 mt-3">
-      <h6 class="fw-bold mb-3"><i class="bi bi-graph-up text-info me-2"></i>Proyección de Flujo — Próximos 30 días</h6>
-      <canvas id="ch-proyeccion" height="120"></canvas>
-    </div>
     <!-- ACTIVIDAD RECIENTE -->
     <div class="card p-3 mt-3">
       <div class="d-flex align-items-center justify-content-between mb-3">
@@ -6682,8 +6677,13 @@ function renderDashboard() {
   // ── LIQUIDEZ NETA ──
   const totFacPagar = facPagPend.reduce((s,f)=>s+ +f.total,0);
   const totObligaciones = totPagar + totFacPagar;
-  // Comisiones pendientes de cobro (todas las registradas en ST.comisiones)
-  const totComisiones = (ST.comisiones||[]).reduce((s,c)=>s+ +c.monto,0);
+  // Comisiones pendientes: solo las SIN FACTURA o Monotributo (las con factura ya están en Facturas a Cobrar)
+  const totComisiones = (ST.comisionesResumen||[])
+    .filter(c => {
+      const obs = (c.obs||'').toLowerCase().trim();
+      return c.saldo > 0 && (obs.includes('sin factura') || obs.includes('monotributo'));
+    })
+    .reduce((s,c) => s + c.saldo, 0);
   const totalActivos = sB + sE + totCartera + totComisiones;
   const liquidez = totalActivos - totObligaciones;
   const elLiq = document.getElementById('kpi-liquidez');
@@ -6834,7 +6834,6 @@ function renderDashboard() {
   }
   renderDashCharts(sB,sE,totCartera);
   renderAlertas();
-  renderProyeccion();
   renderActividadReciente();
   if(typeof _renderMetaCobranza==='function') _renderMetaCobranza();
 
