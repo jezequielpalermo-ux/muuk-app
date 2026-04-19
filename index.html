@@ -3560,14 +3560,14 @@ CREATE POLICY "acceso total" ON flujo_caja_versions FOR ALL USING (true) WITH CH
       </div>
     </div>
 
-    <!-- ── Cross-Sell: Oportunidades de Venta Cruzada ── -->
+    <!-- ── Facturación por Cliente × Empresa ── -->
     <div class="mt-3" id="gest-crosssell-section">
       <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
-        <span style="font-size:.78rem;font-weight:700;color:#0f172a"><i class="bi bi-shuffle me-1" style="color:#7c3aed"></i>Oportunidades de Venta Cruzada</span>
-        <small class="text-muted" style="font-size:.62rem">Clientes que compran a algunas empresas pero no a otras</small>
+        <span style="font-size:.78rem;font-weight:700;color:#0f172a"><i class="bi bi-table me-1" style="color:#0891b2"></i>Facturación por Cliente × Empresa</span>
+        <small class="text-muted" style="font-size:.62rem">Facturado sin IVA y comisión por cliente y empresa</small>
         <div class="ms-auto d-flex align-items-center gap-2">
           <select id="crosssell-mes-filter" class="form-select form-select-sm" style="font-size:.68rem;width:auto;min-width:130px;border-radius:6px" onchange="_renderCrossSell(GESTION_DATA)">
-            <option value="">Todos los meses</option>
+            <option value="">Todos los meses 2026</option>
           </select>
           <button class="btn btn-sm btn-outline-primary" style="font-size:.68rem;border-radius:6px;padding:3px 10px;white-space:nowrap" onclick="printCrossSellPDF()">
             <i class="bi bi-file-earmark-pdf me-1"></i>Imprimir PDF
@@ -12886,12 +12886,14 @@ function _buildGestionData(rawRows /* array of arrays, row 0 = headers */) {
   let iMes = ci('mes'); if (iMes < 0) iMes = 25;
 
   const byMesMap = {}, byEmpresaMap = {}, byClienteMap = {};
-  const rows = [];
+  const rows = [], rows2025 = [];
   for (let i = 1; i < rawRows.length; i++) {
     const r = rawRows[i];
     if (!r || r.length < 3) continue;
     const mes = String(r[iMes] || '').trim();
-    if (!mes.includes('2026')) continue;
+    const is2026 = mes.includes('2026');
+    const is2025 = mes.includes('2025');
+    if (!is2026 && !is2025) continue;
     const fac = _parseNum(r[iFac]);
     const siv = _parseNum(r[iSiv]);
     const com = _parseMonto(r[iCom]);
@@ -12901,18 +12903,23 @@ function _buildGestionData(rawRows /* array of arrays, row 0 = headers */) {
     const fechaRaw = String(r[iFecha] || '').trim();
     const fecha = fechaRaw.includes(' ') ? fechaRaw.split(' ')[0] : fechaRaw;
     const pct = String(r[iPct] || '').trim();
-    rows.push([mes, fecha, cli, emp, Math.round(fac), Math.round(siv), pct, Math.round(com)]);
-    if (!byMesMap[mes]) byMesMap[mes] = [0,0,0,0];
-    byMesMap[mes][0]++; byMesMap[mes][1]+=fac; byMesMap[mes][2]+=siv; byMesMap[mes][3]+=com;
-    if (!byEmpresaMap[emp]) byEmpresaMap[emp] = [0,0,0,0];
-    byEmpresaMap[emp][0]++; byEmpresaMap[emp][1]+=fac; byEmpresaMap[emp][2]+=siv; byEmpresaMap[emp][3]+=com;
-    if (!byClienteMap[cli]) byClienteMap[cli] = [0,0,0,0];
-    byClienteMap[cli][0]++; byClienteMap[cli][1]+=fac; byClienteMap[cli][2]+=siv; byClienteMap[cli][3]+=com;
+    const rowArr = [mes, fecha, cli, emp, Math.round(fac), Math.round(siv), pct, Math.round(com)];
+    if (is2025) {
+      rows2025.push(rowArr);
+    } else {
+      rows.push(rowArr);
+      if (!byMesMap[mes]) byMesMap[mes] = [0,0,0,0];
+      byMesMap[mes][0]++; byMesMap[mes][1]+=fac; byMesMap[mes][2]+=siv; byMesMap[mes][3]+=com;
+      if (!byEmpresaMap[emp]) byEmpresaMap[emp] = [0,0,0,0];
+      byEmpresaMap[emp][0]++; byEmpresaMap[emp][1]+=fac; byEmpresaMap[emp][2]+=siv; byEmpresaMap[emp][3]+=com;
+      if (!byClienteMap[cli]) byClienteMap[cli] = [0,0,0,0];
+      byClienteMap[cli][0]++; byClienteMap[cli][1]+=fac; byClienteMap[cli][2]+=siv; byClienteMap[cli][3]+=com;
+    }
   }
   const byMes = MES_ORDER.filter(m=>byMesMap[m]).map(m=>[m,...byMesMap[m].map(v=>Math.round(v))]);
   const empresas = Object.entries(byEmpresaMap).sort((a,b)=>b[1][1]-a[1][1]).map(([k,v])=>[k,...v.map(x=>Math.round(x))]);
   const clientes = Object.entries(byClienteMap).sort((a,b)=>b[1][1]-a[1][1]).map(([k,v])=>[k,...v.map(x=>Math.round(x))]);
-  return { byMes, empresas, clientes, rows, updatedAt: new Date().toLocaleString('es-AR') };
+  return { byMes, empresas, clientes, rows, rows2025, updatedAt: new Date().toLocaleString('es-AR') };
 }
 
 /* ─── Fuente 1: JSONP gviz/tq (no necesita CORS, funciona si la planilla es pública) ─── */
@@ -13451,193 +13458,129 @@ function _renderCrossSell(d) {
   const el = document.getElementById('gest-crosssell-content');
   if (!el || !d.rows || !d.rows.length) { if(el) el.innerHTML=''; return; }
 
-  // Populate month filter (only once if empty)
+  // Populate month filter
   const filMes = document.getElementById('crosssell-mes-filter');
   if (filMes && filMes.options.length <= 1) {
-    d.byMes.forEach(m => { const o = document.createElement('option'); o.value = m[0]; o.textContent = m[0]; filMes.appendChild(o); });
+    d.byMes.forEach(m => { const o = document.createElement('option'); o.value = m[0]; o.textContent = m[0].replace(' 2026',''); filMes.appendChild(o); });
   }
   const mesFilter = filMes ? filMes.value : '';
 
-  // Filter rows by selected month
+  // Filter 2026 rows by selected month
   const rows = mesFilter ? d.rows.filter(r => r[0] === mesFilter) : d.rows;
   if (rows.length === 0) { el.innerHTML = '<p class="text-muted" style="font-size:.75rem">No hay datos para el mes seleccionado.</p>'; return; }
 
-  // Build matrix: cliente → { empresa → { ops, fac, siv, com } }
-  const matrix = {};
-  const allEmpresas = new Set();
-  rows.forEach(r => {
-    const cli = r[2], emp = r[3], fac = r[4], siv = r[5], com = r[7];
-    if (!cli || !emp) return;
-    allEmpresas.add(emp);
-    if (!matrix[cli]) matrix[cli] = {};
-    if (!matrix[cli][emp]) matrix[cli][emp] = { ops:0, fac:0, siv:0, com:0 };
-    matrix[cli][emp].ops++; matrix[cli][emp].fac+=fac; matrix[cli][emp].siv+=siv; matrix[cli][emp].com+=com;
-  });
+  const periodoLabel = mesFilter ? mesFilter.replace(' 2026','') + ' 2026' : 'Acumulado 2026';
 
-  // Re-aggregate empresas/clientes from filtered rows
-  const empMap = {}, cliMap = {};
-  rows.forEach(r => {
-    const cli=r[2], emp=r[3], fac=r[4], siv=r[5], com=r[7];
-    if(!empMap[emp]) empMap[emp]=[0,0,0,0]; empMap[emp][0]++; empMap[emp][1]+=fac; empMap[emp][2]+=siv; empMap[emp][3]+=com;
-    if(!cliMap[cli]) cliMap[cli]=[0,0,0,0]; cliMap[cli][0]++; cliMap[cli][1]+=fac; cliMap[cli][2]+=siv; cliMap[cli][3]+=com;
-  });
-  const empresas = Object.entries(empMap).sort((a,b)=>b[1][1]-a[1][1]).map(e=>e[0]);
-  const clientes = Object.entries(cliMap).sort((a,b)=>b[1][1]-a[1][1]).map(e=>e[0]);
-
-  // Skip if less than 2 empresas
-  if (empresas.length < 2) { el.innerHTML = '<p class="text-muted" style="font-size:.75rem">Se necesitan al menos 2 empresas para el análisis cruzado.</p>'; return; }
-
-  // Totales por empresa (para sizing)
-  const empTotals = {};
-  empresas.forEach(emp => { empTotals[emp] = empMap[emp]; });
-
-  // Build opportunities: for each client, find empresas they DON'T buy from
-  const opportunities = [];
-  clientes.forEach(cli => {
-    const cliData = matrix[cli] || {};
-    const compraA = Object.keys(cliData);
-    const noCompraA = empresas.filter(emp => !cliData[emp]);
-    if (compraA.length === 0 || noCompraA.length === 0) return; // buys from all or from none
-    // Potential value: average spend across empresas they DO buy from
-    const totalCliSiv = compraA.reduce((s,e) => s + (cliData[e]?.siv||0), 0);
-    const avgPerEmpresa = totalCliSiv / compraA.length;
-    noCompraA.forEach(emp => {
-      opportunities.push({
-        cliente: cli,
-        empresa: emp,
-        compraA: compraA,
-        totalCliSiv: totalCliSiv,
-        avgPerEmpresa: avgPerEmpresa,
-        potencial: Math.round(avgPerEmpresa),
-        clienteOps: compraA.reduce((s,e) => s + (cliData[e]?.ops||0), 0)
-      });
+  // ── Helper para construir tabla cliente×empresa ──
+  function buildCliEmpTable(sourceRows, year) {
+    // Group: cliente → empresa → { ops, siv, com }
+    const cliEmpMap = {};
+    sourceRows.forEach(r => {
+      const cli = r[2], emp = r[3], siv = r[5] || 0, com = r[7] || 0;
+      if (!cli || !emp) return;
+      if (!cliEmpMap[cli]) cliEmpMap[cli] = {};
+      if (!cliEmpMap[cli][emp]) cliEmpMap[cli][emp] = { ops:0, siv:0, com:0 };
+      cliEmpMap[cli][emp].ops++; cliEmpMap[cli][emp].siv+=siv; cliEmpMap[cli][emp].com+=com;
     });
-  });
+    // Sort clients by total siv desc
+    const sortedCli = Object.entries(cliEmpMap)
+      .map(([cli, empData]) => {
+        const totSiv = Object.values(empData).reduce((s,e)=>s+e.siv,0);
+        const totCom = Object.values(empData).reduce((s,e)=>s+e.com,0);
+        return { cli, empData, totSiv, totCom };
+      })
+      .sort((a,b) => b.totSiv - a.totSiv);
 
-  // Sort by potential value desc
-  opportunities.sort((a,b) => b.potencial - a.potencial);
-  const topOps = opportunities.slice(0, 30);
+    if (!sortedCli.length) return '<p class="text-muted" style="font-size:.75rem">Sin datos disponibles.</p>';
 
-  // ── Matrix heatmap (top 15 clients) ──
-  const topClientes = clientes.slice(0, 15);
-  let matrixHTML = `<div style="overflow-x:auto;margin-bottom:12px">
-    <table class="table table-sm mb-0" style="font-size:.7rem;min-width:${200 + empresas.length * 80}px">
-      <thead><tr style="background:#f8fafc">
-        <th class="ps-2" style="position:sticky;left:0;background:#f8fafc;z-index:2;min-width:160px">Cliente</th>
-        ${empresas.map(e => `<th class="text-center" style="font-size:.62rem;writing-mode:horizontal-tb;max-width:80px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${e}">${e.length>12?e.substring(0,11)+'…':e}</th>`).join('')}
-        <th class="text-center" style="font-size:.62rem">Cobertura</th>
-      </tr></thead>
-      <tbody>`;
+    const grandTotSiv = sortedCli.reduce((s,c)=>s+c.totSiv,0);
+    const grandTotCom = sortedCli.reduce((s,c)=>s+c.totCom,0);
+    const grandPct = grandTotSiv > 0 ? (grandTotCom/grandTotSiv*100).toFixed(1)+'%' : '–';
 
-  topClientes.forEach(cli => {
-    const cliData = matrix[cli] || {};
-    const compraCount = empresas.filter(e => cliData[e]).length;
-    const coverPct = Math.round(compraCount / empresas.length * 100);
-    const coverColor = coverPct >= 80 ? '#16a34a' : coverPct >= 50 ? '#d97706' : '#dc2626';
-    matrixHTML += `<tr>
-      <td class="ps-2 fw-semibold" style="position:sticky;left:0;background:#fff;z-index:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px" title="${cli}">${cli}</td>`;
-    empresas.forEach(emp => {
-      if (cliData[emp]) {
-        const intensity = Math.min(1, cliData[emp].siv / (empTotals[emp]?.[2] || 1) * empresas.length * 0.8);
-        const alpha = 0.15 + intensity * 0.6;
-        matrixHTML += `<td class="text-center" style="background:rgba(22,163,74,${alpha.toFixed(2)});cursor:default" title="${cli} → ${emp}: ${cliData[emp].ops} ops, ${fmt(cliData[emp].siv)} sin IVA">
-          <span style="font-size:.62rem;font-weight:600;color:#065f46">${fmt(cliData[emp].siv)}</span></td>`;
-      } else {
-        matrixHTML += `<td class="text-center" style="background:rgba(220,38,38,.06);cursor:default" title="${cli} NO compra a ${emp}">
-          <i class="bi bi-dash" style="color:#e2e8f0;font-size:.65rem"></i></td>`;
+    let tbodyHTML = '';
+    sortedCli.forEach(({ cli, empData, totSiv, totCom }) => {
+      const sortedEmp = Object.entries(empData).sort((a,b)=>b[1].siv-a[1].siv);
+      const cliPct = totSiv > 0 ? (totCom/totSiv*100).toFixed(1)+'%' : '–';
+      const rowCount = sortedEmp.length;
+      sortedEmp.forEach(([emp, vals], eIdx) => {
+        const pct = vals.siv > 0 ? (vals.com/vals.siv*100).toFixed(1)+'%' : '–';
+        const pctNum = vals.siv > 0 ? vals.com/vals.siv*100 : 0;
+        const pctColor = pctNum >= 5 ? '#16a34a' : pctNum >= 2 ? '#d97706' : '#94a3b8';
+        if (eIdx === 0) {
+          tbodyHTML += `<tr style="border-top:2px solid #f1f5f9">
+            <td class="fw-semibold ps-2" rowspan="${rowCount}" style="font-size:.72rem;vertical-align:top;padding-top:8px;max-width:160px;white-space:normal;line-height:1.3">${cli}</td>
+            <td style="font-size:.7rem">${emp}</td>
+            <td class="text-end" style="font-size:.7rem;font-variant-numeric:tabular-nums">${fmt(vals.siv)}</td>
+            <td class="text-end text-success fw-bold" style="font-size:.7rem;font-variant-numeric:tabular-nums">${fmt(vals.com)}</td>
+            <td class="text-end"><small style="font-weight:600;color:${pctColor}">${pct}</small></td>
+          </tr>`;
+        } else {
+          tbodyHTML += `<tr>
+            <td style="font-size:.7rem">${emp}</td>
+            <td class="text-end" style="font-size:.7rem;font-variant-numeric:tabular-nums">${fmt(vals.siv)}</td>
+            <td class="text-end text-success fw-bold" style="font-size:.7rem;font-variant-numeric:tabular-nums">${fmt(vals.com)}</td>
+            <td class="text-end"><small style="font-weight:600;color:${pctColor}">${pct}</small></td>
+          </tr>`;
+        }
+      });
+      // Subtotal row per cliente (only if more than 1 empresa)
+      if (rowCount > 1) {
+        tbodyHTML += `<tr style="background:rgba(8,145,178,.06)">
+          <td class="ps-2" style="font-size:.65rem;color:#64748b;font-style:italic"></td>
+          <td style="font-size:.65rem;color:#64748b;font-weight:600;font-style:italic">Subtotal ${cli.split(' ')[0]}</td>
+          <td class="text-end fw-bold" style="font-size:.68rem;font-variant-numeric:tabular-nums">${fmt(totSiv)}</td>
+          <td class="text-end fw-bold text-success" style="font-size:.68rem;font-variant-numeric:tabular-nums">${fmt(totCom)}</td>
+          <td class="text-end"><small style="font-weight:700;color:#0891b2">${cliPct}</small></td>
+        </tr>`;
       }
     });
-    matrixHTML += `<td class="text-center"><span class="badge" style="background:${coverColor};font-size:.6rem">${coverPct}%</span></td></tr>`;
-  });
-  matrixHTML += '</tbody></table></div>';
 
-  // ── Top opportunities list ──
-  let opsHTML = '';
-  if (topOps.length > 0) {
-    opsHTML = `<div style="font-size:.72rem;font-weight:700;color:#0f172a;margin-bottom:6px"><i class="bi bi-lightbulb-fill me-1" style="color:#d97706"></i>Top Oportunidades</div>
-    <div class="row g-2">`;
-    topOps.slice(0, 12).forEach(op => {
-      const compraLabel = op.compraA.length <= 3
-        ? op.compraA.join(', ')
-        : op.compraA.slice(0,2).join(', ') + ' +' + (op.compraA.length-2) + ' más';
-      opsHTML += `
-      <div class="col-12 col-md-6 col-xl-4">
-        <div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:8px 10px;font-size:.7rem;border-left:3px solid #7c3aed">
-          <div style="font-weight:700;color:#1e293b;margin-bottom:2px">${op.cliente}</div>
-          <div style="color:#64748b;margin-bottom:4px">
-            <i class="bi bi-check-circle-fill text-success me-1" style="font-size:.6rem"></i>Compra a: <span style="color:#334155">${compraLabel}</span>
-          </div>
-          <div style="color:#dc2626;margin-bottom:4px">
-            <i class="bi bi-x-circle-fill me-1" style="font-size:.6rem"></i>No compra a: <b>${op.empresa}</b>
-          </div>
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px;padding-top:4px;border-top:1px solid #f1f5f9">
-            <span style="color:#7c3aed;font-weight:600"><i class="bi bi-graph-up-arrow me-1"></i>Potencial: ${fmt(op.potencial)}</span>
-            <span style="color:#94a3b8;font-size:.6rem">${op.clienteOps} ops actuales</span>
-          </div>
-        </div>
-      </div>`;
-    });
-    opsHTML += '</div>';
+    return `<div style="overflow-x:auto">
+      <table class="table table-sm mb-0" style="font-size:.72rem">
+        <thead>
+          <tr style="background:#f8fafc">
+            <th class="ps-2" style="min-width:150px;font-size:.62rem">Cliente</th>
+            <th style="min-width:120px;font-size:.62rem">Empresa</th>
+            <th class="text-end" style="font-size:.62rem">Sin IVA</th>
+            <th class="text-end" style="font-size:.62rem">Comisión</th>
+            <th class="text-end" style="font-size:.62rem">%</th>
+          </tr>
+        </thead>
+        <tbody>${tbodyHTML}</tbody>
+        <tfoot>
+          <tr class="table-dark fw-bold">
+            <td class="ps-2" colspan="2" style="font-size:.72rem">TOTAL ${year}</td>
+            <td class="text-end" style="font-size:.72rem;font-variant-numeric:tabular-nums">${fmt(grandTotSiv)}</td>
+            <td class="text-end text-success" style="font-size:.72rem;font-variant-numeric:tabular-nums">${fmt(grandTotCom)}</td>
+            <td class="text-end"><small style="color:#fbbf24;font-weight:700">${grandPct}</small></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>`;
   }
 
-  // ── Summary KPIs ──
-  const totalClientes = clientes.length;
-  const clientesFull = clientes.filter(cli => {
-    const cliData = matrix[cli] || {};
-    return empresas.every(e => cliData[e]);
-  }).length;
-  const clientesParcial = totalClientes - clientesFull;
-  const totalPotencial = topOps.reduce((s,o) => s + o.potencial, 0);
-  const avgCoverage = totalClientes > 0
-    ? Math.round(clientes.reduce((s, cli) => {
-        const cliData = matrix[cli] || {};
-        return s + empresas.filter(e => cliData[e]).length / empresas.length * 100;
-      }, 0) / totalClientes)
-    : 0;
+  // ── Tabla 2026 ──
+  const table2026 = buildCliEmpTable(rows, periodoLabel);
+
+  // ── Tabla 2025 (anual, si hay datos) ──
+  let section2025 = '';
+  const rows2025 = d.rows2025 || [];
+  if (rows2025.length > 0) {
+    section2025 = `
+      <div style="font-size:.72rem;font-weight:700;color:#0f172a;margin:14px 0 6px"><i class="bi bi-calendar2 me-1" style="color:#7c3aed"></i>2025 — Facturación Anual por Cliente × Empresa</div>
+      ${buildCliEmpTable(rows2025, '2025')}`;
+  } else {
+    section2025 = `<div style="font-size:.68rem;color:#94a3b8;margin-top:12px;padding:10px 14px;background:#f8fafc;border-radius:8px;border:1px dashed #e2e8f0">
+      <i class="bi bi-info-circle me-1"></i>Datos 2025 no disponibles en el sheet. Si el sheet contiene filas con "2025" en la columna Mes, se mostrarán automáticamente al sincronizar.
+    </div>`;
+  }
 
   el.innerHTML = `
-    <div class="row g-2 mb-2">
-      <div class="col-6 col-xl-3">
-        <div class="gest-stat" style="border-left-color:#7c3aed;padding:7px 10px">
-          <div class="gest-stat-icon" style="background:#f5f3ff;color:#7c3aed;width:28px;height:28px;font-size:.85rem"><i class="bi bi-shuffle"></i></div>
-          <div>
-            <div class="gest-stat-lbl">Oportunidades</div>
-            <div class="gest-stat-val gest-num" style="font-size:.82rem">${opportunities.length}</div>
-          </div>
-        </div>
-      </div>
-      <div class="col-6 col-xl-3">
-        <div class="gest-stat" style="border-left-color:#d97706;padding:7px 10px">
-          <div class="gest-stat-icon" style="background:#fffbeb;color:#d97706;width:28px;height:28px;font-size:.85rem"><i class="bi bi-graph-up-arrow"></i></div>
-          <div>
-            <div class="gest-stat-lbl">Potencial Total</div>
-            <div class="gest-stat-val gest-num" style="font-size:.82rem">${fmt(totalPotencial)}</div>
-          </div>
-        </div>
-      </div>
-      <div class="col-6 col-xl-3">
-        <div class="gest-stat" style="border-left-color:#16a34a;padding:7px 10px">
-          <div class="gest-stat-icon" style="background:#f0fdf4;color:#16a34a;width:28px;height:28px;font-size:.85rem"><i class="bi bi-people-fill"></i></div>
-          <div>
-            <div class="gest-stat-lbl">Cobertura Promedio</div>
-            <div class="gest-stat-val gest-num" style="font-size:.82rem">${avgCoverage}%</div>
-          </div>
-        </div>
-      </div>
-      <div class="col-6 col-xl-3">
-        <div class="gest-stat" style="border-left-color:#0891b2;padding:7px 10px">
-          <div class="gest-stat-icon" style="background:#ecfeff;color:#0891b2;width:28px;height:28px;font-size:.85rem"><i class="bi bi-check-all"></i></div>
-          <div>
-            <div class="gest-stat-lbl">Compran a Todas</div>
-            <div class="gest-stat-val gest-num" style="font-size:.82rem">${clientesFull} <small style="font-size:.6rem;color:#94a3b8">/ ${totalClientes}</small></div>
-          </div>
-        </div>
-      </div>
+    <div style="font-size:.72rem;font-weight:700;color:#0f172a;margin-bottom:6px">
+      <i class="bi bi-table me-1" style="color:#0891b2"></i>${periodoLabel} — Facturación por Cliente × Empresa
     </div>
-    <div style="font-size:.72rem;font-weight:700;color:#0f172a;margin-bottom:4px"><i class="bi bi-grid-3x3 me-1" style="color:#3b82f6"></i>Matriz Cliente × Empresa</div>
-    <small class="text-muted d-block mb-2" style="font-size:.6rem"><span style="display:inline-block;width:10px;height:10px;background:rgba(22,163,74,.5);border-radius:2px;margin-right:3px"></span>Compra (verde = mayor volumen) &nbsp;<span style="display:inline-block;width:10px;height:10px;background:rgba(220,38,38,.06);border:1px solid #e2e8f0;border-radius:2px;margin-right:3px"></span>No compra (oportunidad)</small>
-    ${matrixHTML}
-    ${opsHTML}`;
+    ${table2026}
+    ${section2025}`;
 }
 
 /* ─── Imprimir Cross-Sell como PDF ─── */
