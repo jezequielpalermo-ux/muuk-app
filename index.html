@@ -80,19 +80,22 @@
     .sidebar-logo small { color: #64748b; font-size: .73rem; }
     .sl {
       color: #64748b; font-size: .62rem; text-transform: uppercase; letter-spacing: .12em;
-      padding: 10px 14px 4px 12px; font-weight: 700; flex-shrink: 0;
-      border-top: 1px solid rgba(148,163,184,.1); margin-top: 4px; position: relative;
+      padding: 8px 14px 6px 12px; font-weight: 700; flex-shrink: 0;
+      border-top: 1px solid rgba(148,163,184,.1); margin-top: 2px; position: relative;
       display: flex; align-items: center; justify-content: space-between;
-      cursor: pointer; user-select: none; transition: color .15s;
+      cursor: pointer; user-select: none; transition: color .18s, background .18s;
+      border-radius: 0;
     }
-    .sl:hover { color: #94a3b8; }
-    .sl-chevron { font-size: .6rem; transition: transform .22s ease; opacity: .6; }
+    .sl:hover { color: #94a3b8; background: rgba(255,255,255,.04); }
+    .sl.sl-active { color: #818cf8 !important; }
+    .sl.sl-active .sl-chevron { opacity: 1; color: #818cf8; }
+    .sl-chevron { font-size: .6rem; transition: transform .22s ease; opacity: .5; }
     .sl.collapsed .sl-chevron { transform: rotate(-90deg); }
     .sl-items {
-      overflow: hidden; transition: max-height .25s ease, opacity .2s ease;
-      max-height: 600px; opacity: 1;
+      overflow: hidden; transition: max-height .3s cubic-bezier(0.4,0,0.2,1), opacity .25s ease;
+      max-height: 700px; opacity: 1;
     }
-    .sl-items.collapsed { max-height: 0 !important; opacity: 0; }
+    .sl-items.collapsed { max-height: 0 !important; opacity: 0; pointer-events: none; }
     #sidebar-nav {
       overflow-y: auto; flex: 1 1 0; min-height: 0;
       scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.15) transparent;
@@ -107,7 +110,7 @@
       position: relative;
     }
     .sidebar .nav-link:hover { color: #e2e8f0; background: rgba(255,255,255,.07); transform: translateX(2px); }
-    .sidebar .nav-link.active { color: #fff; background: linear-gradient(135deg,#1d4ed8,#3b82f6); box-shadow: 0 2px 8px rgba(29,78,216,.35); }
+    .sidebar .nav-link.active { color: #fff; background: linear-gradient(135deg,#4f46e5,#6366f1); box-shadow: 0 2px 8px rgba(79,70,229,.4); }
     .sidebar .nav-link i { font-size: .9rem; width: 16px; text-align: center; flex-shrink: 0; }
     .sidebar-footer { padding: 8px 10px; border-top: 1px solid rgba(255,255,255,.08); flex-shrink: 0; }
     .sb-btn { 
@@ -3447,6 +3450,7 @@ CREATE POLICY "acceso total" ON flujo_caja_versions FOR ALL USING (true) WITH CH
                     <th class="text-end" id="gest-th-siv">Sin IVA</th>
                     <th class="text-end pe-3">Comisión</th>
                     <th class="text-end pe-2" title="% Comisión sobre facturación sin IVA">% Com</th>
+                    <th class="text-end pe-2" title="Variación vs mes anterior">Tend.</th>
                   </tr>
                 </thead>
                 <tbody id="gest-tbody-mensual"></tbody>
@@ -4053,15 +4057,15 @@ CREATE POLICY "acceso total" ON flujo_caja_versions FOR ALL USING (true) WITH CH
   <div id="page-calculadora" class="page">
 
     <!-- Header -->
-    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:16px">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px">
       <div>
         <h4 style="font-weight:800;margin:0;font-size:1.05rem;color:#0f172a">
           <i class="bi bi-calculator-fill me-2" style="color:#4f46e5"></i>Calculadora de Costo y Precio
         </h4>
         <div style="font-size:.7rem;color:#94a3b8;margin-top:2px">Producto físico · Reventa · Argentina</div>
       </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <button class="btn btn-sm" onclick="calcReset()" style="background:#f1f5f9;color:#64748b;border:none;border-radius:7px;font-size:.72rem;padding:5px 12px">
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+        <button class="btn btn-sm" onclick="calcReset()" style="background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0;border-radius:7px;font-size:.72rem;padding:5px 12px">
           <i class="bi bi-arrow-counterclockwise me-1"></i>Limpiar
         </button>
         <button class="btn btn-sm" onclick="calcGuardar()" style="background:#16a34a;color:#fff;border:none;border-radius:7px;font-size:.72rem;padding:5px 12px">
@@ -4070,6 +4074,32 @@ CREATE POLICY "acceso total" ON flujo_caja_versions FOR ALL USING (true) WITH CH
         <button class="btn btn-sm" onclick="calcCopy()" style="background:#4f46e5;color:#fff;border:none;border-radius:7px;font-size:.72rem;padding:5px 12px">
           <i class="bi bi-clipboard me-1"></i>Copiar
         </button>
+      </div>
+    </div>
+
+    <!-- Presets de configuración rápida -->
+    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:8px 12px;margin-bottom:12px">
+      <div style="font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#64748b;margin-bottom:6px"><i class="bi bi-lightning-charge-fill me-1" style="color:#f59e0b"></i>Configuración rápida</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button onclick="calcPreset('alimentos')" style="background:#fff;border:1px solid #e2e8f0;border-radius:6px;padding:3px 10px;font-size:.68rem;cursor:pointer;color:#334155;transition:all .15s" onmouseover="this.style.borderColor='#4f46e5';this.style.color='#4f46e5'" onmouseout="this.style.borderColor='#e2e8f0';this.style.color='#334155'">
+          <i class="bi bi-basket2 me-1"></i>Alimentos
+        </button>
+        <button onclick="calcPreset('industrial')" style="background:#fff;border:1px solid #e2e8f0;border-radius:6px;padding:3px 10px;font-size:.68rem;cursor:pointer;color:#334155;transition:all .15s" onmouseover="this.style.borderColor='#4f46e5';this.style.color='#4f46e5'" onmouseout="this.style.borderColor='#e2e8f0';this.style.color='#334155'">
+          <i class="bi bi-gear me-1"></i>Industrial
+        </button>
+        <button onclick="calcPreset('limpieza')" style="background:#fff;border:1px solid #e2e8f0;border-radius:6px;padding:3px 10px;font-size:.68rem;cursor:pointer;color:#334155;transition:all .15s" onmouseover="this.style.borderColor='#4f46e5';this.style.color='#4f46e5'" onmouseout="this.style.borderColor='#e2e8f0';this.style.color='#334155'">
+          <i class="bi bi-droplet me-1"></i>Limpieza
+        </button>
+        <button onclick="calcPreset('cheque30')" style="background:#fff;border:1px solid #e2e8f0;border-radius:6px;padding:3px 10px;font-size:.68rem;cursor:pointer;color:#334155;transition:all .15s" onmouseover="this.style.borderColor='#4f46e5';this.style.color='#4f46e5'" onmouseout="this.style.borderColor='#e2e8f0';this.style.color='#334155'">
+          <i class="bi bi-calendar-check me-1"></i>Cheque 30d
+        </button>
+        <button onclick="calcPreset('cheque60')" style="background:#fff;border:1px solid #e2e8f0;border-radius:6px;padding:3px 10px;font-size:.68rem;cursor:pointer;color:#334155;transition:all .15s" onmouseover="this.style.borderColor='#4f46e5';this.style.color='#4f46e5'" onmouseout="this.style.borderColor='#e2e8f0';this.style.color='#334155'">
+          <i class="bi bi-calendar2-check me-1"></i>Cheque 60d
+        </button>
+        <div style="display:flex;align-items:center;gap:6px;margin-left:6px;padding-left:8px;border-left:1px solid #e2e8f0">
+          <span style="font-size:.62rem;color:#94a3b8">Total cargas:</span>
+          <span id="calc-total-cargas-strip" style="font-size:.72rem;font-weight:800;color:#dc2626">–</span>
+        </div>
       </div>
     </div>
 
@@ -4106,12 +4136,12 @@ CREATE POLICY "acceso total" ON flujo_caja_versions FOR ALL USING (true) WITH CH
               <label class="form-label small fw-bold mb-1" style="font-size:.7rem">Precio de compra (neto proveedor) <span class="text-danger">*</span></label>
               <div class="input-group input-group-sm">
                 <span class="input-group-text" style="font-size:.75rem">$</span>
-                <input type="number" class="form-control" id="calc-costo" placeholder="0.00" min="0" step="0.01" oninput="calcCalc()" style="font-size:.82rem">
+                <input type="number" class="form-control" id="calc-costo" placeholder="0.00" min="0" step="0.01" oninput="dCalcCalc()" style="font-size:.82rem">
               </div>
             </div>
             <div class="col-sm-3">
               <label class="form-label small fw-bold mb-1" style="font-size:.7rem">IVA compra</label>
-              <select class="form-select form-select-sm" id="calc-iva-compra" onchange="calcCalc()" style="font-size:.78rem">
+              <select class="form-select form-select-sm" id="calc-iva-compra" onchange="dCalcCalc()" style="font-size:.78rem">
                 <option value="0">Sin IVA</option>
                 <option value="10.5">10,5%</option>
                 <option value="21" selected>21%</option>
@@ -4119,7 +4149,7 @@ CREATE POLICY "acceso total" ON flujo_caja_versions FOR ALL USING (true) WITH CH
             </div>
             <div class="col-sm-3">
               <label class="form-label small fw-bold mb-1" style="font-size:.7rem">Cantidad (unidades)</label>
-              <input type="number" class="form-control form-control-sm" id="calc-qty" placeholder="1" min="1" step="1" oninput="calcCalc()" style="font-size:.78rem">
+              <input type="number" class="form-control form-control-sm" id="calc-qty" placeholder="1" min="1" step="1" oninput="dCalcCalc()" style="font-size:.78rem">
             </div>
           </div>
         </div>
@@ -4136,13 +4166,13 @@ CREATE POLICY "acceso total" ON flujo_caja_versions FOR ALL USING (true) WITH CH
                 <label class="form-label small fw-bold mb-1" style="font-size:.7rem">Flete / Envío ($)</label>
                 <div class="input-group input-group-sm">
                   <span class="input-group-text" style="font-size:.75rem">$</span>
-                  <input type="number" class="form-control" id="calc-flete" placeholder="0" min="0" step="0.01" oninput="calcCalc()" style="font-size:.78rem">
+                  <input type="number" class="form-control" id="calc-flete" placeholder="0" min="0" step="0.01" oninput="dCalcCalc()" style="font-size:.78rem">
                 </div>
               </div>
               <div class="col-sm-4">
                 <label class="form-label small fw-bold mb-1" style="font-size:.7rem">Seguro (% sobre costo)</label>
                 <div class="input-group input-group-sm">
-                  <input type="number" class="form-control" id="calc-seguro" placeholder="0" min="0" step="0.01" max="100" oninput="calcCalc()" style="font-size:.78rem">
+                  <input type="number" class="form-control" id="calc-seguro" placeholder="0" min="0" step="0.01" max="100" oninput="dCalcCalc()" style="font-size:.78rem">
                   <span class="input-group-text" style="font-size:.75rem">%</span>
                 </div>
               </div>
@@ -4150,7 +4180,7 @@ CREATE POLICY "acceso total" ON flujo_caja_versions FOR ALL USING (true) WITH CH
                 <label class="form-label small fw-bold mb-1" style="font-size:.7rem">Depósito / Manipulación ($)</label>
                 <div class="input-group input-group-sm">
                   <span class="input-group-text" style="font-size:.75rem">$</span>
-                  <input type="number" class="form-control" id="calc-deposito" placeholder="0" min="0" step="0.01" oninput="calcCalc()" style="font-size:.78rem">
+                  <input type="number" class="form-control" id="calc-deposito" placeholder="0" min="0" step="0.01" oninput="dCalcCalc()" style="font-size:.78rem">
                 </div>
               </div>
             </div>
@@ -4165,7 +4195,7 @@ CREATE POLICY "acceso total" ON flujo_caja_versions FOR ALL USING (true) WITH CH
           <div class="row g-2">
             <div class="col-sm-4">
               <label class="form-label small fw-bold mb-1" style="font-size:.7rem">IVA venta</label>
-              <select class="form-select form-select-sm" id="calc-iva-venta" onchange="calcCalc()" style="font-size:.78rem">
+              <select class="form-select form-select-sm" id="calc-iva-venta" onchange="dCalcCalc()" style="font-size:.78rem">
                 <option value="0">Sin IVA (exento)</option>
                 <option value="10.5">10,5%</option>
                 <option value="21" selected>21%</option>
@@ -4174,13 +4204,13 @@ CREATE POLICY "acceso total" ON flujo_caja_versions FOR ALL USING (true) WITH CH
             <div class="col-sm-4">
               <label class="form-label small fw-bold mb-1" style="font-size:.7rem">IIBB / Ing. Brutos</label>
               <div class="input-group input-group-sm">
-                <input type="number" class="form-control" id="calc-iibb" placeholder="3" min="0" step="0.1" max="10" oninput="calcCalc()" style="font-size:.78rem" value="3">
+                <input type="number" class="form-control" id="calc-iibb" placeholder="3" min="0" step="0.1" max="10" oninput="dCalcCalc()" style="font-size:.78rem" value="3">
                 <span class="input-group-text" style="font-size:.75rem">%</span>
               </div>
             </div>
             <div class="col-sm-4">
               <label class="form-label small fw-bold mb-1" style="font-size:.7rem">Impuesto al cheque</label>
-              <select class="form-select form-select-sm" id="calc-imp-cheque" onchange="calcCalc()" style="font-size:.78rem">
+              <select class="form-select form-select-sm" id="calc-imp-cheque" onchange="dCalcCalc()" style="font-size:.78rem">
                 <option value="0">No aplica</option>
                 <option value="0.6">0,6% (débito)</option>
                 <option value="1.2" selected>1,2% (crédito)</option>
@@ -4190,21 +4220,21 @@ CREATE POLICY "acceso total" ON flujo_caja_versions FOR ALL USING (true) WITH CH
             <div class="col-sm-4">
               <label class="form-label small fw-bold mb-1" style="font-size:.7rem">Percepción IIBB</label>
               <div class="input-group input-group-sm">
-                <input type="number" class="form-control" id="calc-percepcion" placeholder="0" min="0" step="0.1" max="10" oninput="calcCalc()" style="font-size:.78rem">
+                <input type="number" class="form-control" id="calc-percepcion" placeholder="0" min="0" step="0.1" max="10" oninput="dCalcCalc()" style="font-size:.78rem">
                 <span class="input-group-text" style="font-size:.75rem">%</span>
               </div>
             </div>
             <div class="col-sm-4">
               <label class="form-label small fw-bold mb-1" style="font-size:.7rem">Retención estimada</label>
               <div class="input-group input-group-sm">
-                <input type="number" class="form-control" id="calc-retencion" placeholder="0" min="0" step="0.1" max="20" oninput="calcCalc()" style="font-size:.78rem">
+                <input type="number" class="form-control" id="calc-retencion" placeholder="0" min="0" step="0.1" max="20" oninput="dCalcCalc()" style="font-size:.78rem">
                 <span class="input-group-text" style="font-size:.75rem">%</span>
               </div>
             </div>
             <div class="col-sm-4">
               <label class="form-label small fw-bold mb-1" style="font-size:.7rem">Sellos / otros imp.</label>
               <div class="input-group input-group-sm">
-                <input type="number" class="form-control" id="calc-sellos" placeholder="0" min="0" step="0.01" oninput="calcCalc()" style="font-size:.78rem">
+                <input type="number" class="form-control" id="calc-sellos" placeholder="0" min="0" step="0.01" oninput="dCalcCalc()" style="font-size:.78rem">
                 <span class="input-group-text" style="font-size:.75rem">%</span>
               </div>
             </div>
@@ -4220,7 +4250,7 @@ CREATE POLICY "acceso total" ON flujo_caja_versions FOR ALL USING (true) WITH CH
             <div class="col-sm-4">
               <label class="form-label small fw-bold mb-1" style="font-size:.7rem">Comisión de venta</label>
               <div class="input-group input-group-sm">
-                <input type="number" class="form-control" id="calc-comision" placeholder="0" min="0" step="0.1" max="50" oninput="calcCalc()" style="font-size:.78rem">
+                <input type="number" class="form-control" id="calc-comision" placeholder="0" min="0" step="0.1" max="50" oninput="dCalcCalc()" style="font-size:.78rem">
                 <span class="input-group-text" style="font-size:.75rem">%</span>
               </div>
               <div style="font-size:.62rem;color:#94a3b8;margin-top:2px">Sobre precio de venta s/IVA</div>
@@ -4228,7 +4258,7 @@ CREATE POLICY "acceso total" ON flujo_caja_versions FOR ALL USING (true) WITH CH
             <div class="col-sm-4">
               <label class="form-label small fw-bold mb-1" style="font-size:.7rem">Bonificación al cliente</label>
               <div class="input-group input-group-sm">
-                <input type="number" class="form-control" id="calc-bonif" placeholder="0" min="0" step="0.1" max="50" oninput="calcCalc()" style="font-size:.78rem">
+                <input type="number" class="form-control" id="calc-bonif" placeholder="0" min="0" step="0.1" max="50" oninput="dCalcCalc()" style="font-size:.78rem">
                 <span class="input-group-text" style="font-size:.75rem">%</span>
               </div>
               <div style="font-size:.62rem;color:#94a3b8;margin-top:2px">Descuento sobre precio lista</div>
@@ -4236,7 +4266,7 @@ CREATE POLICY "acceso total" ON flujo_caja_versions FOR ALL USING (true) WITH CH
             <div class="col-sm-4">
               <label class="form-label small fw-bold mb-1" style="font-size:.7rem">Gastos gral. / overhead</label>
               <div class="input-group input-group-sm">
-                <input type="number" class="form-control" id="calc-overhead" placeholder="0" min="0" step="0.1" max="30" oninput="calcCalc()" style="font-size:.78rem">
+                <input type="number" class="form-control" id="calc-overhead" placeholder="0" min="0" step="0.1" max="30" oninput="dCalcCalc()" style="font-size:.78rem">
                 <span class="input-group-text" style="font-size:.75rem">%</span>
               </div>
               <div style="font-size:.62rem;color:#94a3b8;margin-top:2px">% sobre precio de venta</div>
@@ -4254,12 +4284,12 @@ CREATE POLICY "acceso total" ON flujo_caja_versions FOR ALL USING (true) WITH CH
             <div class="row g-2">
               <div class="col-sm-4">
                 <label class="form-label small fw-bold mb-1" style="font-size:.7rem">Plazo de cobro (días)</label>
-                <input type="number" class="form-control form-control-sm" id="calc-plazo" placeholder="0" min="0" step="1" max="365" oninput="calcCalc()" style="font-size:.78rem">
+                <input type="number" class="form-control form-control-sm" id="calc-plazo" placeholder="0" min="0" step="1" max="365" oninput="dCalcCalc()" style="font-size:.78rem">
               </div>
               <div class="col-sm-4">
                 <label class="form-label small fw-bold mb-1" style="font-size:.7rem">Tasa mensual</label>
                 <div class="input-group input-group-sm">
-                  <input type="number" class="form-control" id="calc-tasa" placeholder="0" min="0" step="0.1" max="50" oninput="calcCalc()" style="font-size:.78rem">
+                  <input type="number" class="form-control" id="calc-tasa" placeholder="0" min="0" step="0.1" max="50" oninput="dCalcCalc()" style="font-size:.78rem">
                   <span class="input-group-text" style="font-size:.75rem">%</span>
                 </div>
               </div>
@@ -4280,7 +4310,7 @@ CREATE POLICY "acceso total" ON flujo_caja_versions FOR ALL USING (true) WITH CH
             <div class="col-sm-6">
               <label class="form-label small fw-bold mb-1" style="font-size:.7rem">Margen objetivo (% sobre precio venta s/IVA)</label>
               <div class="input-group input-group-sm">
-                <input type="number" class="form-control" id="calc-margen" placeholder="30" min="0" step="0.5" max="100" oninput="calcCalc()" style="font-size:.82rem;font-weight:600" value="30">
+                <input type="number" class="form-control" id="calc-margen" placeholder="30" min="0" step="0.5" max="100" oninput="dCalcCalc()" style="font-size:.82rem;font-weight:600" value="30">
                 <span class="input-group-text" style="font-size:.75rem">%</span>
               </div>
             </div>
@@ -4288,7 +4318,7 @@ CREATE POLICY "acceso total" ON flujo_caja_versions FOR ALL USING (true) WITH CH
               <label class="form-label small fw-bold mb-1" style="font-size:.7rem">Precio de venta manual (para análisis)</label>
               <div class="input-group input-group-sm">
                 <span class="input-group-text" style="font-size:.75rem">$</span>
-                <input type="number" class="form-control" id="calc-precio-manual" placeholder="Ingresá un precio..." min="0" step="0.01" oninput="calcCalc()" style="font-size:.78rem">
+                <input type="number" class="form-control" id="calc-precio-manual" placeholder="Ingresá un precio..." min="0" step="0.01" oninput="dCalcCalc()" style="font-size:.78rem">
               </div>
               <div style="font-size:.62rem;color:#94a3b8;margin-top:2px">Precio s/IVA al cliente — calcula margen real</div>
             </div>
@@ -4399,9 +4429,14 @@ CREATE POLICY "acceso total" ON flujo_caja_versions FOR ALL USING (true) WITH CH
         <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#64748b">
           <i class="bi bi-clock-history me-1"></i>Historial de cálculos guardados
         </div>
-        <button onclick="calcLimpiarHistorial()" style="background:none;border:none;color:#94a3b8;font-size:.68rem;cursor:pointer;padding:0" title="Limpiar historial">
-          <i class="bi bi-trash me-1"></i>Limpiar todo
-        </button>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button onclick="calcExportCSV()" style="background:none;border:none;color:#4f46e5;font-size:.68rem;cursor:pointer;padding:0" title="Exportar historial como CSV">
+            <i class="bi bi-download me-1"></i>Exportar CSV
+          </button>
+          <button onclick="calcLimpiarHistorial()" style="background:none;border:none;color:#94a3b8;font-size:.68rem;cursor:pointer;padding:0" title="Limpiar historial">
+            <i class="bi bi-trash me-1"></i>Limpiar todo
+          </button>
+        </div>
       </div>
       <div id="calc-hist-body">
         <div class="text-center text-muted py-3" style="font-size:.78rem">
@@ -5303,7 +5338,7 @@ const fmtUSD = n => 'USD ' + new Intl.NumberFormat('en-US',{minimumFractionDigit
 
 function fmt(n) {
   const val = +(n||0);
-  if (TC_USD.moneda === 'USD' && TC_USD.venta) {
+  if (TC_USD.moneda === 'USD' && TC_USD.venta > 0) {
     return fmtUSD(val / TC_USD.venta);
   }
   return fmtARS(val);
@@ -5666,8 +5701,9 @@ function load() {
   if (!ST.config) ST.config = {};
 
   // Limpiar datos live de Google Sheets — se cargarán frescos al navegar
-  delete ST.comisionesResumen;
-  delete ST.comisionesTotal;
+  // Inicializar como arrays vacíos para evitar errores de null reference en dashboard
+  ST.comisionesResumen = [];
+  ST.comisionesTotal = 0;
   delete ST.comisionesTimestamp;
 
   // Siempre asegurar que los conceptos y socios default estén presentes
@@ -6648,26 +6684,24 @@ function initApp() {
   document.getElementById('fecha-hoy').textContent =
     new Date().toLocaleDateString('es-AR',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
   iniciarAutoSync();
-  // ── Auto-sync Gestión al iniciar ──
+  // ── Auto-sync Gestión + Comisiones al iniciar ──
   // 1) Cargar caché inmediato para render rápido
   _loadGestionData();
-  // 2) Sincronizar en background desde Google Sheets (no bloquea)
+  // 2) Sincronizar en background en paralelo (no bloquea la UI)
   setTimeout(() => {
-    _gestionAutoSync();
-  }, 2000);
-  // 3) Cargar comisiones en background (para Liquidez Neta en Dashboard)
-  setTimeout(() => {
-    cargarComisionesSheet().catch(() => {});
-  }, 4000);
+    Promise.allSettled([
+      _gestionAutoSync(),
+      cargarComisionesSheet()
+    ]).then(() => {
+      // Re-render dashboard con todos los datos disponibles
+      try { renderDashboard(); } catch(e) {}
+    });
+  }, 1800);
   initAutoRefresh(); // Auto-detectar cambios en las bases
   document.querySelectorAll('#sidebar-nav .nav-link[data-page]').forEach(a => {
     a.addEventListener('click', e => {
       e.preventDefault();
-      irA(a.dataset.page);
-      closeSidebarMobile();
-      document.querySelectorAll('#sidebar-nav .nav-link').forEach(l=>l.classList.remove('active'));
-      a.classList.add('active');
-      expandSBGroupForPage(a.dataset.page);
+      irA(a.dataset.page); // irA() ya gestiona active class y expandSBGroupForPage
     });
   });
   initSBGroups();
@@ -6726,12 +6760,17 @@ function initSBGroups() {
 }
 
 function expandSBGroupForPage(page) {
+  // Quitar sl-active de todos los headers
+  document.querySelectorAll('.sl').forEach(h => h.classList.remove('sl-active'));
   Object.entries(_SB_GROUPS).forEach(([group, pages]) => {
     if (pages.includes(page)) {
       const items = document.getElementById('sg-' + group);
       const hdr   = document.querySelector(`.sl[data-group="${group}"]`);
       if (items) items.classList.remove('collapsed');
-      if (hdr)   hdr.classList.remove('collapsed');
+      if (hdr) {
+        hdr.classList.remove('collapsed');
+        hdr.classList.add('sl-active'); // Resaltar grupo activo
+      }
       // Update persisted state
       try {
         const s = JSON.parse(localStorage.getItem('muuk_sb_groups') || '{}');
@@ -6740,6 +6779,10 @@ function expandSBGroupForPage(page) {
       } catch(e) {}
     }
   });
+  // Para Dashboard (sin grupo) limpiar activos
+  if (page === 'dashboard') {
+    document.querySelectorAll('.sl').forEach(h => h.classList.remove('sl-active'));
+  }
 }
 
 /* ═══════════════════════════════════════════
@@ -6988,6 +7031,12 @@ function irA(p) {
   if (p==='contabilidad')      renderContabilidad();
   if (p==='calendarioARCA')    renderCalendarioARCA();
   if (p==='kilometraje')       kmRender();
+  if (p==='calculadora')       try { calcRenderHistorial(); calcRestoreConfig(); } catch(e) {}
+  // Actualizar nav-links activos
+  document.querySelectorAll('#sidebar-nav .nav-link').forEach(l => {
+    l.classList.toggle('active', l.dataset.page === p);
+  });
+  expandSBGroupForPage(p);
 }
 
 function renderTodo() {
@@ -10317,19 +10366,10 @@ function _initDocumentosPage() {
 function _docPDFHeader(tipo, nro, fecha, color) {
   return `
     <div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid ${color};padding-bottom:14px;margin-bottom:18px">
-      <div style="display:flex;align-items:center;gap:14px">
-        <!-- Logo MÜÜK -->
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:3px;width:36px;height:36px;flex-shrink:0">
-          <div style="background:#E31E24;border-radius:3px"></div>
-          <div style="background:#F5C400;border-radius:3px"></div>
-          <div style="background:#F5C400;border-radius:3px"></div>
-          <div style="background:#E31E24;border-radius:3px"></div>
-        </div>
-        <div>
-          <div style="font-size:22px;font-weight:900;color:#E31E24;font-family:Arial Black,Impact,sans-serif;line-height:1">MÜÜK SRL</div>
-          <div style="font-size:9px;color:#64748b;margin-top:1px">CUIT: ${(ST.config && ST.config.cuitEmpresa) || '30-XXXXXXXXX-X'}</div>
-          ${(ST.config && ST.config.dirEmpresa) ? `<div style="font-size:9px;color:#64748b">${ST.config.dirEmpresa}</div>` : ''}
-        </div>
+      <div>
+        <div style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:2px">${(ST.config && ST.config.razonSocial) || 'MÜÜK SRL'}</div>
+        <div style="font-size:9px;color:#64748b">CUIT: ${(ST.config && ST.config.cuitEmpresa) || '30-XXXXXXXXX-X'}</div>
+        ${(ST.config && ST.config.dirEmpresa) ? `<div style="font-size:9px;color:#64748b">${ST.config.dirEmpresa}</div>` : ''}
       </div>
       <div style="text-align:right">
         <div style="font-size:18px;font-weight:800;color:${color};text-transform:uppercase;letter-spacing:.04em">${tipo}</div>
@@ -13600,6 +13640,16 @@ function renderGestion() {
       const rowStyle = esMesActual ? 'background:linear-gradient(90deg,rgba(16,185,129,.12),rgba(16,185,129,.04));border-left:3px solid #10b981;' : '';
       const mesLabel = mes.replace(' 2026','').replace(' 2025','');
       const mesDisplay = esMesActual ? `<b style="color:#059669">${mesLabel}</b> <span style="font-size:.6rem;background:#d1fae5;color:#065f46;border-radius:4px;padding:1px 5px;font-weight:700">HOY</span>` : mesLabel;
+      // Tendencia vs mes anterior
+      let trendCell = '<td class="text-end pe-2"><small style="color:#94a3b8">–</small></td>';
+      if (i > 0) {
+        const prevSiv = d.byMes[i-1][3];
+        if (prevSiv > 0) {
+          const delta = ((siv - prevSiv) / prevSiv * 100).toFixed(1);
+          const up = siv >= prevSiv;
+          trendCell = `<td class="text-end pe-2"><small style="color:${up?'#16a34a':'#dc2626'};font-weight:700">${up?'▲':'▼'} ${Math.abs(delta)}%</small></td>`;
+        }
+      }
       return `<tr style="${rowStyle}">
         <td class="ps-3"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${bg};margin-right:6px"></span>${mesDisplay}</td>
         <td class="text-end">${cnt}</td>
@@ -13607,6 +13657,7 @@ function renderGestion() {
         <td class="text-end" style="opacity:${GESTION_SHOW_SIN_IVA?'.5':'1'}">${fmt(GESTION_SHOW_SIN_IVA?fac:siv)}</td>
         <td class="text-end pe-3 text-success fw-bold">${fmt(com)}</td>
         <td class="text-end pe-2"><small style="color:#d97706;font-weight:600">${pctCom}</small></td>
+        ${trendCell}
       </tr>`;
     }).join('') + `<tr class="table-dark fw-bold">
       <td class="ps-3">TOTAL</td>
@@ -13615,6 +13666,7 @@ function renderGestion() {
       <td class="text-end" style="opacity:${GESTION_SHOW_SIN_IVA?'.5':'1'}">${fmt(GESTION_SHOW_SIN_IVA?totFac2:totSiv2)}</td>
       <td class="text-end pe-3 text-success">${fmt(totCom2)}</td>
       <td class="text-end pe-2"><small style="color:#d97706;font-weight:700">${totSiv2>0?(totCom2/totSiv2*100).toFixed(1)+'%':'–'}</small></td>
+      <td class="text-end pe-2"></td>
     </tr>`;
   }
 
@@ -16893,7 +16945,7 @@ function _renderMetaCobranza() {
   if(!el)return;
   const meta=ST.metaCobranza||0;
   if(!meta){
-    el.innerHTML=`<div class="card p-3 mb-3" style="border-radius:10px;border:1px dashed #cbd5e1;cursor:pointer" onclick="const v=prompt('Establecer Meta de Cobranza Mensual ($):');if(v&&!isNaN(v)&&+v>0){ST.metaCobranza=+v;save();_renderMetaCobranza();}">
+    el.innerHTML=`<div class="card p-3 mb-3" style="border-radius:10px;border:1px dashed #cbd5e1;cursor:pointer" onclick="_metaCobranzaEdit()">
       <div class="text-center" style="font-size:.82rem;color:#94a3b8"><i class="bi bi-target me-1"></i>Click para establecer Meta de Cobranza Mensual</div>
     </div>`;
     return;
@@ -16907,7 +16959,7 @@ function _renderMetaCobranza() {
   let cobradoMes=0;
   if(window.GESTION_DATA&&GESTION_DATA.byMes&&GESTION_DATA.byMes.length){
     const _mData=GESTION_DATA.byMes.find(m=>m[0]===_mesNombreActual);
-    if(_mData) cobradoMes=_mData[3]; // sin IVA (columna 3)
+    if(_mData && _mData.length > 3) cobradoMes=+_mData[3]||0; // sin IVA (columna 3)
   }
   // Fallback: sumar ingresos de caja del mes si no hay dato de Gestión
   if(!cobradoMes){
@@ -16933,13 +16985,13 @@ function _renderMetaCobranza() {
         ${badge}
       </div>
       <div style="font-size:.72rem;color:#64748b;display:flex;align-items:center;gap:4px">
-        ${fmt(meta)} <i class="bi bi-pencil-square" style="cursor:pointer;opacity:.6" onclick="const v=prompt('Nueva Meta de Cobranza Mensual ($):',ST.metaCobranza);if(v&&!isNaN(v)&&+v>0){ST.metaCobranza=+v;save();_renderMetaCobranza();}else if(v==='0'){ST.metaCobranza=0;save();_renderMetaCobranza();}"></i>
+        ${fmt(meta)} <i class="bi bi-pencil-square" style="cursor:pointer;opacity:.6" onclick="_metaCobranzaEdit()"></i>
       </div>
     </div>
     <div style="display:flex;align-items:center;gap:12px">
       <div style="flex:1;background:rgba(0,0,0,.06);border-radius:8px;height:20px;overflow:hidden;position:relative">
         <div style="background:${color};height:100%;width:${pct}%;border-radius:8px;transition:width .7s ease"></div>
-        <div style="position:absolute;inset:0;display:flex;align-items:center;padding:0 10px;font-size:.7rem;font-weight:700;color:${pct>20?'#0f172a':'#0f172a'}">${fmt(cobradoMes)}</div>
+        <div style="position:absolute;inset:0;display:flex;align-items:center;padding:0 10px;font-size:.7rem;font-weight:700;color:${pct>40?'#fff':'#0f172a'}">${fmt(cobradoMes)}</div>
       </div>
       <div style="font-size:1.5rem;font-weight:900;color:${color};min-width:52px;text-align:right;line-height:1">${pct}%</div>
     </div>
@@ -16947,14 +16999,30 @@ function _renderMetaCobranza() {
   </div>`;
 }
 
+function _metaCobranzaEdit() {
+  // Auto-sugerencia: promedio de los últimos 3 meses completos de Gestión
+  let sugerido = '';
+  if (window.GESTION_DATA && GESTION_DATA.byMes && GESTION_DATA.byMes.length > 1) {
+    const recent = GESTION_DATA.byMes.slice(-4, -1); // últimos 3 meses (excluir el actual)
+    const vals = recent.map(m => +m[3] || 0).filter(v => v > 0);
+    if (vals.length) sugerido = String(Math.round(vals.reduce((s,v)=>s+v,0)/vals.length));
+  }
+  const v = prompt('Establecer Meta de Cobranza Mensual ($):', sugerido);
+  if (v !== null && !isNaN(v) && +v > 0) { ST.metaCobranza = +v; save(); _renderMetaCobranza(); }
+  else if (v === '0') { ST.metaCobranza = 0; save(); _renderMetaCobranza(); }
+}
+
 /* ═══════════════════════════════════════════
    #10 SERVICE WORKER — MODO OFFLINE
 ═══════════════════════════════════════════ */
 function _registerServiceWorker() {
   if('serviceWorker' in navigator) {
-    // Register inline SW via blob
+    // Versión del SW derivada de la fecha de modificación del documento — se invalida automáticamente al actualizar
+    const _swVer = 'muuk-v' + (document.lastModified
+      ? document.lastModified.replace(/[\/\s:,]/g,'').slice(0,12)
+      : '20260420');
     const swCode=`
-const CACHE='muuk-v1';
+const CACHE='${_swVer}';
 const URLS=['./','https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css','https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js','https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js','https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css'];
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(URLS)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
@@ -17341,6 +17409,30 @@ function renderAlertas() {
     } else if (badge) { badge.remove(); }
   }
 
+  // Agrega badges en los encabezados de grupo del sidebar sumando los de sus hijos
+  function _updateGroupBadges() {
+    Object.entries(_SB_GROUPS).forEach(([group, pages]) => {
+      const header = document.querySelector(`.sl[data-group="${group}"]`);
+      if (!header) return;
+      let total = 0, hasDanger = false;
+      pages.forEach(page => {
+        const navEl = document.querySelector(`.nav-link[data-page="${page}"]`);
+        if (!navEl) return;
+        const b = navEl.querySelector('.alert-badge');
+        if (b) {
+          total += parseInt(b.textContent) || 0;
+          if (b.style.background && b.style.background.includes('#ef4444')) hasDanger = true;
+        }
+      });
+      let gb = header.querySelector('.sl-group-badge');
+      if (total > 0) {
+        if (!gb) { gb = document.createElement('span'); gb.className='sl-group-badge'; header.appendChild(gb); }
+        gb.textContent = total > 99 ? '99+' : total;
+        gb.style.cssText = `display:inline-flex;align-items:center;justify-content:center;min-width:16px;height:16px;border-radius:8px;font-size:.55rem;font-weight:800;padding:0 3px;background:${hasDanger?'#ef4444':'#f59e0b'};color:#fff;margin-left:4px;flex-shrink:0`;
+      } else if (gb) { gb.remove(); }
+    });
+  }
+
   // Dashboard: total de alertas
   _setSidebarBadge('dashboard', totalCount, dangerCount > 0);
 
@@ -17365,6 +17457,9 @@ function renderAlertas() {
   // Panel Vencimientos: suma de cheques próximos + facturas próximas (sin duplicar urgentes)
   const proxTot = chqProx.length + (arcaProx||[]).length;
   _setSidebarBadge('panelVencimientos', proxTot, false);
+
+  // Agregar badges de grupo (suma hijos)
+  _updateGroupBadges();
 
   if(!alerts.length){el.innerHTML='';return;}
   const btnStyle='flex-shrink:0;background:rgba(255,255,255,.6);border:1px solid currentColor;border-radius:6px;padding:2px 10px;font-size:.7rem;font-weight:700;cursor:pointer;white-space:nowrap;color:inherit';
@@ -18990,6 +19085,35 @@ function _calcToggle(sec) {
   if (chev) chev.className = 'bi ms-1 ' + (hidden ? 'bi-chevron-up' : 'bi-chevron-down');
 }
 
+// Presets de configuración rápida para la calculadora
+const _CALC_PRESETS = {
+  alimentos: { iibb: 3, cheque: 1.2, percepcion: 1, retencion: 0, sellos: 0.5, comision: 0, overhead: 2, margen: 25, ivaVenta: 21 },
+  industrial: { iibb: 3, cheque: 1.2, percepcion: 2, retencion: 1, sellos: 0.5, comision: 3, overhead: 3, margen: 30, ivaVenta: 21 },
+  limpieza: { iibb: 3, cheque: 1.2, percepcion: 1, retencion: 0.5, sellos: 0.5, comision: 2, overhead: 2, margen: 28, ivaVenta: 21 },
+  cheque30: { iibb: 3, cheque: 1.2, percepcion: 1, retencion: 0.5, sellos: 0.5, comision: 0, overhead: 2, margen: 30, plazo: 30, tasa: 8, ivaVenta: 21 },
+  cheque60: { iibb: 3, cheque: 1.2, percepcion: 1, retencion: 0.5, sellos: 0.5, comision: 0, overhead: 2, margen: 35, plazo: 60, tasa: 8, ivaVenta: 21 },
+};
+function calcPreset(nombre) {
+  const p = _CALC_PRESETS[nombre];
+  if (!p) return;
+  const _s = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
+  _s('calc-iibb', p.iibb || 3);
+  _s('calc-imp-cheque', p.cheque || 1.2);
+  _s('calc-percepcion', p.percepcion || 0);
+  _s('calc-retencion', p.retencion || 0);
+  _s('calc-sellos', p.sellos || 0);
+  _s('calc-comision', p.comision || 0);
+  _s('calc-overhead', p.overhead || 0);
+  _s('calc-margen', p.margen || 30);
+  _s('calc-plazo', p.plazo || 0);
+  _s('calc-tasa', p.tasa || 0);
+  // IVA venta: setear select
+  const ivaEl = document.getElementById('calc-iva-venta');
+  if (ivaEl) ivaEl.value = String(p.ivaVenta || 21);
+  calcCalc();
+  toast(`Preset "${nombre}" aplicado`, 'info');
+}
+
 function calcReset() {
   ['calc-costo','calc-flete','calc-seguro','calc-deposito','calc-percepcion','calc-retencion',
    'calc-sellos','calc-comision','calc-bonif','calc-overhead','calc-plazo','calc-tasa',
@@ -19044,6 +19168,23 @@ function calcLimpiarHistorial() {
   ST.calcHistorial = [];
   save();
   calcRenderHistorial();
+}
+
+function calcExportCSV() {
+  const hist = ST.calcHistorial || [];
+  if (!hist.length) { toast('El historial está vacío', 'warning'); return; }
+  const headers = ['Fecha','Item','Marca','Cliente','Costo base','Precio s/IVA','Precio c/IVA','Margen %','Ganancia'];
+  const rows = hist.map(e => [
+    e.fecha, e.item, e.marca, e.cliente || '',
+    e.costo, e.pvSiva, e.pvCiva, e.margen, e.ganancia
+  ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(','));
+  const csv = [headers.join(','), ...rows].join('\r\n');
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `historial-calculadora-${hoy()}.csv`;
+  a.click(); URL.revokeObjectURL(url);
+  toast('CSV exportado ✓', 'success');
 }
 
 function calcEliminarEntrada(id) {
@@ -19131,6 +19272,21 @@ function calcCopy() {
   });
 }
 
+// Versión debounced de calcCalc para inputs de texto (evita recalcular en cada keystroke)
+let dCalcCalc;
+
+function calcRestoreConfig() {
+  try {
+    const cfg = JSON.parse(localStorage.getItem('muuk_calc_cfg') || 'null');
+    if (!cfg) return;
+    Object.entries(cfg).forEach(([id, val]) => {
+      const el = document.getElementById(id);
+      if (el) el.value = val;
+    });
+    calcCalc();
+  } catch(e) {}
+}
+
 function calcCalc() {
   const _n = id => parseFloat(document.getElementById(id)?.value) || 0;
   const _s = id => document.getElementById(id)?.value || '';
@@ -19193,9 +19349,22 @@ function calcCalc() {
   const denominador = 1 - totalCargasPorc - margenObj;
   let pvSiva;
   if (denominador <= 0.01) {
-    // Imposible con esos costos
-    pvSiva = costoDirectoUnit * 10;
+    // Cargas + margen >= 100%: combinación imposible
+    const warnEl = document.getElementById('calc-warn-imposible');
+    if (!warnEl) {
+      const w = document.createElement('div');
+      w.id = 'calc-warn-imposible';
+      w.style.cssText = 'background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:8px 12px;font-size:.75rem;color:#dc2626;font-weight:600;margin-bottom:10px';
+      w.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-1"></i>Las cargas impositivas + margen superan el 100% — combinación inviable. Reducí el margen o los porcentajes.';
+      const resPanel = document.getElementById('calc-result-body');
+      if (resPanel) resPanel.insertBefore(w, resPanel.firstChild);
+    } else {
+      warnEl.style.display = '';
+    }
+    pvSiva = costoDirectoUnit / Math.max(denominador, 0.001);
   } else {
+    const warnEl = document.getElementById('calc-warn-imposible');
+    if (warnEl) warnEl.style.display = 'none';
     pvSiva = costoDirectoUnit / denominador;
   }
 
@@ -19236,17 +19405,35 @@ function calcCalc() {
 
   // ── 10. Mostrar resultados
   document.getElementById('calc-empty').style.display = 'none';
-  document.getElementById('calc-result-body').style.display = '';
+  const resBody = document.getElementById('calc-result-body');
+  resBody.style.display = '';
+  // Animación sutil de pulso al recalcular
+  resBody.style.opacity = '0.7';
+  requestAnimationFrame(() => { resBody.style.transition = 'opacity .2s'; resBody.style.opacity = '1'; });
+
+  // Actualizar strip de cargas totales
+  const stripEl = document.getElementById('calc-total-cargas-strip');
+  if (stripEl) {
+    const totalPct = (totalCargasPorc * 100).toFixed(1);
+    const color = totalCargasPorc > 0.5 ? '#dc2626' : totalCargasPorc > 0.3 ? '#d97706' : '#16a34a';
+    stripEl.textContent = totalPct + '%';
+    stripEl.style.color = color;
+  }
 
   const _f = v => fmt(Math.round(v * 100) / 100);
 
-  document.getElementById('calc-res-precio-siva').textContent = _f(pvSiva);
+  // Color del precio según margen: verde bueno, naranja regular, rojo bajo
+  const margenPct = margenObj * 100;
+  const precioColor = margenPct >= 30 ? '#16a34a' : margenPct >= 20 ? '#d97706' : '#dc2626';
+  const pvSivaEl = document.getElementById('calc-res-precio-siva');
+  if (pvSivaEl) { pvSivaEl.textContent = _f(pvSiva); pvSivaEl.style.color = precioColor; }
   document.getElementById('calc-res-precio-civa').textContent = _f(pvCiva);
   document.getElementById('calc-res-precio-bonif').textContent = bonifPct > 0 ? _f(pvBonif) + ` (-${(bonifPct*100).toFixed(1)}%)` : '–';
   document.getElementById('calc-res-costo-total').textContent = _f(costoTotalUnit);
   document.getElementById('calc-res-break-even').textContent = _f(breakEven);
   document.getElementById('calc-res-ganancia').textContent = _f(ganancia);
-  document.getElementById('calc-res-margen').textContent = (margenObj * 100).toFixed(1) + '%';
+  const margenEl = document.getElementById('calc-res-margen');
+  if (margenEl) { margenEl.textContent = margenPct.toFixed(1) + '%'; margenEl.style.color = precioColor; }
 
   // Bloque análisis precio manual
   const manualBlock = document.getElementById('calc-res-manual-block');
@@ -19304,6 +19491,18 @@ function calcCalc() {
     }
   }
 
+  // ── Persistir configuración de cargas e impuestos en localStorage ──
+  try {
+    const _cfg = {};
+    ['calc-iibb','calc-imp-cheque','calc-percepcion','calc-retencion','calc-sellos',
+     'calc-comision','calc-overhead','calc-margen','calc-iva-venta','calc-iva-compra',
+     'calc-plazo','calc-tasa','calc-bonif'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) _cfg[id] = el.value;
+    });
+    localStorage.setItem('muuk_calc_cfg', JSON.stringify(_cfg));
+  } catch(e) {}
+
   // ── Simulador de márgenes (5%, 10%, 15%, 20%, 25%, 30%, 35%, 40%, 50%)
   const margins = [5, 10, 15, 20, 25, 30, 35, 40, 50];
   const tbody = document.getElementById('calc-sim-tbody');
@@ -19311,20 +19510,31 @@ function calcCalc() {
     tbody.innerHTML = margins.map(m => {
       const mPct = m / 100;
       const den2 = 1 - totalCargasPorc - mPct;
-      if (den2 <= 0.01) return `<tr><td>${m}%</td><td colspan="3" class="text-muted text-center">No viable</td></tr>`;
+      if (den2 <= 0.01) return `<tr><td colspan="4" class="text-center py-1" style="font-size:.68rem;color:#dc2626;opacity:.7">${m}% — no viable con estas cargas</td></tr>`;
       const pv2 = costoDirectoUnit / den2;
       const pc2 = pv2 * (1 + ivaVenta);
       const g2  = pv2 * mPct;
       const isObj = m === Math.round(margenObj * 100);
-      return `<tr style="${isObj ? 'background:#eef2ff;font-weight:700' : ''}">
-        <td>${m}%${isObj ? ' <span style="font-size:.6rem;background:#4f46e5;color:#fff;border-radius:3px;padding:1px 4px">objetivo</span>' : ''}</td>
-        <td class="text-end gest-num">${_f(pv2)}</td>
-        <td class="text-end gest-num">${_f(pc2)}</td>
-        <td class="text-end gest-num" style="color:#16a34a">${_f(g2)}</td>
+      const mColor = m >= 30 ? '#16a34a' : m >= 20 ? '#d97706' : '#dc2626';
+      const mBg    = m >= 30 ? '#f0fdf4' : m >= 20 ? '#fffbeb' : '#fef2f2';
+      return `<tr style="${isObj ? 'background:#eef2ff;font-weight:700;box-shadow:inset 3px 0 0 #4f46e5' : ''}">
+        <td><span style="background:${mBg};color:${mColor};border-radius:20px;padding:1px 7px;font-size:.68rem;font-weight:700">${m}%</span>${isObj ? ' <span style="font-size:.58rem;background:#4f46e5;color:#fff;border-radius:3px;padding:1px 4px">★ obj</span>' : ''}</td>
+        <td class="text-end gest-num" style="font-size:.78rem">${_f(pv2)}</td>
+        <td class="text-end gest-num" style="font-size:.78rem;color:#64748b">${_f(pc2)}</td>
+        <td class="text-end gest-num" style="font-size:.78rem;color:${mColor};font-weight:700">${_f(g2)}</td>
       </tr>`;
     }).join('');
   }
 }
+
+// Inicializar debounced version (requiere que debounced() ya esté definida)
+dCalcCalc = (function() {
+  let _t;
+  return function() {
+    clearTimeout(_t);
+    _t = setTimeout(calcCalc, 80);
+  };
+})();
 
 </script>
 <!-- ═══ DATALIST BANCOS BCRA ═══ -->
