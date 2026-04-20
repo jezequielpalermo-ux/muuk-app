@@ -7673,8 +7673,10 @@ async function cargarComisionesSheet() {
     ST.comisionesResumen = resumen;
     ST.comisionesTotal = total;
     ST.comisionesTimestamp = new Date().toLocaleString('es-AR');
-    
+
     renderComResumen();
+    // Refrescar dashboard para que Liquidez Neta tome las comisiones actualizadas
+    try { renderDashboard(); } catch(e) {}
 
     if (loading) loading.style.display = 'none';
     // Solo mostrar toast si la página de comisiones está visible
@@ -13380,6 +13382,8 @@ async function gestionSincronizar() {
   toast('✅ Gestión actualizada: ' + GESTION_DATA.rows.length + ' registros', 'success');
   if (btn) { btn.disabled = false; btn.innerHTML = '<i class="bi bi-arrow-clockwise me-1"></i>Actualizar desde Google Sheets'; }
   renderGestion();
+  // Refrescar Meta Cobranza en el dashboard con el dato nuevo de Gestión
+  try { _renderMetaCobranza(); } catch(e) {}
 }
 
 /* ─── Auto-sync silencioso de Gestión (al abrir app) ─── */
@@ -13424,6 +13428,8 @@ async function _gestionAutoSync() {
     // Si el usuario está viendo Gestión, re-renderizar
     const activePage = document.querySelector('.page.active');
     if (activePage && activePage.id === 'page-gestion') renderGestion();
+    // Actualizar Meta Cobranza en dashboard con el dato nuevo
+    try { _renderMetaCobranza(); } catch(e) {}
   } else {
     console.log('[GestionAutoSync] Sin cambios respecto al caché.');
   }
@@ -16855,8 +16861,21 @@ function _renderMetaCobranza() {
   }
 
   const mesActual=hoy().substring(0,7);
-  // Sum all collections this month (ingresos to caja)
-  const cobradoMes=[...ST.cajaBancos,...ST.cajaEfectivo].filter(m=>m.tipo==='ingreso'&&m.fecha&&m.fecha.substring(0,7)===mesActual).reduce((s,m)=>s+ +m.monto,0);
+  // Cobranza del mes: tomar dato de Gestión (facturado mes en curso) si está disponible
+  const _MESES_META=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const _now=new Date();
+  const _mesNombreActual=_MESES_META[_now.getMonth()]+' '+_now.getFullYear();
+  let cobradoMes=0;
+  if(window.GESTION_DATA&&GESTION_DATA.byMes&&GESTION_DATA.byMes.length){
+    const _mData=GESTION_DATA.byMes.find(m=>m[0]===_mesNombreActual);
+    if(_mData) cobradoMes=_mData[3]; // sin IVA (columna 3)
+  }
+  // Fallback: sumar ingresos de caja del mes si no hay dato de Gestión
+  if(!cobradoMes){
+    cobradoMes=[...ST.cajaBancos,...ST.cajaEfectivo]
+      .filter(m=>m.tipo==='ingreso'&&m.fecha&&m.fecha.substring(0,7)===mesActual)
+      .reduce((s,m)=>s+ +m.monto,0);
+  }
   const pct=meta>0?Math.min(100,Math.round((cobradoMes/meta)*100)):0;
   const color=pct>=100?'#16a34a':pct>=70?'#d97706':'#dc2626';
 
@@ -16885,7 +16904,7 @@ function _renderMetaCobranza() {
       </div>
       <div style="font-size:1.5rem;font-weight:900;color:${color};min-width:52px;text-align:right;line-height:1">${pct}%</div>
     </div>
-    <div style="font-size:.62rem;color:#64748b;margin-top:4px;text-align:right">Cobrado ${fmt(cobradoMes)} de ${fmt(meta)} — faltan ${fmt(Math.max(0,meta-cobradoMes))}</div>
+    <div style="font-size:.62rem;color:#64748b;margin-top:4px;text-align:right">Facturado s/IVA ${fmt(cobradoMes)} de ${fmt(meta)} — faltan ${fmt(Math.max(0,meta-cobradoMes))}</div>
   </div>`;
 }
 
@@ -19065,7 +19084,7 @@ function calcCalc() {
   document.getElementById('calc-empty').style.display = 'none';
   document.getElementById('calc-result-body').style.display = '';
 
-  const _f = v => '$' + fmt(Math.round(v * 100) / 100);
+  const _f = v => fmt(Math.round(v * 100) / 100);
 
   document.getElementById('calc-res-precio-siva').textContent = _f(pvSiva);
   document.getElementById('calc-res-precio-civa').textContent = _f(pvCiva);
