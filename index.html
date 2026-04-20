@@ -774,6 +774,7 @@
       <li><a class="nav-link" data-page="reportes"><i class="bi bi-bar-chart-line-fill"></i>Reportes</a></li>
       <li><a class="nav-link" data-page="historial"><i class="bi bi-clock-history"></i>Historial</a></li>
       <li><a class="nav-link" data-page="estrategicos"><i class="bi bi-lightbulb-fill"></i>Estratégicos</a></li>
+      <li><a class="nav-link" data-page="calculadora"><i class="bi bi-calculator-fill"></i>Calculadora</a></li>
     </div>
 
     <!-- ── Archivos ── -->
@@ -4048,6 +4049,333 @@ CREATE POLICY "acceso total" ON flujo_caja_versions FOR ALL USING (true) WITH CH
     </div>
   </div>
 
+  <!-- ══════════════════ CALCULADORA DE COSTO ══════════════════ -->
+  <div id="page-calculadora" class="page">
+
+    <!-- Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:16px">
+      <div>
+        <h4 style="font-weight:800;margin:0;font-size:1.05rem;color:#0f172a">
+          <i class="bi bi-calculator-fill me-2" style="color:#4f46e5"></i>Calculadora de Costo y Precio
+        </h4>
+        <div style="font-size:.7rem;color:#94a3b8;margin-top:2px">Producto físico · Reventa · Argentina</div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-sm" onclick="calcReset()" style="background:#f1f5f9;color:#64748b;border:none;border-radius:7px;font-size:.72rem;padding:5px 12px">
+          <i class="bi bi-arrow-counterclockwise me-1"></i>Limpiar
+        </button>
+        <button class="btn btn-sm" onclick="calcCopy()" style="background:#4f46e5;color:#fff;border:none;border-radius:7px;font-size:.72rem;padding:5px 12px">
+          <i class="bi bi-clipboard me-1"></i>Copiar resultado
+        </button>
+      </div>
+    </div>
+
+    <div class="row g-3">
+
+      <!-- ── COLUMNA IZQUIERDA: Inputs ── -->
+      <div class="col-lg-7">
+
+        <!-- BLOQUE 1: Costo base -->
+        <div class="card p-3 mb-3" style="border-left:4px solid #4f46e5">
+          <h6 style="font-size:.75rem;font-weight:700;color:#4f46e5;text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px">
+            <i class="bi bi-box-seam me-1"></i>Costo del Producto
+          </h6>
+          <div class="row g-2">
+            <div class="col-sm-6">
+              <label class="form-label small fw-bold mb-1" style="font-size:.7rem">Precio de compra (neto proveedor) <span class="text-danger">*</span></label>
+              <div class="input-group input-group-sm">
+                <span class="input-group-text" style="font-size:.75rem">$</span>
+                <input type="number" class="form-control" id="calc-costo" placeholder="0.00" min="0" step="0.01" oninput="calcCalc()" style="font-size:.82rem">
+              </div>
+            </div>
+            <div class="col-sm-3">
+              <label class="form-label small fw-bold mb-1" style="font-size:.7rem">IVA compra</label>
+              <select class="form-select form-select-sm" id="calc-iva-compra" onchange="calcCalc()" style="font-size:.78rem">
+                <option value="0">Sin IVA</option>
+                <option value="10.5">10,5%</option>
+                <option value="21" selected>21%</option>
+              </select>
+            </div>
+            <div class="col-sm-3">
+              <label class="form-label small fw-bold mb-1" style="font-size:.7rem">Cantidad (unidades)</label>
+              <input type="number" class="form-control form-control-sm" id="calc-qty" placeholder="1" min="1" step="1" oninput="calcCalc()" style="font-size:.78rem">
+            </div>
+          </div>
+        </div>
+
+        <!-- BLOQUE 2: Logística -->
+        <div class="card p-3 mb-3" style="border-left:4px solid #0891b2">
+          <h6 style="font-size:.75rem;font-weight:700;color:#0891b2;text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px;cursor:pointer" onclick="_calcToggle('log')" id="calc-h-log">
+            <i class="bi bi-truck me-1"></i>Logística y Distribución <small style="font-weight:400;opacity:.7">(opcional)</small>
+            <i class="bi bi-chevron-down ms-1" id="calc-chev-log"></i>
+          </h6>
+          <div id="calc-sec-log">
+            <div class="row g-2">
+              <div class="col-sm-4">
+                <label class="form-label small fw-bold mb-1" style="font-size:.7rem">Flete / Envío ($)</label>
+                <div class="input-group input-group-sm">
+                  <span class="input-group-text" style="font-size:.75rem">$</span>
+                  <input type="number" class="form-control" id="calc-flete" placeholder="0" min="0" step="0.01" oninput="calcCalc()" style="font-size:.78rem">
+                </div>
+              </div>
+              <div class="col-sm-4">
+                <label class="form-label small fw-bold mb-1" style="font-size:.7rem">Seguro (% sobre costo)</label>
+                <div class="input-group input-group-sm">
+                  <input type="number" class="form-control" id="calc-seguro" placeholder="0" min="0" step="0.01" max="100" oninput="calcCalc()" style="font-size:.78rem">
+                  <span class="input-group-text" style="font-size:.75rem">%</span>
+                </div>
+              </div>
+              <div class="col-sm-4">
+                <label class="form-label small fw-bold mb-1" style="font-size:.7rem">Depósito / Manipulación ($)</label>
+                <div class="input-group input-group-sm">
+                  <span class="input-group-text" style="font-size:.75rem">$</span>
+                  <input type="number" class="form-control" id="calc-deposito" placeholder="0" min="0" step="0.01" oninput="calcCalc()" style="font-size:.78rem">
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- BLOQUE 3: Cargas impositivas -->
+        <div class="card p-3 mb-3" style="border-left:4px solid #dc2626">
+          <h6 style="font-size:.75rem;font-weight:700;color:#dc2626;text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px">
+            <i class="bi bi-receipt-cutoff me-1"></i>Cargas Impositivas
+          </h6>
+          <div class="row g-2">
+            <div class="col-sm-4">
+              <label class="form-label small fw-bold mb-1" style="font-size:.7rem">IVA venta</label>
+              <select class="form-select form-select-sm" id="calc-iva-venta" onchange="calcCalc()" style="font-size:.78rem">
+                <option value="0">Sin IVA (exento)</option>
+                <option value="10.5">10,5%</option>
+                <option value="21" selected>21%</option>
+              </select>
+            </div>
+            <div class="col-sm-4">
+              <label class="form-label small fw-bold mb-1" style="font-size:.7rem">IIBB / Ing. Brutos</label>
+              <div class="input-group input-group-sm">
+                <input type="number" class="form-control" id="calc-iibb" placeholder="3" min="0" step="0.1" max="10" oninput="calcCalc()" style="font-size:.78rem" value="3">
+                <span class="input-group-text" style="font-size:.75rem">%</span>
+              </div>
+            </div>
+            <div class="col-sm-4">
+              <label class="form-label small fw-bold mb-1" style="font-size:.7rem">Impuesto al cheque</label>
+              <select class="form-select form-select-sm" id="calc-imp-cheque" onchange="calcCalc()" style="font-size:.78rem">
+                <option value="0">No aplica</option>
+                <option value="0.6">0,6% (débito)</option>
+                <option value="1.2" selected>1,2% (crédito)</option>
+                <option value="1.8">1,8% (ambos)</option>
+              </select>
+            </div>
+            <div class="col-sm-4">
+              <label class="form-label small fw-bold mb-1" style="font-size:.7rem">Percepción IIBB</label>
+              <div class="input-group input-group-sm">
+                <input type="number" class="form-control" id="calc-percepcion" placeholder="0" min="0" step="0.1" max="10" oninput="calcCalc()" style="font-size:.78rem">
+                <span class="input-group-text" style="font-size:.75rem">%</span>
+              </div>
+            </div>
+            <div class="col-sm-4">
+              <label class="form-label small fw-bold mb-1" style="font-size:.7rem">Retención estimada</label>
+              <div class="input-group input-group-sm">
+                <input type="number" class="form-control" id="calc-retencion" placeholder="0" min="0" step="0.1" max="20" oninput="calcCalc()" style="font-size:.78rem">
+                <span class="input-group-text" style="font-size:.75rem">%</span>
+              </div>
+            </div>
+            <div class="col-sm-4">
+              <label class="form-label small fw-bold mb-1" style="font-size:.7rem">Sellos / otros imp.</label>
+              <div class="input-group input-group-sm">
+                <input type="number" class="form-control" id="calc-sellos" placeholder="0" min="0" step="0.01" oninput="calcCalc()" style="font-size:.78rem">
+                <span class="input-group-text" style="font-size:.75rem">%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- BLOQUE 4: Costos comerciales -->
+        <div class="card p-3 mb-3" style="border-left:4px solid #d97706">
+          <h6 style="font-size:.75rem;font-weight:700;color:#d97706;text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px">
+            <i class="bi bi-briefcase me-1"></i>Costos Comerciales
+          </h6>
+          <div class="row g-2">
+            <div class="col-sm-4">
+              <label class="form-label small fw-bold mb-1" style="font-size:.7rem">Comisión de venta</label>
+              <div class="input-group input-group-sm">
+                <input type="number" class="form-control" id="calc-comision" placeholder="0" min="0" step="0.1" max="50" oninput="calcCalc()" style="font-size:.78rem">
+                <span class="input-group-text" style="font-size:.75rem">%</span>
+              </div>
+              <div style="font-size:.62rem;color:#94a3b8;margin-top:2px">Sobre precio de venta s/IVA</div>
+            </div>
+            <div class="col-sm-4">
+              <label class="form-label small fw-bold mb-1" style="font-size:.7rem">Bonificación al cliente</label>
+              <div class="input-group input-group-sm">
+                <input type="number" class="form-control" id="calc-bonif" placeholder="0" min="0" step="0.1" max="50" oninput="calcCalc()" style="font-size:.78rem">
+                <span class="input-group-text" style="font-size:.75rem">%</span>
+              </div>
+              <div style="font-size:.62rem;color:#94a3b8;margin-top:2px">Descuento sobre precio lista</div>
+            </div>
+            <div class="col-sm-4">
+              <label class="form-label small fw-bold mb-1" style="font-size:.7rem">Gastos gral. / overhead</label>
+              <div class="input-group input-group-sm">
+                <input type="number" class="form-control" id="calc-overhead" placeholder="0" min="0" step="0.1" max="30" oninput="calcCalc()" style="font-size:.78rem">
+                <span class="input-group-text" style="font-size:.75rem">%</span>
+              </div>
+              <div style="font-size:.62rem;color:#94a3b8;margin-top:2px">% sobre precio de venta</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- BLOQUE 5: Costo financiero -->
+        <div class="card p-3 mb-3" style="border-left:4px solid #7c3aed">
+          <h6 style="font-size:.75rem;font-weight:700;color:#7c3aed;text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px;cursor:pointer" onclick="_calcToggle('fin')" id="calc-h-fin">
+            <i class="bi bi-clock me-1"></i>Costo Financiero <small style="font-weight:400;opacity:.7">(plazo de cobro)</small>
+            <i class="bi bi-chevron-down ms-1" id="calc-chev-fin"></i>
+          </h6>
+          <div id="calc-sec-fin">
+            <div class="row g-2">
+              <div class="col-sm-4">
+                <label class="form-label small fw-bold mb-1" style="font-size:.7rem">Plazo de cobro (días)</label>
+                <input type="number" class="form-control form-control-sm" id="calc-plazo" placeholder="0" min="0" step="1" max="365" oninput="calcCalc()" style="font-size:.78rem">
+              </div>
+              <div class="col-sm-4">
+                <label class="form-label small fw-bold mb-1" style="font-size:.7rem">Tasa mensual</label>
+                <div class="input-group input-group-sm">
+                  <input type="number" class="form-control" id="calc-tasa" placeholder="0" min="0" step="0.1" max="50" oninput="calcCalc()" style="font-size:.78rem">
+                  <span class="input-group-text" style="font-size:.75rem">%</span>
+                </div>
+              </div>
+              <div class="col-sm-4" style="display:flex;align-items:flex-end">
+                <div id="calc-costo-fin-display" style="background:#f5f3ff;border-radius:7px;padding:6px 10px;font-size:.75rem;width:100%;color:#7c3aed;font-weight:700"></div>
+              </div>
+            </div>
+            <div style="font-size:.65rem;color:#94a3b8;margin-top:6px"><i class="bi bi-info-circle me-1"></i>Se calcula como: precio × (tasa mensual / 30 × días)</div>
+          </div>
+        </div>
+
+        <!-- BLOQUE 6: Margen y precio manual -->
+        <div class="card p-3" style="border-left:4px solid #16a34a">
+          <h6 style="font-size:.75rem;font-weight:700;color:#16a34a;text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px">
+            <i class="bi bi-graph-up-arrow me-1"></i>Margen y Precio
+          </h6>
+          <div class="row g-2">
+            <div class="col-sm-6">
+              <label class="form-label small fw-bold mb-1" style="font-size:.7rem">Margen objetivo (% sobre precio venta s/IVA)</label>
+              <div class="input-group input-group-sm">
+                <input type="number" class="form-control" id="calc-margen" placeholder="30" min="0" step="0.5" max="100" oninput="calcCalc()" style="font-size:.82rem;font-weight:600" value="30">
+                <span class="input-group-text" style="font-size:.75rem">%</span>
+              </div>
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label small fw-bold mb-1" style="font-size:.7rem">Precio de venta manual (para análisis)</label>
+              <div class="input-group input-group-sm">
+                <span class="input-group-text" style="font-size:.75rem">$</span>
+                <input type="number" class="form-control" id="calc-precio-manual" placeholder="Ingresá un precio..." min="0" step="0.01" oninput="calcCalc()" style="font-size:.78rem">
+              </div>
+              <div style="font-size:.62rem;color:#94a3b8;margin-top:2px">Precio s/IVA al cliente — calcula margen real</div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /col-lg-7 -->
+
+      <!-- ── COLUMNA DERECHA: Resultados ── -->
+      <div class="col-lg-5">
+
+        <!-- Panel de resultados principal -->
+        <div class="card p-3 mb-3" id="calc-result-panel" style="background:linear-gradient(135deg,#f8fafc,#f1f5f9);border:2px solid #e2e8f0;position:sticky;top:80px">
+          <div style="text-align:center;padding:32px 0;color:#94a3b8" id="calc-empty">
+            <i class="bi bi-calculator" style="font-size:2.5rem;display:block;margin-bottom:8px;opacity:.4"></i>
+            <div style="font-size:.78rem">Ingresá el costo del producto para ver el resultado</div>
+          </div>
+          <div id="calc-result-body" style="display:none">
+
+            <!-- Precio sugerido -->
+            <div style="text-align:center;padding:14px 0 12px;border-bottom:1px solid #e2e8f0;margin-bottom:12px">
+              <div style="font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#64748b;margin-bottom:4px">PRECIO DE VENTA SUGERIDO</div>
+              <div id="calc-res-precio-siva" style="font-size:2rem;font-weight:900;color:#0f172a;letter-spacing:-.03em;line-height:1"></div>
+              <div style="font-size:.7rem;color:#64748b;margin-top:3px">sin IVA · precio lista</div>
+              <div style="margin-top:6px;display:flex;align-items:center;justify-content:center;gap:8px">
+                <div style="font-size:.72rem;color:#64748b">Con IVA:</div>
+                <div id="calc-res-precio-civa" style="font-size:1rem;font-weight:800;color:#4f46e5"></div>
+              </div>
+              <div style="margin-top:4px;display:flex;align-items:center;justify-content:center;gap:8px">
+                <div style="font-size:.7rem;color:#64748b">Con bonif.:</div>
+                <div id="calc-res-precio-bonif" style="font-size:.9rem;font-weight:700;color:#0891b2"></div>
+              </div>
+            </div>
+
+            <!-- Margen real (precio manual) -->
+            <div id="calc-res-manual-block" style="display:none;padding:10px;background:#f0fdf4;border-radius:8px;margin-bottom:12px;text-align:center">
+              <div style="font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#64748b;margin-bottom:4px">ANÁLISIS PRECIO INGRESADO</div>
+              <div style="display:flex;justify-content:center;gap:16px">
+                <div>
+                  <div style="font-size:.6rem;color:#64748b">Margen real</div>
+                  <div id="calc-res-margen-real" style="font-size:1.4rem;font-weight:900;color:#16a34a"></div>
+                </div>
+                <div>
+                  <div style="font-size:.6rem;color:#64748b">Ganancia</div>
+                  <div id="calc-res-ganancia-real" style="font-size:1.4rem;font-weight:900;color:#16a34a"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- KPIs rápidos -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+              <div style="background:#fff;border-radius:8px;padding:8px 10px;text-align:center">
+                <div style="font-size:.58rem;color:#64748b;text-transform:uppercase;font-weight:600">Costo total s/IVA</div>
+                <div id="calc-res-costo-total" style="font-size:.92rem;font-weight:800;color:#dc2626;margin-top:2px"></div>
+              </div>
+              <div style="background:#fff;border-radius:8px;padding:8px 10px;text-align:center">
+                <div style="font-size:.58rem;color:#64748b;text-transform:uppercase;font-weight:600">Punto de equilibrio</div>
+                <div id="calc-res-break-even" style="font-size:.92rem;font-weight:800;color:#d97706;margin-top:2px"></div>
+              </div>
+              <div style="background:#fff;border-radius:8px;padding:8px 10px;text-align:center">
+                <div style="font-size:.58rem;color:#64748b;text-transform:uppercase;font-weight:600">Ganancia por unidad</div>
+                <div id="calc-res-ganancia" style="font-size:.92rem;font-weight:800;color:#16a34a;margin-top:2px"></div>
+              </div>
+              <div style="background:#fff;border-radius:8px;padding:8px 10px;text-align:center">
+                <div style="font-size:.58rem;color:#64748b;text-transform:uppercase;font-weight:600">Margen efectivo</div>
+                <div id="calc-res-margen" style="font-size:.92rem;font-weight:800;color:#4f46e5;margin-top:2px"></div>
+              </div>
+            </div>
+
+            <!-- Waterfall de costos -->
+            <div>
+              <div style="font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#64748b;margin-bottom:8px">Desglose de costos</div>
+              <div id="calc-waterfall"></div>
+            </div>
+
+            <!-- Nota por cantidad -->
+            <div id="calc-res-lote" style="display:none;margin-top:10px;padding:8px 10px;background:#eef2ff;border-radius:7px;font-size:.7rem;color:#4f46e5;font-weight:600"></div>
+
+          </div>
+        </div>
+
+        <!-- Tabla comparativa de márgenes -->
+        <div class="card p-3">
+          <div style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#64748b;margin-bottom:8px">
+            <i class="bi bi-table me-1"></i>Simulador de márgenes
+          </div>
+          <table class="table table-hover mb-0 gest-table" id="calc-sim-table">
+            <thead class="table-dark">
+              <tr>
+                <th>Margen</th>
+                <th class="text-end">Precio s/IVA</th>
+                <th class="text-end">Precio c/IVA</th>
+                <th class="text-end">Ganancia</th>
+              </tr>
+            </thead>
+            <tbody id="calc-sim-tbody">
+              <tr><td colspan="4" class="text-center text-muted py-3" style="font-size:.78rem">Ingresá el costo para ver la simulación</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+      </div><!-- /col-lg-5 -->
+
+    </div><!-- /row -->
+
+  </div>
+  <!-- ══════════════════ FIN CALCULADORA ══════════════════ -->
+
 </main>
 
 <!-- Comisiones: datos desde Google Sheets -->
@@ -5184,6 +5512,7 @@ function reRenderActivo() {
     case 'facturasACobrar': renderFacturasACobrar(); break;
     case 'facturasPagar': renderFacturasPagar(); break;
     case 'estrategicos': renderEstrategicos(); break;
+    case 'calculadora': /* self-contained, no render needed */ break;
     case 'kilometraje': kmRender(); break;
     case 'flujoProyectado': renderFlujoProyectado(); break;
     case 'panelVencimientos': renderPanelVencimientos(); break;
@@ -6321,7 +6650,7 @@ const _SB_GROUPS = {
   empresa:  ['socios','cuentaSocios'],
   caja:     ['cajaBancos','cajaEfectivo','chequesFisicos','eCheques','chequesPagar','kilometraje'],
   gestion:  ['comisiones','bcra','calendarioARCA','contabilidad','facturasACobrar','facturasPagar','estadosCuenta','stock','listasPrecios'],
-  analisis: ['tesoreria','flujoProyectado','panelVencimientos','rentabilidad','gestion','reportes','historial','estrategicos'],
+  analisis: ['tesoreria','flujoProyectado','panelVencimientos','rentabilidad','gestion','reportes','historial','estrategicos','calculadora'],
   archivos: ['documentos','cuentasBancarias','config'],
 };
 
@@ -6385,7 +6714,7 @@ const _PAGE_LABELS = {
   tesoreria:'Tesorería Integral', flujoProyectado:'Flujo Proyectado',
   panelVencimientos:'Vencimientos', rentabilidad:'Rentabilidad',
   gestion:'Gestión', reportes:'Reportes', historial:'Historial',
-  estrategicos:'Estratégicos', documentos:'Documentos', cuentasBancarias:'Cuentas Bancarias', config:'Configuración'
+  estrategicos:'Estratégicos', calculadora:'Calculadora de Costo', documentos:'Documentos', cuentasBancarias:'Cuentas Bancarias', config:'Configuración'
 };
 const _GROUP_LABELS = {
   empresa:'Empresa', caja:'Caja', gestion:'Gestión', analisis:'Análisis', archivos:'Archivos'
@@ -18589,6 +18918,240 @@ document.addEventListener('keydown', function(e) {
   }
 });
 
+
+/* ═══════════════════════════════════════════
+   CALCULADORA DE COSTO Y PRECIO
+═══════════════════════════════════════════ */
+
+function _calcToggle(sec) {
+  const el = document.getElementById('calc-sec-' + sec);
+  const chev = document.getElementById('calc-chev-' + sec);
+  if (!el) return;
+  const hidden = el.style.display === 'none';
+  el.style.display = hidden ? '' : 'none';
+  if (chev) chev.className = 'bi ms-1 ' + (hidden ? 'bi-chevron-up' : 'bi-chevron-down');
+}
+
+function calcReset() {
+  ['calc-costo','calc-flete','calc-seguro','calc-deposito','calc-percepcion','calc-retencion',
+   'calc-sellos','calc-comision','calc-bonif','calc-overhead','calc-plazo','calc-tasa',
+   'calc-precio-manual','calc-qty'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  const m = document.getElementById('calc-margen'); if (m) m.value = '30';
+  const iibb = document.getElementById('calc-iibb'); if (iibb) iibb.value = '3';
+  const ivac = document.getElementById('calc-iva-compra'); if (ivac) ivac.value = '21';
+  const ivav = document.getElementById('calc-iva-venta'); if (ivav) ivav.value = '21';
+  const chq = document.getElementById('calc-imp-cheque'); if (chq) chq.value = '1.2';
+  calcCalc();
+}
+
+function calcCopy() {
+  const p = document.getElementById('calc-res-precio-siva');
+  const ct = document.getElementById('calc-res-costo-total');
+  if (!p || !p.textContent || p.textContent === '–') { alert('Ingresá el costo primero.'); return; }
+  const txt = `Calculadora MUUK\nPrecio sugerido (s/IVA): ${p.textContent}\nCosto total: ${ct ? ct.textContent : ''}\n`;
+  navigator.clipboard.writeText(txt).then(() => {
+    const btn = document.querySelector('[onclick="calcCopy()"]');
+    if (btn) { btn.innerHTML='<i class="bi bi-check me-1"></i>Copiado'; setTimeout(() => btn.innerHTML='<i class="bi bi-clipboard me-1"></i>Copiar resultado', 2000); }
+  });
+}
+
+function calcCalc() {
+  const _n = id => parseFloat(document.getElementById(id)?.value) || 0;
+  const _s = id => document.getElementById(id)?.value || '';
+
+  const costoNeto = _n('calc-costo');
+  if (costoNeto <= 0) {
+    document.getElementById('calc-empty').style.display = '';
+    document.getElementById('calc-result-body').style.display = 'none';
+    document.getElementById('calc-sim-tbody').innerHTML = '<tr><td colspan="4" class="text-center text-muted py-3" style="font-size:.78rem">Ingresá el costo para ver la simulación</td></tr>';
+    return;
+  }
+
+  const qty       = Math.max(_n('calc-qty') || 1, 1);
+  const ivaCompra = _n('calc-iva-compra') / 100;
+  const ivaVenta  = _n('calc-iva-venta')  / 100;
+  const flete     = _n('calc-flete');
+  const seguroPct = _n('calc-seguro') / 100;
+  const deposito  = _n('calc-deposito');
+  const iibbPct   = _n('calc-iibb')       / 100;
+  const chequePct = _n('calc-imp-cheque') / 100;
+  const percPct   = _n('calc-percepcion') / 100;
+  const retPct    = _n('calc-retencion')  / 100;
+  const sellosPct = _n('calc-sellos')     / 100;
+  const comPct    = _n('calc-comision')   / 100;
+  const bonifPct  = _n('calc-bonif')      / 100;
+  const overPct   = _n('calc-overhead')   / 100;
+  const plazo     = _n('calc-plazo');
+  const tasaMens  = _n('calc-tasa') / 100;
+  const margenObj = _n('calc-margen') / 100;
+  const precioManual = _n('calc-precio-manual');
+
+  // ── 1. Costo de compra (neto, sin recuperar IVA porque somos monotributo o no inscripto típicamente)
+  // Si el comprador recupera el IVA, el costo es el neto. Si no, es neto + IVA.
+  // Asumimos que el costo ingresado ya es NETO (sin IVA), trabajamos sobre precio s/IVA
+  const costoCompraUnit = costoNeto; // precio compra s/IVA por unidad
+
+  // ── 2. Logística (prorrateada por unidad)
+  const fleteUnit  = flete / qty;
+  const seguroUnit = costoCompraUnit * seguroPct;
+  const depositoUnit = deposito / qty;
+  const costoLogUnit = fleteUnit + seguroUnit + depositoUnit;
+
+  // ── 3. Subtotal costo directo por unidad
+  const costoDirectoUnit = costoCompraUnit + costoLogUnit;
+
+  // ── 4. Cargas impositivas sobre PRECIO DE VENTA (s/IVA)
+  // Estas cargas son proporcionales al precio, por lo que usamos el método iterativo para resolverlas
+  // Total cargas sobre precio de venta s/IVA:
+  const cargasSobrePV = iibbPct + chequePct + percPct + retPct + sellosPct + comPct + overPct;
+
+  // ── 5. Costo financiero — también sobre precio de venta
+  // Si plazo > 0: costFin = PV × (tasaMens / 30 × plazo)
+  const tasaDiaria = tasaMens / 30;
+  const costFinPct = plazo > 0 && tasaMens > 0 ? tasaDiaria * plazo : 0;
+
+  const totalCargasPorc = cargasSobrePV + costFinPct;
+
+  // ── 6. Precio de venta s/IVA (sugerido para margen objetivo)
+  // Ecuación: PV = costoDirecto / (1 - totalCargasPorc - margenObj)
+  const denominador = 1 - totalCargasPorc - margenObj;
+  let pvSiva;
+  if (denominador <= 0.01) {
+    // Imposible con esos costos
+    pvSiva = costoDirectoUnit * 10;
+  } else {
+    pvSiva = costoDirectoUnit / denominador;
+  }
+
+  const pvCiva  = pvSiva * (1 + ivaVenta);
+  const pvBonif = pvSiva * (1 - bonifPct); // precio con descuento al cliente
+
+  // ── 7. Desglose de costos sobre PV sugerido
+  const montoIIBB   = pvSiva * iibbPct;
+  const montoCheque = pvSiva * chequePct;
+  const montoPerc   = pvSiva * percPct;
+  const montoRet    = pvSiva * retPct;
+  const montoSellos = pvSiva * sellosPct;
+  const montoCom    = pvSiva * comPct;
+  const montoOver   = pvSiva * overPct;
+  const montoFin    = pvSiva * costFinPct;
+  const ganancia    = pvSiva * margenObj;
+
+  const costoTotalUnit = costoDirectoUnit + montoIIBB + montoCheque + montoPerc + montoRet + montoSellos + montoCom + montoOver + montoFin;
+  const breakEven = costoTotalUnit;
+
+  // ── 8. Costo financiero display
+  const cfDisplay = document.getElementById('calc-costo-fin-display');
+  if (cfDisplay) {
+    if (plazo > 0 && tasaMens > 0) {
+      cfDisplay.innerHTML = `Costo fin.: <b>${fmt(pvSiva * costFinPct)}</b> <span style="opacity:.7;font-size:.65rem">(${(costFinPct*100).toFixed(2)}%)</span>`;
+    } else {
+      cfDisplay.innerHTML = '<span style="opacity:.5;font-size:.7rem">Sin costo financiero</span>';
+    }
+  }
+
+  // ── 9. Análisis precio manual
+  let margenReal = null, gananciaReal = null;
+  if (precioManual > 0) {
+    const cargasAbsManual = precioManual * (cargasSobrePV + costFinPct);
+    gananciaReal = precioManual - costoDirectoUnit - cargasAbsManual;
+    margenReal = precioManual > 0 ? (gananciaReal / precioManual * 100) : 0;
+  }
+
+  // ── 10. Mostrar resultados
+  document.getElementById('calc-empty').style.display = 'none';
+  document.getElementById('calc-result-body').style.display = '';
+
+  const _f = v => '$' + fmt(Math.round(v * 100) / 100);
+
+  document.getElementById('calc-res-precio-siva').textContent = _f(pvSiva);
+  document.getElementById('calc-res-precio-civa').textContent = _f(pvCiva);
+  document.getElementById('calc-res-precio-bonif').textContent = bonifPct > 0 ? _f(pvBonif) + ` (-${(bonifPct*100).toFixed(1)}%)` : '–';
+  document.getElementById('calc-res-costo-total').textContent = _f(costoTotalUnit);
+  document.getElementById('calc-res-break-even').textContent = _f(breakEven);
+  document.getElementById('calc-res-ganancia').textContent = _f(ganancia);
+  document.getElementById('calc-res-margen').textContent = (margenObj * 100).toFixed(1) + '%';
+
+  // Bloque análisis precio manual
+  const manualBlock = document.getElementById('calc-res-manual-block');
+  if (precioManual > 0 && manualBlock) {
+    manualBlock.style.display = '';
+    const mRealEl = document.getElementById('calc-res-margen-real');
+    const gRealEl = document.getElementById('calc-res-ganancia-real');
+    const color = margenReal >= (margenObj * 100) ? '#16a34a' : margenReal > 0 ? '#d97706' : '#dc2626';
+    if (mRealEl) { mRealEl.textContent = margenReal.toFixed(1) + '%'; mRealEl.style.color = color; }
+    if (gRealEl) { gRealEl.textContent = _f(gananciaReal); gRealEl.style.color = color; }
+    if (manualBlock) manualBlock.style.background = margenReal >= (margenObj * 100) ? '#f0fdf4' : margenReal > 0 ? '#fffbeb' : '#fef2f2';
+  } else if (manualBlock) {
+    manualBlock.style.display = 'none';
+  }
+
+  // Waterfall
+  const wf = document.getElementById('calc-waterfall');
+  if (wf) {
+    const items = [
+      { lbl:'Costo compra', monto: costoCompraUnit, color:'#dc2626' },
+      costoLogUnit > 0 && { lbl:'Logística', monto: costoLogUnit, color:'#ea580c' },
+      montoIIBB > 0 && { lbl:'IIBB', monto: montoIIBB, color:'#d97706' },
+      montoCheque > 0 && { lbl:'Imp. cheque', monto: montoCheque, color:'#ca8a04' },
+      (montoPerc + montoRet) > 0 && { lbl:'Percepciones/Ret.', monto: montoPerc + montoRet, color:'#854d0e' },
+      montoSellos > 0 && { lbl:'Sellos', monto: montoSellos, color:'#92400e' },
+      montoCom > 0 && { lbl:'Comisión vta.', monto: montoCom, color:'#0891b2' },
+      montoOver > 0 && { lbl:'Overhead', monto: montoOver, color:'#7c3aed' },
+      montoFin > 0 && { lbl:'Costo financiero', monto: montoFin, color:'#6d28d9' },
+      { lbl:'Ganancia (margen obj.)', monto: ganancia, color:'#16a34a' },
+    ].filter(Boolean);
+    const total = pvSiva;
+    wf.innerHTML = items.map(it => {
+      const pct = total > 0 ? (it.monto / total * 100).toFixed(1) : 0;
+      const barW = Math.max(Math.min((it.monto / total * 100), 100), 2);
+      return `<div style="margin-bottom:6px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px">
+          <span style="font-size:.67rem;color:#334155;font-weight:500">${it.lbl}</span>
+          <span style="font-size:.67rem;font-weight:700;color:${it.color}">${_f(it.monto)} <span style="opacity:.6">(${pct}%)</span></span>
+        </div>
+        <div style="height:5px;background:#f1f5f9;border-radius:3px;overflow:hidden">
+          <div style="width:${barW}%;height:100%;background:${it.color};border-radius:3px;transition:width .4s ease"></div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  // Lote
+  const loteEl = document.getElementById('calc-res-lote');
+  if (loteEl) {
+    if (qty > 1) {
+      loteEl.style.display = '';
+      loteEl.innerHTML = `<i class="bi bi-boxes me-1"></i>Lote de ${qty} unidades · Total s/IVA: <b>${_f(pvSiva * qty)}</b> · Con IVA: <b>${_f(pvCiva * qty)}</b>`;
+    } else {
+      loteEl.style.display = 'none';
+    }
+  }
+
+  // ── Simulador de márgenes (5%, 10%, 15%, 20%, 25%, 30%, 35%, 40%, 50%)
+  const margins = [5, 10, 15, 20, 25, 30, 35, 40, 50];
+  const tbody = document.getElementById('calc-sim-tbody');
+  if (tbody) {
+    tbody.innerHTML = margins.map(m => {
+      const mPct = m / 100;
+      const den2 = 1 - totalCargasPorc - mPct;
+      if (den2 <= 0.01) return `<tr><td>${m}%</td><td colspan="3" class="text-muted text-center">No viable</td></tr>`;
+      const pv2 = costoDirectoUnit / den2;
+      const pc2 = pv2 * (1 + ivaVenta);
+      const g2  = pv2 * mPct;
+      const isObj = m === Math.round(margenObj * 100);
+      return `<tr style="${isObj ? 'background:#eef2ff;font-weight:700' : ''}">
+        <td>${m}%${isObj ? ' <span style="font-size:.6rem;background:#4f46e5;color:#fff;border-radius:3px;padding:1px 4px">objetivo</span>' : ''}</td>
+        <td class="text-end gest-num">${_f(pv2)}</td>
+        <td class="text-end gest-num">${_f(pc2)}</td>
+        <td class="text-end gest-num" style="color:#16a34a">${_f(g2)}</td>
+      </tr>`;
+    }).join('');
+  }
+}
 
 </script>
 <!-- ═══ DATALIST BANCOS BCRA ═══ -->
