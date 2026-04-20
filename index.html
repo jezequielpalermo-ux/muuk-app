@@ -4060,13 +4060,34 @@ CREATE POLICY "acceso total" ON flujo_caja_versions FOR ALL USING (true) WITH CH
         </h4>
         <div style="font-size:.7rem;color:#94a3b8;margin-top:2px">Producto físico · Reventa · Argentina</div>
       </div>
-      <div style="display:flex;gap:8px">
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn btn-sm" onclick="calcReset()" style="background:#f1f5f9;color:#64748b;border:none;border-radius:7px;font-size:.72rem;padding:5px 12px">
           <i class="bi bi-arrow-counterclockwise me-1"></i>Limpiar
         </button>
-        <button class="btn btn-sm" onclick="calcCopy()" style="background:#4f46e5;color:#fff;border:none;border-radius:7px;font-size:.72rem;padding:5px 12px">
-          <i class="bi bi-clipboard me-1"></i>Copiar resultado
+        <button class="btn btn-sm" onclick="calcGuardar()" style="background:#16a34a;color:#fff;border:none;border-radius:7px;font-size:.72rem;padding:5px 12px">
+          <i class="bi bi-floppy me-1"></i>Guardar
         </button>
+        <button class="btn btn-sm" onclick="calcCopy()" style="background:#4f46e5;color:#fff;border:none;border-radius:7px;font-size:.72rem;padding:5px 12px">
+          <i class="bi bi-clipboard me-1"></i>Copiar
+        </button>
+      </div>
+    </div>
+
+    <!-- Identificación del producto -->
+    <div class="card p-3 mb-3" style="background:#fafafa;border:1px dashed #cbd5e1">
+      <div class="row g-2 align-items-center">
+        <div class="col-sm-5">
+          <label class="form-label small fw-bold mb-1" style="font-size:.7rem"><i class="bi bi-tag me-1" style="color:#4f46e5"></i>Producto / Ítem</label>
+          <input type="text" class="form-control form-control-sm" id="calc-item" placeholder="Ej: Harina 000 x 50kg" style="font-size:.82rem">
+        </div>
+        <div class="col-sm-4">
+          <label class="form-label small fw-bold mb-1" style="font-size:.7rem"><i class="bi bi-building me-1" style="color:#64748b"></i>Marca / Proveedor</label>
+          <input type="text" class="form-control form-control-sm" id="calc-marca" placeholder="Ej: Molinos Río de la Plata" style="font-size:.82rem">
+        </div>
+        <div class="col-sm-3">
+          <label class="form-label small fw-bold mb-1" style="font-size:.7rem"><i class="bi bi-person me-1" style="color:#64748b"></i>Cliente destino</label>
+          <input type="text" class="form-control form-control-sm" id="calc-cliente-dest" placeholder="Ej: Panadería Siglo 21" style="font-size:.82rem">
+        </div>
       </div>
     </div>
 
@@ -4350,7 +4371,7 @@ CREATE POLICY "acceso total" ON flujo_caja_versions FOR ALL USING (true) WITH CH
         </div>
 
         <!-- Tabla comparativa de márgenes -->
-        <div class="card p-3">
+        <div class="card p-3 mb-3">
           <div style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#64748b;margin-bottom:8px">
             <i class="bi bi-table me-1"></i>Simulador de márgenes
           </div>
@@ -4370,8 +4391,25 @@ CREATE POLICY "acceso total" ON flujo_caja_versions FOR ALL USING (true) WITH CH
         </div>
 
       </div><!-- /col-lg-5 -->
-
     </div><!-- /row -->
+
+    <!-- ── HISTORIAL DE CÁLCULOS ── -->
+    <div class="card p-3 mt-2" id="calc-hist-panel">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#64748b">
+          <i class="bi bi-clock-history me-1"></i>Historial de cálculos guardados
+        </div>
+        <button onclick="calcLimpiarHistorial()" style="background:none;border:none;color:#94a3b8;font-size:.68rem;cursor:pointer;padding:0" title="Limpiar historial">
+          <i class="bi bi-trash me-1"></i>Limpiar todo
+        </button>
+      </div>
+      <div id="calc-hist-body">
+        <div class="text-center text-muted py-3" style="font-size:.78rem">
+          <i class="bi bi-inbox" style="font-size:1.5rem;display:block;margin-bottom:4px;opacity:.3"></i>
+          Guardá cálculos con el botón "Guardar" para verlos acá
+        </div>
+      </div>
+    </div>
 
   </div>
   <!-- ══════════════════ FIN CALCULADORA ══════════════════ -->
@@ -5512,7 +5550,7 @@ function reRenderActivo() {
     case 'facturasACobrar': renderFacturasACobrar(); break;
     case 'facturasPagar': renderFacturasPagar(); break;
     case 'estrategicos': renderEstrategicos(); break;
-    case 'calculadora': /* self-contained, no render needed */ break;
+    case 'calculadora': try { calcRenderHistorial(); } catch(e) {} break;
     case 'kilometraje': kmRender(); break;
     case 'flujoProyectado': renderFlujoProyectado(); break;
     case 'panelVencimientos': renderPanelVencimientos(); break;
@@ -6617,6 +6655,10 @@ function initApp() {
   setTimeout(() => {
     _gestionAutoSync();
   }, 2000);
+  // 3) Cargar comisiones en background (para Liquidez Neta en Dashboard)
+  setTimeout(() => {
+    cargarComisionesSheet().catch(() => {});
+  }, 4000);
   initAutoRefresh(); // Auto-detectar cambios en las bases
   document.querySelectorAll('#sidebar-nav .nav-link[data-page]').forEach(a => {
     a.addEventListener('click', e => {
@@ -7053,12 +7095,9 @@ function renderDashboard() {
   // ── LIQUIDEZ NETA ──
   const totFacPagar = facPagPend.reduce((s,f)=>s+ +f.total,0);
   const totObligaciones = totPagar + totFacPagar;
-  // Comisiones pendientes: solo las SIN FACTURA o Monotributo (las con factura ya están en Facturas a Cobrar)
+  // Comisiones pendientes: todas con saldo > 0 (sin factura, monotributo, o cualquier obs)
   const totComisiones = (ST.comisionesResumen||[])
-    .filter(c => {
-      const obs = (c.obs||'').toLowerCase().trim();
-      return c.saldo > 0 && (obs.includes('sin factura') || obs.includes('monotributo'));
-    })
+    .filter(c => c.saldo > 0)
     .reduce((s,c) => s + c.saldo, 0);
   const totalActivos = sB + sE + totCartera + totComisiones;
   const liquidez = totalActivos - totObligaciones;
@@ -13423,13 +13462,13 @@ async function _gestionAutoSync() {
     GESTION_DATA.updatedAt + ' · <b>' + GESTION_DATA.rows.length + '</b> registros · vía ' + source +
     (changed ? ' <span class="badge bg-info" style="font-size:.6rem">Actualizado</span>' : '');
 
+  // Siempre refrescar Meta Cobranza (usa dato de Gestión del mes actual)
+  try { _renderMetaCobranza(); } catch(e) {}
   if (changed) {
     toast('Gestión actualizada automáticamente: ' + GESTION_DATA.rows.length + ' registros', 'info');
     // Si el usuario está viendo Gestión, re-renderizar
     const activePage = document.querySelector('.page.active');
     if (activePage && activePage.id === 'page-gestion') renderGestion();
-    // Actualizar Meta Cobranza en dashboard con el dato nuevo
-    try { _renderMetaCobranza(); } catch(e) {}
   } else {
     console.log('[GestionAutoSync] Sin cambios respecto al caché.');
   }
@@ -18954,7 +18993,7 @@ function _calcToggle(sec) {
 function calcReset() {
   ['calc-costo','calc-flete','calc-seguro','calc-deposito','calc-percepcion','calc-retencion',
    'calc-sellos','calc-comision','calc-bonif','calc-overhead','calc-plazo','calc-tasa',
-   'calc-precio-manual','calc-qty'].forEach(id => {
+   'calc-precio-manual','calc-qty','calc-item','calc-marca','calc-cliente-dest'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
   });
@@ -18964,6 +19003,121 @@ function calcReset() {
   const ivav = document.getElementById('calc-iva-venta'); if (ivav) ivav.value = '21';
   const chq = document.getElementById('calc-imp-cheque'); if (chq) chq.value = '1.2';
   calcCalc();
+}
+
+function calcGuardar() {
+  const costo = parseFloat(document.getElementById('calc-costo')?.value) || 0;
+  if (costo <= 0) { toast('Ingresá el costo del producto primero', 'warning'); return; }
+  const pvSivaEl = document.getElementById('calc-res-precio-siva');
+  if (!pvSivaEl || !pvSivaEl.textContent || pvSivaEl.textContent === '–') {
+    toast('Calculá el precio primero', 'warning'); return;
+  }
+  const item   = (document.getElementById('calc-item')?.value || '').trim() || 'Sin nombre';
+  const marca  = (document.getElementById('calc-marca')?.value || '').trim() || '–';
+  const cliente = (document.getElementById('calc-cliente-dest')?.value || '').trim() || '';
+  const margen = parseFloat(document.getElementById('calc-margen')?.value) || 30;
+  const pvSiva = pvSivaEl.textContent;
+  const pvCiva = document.getElementById('calc-res-precio-civa')?.textContent || '–';
+  const ganancia = document.getElementById('calc-res-ganancia')?.textContent || '–';
+  const costoTotal = document.getElementById('calc-res-costo-total')?.textContent || '–';
+  const ivaVenta = document.getElementById('calc-iva-venta')?.value || '21';
+  const iibb = document.getElementById('calc-iibb')?.value || '3';
+  const comision = document.getElementById('calc-comision')?.value || '0';
+
+  const entrada = {
+    id: Date.now(),
+    fecha: new Date().toLocaleString('es-AR', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}),
+    item, marca, cliente,
+    costo, costoTotal, pvSiva, pvCiva, ganancia,
+    margen, ivaVenta, iibb, comision
+  };
+  if (!ST.calcHistorial) ST.calcHistorial = [];
+  ST.calcHistorial.unshift(entrada); // más reciente primero
+  if (ST.calcHistorial.length > 50) ST.calcHistorial.pop(); // max 50 entradas
+  save();
+  calcRenderHistorial();
+  toast('✅ Guardado en historial', 'success');
+}
+
+function calcLimpiarHistorial() {
+  if (!confirm('¿Eliminar todo el historial de cálculos?')) return;
+  ST.calcHistorial = [];
+  save();
+  calcRenderHistorial();
+}
+
+function calcEliminarEntrada(id) {
+  if (!ST.calcHistorial) return;
+  ST.calcHistorial = ST.calcHistorial.filter(e => e.id !== id);
+  save();
+  calcRenderHistorial();
+}
+
+function calcCargarDesdeHistorial(id) {
+  const e = (ST.calcHistorial || []).find(x => x.id === id);
+  if (!e) return;
+  const _set = (elId, val) => { const el = document.getElementById(elId); if (el) el.value = val || ''; };
+  _set('calc-item', e.item === 'Sin nombre' ? '' : e.item);
+  _set('calc-marca', e.marca === '–' ? '' : e.marca);
+  _set('calc-cliente-dest', e.cliente);
+  _set('calc-costo', e.costo);
+  _set('calc-margen', e.margen);
+  _set('calc-iva-venta', e.ivaVenta);
+  _set('calc-iibb', e.iibb);
+  _set('calc-comision', e.comision);
+  calcCalc();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  toast('Datos cargados desde historial', 'info');
+}
+
+function calcRenderHistorial() {
+  const body = document.getElementById('calc-hist-body');
+  if (!body) return;
+  const hist = ST.calcHistorial || [];
+  if (!hist.length) {
+    body.innerHTML = `<div class="text-center text-muted py-3" style="font-size:.78rem">
+      <i class="bi bi-inbox" style="font-size:1.5rem;display:block;margin-bottom:4px;opacity:.3"></i>
+      Guardá cálculos con el botón "Guardar" para verlos acá
+    </div>`;
+    return;
+  }
+  body.innerHTML = `
+    <div class="table-responsive">
+    <table class="table table-hover mb-0 gest-table">
+      <thead class="table-dark">
+        <tr>
+          <th>Fecha</th>
+          <th>Ítem</th>
+          <th>Marca</th>
+          <th>Cliente</th>
+          <th class="text-end">Costo base</th>
+          <th class="text-end">Precio s/IVA</th>
+          <th class="text-end">Precio c/IVA</th>
+          <th class="text-end">Margen</th>
+          <th class="text-end">Ganancia</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        ${hist.map(e => `
+        <tr>
+          <td style="white-space:nowrap;font-size:.67rem;color:#94a3b8">${e.fecha}</td>
+          <td style="font-weight:600;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${e.item}">${e.item}</td>
+          <td style="color:#64748b;font-size:.72rem">${e.marca}</td>
+          <td style="color:#64748b;font-size:.72rem;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.cliente||'–'}</td>
+          <td class="text-end gest-num">${fmt(e.costo)}</td>
+          <td class="text-end gest-num fw-bold" style="color:#4f46e5">${e.pvSiva}</td>
+          <td class="text-end gest-num" style="color:#0891b2">${e.pvCiva}</td>
+          <td class="text-end"><span style="background:${e.margen>=30?'#f0fdf4':e.margen>=20?'#fffbeb':'#fef2f2'};color:${e.margen>=30?'#16a34a':e.margen>=20?'#d97706':'#dc2626'};border-radius:20px;padding:2px 8px;font-size:.68rem;font-weight:700">${e.margen}%</span></td>
+          <td class="text-end gest-num" style="color:#16a34a">${e.ganancia}</td>
+          <td style="white-space:nowrap">
+            <button onclick="calcCargarDesdeHistorial(${e.id})" class="btn btn-sm" style="background:none;border:none;color:#4f46e5;font-size:.68rem;padding:1px 4px" title="Cargar estos datos"><i class="bi bi-arrow-up-left-circle"></i></button>
+            <button onclick="calcEliminarEntrada(${e.id})" class="btn btn-sm" style="background:none;border:none;color:#dc2626;font-size:.68rem;padding:1px 4px" title="Eliminar"><i class="bi bi-x-circle"></i></button>
+          </td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+    </div>`;
 }
 
 function calcCopy() {
