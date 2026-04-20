@@ -877,7 +877,6 @@
 
   <!-- DASHBOARD -->
   <div id="page-dashboard" class="page active">
-  <div id="dash-meta-cobranza" class="mb-3"></div>
     <!-- MUUK Logo banner — compacto -->
     <div class="mb-3" style="background:linear-gradient(120deg,#0f172a 0%,#1e293b 100%);border-radius:12px;padding:10px 18px;display:flex;align-items:center;gap:12px">
       <!-- Logo pequeño -->
@@ -970,25 +969,11 @@
         <span style="flex:1;height:1px;background:#e2e8f0;display:block"></span>
       </div>
       <div class="row g-3">
-        <div class="col-sm-4">
+        <div class="col-12">
           <div class="card p-3" style="border-left:4px solid #16a34a">
-            <div style="font-size:.62rem;color:#64748b;font-weight:600;text-transform:uppercase;margin-bottom:4px"><i class="bi bi-arrow-down-circle me-1 text-success"></i>Cobrado este mes</div>
+            <div style="font-size:.62rem;color:#64748b;font-weight:600;text-transform:uppercase;margin-bottom:4px"><i class="bi bi-graph-up-arrow me-1 text-success"></i>Facturado este mes</div>
             <div id="dash-mes-cobrado" style="font-size:1.25rem;font-weight:800;color:#16a34a">$0</div>
-            <div id="dash-mes-cobrado-sub" style="font-size:.68rem;color:#94a3b8;margin-top:2px">0 facturas · 0 mov. caja</div>
-          </div>
-        </div>
-        <div class="col-sm-4">
-          <div class="card p-3" style="border-left:4px solid #dc2626">
-            <div style="font-size:.62rem;color:#64748b;font-weight:600;text-transform:uppercase;margin-bottom:4px"><i class="bi bi-arrow-up-circle me-1 text-danger"></i>Pagado este mes</div>
-            <div id="dash-mes-pagado" style="font-size:1.25rem;font-weight:800;color:#dc2626">$0</div>
-            <div id="dash-mes-pagado-sub" style="font-size:.68rem;color:#94a3b8;margin-top:2px">0 facturas · 0 mov. caja</div>
-          </div>
-        </div>
-        <div class="col-sm-4">
-          <div class="card p-3" id="dash-mes-resultado-card" style="border-left:4px solid #64748b">
-            <div style="font-size:.62rem;color:#64748b;font-weight:600;text-transform:uppercase;margin-bottom:4px"><i class="bi bi-calculator me-1"></i>Resultado neto</div>
-            <div id="dash-mes-neto" style="font-size:1.25rem;font-weight:800;color:#64748b">$0</div>
-            <div id="dash-mes-neto-sub" style="font-size:.68rem;color:#94a3b8;margin-top:2px">Cobrado − Pagado del mes</div>
+            <div id="dash-mes-cobrado-sub" style="font-size:.68rem;color:#94a3b8;margin-top:2px">Desde Gestión</div>
           </div>
         </div>
       </div>
@@ -996,16 +981,6 @@
 
     <!-- METAS MENSUALES -->
     <div class="row g-3 mb-3" id="kpi-metas-row" style="display:none">
-      <div class="col-sm-6 col-lg-3">
-        <div class="card p-3" id="kpi-meta-com-card" style="border-radius:10px;transition:background .4s">
-          <div style="display:flex;justify-content:space-between;align-items:flex-start">
-            <div style="font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#64748b">Meta Comisiones</div>
-            <span id="kpi-meta-com-pct" style="font-size:1.5rem;font-weight:900;line-height:1;color:#16a34a">0%</span>
-          </div>
-          <div style="margin:8px 0 4px;height:6px;background:rgba(0,0,0,.08);border-radius:3px;overflow:hidden"><div id="kpi-meta-com-bar" style="height:100%;background:#16a34a;border-radius:3px;width:0%;transition:width .7s ease"></div></div>
-          <div style="font-size:.62rem;color:#64748b"><span id="kpi-meta-com-actual">$0</span> <span style="opacity:.5">/ <span id="kpi-meta-com-target">$0</span></span></div>
-        </div>
-      </div>
       <div class="col-sm-6 col-lg-3">
         <div class="card p-3" id="kpi-meta-fac-card" style="border-radius:10px;transition:background .4s">
           <div style="display:flex;justify-content:space-between;align-items:flex-start">
@@ -1112,14 +1087,6 @@
         <span style="flex:1;height:1px;background:#e2e8f0;display:block"></span>
       </div>
       <div class="row g-3">
-        <div class="col-sm-6 col-xl">
-          <div class="stat-card" style="background:linear-gradient(135deg,#334155,#64748b);cursor:pointer" onclick="irA('comisiones')">
-            <div class="bg-icon"><i class="bi bi-percent"></i></div>
-            <div class="lbl">Comisiones del Mes</div>
-            <div class="val" id="stat-comisiones">$0</div>
-            <div class="sub" id="stat-comisiones-n">0 registros</div>
-          </div>
-        </div>
         <div class="col-sm-6 col-xl">
           <div class="stat-card" style="background:linear-gradient(135deg,#581c87,#a855f7);cursor:pointer" onclick="irA('stock')">
             <div class="bg-icon"><i class="bi bi-box-seam-fill"></i></div>
@@ -2731,17 +2698,6 @@
       <div class="card-header bg-white fw-bold"><i class="bi bi-database-fill-check me-2 text-success"></i>Base de datos en la nube (Supabase)</div>
       <div class="card-body">
         <div id="sb-status-card" class="alert mb-3" style="font-size:.84rem"></div>
-        <script>
-          (function(){
-            const el = document.getElementById('sb-status-card');
-            if(!el) return;
-            const ok = (typeof SB_URL !== 'undefined') && SB_URL && !SB_URL.includes('TU-PROYECTO');
-            el.className = 'alert mb-3 ' + (ok ? 'alert-success' : 'alert-warning');
-            el.innerHTML = ok
-              ? '<strong>✅ Supabase configurado</strong> — sincronización activa cada 5 seg. Historial de versiones guardado automáticamente.'
-              : '<strong>⚠️ Supabase aún no configurado</strong> — los datos se guardan solo en este navegador. Seguí los pasos de abajo para activar la base de datos.';
-          })();
-        </script>
         <div class="accordion" id="acc-sb-setup">
           <div class="accordion-item">
             <h2 class="accordion-header">
@@ -5745,7 +5701,7 @@ const SB_ROW_ID    = 1;
 
 let _syncInterval = null;
 let _pendingSave  = false;
-let _online       = navigator.onLine;
+let _online       = true; // Asumir online; el evento 'offline' actualizará si es necesario
 
 window.addEventListener('online',  () => { _online = true;  setSyncStatus('syncing', 'Reconectando...'); if (_pendingSave) pushRemoto(); });
 window.addEventListener('offline', () => { _online = false; setSyncStatus('offline', 'Sin internet — guardado local'); });
@@ -5754,6 +5710,16 @@ function sbHdrs() {
   return { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY, 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' };
 }
 function sbReady() { return SB_URL && SB_KEY && !SB_URL.includes('TU-PROYECTO'); }
+
+function _updateSbStatusCard() {
+  const el = document.getElementById('sb-status-card');
+  if (!el) return;
+  const ok = sbReady();
+  el.className = 'alert mb-3 ' + (ok ? 'alert-success' : 'alert-warning');
+  el.innerHTML = ok
+    ? `<strong>✅ Supabase configurado</strong> — proyecto: <code>${SB_URL.replace('https://','').replace('.supabase.co','')}</code>. Sincronización activa. Historial de versiones guardado automáticamente.`
+    : '<strong>⚠️ Supabase aún no configurado</strong> — los datos se guardan solo en este navegador. Seguí los pasos de abajo para activar la base de datos.';
+}
 
 function setSyncStatus(status, msg) {
   const el = document.getElementById('sync-status');
@@ -5839,10 +5805,10 @@ async function pullRemoto(silent) {
     const remoteTs = (remote.data && remote.data._syncTs) || 0;
     const localTs  = ST._syncTs || 0;
     if (remoteTs > localTs) {
+      // Supabase tiene datos más recientes — cargar
       Object.assign(ST, remote.data);
       if (!ST.socios || !ST.socios.length) ST.socios = SOCIOS_DEFAULT.map(s=>({...s}));
       if (ST.conceptos) CONCEPTOS_DEFAULT.forEach(c => { if (!ST.conceptos.find(x=>x===c)) ST.conceptos.push(c); });
-      // Asegurar campos Kilometraje tras sync remoto
       if (!Array.isArray(ST.kilometraje)) ST.kilometraje = [];
       if (!Array.isArray(ST.kmTarifas) || !ST.kmTarifas.length) ST.kmTarifas = [{ id:'kmt_base', desde:'2025-04-01', valor:1200, motivo:'Tarifa inicial acordada' }];
       if (typeof ST.metaCobranza === 'undefined') ST.metaCobranza = 0;
@@ -5852,6 +5818,10 @@ async function pullRemoto(silent) {
         const quien = remote.updated_by ? ' — ' + remote.updated_by : '';
         toast('🔄 Datos sincronizados' + quien, 'info');
       }
+    } else if (localTs > remoteTs && localTs > 0) {
+      // Datos locales más recientes (ej: cambios pendientes de subir) — empujar a Supabase
+      if (!silent) toast('↑ Subiendo cambios locales pendientes...', 'info');
+      pushRemoto();
     }
     _sbPushErrors = 0; // reset error count on successful pull
     setSyncStatus('ok', 'Sincronizado');
@@ -7078,7 +7048,7 @@ function irA(p) {
   if (p==='historial')         renderHistorial();
   if (p==='facturasACobrar')   renderFacturasACobrar();
   if (p==='facturasPagar')     renderFacturasPagar();
-  if (p==='config')            renderListaConceptos();
+  if (p==='config')            { renderListaConceptos(); _updateSbStatusCard(); }
   if (p==='gestion')           renderGestion();
   if (p==='estrategicos')      renderEstrategicos();
   if (p==='estadosCuenta')     renderEstadosCuenta();
@@ -7147,8 +7117,6 @@ function renderDashboard() {
   const _dMesAnt=(function(){ const d=new Date(); d.setMonth(d.getMonth()-1); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); })();
 
   const comMes=(ST.comisiones||[]).filter(c=>c.fecha&&c.fecha.startsWith(mesActual));
-  document.getElementById('stat-comisiones').textContent = fmt(comMes.reduce((s,c)=>s+ +c.monto,0));
-  document.getElementById('stat-comisiones-n').textContent = `${comMes.length} registro${comMes.length!==1?'s':''} este mes`;
 
   // Facturas stat cards en Dashboard
   const facCobPend = (ST.facturasACobrar||[]).filter(f=>f.estado==='pendiente');
@@ -7173,32 +7141,19 @@ function renderDashboard() {
   const stkSubEl = document.getElementById('stat-stock-sub');
   if (stkSubEl) stkSubEl.innerHTML = `${stkProds.length} producto${stkProds.length!==1?'s':''}${stkBajo>0?' · <span style="color:#fca5a5;font-weight:700">'+stkBajo+' bajo mín.</span>':''}`;
 
-  // ── RESUMEN DEL MES ──
+  // ── RESUMEN DEL MES — Facturado desde Gestión ──
   (function(){
     const now = new Date();
-    const mesIso = hoy().slice(0,7);
     const mesNombre = now.toLocaleDateString('es-AR',{month:'long',year:'numeric'});
     _setEl('dash-mes-label', mesNombre.charAt(0).toUpperCase()+mesNombre.slice(1));
-    // Movimientos de caja del mes
-    const movMes = [...ST.cajaBancos, ...ST.cajaEfectivo].filter(m=>m.fecha&&m.fecha.startsWith(mesIso));
-    const cajaCobrado = movMes.filter(m=>m.tipo==='ingreso').reduce((s,m)=>s+ +m.monto,0);
-    const cajaPagado  = movMes.filter(m=>m.tipo==='egreso').reduce((s,m)=>s+ +m.monto,0);
-    // Facturas cobradas/pagadas el mes
-    const facCobMes = (ST.facturasACobrar||[]).filter(f=>f.estado==='cobrada'&&f.fechaCobro&&f.fechaCobro.startsWith(mesIso));
-    const facPagMes = (ST.facturasPagar||[]).filter(f=>f.estado==='pagada'&&f.fechaPago&&f.fechaPago.startsWith(mesIso));
-    const facCobMonto = facCobMes.reduce((s,f)=>s+ +f.total,0);
-    const facPagMonto = facPagMes.reduce((s,f)=>s+ +f.total,0);
-    const totalCobrado = cajaCobrado + facCobMonto;
-    const totalPagado  = cajaPagado  + facPagMonto;
-    const neto = totalCobrado - totalPagado;
-    _setEl('dash-mes-cobrado', fmt(totalCobrado));
-    _setEl('dash-mes-cobrado-sub', `${facCobMes.length} factura${facCobMes.length!==1?'s':''} · ${movMes.filter(m=>m.tipo==='ingreso').length} mov. caja`);
-    _setEl('dash-mes-pagado',  fmt(totalPagado));
-    _setEl('dash-mes-pagado-sub',  `${facPagMes.length} factura${facPagMes.length!==1?'s':''} · ${movMes.filter(m=>m.tipo==='egreso').length} mov. caja`);
-    const elNeto = document.getElementById('dash-mes-neto');
-    const elCard = document.getElementById('dash-mes-resultado-card');
-    if (elNeto) { elNeto.textContent = (neto>=0?'+':'')+fmt(neto); elNeto.style.color = neto>=0?'#16a34a':'#dc2626'; }
-    if (elCard) elCard.style.borderLeftColor = neto>=0?'#16a34a':'#dc2626';
+    // Buscar el mes actual en GESTION_DATA
+    const _MES_NOMBRES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+    const gMesKey = _MES_NOMBRES[now.getMonth()] + ' ' + now.getFullYear();
+    const gMesData = (window.GESTION_DATA && GESTION_DATA.byMes) ? GESTION_DATA.byMes.find(m => m[0] === gMesKey) : null;
+    const facturadoMes = gMesData ? gMesData[2] : 0; // índice 2 = facturado c/IVA
+    _setEl('dash-mes-cobrado', fmt(facturadoMes));
+    const elSub = document.getElementById('dash-mes-cobrado-sub');
+    if (elSub) elSub.textContent = gMesData ? `${gMesData[1]} operaciones · Gestión ${now.getFullYear()}` : 'Sin datos de Gestión aún';
   })();
 
   // ── LIQUIDEZ NETA ──
@@ -7243,9 +7198,6 @@ function renderDashboard() {
 
   // ── VARIACIÓN MENSUAL ──
   const comThisMonth = comMes.reduce((s,c)=>s+ +c.monto,0);
-  const comPrevMonth = (ST.comisiones||[]).filter(c=>c.fecha&&c.fecha.startsWith(_dMesAnt)).reduce((s,c)=>s+ +c.monto,0);
-  const elComN = document.getElementById('stat-comisiones-n');
-  if(elComN) elComN.innerHTML = `${comMes.length} registro${comMes.length!==1?'s':''} este mes${_trendBadge(comThisMonth, comPrevMonth)}`;
 
   // Tendencia bancos y efectivo: ingresos netos del mes actual vs mes anterior
   const _cajaMesIng = (arr, mes) => arr.filter(m=>m.fecha&&m.fecha.startsWith(mes)&&m.tipo==='ingreso').reduce((s,m)=>s+ +m.monto,0);
