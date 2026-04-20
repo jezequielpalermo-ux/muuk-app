@@ -812,7 +812,7 @@
     </div>
     <!-- Fila 1: Sincronizar + PDF -->
     <div style="display:flex;gap:4px;margin-bottom:3px">
-      <button class="sb-btn sb-sync flex-fill" onclick="pullRemoto(false)">
+      <button class="sb-btn sb-sync flex-fill" onclick="testConexionSupabase()">
         <i class="bi bi-arrow-clockwise"></i>Sincronizar
       </button>
       <button class="sb-btn sb-pdf" style="width:36px;flex-shrink:0;padding:5px 0" onclick="generarReportePDF()" title="Generar PDF">
@@ -5774,23 +5774,37 @@ function setSyncStatus(status, msg) {
   el.className = status === 'ok' ? 'sync-status-ok' : status === 'syncing' ? 'sync-status-syncing' : 'sync-status-error';
 }
 
+let _sbPushErrors = 0;
+
 async function pushRemoto() {
   if (!sbReady()) { setSyncStatus('none'); return; }
   if (!_online) { _pendingSave = true; setSyncStatus('offline', 'Sin internet — se enviará al reconectar'); return; }
   _pendingSave = false;
   setSyncStatus('syncing');
   const currentUser = sessionStorage.getItem('muukAuth') || 'sistema';
-  const body = JSON.stringify({ id: SB_ROW_ID, data: ST, updated_by: currentUser, updated_at: new Date().toISOString() });
+  // Excluir datos live de Google Sheets del payload (siempre se cargan frescos)
+  const { comisionesResumen, comisionesTotal, comisionesTimestamp, ...pushData } = ST;
+  const body = JSON.stringify({ id: SB_ROW_ID, data: pushData, updated_by: currentUser, updated_at: new Date().toISOString() });
   try {
     const res = await fetch(SB_URL + '/rest/v1/' + SB_TABLE, { method: 'POST', headers: sbHdrs(), body });
-    if (!res.ok) throw new Error('HTTP ' + res.status);
+    if (!res.ok) {
+      let detail = '';
+      if (res.status === 401 || res.status === 403) detail = ' (permisos — revisá RLS en Supabase)';
+      else if (res.status === 503 || res.status === 500) detail = ' (proyecto posiblemente pausado — ir a supabase.com)';
+      else if (res.status === 404) detail = ' (tabla no encontrada)';
+      throw new Error('HTTP ' + res.status + detail);
+    }
+    _sbPushErrors = 0;
     setSyncStatus('ok', 'Guardado en la nube ✓');
     setTimeout(() => setSyncStatus('ok', 'Sincronizado'), 2500);
     _guardarVersion(currentUser);
   } catch(e) {
-    setSyncStatus('error', 'Error al guardar — reintentando...');
+    _sbPushErrors++;
+    // Backoff exponencial: 8s, 16s, 32s, 60s máximo
+    const delay = Math.min(60000, 8000 * Math.pow(2, Math.min(_sbPushErrors - 1, 3)));
+    setSyncStatus('error', 'Error al guardar: ' + (e.message||'sin conexión'));
     _pendingSave = true;
-    setTimeout(() => { if (_pendingSave) pushRemoto(); }, 8000);
+    setTimeout(() => { if (_pendingSave) pushRemoto(); }, delay);
   }
 }
 
@@ -5839,9 +5853,22 @@ async function pullRemoto(silent) {
         toast('🔄 Datos sincronizados' + quien, 'info');
       }
     }
+    _sbPushErrors = 0; // reset error count on successful pull
     setSyncStatus('ok', 'Sincronizado');
   } catch(e) {
-    setSyncStatus('error', 'Sin conexión con la base de datos');
+    let msg = 'Sin conexión con la base de datos';
+    if (e.message) {
+      if (e.message.includes('503') || e.message.includes('500')) {
+        msg = '⚠ Proyecto pausado — activalo en supabase.com';
+      } else if (e.message.includes('401') || e.message.includes('403')) {
+        msg = '⚠ Error de permisos — revisá RLS en Supabase';
+      } else if (e.message.includes('404')) {
+        msg = '⚠ Tabla no encontrada — verificá el nombre';
+      } else {
+        msg = 'Error: ' + e.message;
+      }
+    }
+    setSyncStatus('error', msg);
   }
 }
 
@@ -5883,8 +5910,41 @@ function iniciarAutoSync() {
   setSyncStatus('syncing', 'Conectando con la base de datos...');
   pullRemoto(false);
   if (_syncInterval) clearInterval(_syncInterval);
-  // Polling cada 5 segundos → cambios casi en tiempo real entre los 3 socios
-  _syncInterval = setInterval(() => pullRemoto(true), 5000);
+  // Polling cada 8 segundos (más conservador para evitar saturar proyecto pausado)
+  _syncInterval = setInterval(() => {
+    // Si hay errores acumulados, reducir frecuencia de polling
+    if (_sbPushErrors >= 3) return; // dejar de intentar hasta que el usuario reintente manualmente
+    pullRemoto(true);
+  }, 8000);
+}
+
+async function testConexionSupabase() {
+  if (!sbReady()) { toast('Supabase no configurado', 'warning'); return; }
+  setSyncStatus('syncing', 'Probando conexión...');
+  try {
+    const res = await fetch(
+      SB_URL + '/rest/v1/' + SB_TABLE + '?id=eq.' + SB_ROW_ID + '&select=id,updated_at',
+      { headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY }, cache: 'no-store' }
+    );
+    if (!res.ok) {
+      let detail = '';
+      if (res.status === 503 || res.status === 500) detail = ' — Proyecto pausado. Ir a supabase.com y activarlo.';
+      else if (res.status === 401 || res.status === 403) detail = ' — Error de permisos (RLS). Revisá las políticas en Supabase.';
+      else if (res.status === 404) detail = ' — Tabla "' + SB_TABLE + '" no encontrada.';
+      toast('Error HTTP ' + res.status + detail, 'danger');
+      setSyncStatus('error', 'Error HTTP ' + res.status);
+      return;
+    }
+    const rows = await res.json();
+    _sbPushErrors = 0;
+    toast('✅ Conexión OK — ' + (rows.length ? 'datos encontrados' : 'tabla vacía, se subirán los datos'), 'success');
+    setSyncStatus('ok', 'Conexión verificada ✓');
+    if (!rows.length) pushRemoto();
+    else iniciarAutoSync();
+  } catch(e) {
+    toast('Error de red: ' + e.message, 'danger');
+    setSyncStatus('error', 'Error de red — sin conexión');
+  }
 }
 
 /* ══ EXPORTAR EXCEL (CSV UTF-8 con BOM) ══ */
@@ -7144,9 +7204,9 @@ function renderDashboard() {
   // ── LIQUIDEZ NETA ──
   const totFacPagar = facPagPend.reduce((s,f)=>s+ +f.total,0);
   const totObligaciones = totPagar + totFacPagar;
-  // Comisiones pendientes: todas con saldo > 0 (sin factura, monotributo, o cualquier obs)
+  // Comisiones pendientes: saldo > 0 excluyendo las que ya tienen "Factura Muuk" (ya cobradas/facturadas)
   const totComisiones = (ST.comisionesResumen||[])
-    .filter(c => c.saldo > 0)
+    .filter(c => c.saldo > 0 && !(c.obs||'').toLowerCase().includes('factura muuk'))
     .reduce((s,c) => s + c.saldo, 0);
   const totalActivos = sB + sE + totCartera + totComisiones;
   const liquidez = totalActivos - totObligaciones;
@@ -16959,7 +17019,7 @@ function _renderMetaCobranza() {
   let cobradoMes=0;
   if(window.GESTION_DATA&&GESTION_DATA.byMes&&GESTION_DATA.byMes.length){
     const _mData=GESTION_DATA.byMes.find(m=>m[0]===_mesNombreActual);
-    if(_mData && _mData.length > 3) cobradoMes=+_mData[3]||0; // sin IVA (columna 3)
+    if(_mData && _mData.length > 2) cobradoMes=+_mData[2]||0; // facturado c/IVA (columna 2)
   }
   // Fallback: sumar ingresos de caja del mes si no hay dato de Gestión
   if(!cobradoMes){
@@ -16995,7 +17055,7 @@ function _renderMetaCobranza() {
       </div>
       <div style="font-size:1.5rem;font-weight:900;color:${color};min-width:52px;text-align:right;line-height:1">${pct}%</div>
     </div>
-    <div style="font-size:.62rem;color:#64748b;margin-top:4px;text-align:right">Facturado s/IVA ${fmt(cobradoMes)} de ${fmt(meta)} — faltan ${fmt(Math.max(0,meta-cobradoMes))}</div>
+    <div style="font-size:.62rem;color:#64748b;margin-top:4px;text-align:right">Facturado ${fmt(cobradoMes)} de meta ${fmt(meta)} — faltan ${fmt(Math.max(0,meta-cobradoMes))}</div>
   </div>`;
 }
 
@@ -17004,7 +17064,7 @@ function _metaCobranzaEdit() {
   let sugerido = '';
   if (window.GESTION_DATA && GESTION_DATA.byMes && GESTION_DATA.byMes.length > 1) {
     const recent = GESTION_DATA.byMes.slice(-4, -1); // últimos 3 meses (excluir el actual)
-    const vals = recent.map(m => +m[3] || 0).filter(v => v > 0);
+    const vals = recent.map(m => +m[2] || 0).filter(v => v > 0); // facturado c/IVA (columna 2)
     if (vals.length) sugerido = String(Math.round(vals.reduce((s,v)=>s+v,0)/vals.length));
   }
   const v = prompt('Establecer Meta de Cobranza Mensual ($):', sugerido);
