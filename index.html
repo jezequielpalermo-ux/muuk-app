@@ -729,6 +729,7 @@
     <div class="sl-items" id="sg-empresa">
       <li><a class="nav-link" data-page="socios"><i class="bi bi-people-fill"></i>Socios</a></li>
       <li><a class="nav-link" data-page="cuentaSocios"><i class="bi bi-bar-chart-steps"></i>Cuenta Socios</a></li>
+      <li><a class="nav-link" data-page="liquidacion"><i class="bi bi-cash-stack"></i>Liquidación Socios</a></li>
     </div>
 
     <!-- ── Cheques ── -->
@@ -761,6 +762,7 @@
       <li><a class="nav-link" data-page="estadosCuenta"><i class="bi bi-person-lines-fill"></i>Estados de Cuenta</a></li>
       <li><a class="nav-link" data-page="stock"><i class="bi bi-box-seam-fill"></i>Stock</a></li>
       <li><a class="nav-link" data-page="listasPrecios"><i class="bi bi-tags-fill"></i>Listas de Precios</a></li>
+      <li><a class="nav-link" data-page="empresas"><i class="bi bi-building-check"></i>CRM Empresas</a></li>
     </div>
 
     <!-- ── Análisis ── -->
@@ -2744,6 +2746,56 @@ CREATE POLICY "acceso total" ON flujo_caja_versions FOR ALL USING (true) WITH CH
       </div>
     </div>
 
+    <!-- ALERTAS POR EMAIL (EmailJS) -->
+    <div class="card mb-4">
+      <div class="card-header bg-white fw-bold"><i class="bi bi-envelope-fill me-2" style="color:#e11d48"></i>Alertas por Email</div>
+      <div class="card-body">
+        <div id="emailjs-status" class="alert mb-3" style="font-size:.84rem"></div>
+        <div class="row g-3 mb-3">
+          <div class="col-md-6">
+            <label class="form-label small fw-bold">EmailJS — Service ID</label>
+            <input type="text" class="form-control form-control-sm" id="cfg-ejs-service" placeholder="service_xxxxxxx"
+              oninput="if(!ST.emailjsConfig)ST.emailjsConfig={};ST.emailjsConfig.serviceId=this.value;save();_updateEmailjsStatus()">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label small fw-bold">EmailJS — Template ID</label>
+            <input type="text" class="form-control form-control-sm" id="cfg-ejs-template" placeholder="template_xxxxxxx"
+              oninput="if(!ST.emailjsConfig)ST.emailjsConfig={};ST.emailjsConfig.templateId=this.value;save();_updateEmailjsStatus()">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label small fw-bold">EmailJS — Public Key (User ID)</label>
+            <input type="text" class="form-control form-control-sm" id="cfg-ejs-userid" placeholder="XXXXXXXXXXXXXXXXXXXX"
+              oninput="if(!ST.emailjsConfig)ST.emailjsConfig={};ST.emailjsConfig.userId=this.value;save();_updateEmailjsStatus()">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label small fw-bold">Email destino</label>
+            <input type="email" class="form-control form-control-sm" id="cfg-ejs-email" placeholder="socios@muuk.com"
+              oninput="if(!ST.emailjsConfig)ST.emailjsConfig={};ST.emailjsConfig.email=this.value;save()">
+          </div>
+        </div>
+        <div style="font-weight:600;font-size:.8rem;margin-bottom:8px">Activar alertas:</div>
+        <div class="d-flex flex-wrap gap-3 mb-3">
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="cfg-alerta-cheques" onchange="if(!ST.alertasConfig)ST.alertasConfig={};ST.alertasConfig.chequesVenc=this.checked;save()">
+            <label class="form-check-label small" for="cfg-alerta-cheques">Cheques venciendo en 48 hs</label>
+          </div>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="cfg-alerta-arca" onchange="if(!ST.alertasConfig)ST.alertasConfig={};ST.alertasConfig.arcaOblig=this.checked;save()">
+            <label class="form-check-label small" for="cfg-alerta-arca">Obligaciones ARCA en 5 días</label>
+          </div>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="cfg-alerta-diario" onchange="if(!ST.alertasConfig)ST.alertasConfig={};ST.alertasConfig.resumenDiario=this.checked;save()">
+            <label class="form-check-label small" for="cfg-alerta-diario">Resumen diario (08:00)</label>
+          </div>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+          <button class="btn btn-sm" onclick="alertasEnviarPrueba()" style="background:#e11d48;color:#fff;border:none;border-radius:7px;font-size:.72rem;padding:5px 12px"><i class="bi bi-send me-1"></i>Enviar prueba</button>
+          <a href="https://www.emailjs.com" target="_blank" class="btn btn-sm btn-outline-secondary" style="font-size:.72rem;border-radius:7px;padding:5px 12px"><i class="bi bi-box-arrow-up-right me-1"></i>Registrarse en EmailJS</a>
+        </div>
+        <div class="mt-2 text-muted" style="font-size:.72rem"><i class="bi bi-info-circle me-1"></i>EmailJS es gratuito (hasta 200 emails/mes) y no requiere servidor. Las alertas se envían directamente desde el navegador.</div>
+      </div>
+    </div>
+
     <!-- DATOS LOCALES Y BACKUP -->
     <div class="card">
       <div class="card-header bg-white fw-bold"><i class="bi bi-shield-fill-check me-2 text-success"></i>Backup y Restauración</div>
@@ -3971,6 +4023,7 @@ CREATE POLICY "acceso total" ON flujo_caja_versions FOR ALL USING (true) WITH CH
       <div class="col-lg-5">
         <div class="card p-3">
           <h6 style="font-size:.78rem;font-weight:700;margin-bottom:8px"><i class="bi bi-pie-chart-fill me-1 text-danger"></i>Concentración de Riesgo</h6>
+          <div style="height:130px;position:relative;margin-bottom:8px"><canvas id="estrat-chart-concentracion"></canvas></div>
           <div id="estrat-concentracion" style="font-size:.78rem"></div>
         </div>
       </div>
@@ -4006,6 +4059,152 @@ CREATE POLICY "acceso total" ON flujo_caja_versions FOR ALL USING (true) WITH CH
     <div class="card p-3 mt-3" id="estrat-hist-meses" style="display:none">
       <h6 style="font-size:.78rem;font-weight:700;margin-bottom:8px"><i class="bi bi-bar-chart-steps me-1 text-info"></i>Comisiones por Mes — Comparativa Anual</h6>
       <div style="height:200px;position:relative"><canvas id="estrat-chart-meses"></canvas></div>
+    </div>
+
+    <!-- ESTACIONALIDAD Y FORECASTING -->
+    <div class="card p-3 mt-3">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:6px">
+        <h6 style="font-size:.78rem;font-weight:700;margin:0"><i class="bi bi-activity me-1" style="color:#e11d48"></i>Estacionalidad y Forecasting</h6>
+        <div id="estrat-season-legend" style="display:flex;gap:8px;flex-wrap:wrap;font-size:.62rem"></div>
+      </div>
+      <div style="height:220px;position:relative"><canvas id="estrat-chart-estacionalidad"></canvas></div>
+      <div id="estrat-forecast-cards" class="row g-2 mt-2"></div>
+    </div>
+  </div>
+
+  <!-- ══════════════════ LIQUIDACIÓN SOCIOS ══════════════════ -->
+  <div id="page-liquidacion" class="page">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px">
+      <div>
+        <h4 style="font-weight:800;margin:0;font-size:1.05rem;color:#0f172a">
+          <i class="bi bi-cash-stack me-2" style="color:#7c3aed"></i>Liquidación Mensual por Socio
+        </h4>
+        <div style="font-size:.7rem;color:#94a3b8;margin-top:2px">Distribución equitativa de comisiones entre los 3 socios</div>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+        <select id="liq-mes-sel" class="form-select form-select-sm" style="max-width:160px;font-size:.78rem" onchange="renderLiquidacion()">
+          <option value="">Mes actual</option>
+        </select>
+        <button class="btn btn-sm" onclick="liqExportPDF()" style="background:#7c3aed;color:#fff;border:none;border-radius:7px;font-size:.72rem;padding:5px 12px"><i class="bi bi-file-earmark-pdf me-1"></i>PDF</button>
+      </div>
+    </div>
+
+    <!-- KPIs resumen -->
+    <div class="row g-2 mb-3" id="liq-kpis"></div>
+
+    <!-- Tabla socios -->
+    <div class="card mb-3">
+      <div class="card-header bg-white" style="font-size:.8rem;font-weight:700"><i class="bi bi-people-fill me-2 text-primary"></i>Distribución por Socio</div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0 gest-table">
+            <thead class="table-dark">
+              <tr>
+                <th class="ps-3">Socio</th>
+                <th class="text-end">Bruto (33.33%)</th>
+                <th class="text-end">Gastos asign.</th>
+                <th class="text-end">Retiros acum.</th>
+                <th class="text-end pe-3" style="color:#fbbf24">Saldo neto</th>
+              </tr>
+            </thead>
+            <tbody id="liq-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Desglose de ingresos -->
+    <div class="row g-3">
+      <div class="col-lg-6">
+        <div class="card p-3">
+          <h6 style="font-size:.78rem;font-weight:700;margin-bottom:8px"><i class="bi bi-receipt me-1 text-success"></i>Fuentes de Ingreso del Mes</h6>
+          <div id="liq-ingresos-detalle" style="font-size:.8rem"></div>
+        </div>
+      </div>
+      <div class="col-lg-6">
+        <div class="card p-3">
+          <h6 style="font-size:.78rem;font-weight:700;margin-bottom:8px"><i class="bi bi-bar-chart-fill me-1" style="color:#7c3aed"></i>Retiros Acumulados por Socio</h6>
+          <div style="height:160px;position:relative"><canvas id="liq-chart-retiros"></canvas></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════ CRM EMPRESAS ══════════════════ -->
+  <div id="page-empresas" class="page">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px">
+      <div>
+        <h4 style="font-weight:800;margin:0;font-size:1.05rem;color:#0f172a">
+          <i class="bi bi-building-check me-2" style="color:#0ea5e9"></i>CRM Empresas
+        </h4>
+        <div style="font-size:.7rem;color:#94a3b8;margin-top:2px">Cartera de empresas · contactos · historial de operaciones</div>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+        <input type="text" id="crm-buscar" class="form-control form-control-sm" placeholder="Buscar empresa..." style="max-width:200px;font-size:.78rem" oninput="renderEmpresas()">
+        <button class="btn btn-sm" onclick="crmNuevaEmpresa()" style="background:#0ea5e9;color:#fff;border:none;border-radius:7px;font-size:.72rem;padding:5px 12px"><i class="bi bi-plus-lg me-1"></i>Nueva empresa</button>
+      </div>
+    </div>
+
+    <!-- Stats row -->
+    <div class="row g-2 mb-3" id="crm-stats"></div>
+
+    <!-- Cards grid -->
+    <div id="crm-cards" class="row g-3"></div>
+
+    <!-- Modal empresa -->
+    <div class="modal fade" id="modal-crm-empresa" tabindex="-1">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" style="font-size:.92rem;font-weight:700"><i class="bi bi-building-check me-2" style="color:#0ea5e9"></i><span id="crm-modal-title">Nueva empresa</span></h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label small fw-bold">Nombre de la empresa *</label>
+                <input type="text" class="form-control form-control-sm" id="crm-f-nombre" placeholder="Distribuidora XYZ S.A.">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label small fw-bold">CUIT</label>
+                <input type="text" class="form-control form-control-sm" id="crm-f-cuit" placeholder="30-XXXXXXXX-X">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label small fw-bold">Contacto principal</label>
+                <input type="text" class="form-control form-control-sm" id="crm-f-contacto" placeholder="Juan Pérez">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label small fw-bold">Teléfono</label>
+                <input type="text" class="form-control form-control-sm" id="crm-f-tel" placeholder="+54 9 11 1234-5678">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label small fw-bold">Email</label>
+                <input type="email" class="form-control form-control-sm" id="crm-f-email" placeholder="contacto@empresa.com">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label small fw-bold">Condición de pago</label>
+                <select class="form-select form-select-sm" id="crm-f-condpago">
+                  <option value="">Sin especificar</option>
+                  <option value="contado">Contado</option>
+                  <option value="cheque30">Cheque 30 días</option>
+                  <option value="cheque60">Cheque 60 días</option>
+                  <option value="cheque90">Cheque 90 días</option>
+                  <option value="echeque">E-Cheque</option>
+                  <option value="transferencia">Transferencia</option>
+                </select>
+              </div>
+              <div class="col-12">
+                <label class="form-label small fw-bold">Notas</label>
+                <textarea class="form-control form-control-sm" id="crm-f-notas" rows="3" placeholder="Observaciones, acuerdos especiales, historial de relación..."></textarea>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+            <button type="button" class="btn btn-primary btn-sm" onclick="crmGuardarEmpresa()"><i class="bi bi-floppy me-1"></i>Guardar</button>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -5193,7 +5392,10 @@ let ST = {
   kmTarifas: [
     { id: 'kmt_base', desde: '2025-04-01', valor: 1200, motivo: 'Tarifa inicial acordada' }
   ],
-  metaCobranza: 0
+  metaCobranza: 0,
+  empresasCRM: [],
+  emailjsConfig: { serviceId: '', templateId: '', userId: '', email: '' },
+  alertasConfig: { chequesVenc: true, arcaOblig: true, resumenDiario: false }
 };
 
 let CHARTS = {};
@@ -5680,6 +5882,9 @@ function load() {
   if (typeof ST.metaCobranza === 'undefined') ST.metaCobranza = 0;
   if (!Array.isArray(ST.facturasACobrar)) ST.facturasACobrar = [];
   if (!Array.isArray(ST.facturasPagar)) ST.facturasPagar = [];
+  if (!Array.isArray(ST.empresasCRM)) ST.empresasCRM = [];
+  if (!ST.emailjsConfig || typeof ST.emailjsConfig !== 'object') ST.emailjsConfig = { serviceId:'', templateId:'', userId:'', email:'' };
+  if (!ST.alertasConfig || typeof ST.alertasConfig !== 'object') ST.alertasConfig = { chequesVenc:true, arcaOblig:true, resumenDiario:false };
 }
 
 
@@ -6753,9 +6958,9 @@ function initApp() {
    SIDEBAR — Grupos Colapsables
 ═══════════════════════════════════════════ */
 const _SB_GROUPS = {
-  empresa:  ['socios','cuentaSocios'],
+  empresa:  ['socios','cuentaSocios','liquidacion'],
   caja:     ['cajaBancos','cajaEfectivo','chequesFisicos','eCheques','chequesPagar','kilometraje'],
-  gestion:  ['comisiones','bcra','calendarioARCA','contabilidad','facturasACobrar','facturasPagar','estadosCuenta','stock','listasPrecios'],
+  gestion:  ['comisiones','bcra','calendarioARCA','contabilidad','facturasACobrar','facturasPagar','estadosCuenta','stock','listasPrecios','empresas'],
   analisis: ['tesoreria','flujoProyectado','panelVencimientos','rentabilidad','gestion','reportes','historial','estrategicos','calculadora'],
   archivos: ['documentos','cuentasBancarias','config'],
 };
@@ -6829,7 +7034,8 @@ const _PAGE_LABELS = {
   tesoreria:'Tesorería Integral', flujoProyectado:'Flujo Proyectado',
   panelVencimientos:'Vencimientos', rentabilidad:'Rentabilidad',
   gestion:'Gestión', reportes:'Reportes', historial:'Historial',
-  estrategicos:'Estratégicos', calculadora:'Calculadora de Costo', documentos:'Documentos', cuentasBancarias:'Cuentas Bancarias', config:'Configuración'
+  estrategicos:'Estratégicos', calculadora:'Calculadora de Costo', documentos:'Documentos', cuentasBancarias:'Cuentas Bancarias', config:'Configuración',
+  liquidacion:'Liquidación Socios', empresas:'CRM Empresas'
 };
 const _GROUP_LABELS = {
   empresa:'Empresa', caja:'Caja', gestion:'Gestión', analisis:'Análisis', archivos:'Archivos'
@@ -7048,7 +7254,7 @@ function irA(p) {
   if (p==='historial')         renderHistorial();
   if (p==='facturasACobrar')   renderFacturasACobrar();
   if (p==='facturasPagar')     renderFacturasPagar();
-  if (p==='config')            { renderListaConceptos(); _updateSbStatusCard(); }
+  if (p==='config')            { renderListaConceptos(); _updateSbStatusCard(); _renderConfigEmailjs(); }
   if (p==='gestion')           renderGestion();
   if (p==='estrategicos')      renderEstrategicos();
   if (p==='estadosCuenta')     renderEstadosCuenta();
@@ -7062,6 +7268,8 @@ function irA(p) {
   if (p==='calendarioARCA')    renderCalendarioARCA();
   if (p==='kilometraje')       kmRender();
   if (p==='calculadora')       try { calcRenderHistorial(); calcRestoreConfig(); } catch(e) {}
+  if (p==='liquidacion')       renderLiquidacion();
+  if (p==='empresas')          renderEmpresas();
   // Actualizar nav-links activos
   document.querySelectorAll('#sidebar-nav .nav-link').forEach(l => {
     l.classList.toggle('active', l.dataset.page === p);
@@ -14453,38 +14661,62 @@ function renderEstrategicos() {
     });
   }
 
-  // Concentración de riesgo
-  const conc = document.getElementById('estrat-concentracion');
-  if (conc && d.clientes.length) {
-    const sorted = [...d.clientes].sort((a,b)=>b[4]-a[4]);
+  // Concentración de riesgo — donut chart + tabla
+  (function(){
+    const sorted = [...(filtClientes.length ? filtClientes : d.clientes)].sort((a,b)=>b[4]-a[4]);
+    const localTotCom = filtClientes.length ? filtTotCom : totCom;
+    if (!sorted.length) return;
     const top1 = sorted[0]?sorted[0][4]:0;
     const top3 = sorted.slice(0,3).reduce((s,c)=>s+c[4],0);
-    const top5 = sorted.slice(0,5).reduce((s,c)=>s+c[4],0);
-    const pct1 = totCom?(top1/totCom*100):0;
-    const pct3 = totCom?(top3/totCom*100):0;
-    const pct5 = totCom?(top5/totCom*100):0;
-    const riskColor = pct1>40?'#dc2626':pct1>25?'#d97706':'#16a34a';
-    const riskLabel = pct1>40?'ALTO':pct1>25?'MEDIO':'BAJO';
+    const riskColor = top1/localTotCom>0.4?'#dc2626':top1/localTotCom>0.25?'#d97706':'#16a34a';
+    const riskLabel = top1/localTotCom>0.4?'⚠ ALTO':top1/localTotCom>0.25?'MEDIO':'✓ BAJO';
+    const top5 = sorted.slice(0,5);
+    const restoCom = localTotCom - top5.reduce((s,c)=>s+c[4],0);
+    const top5Labels = [...top5.map(c=>c[0].length>16?c[0].slice(0,14)+'…':c[0]), 'Resto'];
+    const top5Data = [...top5.map(c=>c[4]), Math.max(0,restoCom)];
+    const donutColors = ['#dc2626','#d97706','#4f46e5','#0ea5e9','#16a34a','#94a3b8'];
 
+    // Donut chart
+    const ctxC = document.getElementById('estrat-chart-concentracion');
+    if (ctxC) {
+      if (window._chartConcentracion) window._chartConcentracion.destroy();
+      window._chartConcentracion = new Chart(ctxC, {
+        type:'doughnut',
+        data:{ labels:top5Labels, datasets:[{ data:top5Data, backgroundColor:donutColors, borderWidth:2, hoverOffset:6 }] },
+        options:{
+          responsive:true, maintainAspectRatio:false, cutout:'62%',
+          plugins:{
+            legend:{display:false},
+            tooltip:{callbacks:{label:ctx=>{
+              const pct=(localTotCom?ctx.raw/localTotCom*100:0).toFixed(1);
+              return ` ${ctx.label}: ${pct}% (${fmt(ctx.raw)})`;
+            }}}
+          }
+        }
+      });
+    }
+
+    // Texto debajo del donut
+    const conc = document.getElementById('estrat-concentracion');
+    if (!conc) return;
+    const pct1=(localTotCom?top1/localTotCom*100:0).toFixed(1);
+    const pct3=(localTotCom?top3/localTotCom*100:0).toFixed(1);
     conc.innerHTML = `
-      <div style="background:${riskColor}11;border:1px solid ${riskColor}33;border-radius:8px;padding:10px 12px;margin-bottom:10px;text-align:center">
-        <div style="font-size:.65rem;color:#64748b;text-transform:uppercase;font-weight:600">Nivel de concentración</div>
-        <div style="font-size:1.2rem;font-weight:800;color:${riskColor}">${riskLabel}</div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;background:${riskColor}11;border-left:3px solid ${riskColor};border-radius:6px;padding:6px 10px">
+        <span style="font-weight:800;color:${riskColor};font-size:.88rem">${riskLabel}</span>
+        <span style="font-size:.68rem;color:#64748b">Top 1 cliente: ${pct1}% · Top 3: ${pct3}%</span>
       </div>
-      <div style="display:flex;flex-direction:column;gap:8px">
-        <div style="display:flex;justify-content:space-between;align-items:center">
-          <span style="color:#64748b;font-size:.72rem">Top 1 cliente</span>
-          <span style="font-weight:700;color:${riskColor}">${pct1.toFixed(1)}%</span>
-        </div>
-        <div style="height:6px;background:#e2e8f0;border-radius:3px"><div style="width:${pct1}%;height:100%;background:${riskColor};border-radius:3px"></div></div>
-        <div style="display:flex;justify-content:space-between"><span style="color:#64748b;font-size:.72rem">Top 3</span><span style="font-weight:700">${pct3.toFixed(1)}%</span></div>
-        <div style="height:6px;background:#e2e8f0;border-radius:3px"><div style="width:${pct3}%;height:100%;background:#d97706;border-radius:3px"></div></div>
-        <div style="display:flex;justify-content:space-between"><span style="color:#64748b;font-size:.72rem">Top 5</span><span style="font-weight:700">${pct5.toFixed(1)}%</span></div>
-        <div style="height:6px;background:#e2e8f0;border-radius:3px"><div style="width:${pct5}%;height:100%;background:#4f46e5;border-radius:3px"></div></div>
+      <div style="display:flex;flex-direction:column;gap:3px">
+        ${top5.map((c,i)=>{const pct=(localTotCom?c[4]/localTotCom*100:0).toFixed(1);return `
+          <div style="display:flex;align-items:center;gap:6px;font-size:.68rem">
+            <span style="width:8px;height:8px;border-radius:50%;background:${donutColors[i]};flex-shrink:0"></span>
+            <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#334155">${c[0]}</span>
+            <span style="font-weight:700;color:${donutColors[i]}">${pct}%</span>
+          </div>`;}).join('')}
       </div>
-      <div style="margin-top:10px;font-size:.68rem;color:#94a3b8"><i class="bi bi-info-circle me-1"></i>${pct1>40?'Alto riesgo: un solo cliente concentra más del 40% de las comisiones. Diversificar cartera.':pct1>25?'Concentración moderada. Considerar expandir base de clientes.':'Buena diversificación de cartera.'}</div>
+      <div style="margin-top:8px;font-size:.65rem;color:#94a3b8"><i class="bi bi-info-circle me-1"></i>${parseFloat(pct1)>40?'Alto riesgo: un solo cliente concentra más del 40% de las comisiones.':parseFloat(pct1)>25?'Concentración moderada. Considerar expandir la base de clientes.':'Buena diversificación de cartera de clientes.'}</div>
     `;
-  }
+  })();
 
   // Expectativas y proyección
   const exp = document.getElementById('estrat-expectativas');
@@ -14519,6 +14751,109 @@ function renderEstrategicos() {
         </div>
       </div>`;
   }
+  // ── Estacionalidad y Forecasting ──
+  (function(){
+    const MES_NOMBRES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+    // Construir mapa: año → array de 12 comisiones (una por mes, 0 si no hay dato)
+    const allYears = Object.keys(_HIST_DATA).map(Number).sort();
+    // También agregar datos live de 2026 desde GESTION_DATA
+    const liveYear = new Date().getFullYear();
+    const liveMap = {};
+    d.rows.forEach(r => {
+      const parts = String(r[0]).trim().split(' ');
+      const y = parseInt(parts[parts.length-1]);
+      const mName = parts[0];
+      const mIdx = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'].indexOf(mName);
+      if (mIdx >= 0 && !isNaN(y)) {
+        if (!liveMap[y]) liveMap[y] = {};
+        if (!liveMap[y][mIdx+1]) liveMap[y][mIdx+1] = 0;
+        liveMap[y][mIdx+1] += (r[7]||0);
+      }
+    });
+
+    // Colores por año
+    const yearColors = { 2022:'#94a3b8', 2023:'#60a5fa', 2024:'#f59e0b', 2025:'#16a34a', 2026:'#e11d48' };
+    const yearsToShow = [...new Set([...allYears, ...Object.keys(liveMap).map(Number)])].sort().slice(-4);
+
+    const datasets = yearsToShow.map(yr => {
+      const histMeses = _HIST_DATA[yr]?.meses || {};
+      const liveMeses = liveMap[yr] || {};
+      const data = MES_NOMBRES.map((_,i) => {
+        const mIdx = i+1;
+        return Math.round((histMeses[mIdx] || 0) + (liveMeses[mIdx] || 0));
+      });
+      return { label: String(yr), data, backgroundColor: (yearColors[yr]||'#64748b')+'99', borderColor: yearColors[yr]||'#64748b', borderWidth:2, borderRadius:4, type:'bar' };
+    });
+
+    // Línea de promedio histórico (promedio de todos los años anteriores por mes)
+    const avgData = MES_NOMBRES.map((_,i) => {
+      const mIdx = i+1;
+      const vals = yearsToShow.slice(0,-1).map(yr => {
+        return (_HIST_DATA[yr]?.meses[mIdx]||0) + (liveMap[yr]?.[mIdx]||0);
+      }).filter(v=>v>0);
+      return vals.length ? Math.round(vals.reduce((a,b)=>a+b,0)/vals.length) : 0;
+    });
+    datasets.push({ label:'Prom. hist.', data:avgData, type:'line', borderColor:'#7c3aed', backgroundColor:'transparent', borderWidth:2, borderDash:[5,3], pointRadius:3, pointBackgroundColor:'#7c3aed', tension:.3 });
+
+    const ctxS = document.getElementById('estrat-chart-estacionalidad');
+    if (ctxS) {
+      if (window._chartEstacionalidad) window._chartEstacionalidad.destroy();
+      window._chartEstacionalidad = new Chart(ctxS, {
+        type:'bar',
+        data:{ labels:MES_NOMBRES, datasets },
+        options:{
+          responsive:true, maintainAspectRatio:false,
+          plugins:{ legend:{display:false},
+            tooltip:{callbacks:{label:ctx=>` ${ctx.dataset.label}: ${fmt(ctx.raw)}`}} },
+          scales:{
+            y:{ ticks:{callback:v=>'$'+(v>=1e9?(v/1e9).toFixed(1)+'B':(v/1e6).toFixed(0)+'M'),font:{size:9}}, grid:{color:'rgba(0,0,0,.05)'} },
+            x:{ ticks:{font:{size:10}}, grid:{display:false} }
+          }
+        }
+      });
+    }
+
+    // Legend
+    const legend = document.getElementById('estrat-season-legend');
+    if (legend) {
+      legend.innerHTML = [...yearsToShow.map(yr=>`<span style="display:flex;align-items:center;gap:3px"><span style="width:10px;height:10px;border-radius:2px;background:${yearColors[yr]||'#64748b'}"></span>${yr}</span>`),
+        `<span style="display:flex;align-items:center;gap:3px"><span style="width:14px;height:2px;background:#7c3aed;border-top:2px dashed #7c3aed"></span>Promedio</span>`].join('');
+    }
+
+    // Forecast cards — proyección para los meses que faltan del año actual
+    const fcCards = document.getElementById('estrat-forecast-cards');
+    if (fcCards) {
+      const now = new Date();
+      const curMes = now.getMonth(); // 0-based, meses ya pasados
+      const remaining = [];
+      for (let m = curMes+1; m < 12; m++) {
+        const histVals = allYears.map(yr=>_HIST_DATA[yr]?.meses[m+1]||0).filter(v=>v>0);
+        const avg = histVals.length ? histVals.reduce((a,b)=>a+b,0)/histVals.length : 0;
+        const growth = allYears.length>=2 ? (() => {
+          const last = _HIST_DATA[allYears[allYears.length-1]]?.meses[m+1]||0;
+          const prev2 = _HIST_DATA[allYears[allYears.length-2]]?.meses[m+1]||0;
+          return prev2 ? (last-prev2)/prev2 : 0;
+        })() : 0;
+        remaining.push({ mes: MES_NOMBRES[m], avg, growth });
+      }
+      if (!remaining.length) {
+        fcCards.innerHTML = '<div class="col-12"><div class="text-muted" style="font-size:.75rem;padding:8px 0"><i class="bi bi-check-circle-fill text-success me-1"></i>Año completo — sin meses proyectables.</div></div>';
+      } else {
+        fcCards.innerHTML = remaining.map(fc => {
+          const gColor = fc.growth>=0?'#16a34a':'#dc2626';
+          const gArrow = fc.growth>=0?'▲':'▼';
+          return `<div class="col-6 col-md-3">
+            <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:8px 10px">
+              <div style="font-size:.65rem;color:#64748b;font-weight:600;text-transform:uppercase">${fc.mes} (proyectado)</div>
+              <div style="font-size:.92rem;font-weight:700;color:#0f172a">${fmt(Math.round(fc.avg))}</div>
+              <div style="font-size:.65rem;color:${gColor};margin-top:2px">${gArrow}${(Math.abs(fc.growth)*100).toFixed(0)}% vs año ant.</div>
+            </div>
+          </div>`;
+        }).join('');
+      }
+    }
+  })();
+
   // Render comparativa anual automáticamente (con datos hardcoded + 2026 live)
   _buildFromGestionOnly();
 }
@@ -19547,6 +19882,439 @@ dCalcCalc = (function() {
     _t = setTimeout(calcCalc, 80);
   };
 })();
+
+/* ═══════════════════════════════════════════
+   LIQUIDACIÓN MENSUAL POR SOCIO
+═══════════════════════════════════════════ */
+let _liqChartRetiros = null;
+
+function renderLiquidacion() {
+  const socios = ST.socios || [];
+  if (!socios.length) {
+    const tb = document.getElementById('liq-tbody');
+    if (tb) tb.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-3" style="font-size:.8rem"><i class="bi bi-people me-2"></i>No hay socios configurados. Configurá los socios primero.</td></tr>';
+    return;
+  }
+
+  // Poblar selector de meses
+  const sel = document.getElementById('liq-mes-sel');
+  if (sel) {
+    const MES_NOMBRES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+    const now = new Date();
+    const opciones = [];
+    for (let i = 11; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const key = MES_NOMBRES[d.getMonth()] + ' ' + d.getFullYear();
+      opciones.push(`<option value="${key}"${i===0?' selected':''}>${key}</option>`);
+    }
+    if (!sel.innerHTML.includes('Enero')) sel.innerHTML = opciones.join('');
+  }
+
+  const mesSelVal = sel ? sel.value : '';
+  const MES_NOMBRES2 = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const now = new Date();
+  const mesLabel = mesSelVal || (MES_NOMBRES2[now.getMonth()] + ' ' + now.getFullYear());
+
+  // ── Comisiones desde Gestión para el mes seleccionado ──
+  let comGestion = 0, facGestion = 0, opsGestion = 0;
+  if (GESTION_DATA && GESTION_DATA.byMes) {
+    const gm = GESTION_DATA.byMes.find(m => m[0] === mesLabel);
+    if (gm) { comGestion = gm[4]||0; facGestion = gm[2]||0; opsGestion = gm[1]||0; }
+  }
+
+  // ── Ingresos de Caja Bancos para el mes ──
+  const parseMesKey = label => {
+    const parts = label.trim().split(' ');
+    const mIdx = MES_NOMBRES2.indexOf(parts[0]);
+    const yr = parseInt(parts[1]);
+    return { m: mIdx, y: yr };
+  };
+  const { m: mesSel, y: yearSel } = parseMesKey(mesLabel);
+  const enMes = mov => {
+    const d = new Date(mov.fecha);
+    return d.getMonth() === mesSel && d.getFullYear() === yearSel;
+  };
+
+  let ingresosOtros = 0, egresosTotal = 0;
+  (ST.cajaBancos || []).filter(enMes).forEach(m => {
+    if (m.tipo === 'ingreso') ingresosOtros += Math.abs(+m.monto);
+    else egresosTotal += Math.abs(+m.monto);
+  });
+  (ST.cajaEfectivo || []).filter(enMes).forEach(m => {
+    if (m.tipo === 'egreso') egresosTotal += Math.abs(+m.monto);
+  });
+
+  // ── Retiros por socio (histórico acumulado — cajaEfectivo) ──
+  const RETIRO_KEYWORDS = ['retiro','adelanto','distribución','distribucion','sueldo'];
+  const retirosBySocio = {};
+  socios.forEach(s => { retirosBySocio[s.id] = 0; });
+  (ST.cajaEfectivo || []).filter(enMes).forEach(m => {
+    if (m.tipo !== 'egreso') return;
+    const conc = (m.concepto || '').toLowerCase();
+    if (!RETIRO_KEYWORDS.some(k => conc.includes(k))) return;
+    const socio = socios.find(s => m.socioId === s.id || conc.includes(s.nombre.split(' ')[0].toLowerCase()));
+    if (socio) retirosBySocio[socio.id] = (retirosBySocio[socio.id]||0) + Math.abs(+m.monto);
+  });
+  (ST.cajaBancos || []).filter(enMes).forEach(m => {
+    if (m.tipo !== 'egreso') return;
+    const conc = (m.concepto || '').toLowerCase();
+    if (!RETIRO_KEYWORDS.some(k => conc.includes(k))) return;
+    const socio = socios.find(s => m.socioId === s.id || conc.includes(s.nombre.split(' ')[0].toLowerCase()));
+    if (socio) retirosBySocio[socio.id] = (retirosBySocio[socio.id]||0) + Math.abs(+m.monto);
+  });
+
+  const totalIngresos = comGestion + ingresosOtros;
+  const neto = totalIngresos - egresosTotal;
+  const porSocio = neto / (socios.length || 1);
+  const pct = (100 / (socios.length||1)).toFixed(2);
+
+  // KPIs
+  const kpisEl = document.getElementById('liq-kpis');
+  if (kpisEl) {
+    const kpis = [
+      { icon:'bi-graph-up-arrow', color:'#16a34a', bg:'#f0fdf4', label:'Comisiones Gestión', val:fmt(comGestion), sub:`${opsGestion} ops · ${mesLabel}` },
+      { icon:'bi-cash-coin', color:'#4f46e5', bg:'#eef2ff', label:'Otros ingresos Caja', val:fmt(ingresosOtros), sub:'Bancos + Efectivo' },
+      { icon:'bi-arrow-down-circle', color:'#dc2626', bg:'#fef2f2', label:'Gastos del mes', val:fmt(egresosTotal), sub:'Egresos operativos' },
+      { icon:'bi-person-check', color:'#7c3aed', bg:'#f5f3ff', label:`Por socio (${pct}%)`, val:fmt(Math.max(0,porSocio)), sub:neto<0?'Resultado negativo':'Disponible c/u' },
+    ];
+    kpisEl.innerHTML = kpis.map(k=>`<div class="col-6 col-xl-3"><div class="gest-stat" style="border-left-color:${k.color}">
+      <div class="gest-stat-icon" style="background:${k.bg};color:${k.color}"><i class="bi ${k.icon}"></i></div>
+      <div><div class="gest-stat-lbl">${k.label}</div><div class="gest-stat-val gest-num">${k.val}</div><div class="gest-stat-sub">${k.sub}</div></div>
+    </div></div>`).join('');
+  }
+
+  // Tabla por socio
+  const PAL = ['#7c3aed','#0ea5e9','#16a34a','#f59e0b'];
+  const tb = document.getElementById('liq-tbody');
+  if (tb) {
+    tb.innerHTML = socios.map((s,i) => {
+      const bruto = Math.max(0, porSocio);
+      const retirado = retirosBySocio[s.id]||0;
+      const saldo = bruto - retirado;
+      const saldoColor = saldo >= 0 ? '#16a34a' : '#dc2626';
+      return `<tr>
+        <td class="ps-3"><span style="display:inline-flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:50%;background:${PAL[i%PAL.length]}"></span><b>${s.nombre}</b></span></td>
+        <td class="text-end fw-bold">${fmt(bruto)}</td>
+        <td class="text-end text-muted">${fmt(0)}</td>
+        <td class="text-end">${fmt(retirado)}</td>
+        <td class="text-end pe-3 fw-bold" style="color:${saldoColor}">${fmt(saldo)}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  // Desglose de ingresos
+  const ingEl = document.getElementById('liq-ingresos-detalle');
+  if (ingEl) {
+    const items = [
+      { label:'Comisiones Gestión', val:comGestion, color:'#16a34a' },
+      { label:'Ingresos Caja Bancos', val:ingresosOtros, color:'#4f46e5' },
+    ].filter(i=>i.val>0);
+    if (!items.length) { ingEl.innerHTML = '<div class="text-muted" style="font-size:.78rem;padding:6px 0">Sin datos de ingresos para el período seleccionado.</div>'; }
+    else {
+      const tot = items.reduce((s,i)=>s+i.val,0);
+      ingEl.innerHTML = items.map(i=>{
+        const pct = tot?(i.val/tot*100).toFixed(1):'0';
+        return `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <div style="display:flex;align-items:center;gap:6px;font-size:.78rem">
+            <span style="width:8px;height:8px;border-radius:50%;background:${i.color}"></span>${i.label}
+          </div>
+          <div style="text-align:right">
+            <div style="font-weight:700;font-size:.8rem">${fmt(i.val)}</div>
+            <div style="font-size:.65rem;color:#94a3b8">${pct}%</div>
+          </div>
+        </div>
+        <div style="height:4px;background:#e2e8f0;border-radius:2px;margin-bottom:10px">
+          <div style="width:${pct}%;height:100%;background:${i.color};border-radius:2px"></div>
+        </div>`;
+      }).join('') + `<div style="border-top:1px solid #e2e8f0;padding-top:6px;display:flex;justify-content:space-between;font-size:.8rem;font-weight:700"><span>Total ingresos</span><span>${fmt(tot)}</span></div>`;
+    }
+  }
+
+  // Chart retiros
+  const ctxR = document.getElementById('liq-chart-retiros');
+  if (ctxR) {
+    if (_liqChartRetiros) _liqChartRetiros.destroy();
+    _liqChartRetiros = new Chart(ctxR, {
+      type:'bar',
+      data:{
+        labels: socios.map(s=>s.nombre),
+        datasets:[
+          { label:'Retirado', data:socios.map(s=>retirosBySocio[s.id]||0), backgroundColor:PAL.slice(0,socios.length), borderRadius:6 },
+          { label:'Disponible', data:socios.map(()=>Math.max(0,porSocio)), backgroundColor:'rgba(0,0,0,0)', borderColor:PAL.slice(0,socios.length), borderWidth:2, borderRadius:6, type:'bar' }
+        ]
+      },
+      options:{ responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{labels:{boxWidth:10,font:{size:10}}}, tooltip:{callbacks:{label:ctx=>` ${ctx.dataset.label}: ${fmt(ctx.raw)}`}} },
+        scales:{ y:{ticks:{callback:v=>'$'+(v/1000000).toFixed(0)+'M',font:{size:9}},grid:{color:'rgba(0,0,0,.05)'}}, x:{ticks:{font:{size:10}},grid:{display:false}} }
+      }
+    });
+  }
+}
+
+function liqExportPDF() {
+  window.print();
+}
+
+/* ═══════════════════════════════════════════
+   CRM EMPRESAS
+═══════════════════════════════════════════ */
+let _crmEditId = null;
+
+function renderEmpresas() {
+  if (!ST.empresasCRM) ST.empresasCRM = [];
+
+  // Auto-poblar desde GESTION_DATA si hay empresas nuevas
+  if (GESTION_DATA && GESTION_DATA.empresas && GESTION_DATA.empresas.length) {
+    GESTION_DATA.empresas.forEach(e => {
+      const nombre = e[0];
+      if (!nombre) return;
+      const exists = ST.empresasCRM.find(c => c.nombre.toLowerCase() === nombre.toLowerCase());
+      if (!exists) {
+        ST.empresasCRM.push({
+          id: uid(), nombre, cuit:'', contacto:'', tel:'', email:'', condpago:'', notas:'',
+          fromGestion: true, createdAt: new Date().toISOString().slice(0,10)
+        });
+      }
+    });
+    // No save() automático para no hacer spam de escrituras
+  }
+
+  const buscar = (document.getElementById('crm-buscar')?.value||'').toLowerCase();
+  const list = (ST.empresasCRM||[]).filter(e => !buscar || e.nombre.toLowerCase().includes(buscar));
+
+  // Stats
+  const statsEl = document.getElementById('crm-stats');
+  if (statsEl) {
+    const total = (ST.empresasCRM||[]).length;
+    const conContacto = (ST.empresasCRM||[]).filter(e=>e.email||e.tel).length;
+    const conNotas = (ST.empresasCRM||[]).filter(e=>e.notas).length;
+    // Facturación total desde GESTION_DATA
+    let facTotal = 0;
+    if (GESTION_DATA && GESTION_DATA.empresas) GESTION_DATA.empresas.forEach(e=>{ facTotal += e[2]||0; });
+    const stats = [
+      { icon:'bi-building', color:'#0ea5e9', bg:'#f0f9ff', label:'Empresas', val:total },
+      { icon:'bi-person-check', color:'#16a34a', bg:'#f0fdf4', label:'Con contacto', val:conContacto },
+      { icon:'bi-journal-text', color:'#7c3aed', bg:'#f5f3ff', label:'Con notas', val:conNotas },
+      { icon:'bi-currency-exchange', color:'#d97706', bg:'#fffbeb', label:'Facturación hist.', val:fmt(facTotal) },
+    ];
+    statsEl.innerHTML = stats.map(s=>`<div class="col-6 col-xl-3"><div class="gest-stat" style="border-left-color:${s.color}">
+      <div class="gest-stat-icon" style="background:${s.bg};color:${s.color}"><i class="bi ${s.icon}"></i></div>
+      <div><div class="gest-stat-lbl">${s.label}</div><div class="gest-stat-val">${s.val}</div></div>
+    </div></div>`).join('');
+  }
+
+  // Cards
+  const cardsEl = document.getElementById('crm-cards');
+  if (!cardsEl) return;
+  if (!list.length) {
+    cardsEl.innerHTML = `<div class="col-12"><div class="text-center text-muted py-5" style="font-size:.85rem"><i class="bi bi-building me-2" style="font-size:2rem;display:block;margin-bottom:8px;color:#cbd5e1"></i>${buscar?'Sin resultados para "'+buscar+'"':'No hay empresas. Sincronizá Gestión o agregá manualmente.'}</div></div>`;
+    return;
+  }
+
+  cardsEl.innerHTML = list.map(e => {
+    // Buscar stats de gestión para esta empresa
+    let gFac = 0, gCom = 0, gOps = 0;
+    if (GESTION_DATA && GESTION_DATA.empresas) {
+      const ge = GESTION_DATA.empresas.find(g=>g[0].toLowerCase()===e.nombre.toLowerCase());
+      if (ge) { gOps=ge[1]||0; gFac=ge[2]||0; gCom=ge[4]||0; }
+    }
+    const condLabels = { contado:'Contado', cheque30:'Cheque 30d', cheque60:'Cheque 60d', cheque90:'Cheque 90d', echeque:'E-Cheque', transferencia:'Transferencia' };
+    return `<div class="col-md-6 col-xl-4">
+      <div class="card h-100" style="border-top:3px solid #0ea5e9">
+        <div class="card-body p-3">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+            <div>
+              <div style="font-weight:700;font-size:.9rem;color:#0f172a">${e.nombre}</div>
+              ${e.cuit?`<div style="font-size:.65rem;color:#94a3b8">CUIT: ${e.cuit}</div>`:''}
+            </div>
+            <div style="display:flex;gap:4px">
+              ${e.fromGestion?'<span style="font-size:.55rem;background:#dbeafe;color:#1d4ed8;padding:2px 5px;border-radius:4px;font-weight:700">GESTIÓN</span>':''}
+              <button class="btn btn-sm" onclick="crmEditarEmpresa('${e.id}')" style="padding:2px 6px;font-size:.65rem;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:4px" title="Editar"><i class="bi bi-pencil"></i></button>
+              <button class="btn btn-sm" onclick="crmEliminarEmpresa('${e.id}')" style="padding:2px 6px;font-size:.65rem;background:#fef2f2;border:1px solid #fecaca;border-radius:4px;color:#dc2626" title="Eliminar"><i class="bi bi-trash"></i></button>
+            </div>
+          </div>
+          ${e.contacto||e.tel||e.email ? `<div style="font-size:.72rem;color:#475569;margin-bottom:6px;display:flex;flex-direction:column;gap:2px">
+            ${e.contacto?`<span><i class="bi bi-person me-1"></i>${e.contacto}</span>`:''}
+            ${e.tel?`<span><i class="bi bi-telephone me-1"></i>${e.tel}</span>`:''}
+            ${e.email?`<span><i class="bi bi-envelope me-1"></i>${e.email}</span>`:''}
+          </div>` : ''}
+          ${e.condpago?`<div style="margin-bottom:6px"><span style="font-size:.62rem;background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0;border-radius:4px;padding:2px 6px;font-weight:600"><i class="bi bi-clock me-1"></i>${condLabels[e.condpago]||e.condpago}</span></div>`:''}
+          ${gFac>0 ? `<div style="background:#f8fafc;border-radius:6px;padding:6px 8px;margin-bottom:6px;display:flex;gap:12px">
+            <div style="font-size:.65rem;color:#64748b">Ops: <b>${gOps}</b></div>
+            <div style="font-size:.65rem;color:#64748b">Facturado: <b style="color:#4f46e5">${fmt(gFac)}</b></div>
+            <div style="font-size:.65rem;color:#64748b">Com: <b style="color:#16a34a">${fmt(gCom)}</b></div>
+          </div>` : ''}
+          ${e.notas?`<div style="font-size:.7rem;color:#64748b;border-top:1px solid #f1f5f9;padding-top:6px;margin-top:4px;font-style:italic">"${e.notas.slice(0,100)}${e.notas.length>100?'…':''}"</div>`:''}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function crmNuevaEmpresa() {
+  _crmEditId = null;
+  document.getElementById('crm-modal-title').textContent = 'Nueva empresa';
+  ['nombre','cuit','contacto','tel','email','notas'].forEach(f => { const el=document.getElementById('crm-f-'+f); if(el) el.value=''; });
+  const cpEl = document.getElementById('crm-f-condpago'); if(cpEl) cpEl.value='';
+  const m = new bootstrap.Modal(document.getElementById('modal-crm-empresa'));
+  m.show();
+}
+
+function crmEditarEmpresa(id) {
+  const e = (ST.empresasCRM||[]).find(x=>x.id===id);
+  if (!e) return;
+  _crmEditId = id;
+  document.getElementById('crm-modal-title').textContent = 'Editar empresa';
+  ['nombre','cuit','contacto','tel','email','notas'].forEach(f => { const el=document.getElementById('crm-f-'+f); if(el) el.value=e[f]||''; });
+  const cpEl = document.getElementById('crm-f-condpago'); if(cpEl) cpEl.value=e.condpago||'';
+  const m = new bootstrap.Modal(document.getElementById('modal-crm-empresa'));
+  m.show();
+}
+
+function crmGuardarEmpresa() {
+  const nombre = (document.getElementById('crm-f-nombre')?.value||'').trim();
+  if (!nombre) { toast('El nombre es obligatorio', 'danger'); return; }
+  if (!ST.empresasCRM) ST.empresasCRM = [];
+  const data = {
+    nombre,
+    cuit: document.getElementById('crm-f-cuit')?.value||'',
+    contacto: document.getElementById('crm-f-contacto')?.value||'',
+    tel: document.getElementById('crm-f-tel')?.value||'',
+    email: document.getElementById('crm-f-email')?.value||'',
+    condpago: document.getElementById('crm-f-condpago')?.value||'',
+    notas: document.getElementById('crm-f-notas')?.value||'',
+  };
+  if (_crmEditId) {
+    const idx = ST.empresasCRM.findIndex(x=>x.id===_crmEditId);
+    if (idx>=0) ST.empresasCRM[idx] = { ...ST.empresasCRM[idx], ...data };
+  } else {
+    ST.empresasCRM.push({ id:uid(), fromGestion:false, createdAt:new Date().toISOString().slice(0,10), ...data });
+  }
+  save();
+  bootstrap.Modal.getInstance(document.getElementById('modal-crm-empresa'))?.hide();
+  renderEmpresas();
+  toast(_crmEditId ? 'Empresa actualizada' : 'Empresa agregada', 'success');
+}
+
+function crmEliminarEmpresa(id) {
+  if (!confirm('¿Eliminar esta empresa?')) return;
+  ST.empresasCRM = (ST.empresasCRM||[]).filter(x=>x.id!==id);
+  save();
+  renderEmpresas();
+  toast('Empresa eliminada', 'info');
+}
+
+/* ═══════════════════════════════════════════
+   ALERTAS POR EMAIL — EmailJS
+═══════════════════════════════════════════ */
+function _loadEmailJS(cb) {
+  if (window.emailjs) { cb(); return; }
+  const s = document.createElement('script');
+  s.src = 'https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js';
+  s.onload = () => { if (window.emailjs && ST.emailjsConfig?.userId) { emailjs.init(ST.emailjsConfig.userId); } cb(); };
+  s.onerror = () => { toast('No se pudo cargar EmailJS (sin conexión?)', 'danger'); };
+  document.head.appendChild(s);
+}
+
+function _updateEmailjsStatus() {
+  const el = document.getElementById('emailjs-status');
+  if (!el) return;
+  const c = ST.emailjsConfig || {};
+  const ok = c.serviceId && c.templateId && c.userId && c.email;
+  el.className = 'alert mb-3 ' + (ok?'alert-success':'alert-warning');
+  el.innerHTML = ok
+    ? `<strong>✅ EmailJS configurado</strong> — Emails se enviarán a <code>${c.email}</code>.`
+    : '<strong>⚠️ EmailJS no configurado</strong> — Completá los 4 campos para activar las alertas por mail.';
+}
+
+function _renderConfigEmailjs() {
+  const c = ST.emailjsConfig || {};
+  const a = ST.alertasConfig || {};
+  const set = (id, val) => { const el=document.getElementById(id); if(el) el.value=val||''; };
+  const setChk = (id, val) => { const el=document.getElementById(id); if(el) el.checked=!!val; };
+  set('cfg-ejs-service', c.serviceId);
+  set('cfg-ejs-template', c.templateId);
+  set('cfg-ejs-userid', c.userId);
+  set('cfg-ejs-email', c.email);
+  setChk('cfg-alerta-cheques', a.chequesVenc !== false);
+  setChk('cfg-alerta-arca', a.arcaOblig !== false);
+  setChk('cfg-alerta-diario', a.resumenDiario === true);
+  _updateEmailjsStatus();
+}
+
+function alertasEnviarPrueba() {
+  const c = ST.emailjsConfig || {};
+  if (!c.serviceId || !c.templateId || !c.userId || !c.email) {
+    toast('Completá todos los campos de EmailJS primero', 'danger'); return;
+  }
+  _loadEmailJS(() => {
+    if (!window.emailjs) { toast('EmailJS no disponible', 'danger'); return; }
+    emailjs.init(c.userId);
+    const params = {
+      to_email: c.email,
+      subject: 'MÜÜK — Email de prueba',
+      message: `Hola! Este es un email de prueba del sistema de alertas MÜÜK.\n\nFecha: ${new Date().toLocaleString('es-AR')}\n\nSi recibiste este mail, la configuración es correcta.`,
+      empresa: 'MÜÜK SRL'
+    };
+    toast('Enviando email de prueba...', 'info');
+    emailjs.send(c.serviceId, c.templateId, params)
+      .then(() => toast('✅ Email de prueba enviado a ' + c.email, 'success'))
+      .catch(err => toast('Error al enviar: ' + (err.text||err.message||JSON.stringify(err)), 'danger'));
+  });
+}
+
+function _checkAlertas() {
+  const c = ST.emailjsConfig || {};
+  const a = ST.alertasConfig || {};
+  if (!c.serviceId || !c.templateId || !c.userId || !c.email) return;
+
+  const alertLines = [];
+  const now = new Date();
+
+  // Cheques venciendo en 48hs
+  if (a.chequesVenc !== false) {
+    const enVencer = [...(ST.chequesFisicos||[]), ...(ST.eCheques||[])].filter(ch => {
+      if (ch.estado !== 'pendiente' && ch.estado !== 'en_cartera') return false;
+      const venc = new Date(ch.fechaVencimiento || ch.fecha);
+      const diff = (venc - now) / (1000*60*60*24);
+      return diff >= 0 && diff <= 2;
+    });
+    if (enVencer.length) {
+      alertLines.push(`⚠️ ${enVencer.length} cheque(s) vencen en menos de 48hs:`);
+      enVencer.slice(0,5).forEach(ch => alertLines.push(`  • ${ch.cliente||ch.librador||'?'} — ${fmt(+ch.monto)} (vence ${ch.fechaVencimiento||ch.fecha})`));
+    }
+  }
+
+  // Obligaciones ARCA en 5 días
+  if (a.arcaOblig !== false) {
+    const arcaProx = (ST.calendarioARCA || []).filter(ev => {
+      const d = new Date(ev.fecha);
+      const diff = (d - now) / (1000*60*60*24);
+      return diff >= 0 && diff <= 5;
+    });
+    if (arcaProx.length) {
+      alertLines.push(`📅 ${arcaProx.length} obligación(es) ARCA en los próximos 5 días:`);
+      arcaProx.slice(0,5).forEach(ev => alertLines.push(`  • ${ev.nombre||ev.tipo||'?'} — ${ev.fecha}`));
+    }
+  }
+
+  if (!alertLines.length) return;
+
+  _loadEmailJS(() => {
+    if (!window.emailjs) return;
+    emailjs.init(c.userId);
+    emailjs.send(c.serviceId, c.templateId, {
+      to_email: c.email,
+      subject: `MÜÜK — ${alertLines.length} alerta(s) activa(s)`,
+      message: alertLines.join('\n'),
+      empresa: 'MÜÜK SRL'
+    }).catch(()=>{});
+  });
+}
+
+// Verificar alertas al cargar y cada 6 horas
+setTimeout(() => { try { _checkAlertas(); } catch(e){} }, 5000);
+setInterval(() => { try { _checkAlertas(); } catch(e){} }, 6 * 60 * 60 * 1000);
 
 </script>
 <!-- ═══ DATALIST BANCOS BCRA ═══ -->
