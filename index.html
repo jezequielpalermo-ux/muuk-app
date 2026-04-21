@@ -20647,7 +20647,7 @@ function _buildReporteEmailHTML(data) {
       <thead><tr>
         <th style="${H.th}">Socio</th>
         <th style="${H.th};text-align:right">Retiros acumulados</th>
-        <th style="${H.th};text-align:right">Saldo a retirar</th>
+        <th style="${H.th};text-align:right">Disponible para retirar</th>
         <th style="${H.th}">Estado</th>
       </tr></thead>
       <tbody>
@@ -20659,13 +20659,13 @@ function _buildReporteEmailHTML(data) {
           return `<tr style="${rowBg}">
             <td style="${H.td}"><strong>${s.nombre}</strong>${esMax?' <span style="font-size:10px;background:#16a34a;color:white;padding:1px 6px;border-radius:10px">mayor retiro</span>':''}</td>
             <td style="${H.tdR}">${fmtFull(ret)}</td>
-            <td style="${H.tdR};font-weight:700;color:${saldo>0?'#d97706':'#16a34a'}">${saldo>0?fmtFull(saldo):'Equiparado'}</td>
-            <td style="${H.td};font-size:11px;color:${saldo>0?'#92400e':'#15803d'}">${saldo>0?'⏳ Pendiente retirar':'✓ Al día'}</td>
+            <td style="${H.tdR};font-weight:700;color:${saldo>0?'#d97706':'#16a34a'}">${saldo>0?fmtFull(saldo):'Equiparado ✓'}</td>
+            <td style="${H.td};font-size:11px;color:${saldo>0?'#92400e':'#15803d'}">${saldo>0?'⏳ Disponible para retirar':'✓ Al día'}</td>
           </tr>`;
         }).join('')}
       </tbody>
     </table>
-    <p style="font-size:11px;color:#64748b;margin-top:8px;font-style:italic">* "Saldo a retirar" = monto que necesita retirar cada socio para equipararse con quien más retiró (${fmtFull(maxRetiro)}).</p>
+    <p style="font-size:11px;color:#64748b;margin-top:8px;font-style:italic">* "Disponible para retirar" = monto que puede retirar cada socio para equipararse con quien más retiró (${fmtFull(maxRetiro)}).</p>
     ` : '<p style="color:#94a3b8;font-size:12px;margin:8px 0">Sin socios configurados.</p>';
 
   // Estados de cuenta por vendedor — clientes con deuda pendiente
@@ -20849,7 +20849,6 @@ async function reporteEnviarAhora() {
     toast('Configurá EmailJS primero (Service ID, Template ID y Public Key)', 'danger'); return;
   }
 
-  // Deshabilitar botón mientras se envía
   const btn = document.getElementById('btn-enviar-reporte');
   if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Enviando...'; }
 
@@ -20859,43 +20858,45 @@ async function reporteEnviarAhora() {
     const html = _buildReporteEmailHTML(data);
     const semana = data.semana;
     const asunto = `Pendientes MUUK SRL — ${semana}`;
+    const textoResumen =
+      `Reporte semanal de cuentas pendientes — MÜÜK SRL\n` +
+      `Semana: ${semana}\n\n` +
+      `📥 FACTURAS A COBRAR: ${data.facsCobrar.length} facturas · ${fmt(data.totFacCobrar)}\n` +
+      `📤 FACTURAS A PAGAR: ${data.facsPagar.length} facturas · ${fmt(data.totFacPagar)}\n` +
+      `💼 COMISIONES PENDIENTES: ${data.comisionesP.length} · ${fmt(data.totCom)}\n` +
+      `🏦 CHEQUES ESTA SEMANA: ${data.chequesPagarSemana.length} · ${fmt(data.totChPagar)}\n\n` +
+      `Ver reporte completo adjunto o en la app MÜÜK SRL.`;
 
-    // Texto plano resumido (evitar límite de tamaño en parámetros EmailJS)
-    const textoPlano =
-      `Reporte de cuentas pendientes MÜÜK SRL\n${semana}\n\n` +
-      `FACTURAS A COBRAR: ${data.facsCobrar.length} facturas · Total ${fmt(data.totFacCobrar)}\n` +
-      `FACTURAS A PAGAR: ${data.facsPagar.length} facturas · Total ${fmt(data.totFacPagar)}\n` +
-      `COMISIONES PENDIENTES: ${data.comisionesP.length} · Total ${fmt(data.totCom)}\n` +
-      `CHEQUES VENCEN ESTA SEMANA: ${data.chequesPagarSemana.length} · Total ${fmt(data.totChPagar)}\n\n` +
-      `Ver el reporte completo abriendo la app MÜÜK SRL.`;
-
-    // Cargar SDK EmailJS
-    toast('Cargando módulo de email...', 'info');
-    await _loadEmailJS();
-
-    if (!window.emailjs) { throw new Error('EmailJS no disponible después de cargar'); }
-
-    // Init v4 acepta { publicKey } o string directo — usamos objeto para compatibilidad
-    try { emailjs.init({ publicKey: c.userId }); }
-    catch(e) { emailjs.init(c.userId); } // fallback v3
-
-    toast(`Enviando a ${REPORTE_DESTINATARIOS.length} destinatarios...`, 'info');
-
-    const enviarA = (email, idx) => new Promise((resolve, reject) => {
-      setTimeout(() => {
-        emailjs.send(c.serviceId, c.templateId, {
+    // Envío via REST API de EmailJS (no requiere SDK — evita errores de carga y tamaño)
+    const enviarA = async (email, idx) => {
+      if (idx > 0) await new Promise(r => setTimeout(r, idx * 1000));
+      const payload = {
+        service_id:   c.serviceId,
+        template_id:  c.templateId,
+        user_id:      c.userId,
+        template_params: {
           to_email:    email,
           subject:     asunto,
-          message:     textoPlano,
+          message:     textoResumen,
           message_html: html,
           empresa:     'MÜÜK SRL',
           semana:      semana
-        })
-        .then(r => { console.log(`EmailJS OK → ${email}`, r); resolve(r); })
-        .catch(e => { console.error(`EmailJS ERROR → ${email}`, e); reject(e); });
-      }, idx * 900);
-    });
+        }
+      };
+      const res = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify(payload)
+      });
+      if (!res.ok) {
+        const errTxt = await res.text().catch(()=>'');
+        throw new Error(`HTTP ${res.status}${errTxt ? ': ' + errTxt : ''}`);
+      }
+      console.log(`EmailJS OK → ${email} (${res.status})`);
+      return res;
+    };
 
+    toast(`Enviando a ${REPORTE_DESTINATARIOS.length} destinatarios...`, 'info');
     const results = await Promise.allSettled(
       REPORTE_DESTINATARIOS.map((email, i) => enviarA(email, i))
     );
@@ -20909,16 +20910,17 @@ async function reporteEnviarAhora() {
       save();
       _actualizarUltimoEnvio();
     } else if (ok > 0) {
-      const errMsg = fail[0]?.reason?.text || fail[0]?.reason?.message || JSON.stringify(fail[0]?.reason||'');
-      toast(`⚠️ Enviado a ${ok}/${REPORTE_DESTINATARIOS.length} · Error: ${errMsg}`, 'warning');
+      toast(`⚠️ Enviado a ${ok}/${REPORTE_DESTINATARIOS.length} · ${fail[0]?.reason?.message||''}`, 'warning');
+      console.error('Errores parciales:', fail.map(f=>f.reason));
     } else {
-      const errMsg = fail[0]?.reason?.text || fail[0]?.reason?.message || JSON.stringify(fail[0]?.reason||'Error desconocido');
-      toast(`❌ Error al enviar: ${errMsg}`, 'danger');
+      const errMsg = fail[0]?.reason?.message || 'Error desconocido';
+      toast(`❌ No se pudo enviar: ${errMsg}`, 'danger');
+      console.error('Error envío EmailJS:', fail);
     }
 
   } catch(err) {
     console.error('reporteEnviarAhora error:', err);
-    toast(`❌ Error: ${err.message || err}`, 'danger');
+    toast(`❌ Error: ${err.message || String(err)}`, 'danger');
   } finally {
     if (btn) { btn.disabled = false; btn.innerHTML = '<i class="bi bi-send me-1"></i>Enviar reporte ahora'; }
   }
