@@ -18829,31 +18829,100 @@ function ectaPdfGeneral() {
   for (let ci = 0; ci < conPendientes.length; ci++) {
     const c = conPendientes[ci];
     const pal = PDF_COLORS[ci % PDF_COLORS.length];
+
+    // ── Agrupar pendientes por empresa ──────────────────────────────
+    const empresaMap = {};
+    c.pendientes.forEach(f => {
+      const emp = (f.empresa || '(Sin empresa)').trim();
+      if (!empresaMap[emp]) empresaMap[emp] = [];
+      empresaMap[emp].push(f);
+    });
+    const empresasList = Object.keys(empresaMap);
+    const multiEmpresa = empresasList.length > 1;
+    const tieneNC = c.pendientes.some(f => /\bNC\b/i.test(f.factura));
+
+    // ── Construir filas agrupadas ────────────────────────────────────
     let rows = '';
-    for (let j = 0; j < c.pendientes.length; j++) {
-      const f = c.pendientes[j];
-      const isNC = /\bNC\b/i.test(f.factura);
-      const rowBg = j % 2 === 0 ? '#fff' : pal.bg;
-      rows += `<tr style="background:${rowBg}">
-        <td style="font-weight:600;padding:6px 10px">${f.empresa}</td>
-        <td style="padding:6px 10px">${f.fecha || '-'}</td>
-        <td style="padding:6px 10px">${f.factura}${isNC ? ' <span style="background:#ede9fe;color:#6d28d9;font-size:9px;padding:1px 4px;border-radius:3px;font-weight:700">NC</span>' : ''}</td>
-        <td style="text-align:right;font-weight:700;color:#b91c1c;padding:6px 10px">${f.importe}</td>
-        <td style="padding:6px 10px;font-weight:500">${f.fechaPago || '-'}</td>
-      </tr>`;
-    }
+    let rowIdx = 0;
+    empresasList.forEach((emp, ei) => {
+      const facts = empresaMap[emp];
+      const subtotalEmp = facts.reduce((s, f) => s + (f.monto || 0), 0);
+      const empTieneNC  = facts.some(f => /\bNC\b/i.test(f.factura));
+
+      // Separador de empresa (solo si hay más de una)
+      if (multiEmpresa) {
+        rows += `<tr style="background:${pal.headerBg}">
+          <td colspan="5" style="padding:5px 10px 4px;font-size:10px;font-weight:800;color:${pal.accent};text-transform:uppercase;letter-spacing:.04em;border-top:${ei>0?'2px solid '+pal.border+'40':'none'}">
+            ▸ ${emp}
+          </td>
+        </tr>`;
+      }
+
+      // Filas de facturas de esa empresa
+      facts.forEach(f => {
+        const isNC  = /\bNC\b/i.test(f.factura);
+        const rowBg = rowIdx++ % 2 === 0 ? '#fff' : pal.bg;
+        const montoColor = isNC ? '#6d28d9' : '#b91c1c';
+        rows += `<tr style="background:${rowBg}">
+          <td style="font-weight:600;padding:5px 10px;font-size:11px">${f.empresa || '-'}</td>
+          <td style="padding:5px 10px;font-size:11px">${f.fecha || '-'}</td>
+          <td style="padding:5px 10px;font-size:11px">${f.factura}${isNC ? ' <span style="background:#ede9fe;color:#6d28d9;font-size:8px;padding:1px 5px;border-radius:3px;font-weight:700">NC</span>' : ''}</td>
+          <td style="text-align:right;font-weight:700;color:${montoColor};padding:5px 10px;font-size:11px">${f.importe}</td>
+          <td style="padding:5px 10px;font-size:11px;color:#64748b">${f.fechaPago || '-'}</td>
+        </tr>`;
+      });
+
+      // Subtotal por empresa (siempre que haya NC, o cuando hay múltiples empresas)
+      if (multiEmpresa || empTieneNC) {
+        const stBg    = subtotalEmp < 0 ? '#ede9fe' : (subtotalEmp === 0 ? '#f1f5f9' : '#fef2f2');
+        const stColor = subtotalEmp < 0 ? '#6d28d9' : (subtotalEmp === 0 ? '#64748b' : '#991b1b');
+        rows += `<tr style="background:${stBg};border-top:1.5px solid ${pal.border}50">
+          <td colspan="3" style="padding:5px 10px;font-size:10px;font-weight:700;color:${stColor}">
+            SUBTOTAL ${emp.toUpperCase()}${empTieneNC ? ' &nbsp;<span style="background:#ede9fe;color:#6d28d9;font-size:8px;padding:1px 5px;border-radius:3px;font-weight:700">NC descontada</span>' : ''}
+          </td>
+          <td style="text-align:right;font-size:12px;font-weight:800;color:${stColor};padding:5px 10px">${_ectaFmt(subtotalEmp)}</td>
+          <td></td>
+        </tr>`;
+      }
+    });
+
+    // Fila TOTAL del cliente (suma neta de todas las empresas, con NC restadas)
+    const totalNeto = c.totalPendiente; // ya calculado con NC negativas al parsear
+    const notaEmpresas = multiEmpresa
+      ? `<div style="font-size:9px;color:#64748b;padding:4px 10px 6px;font-style:italic">* Total neto incluye ${empresasList.length} empresas. Las NC están descontadas del subtotal de cada empresa.</div>`
+      : (tieneNC ? `<div style="font-size:9px;color:#64748b;padding:4px 10px 6px;font-style:italic">* Las Notas de Crédito (NC) están descontadas del total.</div>` : '');
+
+    rows += `<tr style="background:#fecaca;font-weight:800;border-top:2px solid #f87171">
+      <td colspan="3" style="padding:7px 10px;font-size:11px;color:#7f1d1d;text-transform:uppercase">
+        TOTAL ${c.nombre} — ${empresasList.length > 1 ? empresasList.length + ' empresas' : empresasList[0] || ''}
+      </td>
+      <td style="text-align:right;color:#7f1d1d;font-size:14px;padding:7px 10px">${_ectaFmt(totalNeto)}</td>
+      <td></td>
+    </tr>`;
+
     clientesHTML += `
-      <div class="client-section" style="border-left:5px solid ${pal.border};margin-bottom:14px;border-radius:8px;overflow:hidden;border:1px solid ${pal.border}40">
+      <div class="client-section" style="margin-bottom:18px;border-radius:8px;overflow:hidden;border:1px solid ${pal.border}50;border-left:5px solid ${pal.border}">
         <div style="background:${pal.headerBg};padding:10px 14px;display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid ${pal.border}30">
           <span style="font-size:14px;font-weight:700;color:${pal.accent}">${c.nombre}</span>
-          <span style="font-size:10px;color:${pal.accent};background:${pal.bg};padding:3px 8px;border-radius:5px;font-weight:600">${c.pendientes.length} factura${c.pendientes.length > 1 ? 's' : ''}</span>
+          <span style="font-size:10px;color:${pal.accent};background:${pal.bg};padding:3px 10px;border-radius:5px;font-weight:600">
+            ${empresasList.length} empresa${empresasList.length > 1 ? 's' : ''} &middot; ${c.pendientes.length} factura${c.pendientes.length > 1 ? 's' : ''}
+          </span>
         </div>
         <table>
-          <thead><tr style="background:#f8fafc"><th style="color:${pal.accent}">Empresa</th><th style="color:${pal.accent}">Fecha</th><th style="color:${pal.accent}">Factura</th><th style="text-align:right;color:${pal.accent}">Monto</th><th style="color:${pal.accent}">Vto. Pago</th></tr></thead>
-          <tbody>${rows}
-            <tr style="background:#fecaca;font-weight:800;border-top:2px solid #f87171"><td colspan="3" style="padding:7px 10px;font-size:12px;color:#7f1d1d">SUBTOTAL ${c.nombre.toUpperCase()}</td><td style="text-align:right;color:#7f1d1d;font-size:13px;padding:7px 10px">${_ectaFmt(c.totalPendiente)}</td><td></td></tr>
+          <thead>
+            <tr style="background:#f8fafc">
+              <th style="color:${pal.accent};padding:5px 10px;font-size:10px">Empresa</th>
+              <th style="color:${pal.accent};padding:5px 10px;font-size:10px">Fecha</th>
+              <th style="color:${pal.accent};padding:5px 10px;font-size:10px">Factura / NC</th>
+              <th style="text-align:right;color:${pal.accent};padding:5px 10px;font-size:10px">Monto</th>
+              <th style="color:${pal.accent};padding:5px 10px;font-size:10px">Vto. Pago</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows}
           </tbody>
         </table>
+        ${notaEmpresas}
       </div>`;
   }
 
@@ -18915,7 +18984,7 @@ ${clientesHTML}
   <div class="val">${_ectaFmt(totalGeneral)}</div>
 </div>
 
-<div class="footer">Documento generado el ${hoyStr} &middot; Solo incluye facturas pendientes de cobro &middot; Las facturas cobradas no se incluyen en este reporte</div>
+<div class="footer">Documento generado el ${hoyStr} &middot; Solo incluye facturas pendientes de cobro &middot; Las Notas de Crédito (NC) se descuentan del subtotal de la empresa correspondiente &middot; El total por cliente es la suma neta de todas sus empresas</div>
 </body></html>`);
   w.document.close();
 }
