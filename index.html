@@ -16063,6 +16063,51 @@ function _initPFPV883715() {
   save();
 }
 
+// ── Pre-carga 3 Planes de Facilidades de Pago RG 5321 (día 16) ──
+// V719343 (19/02/2026): 4 cuotas mar-jun 2026 · $3.480.828,58 c/u
+// V601977 (20/01/2026): 3 cuotas feb-abr 2026 · $4.853.525,98 c/u
+// V242094 (20/10/2025): 12 cuotas nov 2025-oct 2026 · $1.204.199,18 c/u
+// Importes sumados por fecha
+function _initPFPNuevos2025() {
+  if (ST.arcaConfig?.pfpNuevos2025Loaded) return; // ya cargado
+  if (!ST.arcaVencimientos) ST.arcaVencimientos = [];
+
+  // Total por fecha = suma de todos los planes que vencen ese día 16
+  const cuotas = [
+    { fecha:'2025-11-16', total:1204199.18, detalle:'V242094 C1' },
+    { fecha:'2025-12-16', total:1204199.18, detalle:'V242094 C2' },
+    { fecha:'2026-01-16', total:1204199.18, detalle:'V242094 C3' },
+    { fecha:'2026-02-16', total:6057725.16, detalle:'V601977 C1 ($4.853.525,98) + V242094 C4 ($1.204.199,18)' },
+    { fecha:'2026-03-16', total:9538553.74, detalle:'V719343 C1 ($3.480.828,58) + V601977 C2 ($4.853.525,98) + V242094 C5 ($1.204.199,18)' },
+    { fecha:'2026-04-16', total:9538553.74, detalle:'V719343 C2 ($3.480.828,58) + V601977 C3 ($4.853.525,98) + V242094 C6 ($1.204.199,18)' },
+    { fecha:'2026-05-16', total:4685027.76, detalle:'V719343 C3 ($3.480.828,58) + V242094 C7 ($1.204.199,18)' },
+    { fecha:'2026-06-16', total:4685027.76, detalle:'V719343 C4 ($3.480.828,58) + V242094 C8 ($1.204.199,18)' },
+    { fecha:'2026-07-16', total:1204199.18, detalle:'V242094 C9' },
+    { fecha:'2026-08-16', total:1204199.18, detalle:'V242094 C10' },
+    { fecha:'2026-09-16', total:1204199.18, detalle:'V242094 C11' },
+    { fecha:'2026-10-16', total:1204199.18, detalle:'V242094 C12' },
+  ];
+
+  cuotas.forEach(c => {
+    // Evitar duplicados (por si se llama más de una vez)
+    const idNuevo = 'pfp-nuevos-' + c.fecha;
+    if (ST.arcaVencimientos.find(v => v.id === idNuevo)) return;
+    ST.arcaVencimientos.push({
+      id:       idNuevo,
+      concepto: 'PFP RG 5321 — Cuotas día 16',
+      fecha:    c.fecha,
+      importe:  Math.round(c.total * 100) / 100,
+      detalle:  c.detalle,
+      pagado:   false,
+      origen:   'pfp'
+    });
+  });
+
+  if (!ST.arcaConfig) ST.arcaConfig = {};
+  ST.arcaConfig.pfpNuevos2025Loaded = true;
+  save();
+}
+
 // ── Parser de VEP (Volante Electrónico de Pago ARCA) ──────────
 function parsearVEP(texto) {
   const t = texto.replace(/\s+/g, ' ');
@@ -16308,8 +16353,9 @@ function renderCalendarioARCA() {
   const pg = document.getElementById('page-calendarioARCA');
   if (!pg) return;
 
-  // Pre-cargar Plan V883715 si es la primera vez
+  // Pre-cargar planes de facilidades de pago (primera vez)
   _initPFPV883715();
+  _initPFPNuevos2025();
 
   // Restore config
   const cfg = ST.arcaConfig || {};
