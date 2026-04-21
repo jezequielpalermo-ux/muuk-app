@@ -2819,7 +2819,11 @@ CREATE POLICY "acceso total" ON flujo_caja_versions FOR ALL USING (true) WITH CH
             <span style="background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;border-radius:20px;padding:3px 10px"><i class="bi bi-file-earmark-arrow-down me-1"></i>Facturas a Cobrar</span>
             <span style="background:#fff7ed;color:#c2410c;border:1px solid #fed7aa;border-radius:20px;padding:3px 10px"><i class="bi bi-file-earmark-arrow-up me-1"></i>Facturas a Pagar</span>
             <span style="background:#fdf4ff;color:#7e22ce;border:1px solid #e9d5ff;border-radius:20px;padding:3px 10px"><i class="bi bi-percent me-1"></i>Comisiones Pendientes</span>
+            <span style="background:#fff1f2;color:#9f1239;border:1px solid #fda4af;border-radius:20px;padding:3px 10px"><i class="bi bi-bank me-1"></i>Cheques a Pagar</span>
+            <span style="background:#ecfdf5;color:#065f46;border:1px solid #6ee7b7;border-radius:20px;padding:3px 10px"><i class="bi bi-cash-coin me-1"></i>Cheques en Cartera</span>
             <span style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;border-radius:20px;padding:3px 10px"><i class="bi bi-people-fill me-1"></i>Estados de Cuenta</span>
+            <span style="background:#f5f3ff;color:#5b21b6;border:1px solid #ddd6fe;border-radius:20px;padding:3px 10px"><i class="bi bi-wallet2 me-1"></i>Saldo Socios</span>
+            <span style="background:#fffbeb;color:#92400e;border:1px solid #fde68a;border-radius:20px;padding:3px 10px"><i class="bi bi-calendar-check me-1"></i>Vencimientos ARCA</span>
           </div>
         </div>
 
@@ -20474,19 +20478,45 @@ async function _buildReporteData() {
     }
   }));
 
-  const totFacCobrar = facsCobrar.reduce((s,f)=>s+(+f.total||0),0);
-  const totFacPagar  = facsPagar.reduce((s,f)=>s+(+f.total||0),0);
-  const totCom       = comisionesP.reduce((s,c)=>s+(+c.saldo||0),0);
-  const totChPagar   = chequesPagarSemana.reduce((s,c)=>s+(+c.monto||0),0);
-  const totSaldoRet  = socios.reduce((s,x)=>s+(saldoARetirar[x.id]||0),0);
+  // Cheques en cartera a depositar ESTA semana (físicos + e-cheques pendientes con venc en la semana)
+  const chequesCarteraSemana = [
+    ...(ST.chequesFisicos||[]).filter(c => c.estado === 'en_cartera' || c.estado === 'pendiente'),
+    ...(ST.eCheques||[]).filter(c => c.estado === 'pendiente')
+  ].filter(c => {
+    const v = new Date(c.fechaVenc || c.fecha);
+    return v >= lun && v <= dom;
+  }).sort((a,b) => new Date(a.fechaVenc||a.fecha) - new Date(b.fechaVenc||b.fecha));
+
+  // Vencimientos ARCA pendientes (no pagados) de los próximos 14 días + vencidos
+  const hoy = new Date(); hoy.setHours(0,0,0,0);
+  const en14dias = new Date(hoy); en14dias.setDate(hoy.getDate() + 14);
+  const arcaVencProximos = (ST.arcaVencimientos||[])
+    .filter(v => !v.pagado && v.fecha)
+    .filter(v => {
+      const d = new Date(v.fecha);
+      return d <= en14dias; // vencidos o próximos 14 días
+    })
+    .sort((a,b) => new Date(a.fecha) - new Date(b.fecha));
+
+  const totFacCobrar    = facsCobrar.reduce((s,f)=>s+(+f.total||0),0);
+  const totFacPagar     = facsPagar.reduce((s,f)=>s+(+f.total||0),0);
+  const totCom          = comisionesP.reduce((s,c)=>s+(+c.saldo||0),0);
+  const totChPagar      = chequesPagarSemana.reduce((s,c)=>s+(+c.monto||0),0);
+  const totChCartera    = chequesCarteraSemana.reduce((s,c)=>s+(+c.monto||0),0);
+  const totSaldoRet     = socios.reduce((s,x)=>s+(saldoARetirar[x.id]||0),0);
+  const totArcaProx     = arcaVencProximos.reduce((s,v)=>s+(+v.importe||0),0);
 
   return { now, semana, facsCobrar, facsPagar, comisionesP, chequesPagarSemana,
+           chequesCarteraSemana, arcaVencProximos,
            socios, retBySocio, saldoARetirar, maxRetiro, ectaPendientes,
-           totFacCobrar, totFacPagar, totCom, totChPagar, totSaldoRet };
+           totFacCobrar, totFacPagar, totCom, totChPagar, totChCartera, totSaldoRet, totArcaProx };
 }
 
 function _buildReporteEmailHTML(data) {
-  const { semana, facsCobrar, facsPagar, comisionesP, chequesPagarSemana, socios, retBySocio, saldoARetirar, maxRetiro, ectaPendientes, totFacCobrar, totFacPagar, totCom, totChPagar, now } = data;
+  const { semana, facsCobrar, facsPagar, comisionesP, chequesPagarSemana,
+          chequesCarteraSemana, arcaVencProximos,
+          socios, retBySocio, saldoARetirar, maxRetiro, ectaPendientes,
+          totFacCobrar, totFacPagar, totCom, totChPagar, totChCartera, totSaldoRet, totArcaProx, now } = data;
   const fmtNum = v => {
     if (!v && v !== 0) return '$0';
     const abs = Math.abs(v);
@@ -20523,31 +20553,56 @@ function _buildReporteEmailHTML(data) {
     footer: 'background:#1e1b4b;padding:16px 32px;border-radius:0 0 8px 8px;text-align:center',
   };
 
-  // KPI summary row (4 columnas)
+  // KPI summary — 2 filas de 4
   const kpiHtml = `
     <div style="margin-bottom:20px">
-      <table width="100%" cellpadding="0" cellspacing="6"><tr>
-        <td width="25%" style="text-align:center;background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:12px 8px">
-          <div style="font-size:10px;color:#9a3412;font-weight:600;text-transform:uppercase;margin-bottom:4px">A COBRAR</div>
-          <div style="font-size:20px;font-weight:800;color:#ea580c">${fmtNum(totFacCobrar)}</div>
-          <div style="font-size:10px;color:#9a3412">${facsCobrar.length} factura${facsCobrar.length!==1?'s':''}</div>
-        </td>
-        <td width="25%" style="text-align:center;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:12px 8px">
-          <div style="font-size:10px;color:#991b1b;font-weight:600;text-transform:uppercase;margin-bottom:4px">A PAGAR</div>
-          <div style="font-size:20px;font-weight:800;color:#dc2626">${fmtNum(totFacPagar)}</div>
-          <div style="font-size:10px;color:#991b1b">${facsPagar.length} factura${facsPagar.length!==1?'s':''}</div>
-        </td>
-        <td width="25%" style="text-align:center;background:#fdf4ff;border:1px solid #e9d5ff;border-radius:8px;padding:12px 8px">
-          <div style="font-size:10px;color:#6b21a8;font-weight:600;text-transform:uppercase;margin-bottom:4px">COMISIONES PEND.</div>
-          <div style="font-size:20px;font-weight:800;color:#7c3aed">${fmtNum(totCom)}</div>
-          <div style="font-size:10px;color:#6b21a8">${comisionesP.length} pendiente${comisionesP.length!==1?'s':''}</div>
-        </td>
-        <td width="25%" style="text-align:center;background:#fff1f2;border:1px solid #fda4af;border-radius:8px;padding:12px 8px">
-          <div style="font-size:10px;color:#9f1239;font-weight:600;text-transform:uppercase;margin-bottom:4px">CHEQUES VENCEN HOY/SEM.</div>
-          <div style="font-size:20px;font-weight:800;color:#e11d48">${fmtNum(totChPagar)}</div>
-          <div style="font-size:10px;color:#9f1239">${chequesPagarSemana.length} cheque${chequesPagarSemana.length!==1?'s':''}</div>
-        </td>
-      </tr></table>
+      <table width="100%" cellpadding="0" cellspacing="5">
+        <tr>
+          <td width="25%" style="text-align:center;background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:10px 6px">
+            <div style="font-size:9px;color:#9a3412;font-weight:600;text-transform:uppercase;margin-bottom:3px">FACTURAS A COBRAR</div>
+            <div style="font-size:18px;font-weight:800;color:#ea580c">${fmtNum(totFacCobrar)}</div>
+            <div style="font-size:9px;color:#9a3412">${facsCobrar.length} factura${facsCobrar.length!==1?'s':''}</div>
+          </td>
+          <td width="25%" style="text-align:center;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:10px 6px">
+            <div style="font-size:9px;color:#991b1b;font-weight:600;text-transform:uppercase;margin-bottom:3px">FACTURAS A PAGAR</div>
+            <div style="font-size:18px;font-weight:800;color:#dc2626">${fmtNum(totFacPagar)}</div>
+            <div style="font-size:9px;color:#991b1b">${facsPagar.length} factura${facsPagar.length!==1?'s':''}</div>
+          </td>
+          <td width="25%" style="text-align:center;background:#fdf4ff;border:1px solid #e9d5ff;border-radius:8px;padding:10px 6px">
+            <div style="font-size:9px;color:#6b21a8;font-weight:600;text-transform:uppercase;margin-bottom:3px">COMISIONES PEND.</div>
+            <div style="font-size:18px;font-weight:800;color:#7c3aed">${fmtNum(totCom)}</div>
+            <div style="font-size:9px;color:#6b21a8">${comisionesP.length} pendiente${comisionesP.length!==1?'s':''}</div>
+          </td>
+          <td width="25%" style="text-align:center;background:#fff1f2;border:1px solid #fda4af;border-radius:8px;padding:10px 6px">
+            <div style="font-size:9px;color:#9f1239;font-weight:600;text-transform:uppercase;margin-bottom:3px">CHEQUES A PAGAR</div>
+            <div style="font-size:18px;font-weight:800;color:#e11d48">${fmtNum(totChPagar)}</div>
+            <div style="font-size:9px;color:#9f1239">${chequesPagarSemana.length} cheque${chequesPagarSemana.length!==1?'s':''} esta semana</div>
+          </td>
+        </tr>
+        <tr style="height:5px"></tr>
+        <tr>
+          <td width="25%" style="text-align:center;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px 6px">
+            <div style="font-size:9px;color:#15803d;font-weight:600;text-transform:uppercase;margin-bottom:3px">CHEQUES EN CARTERA</div>
+            <div style="font-size:18px;font-weight:800;color:#16a34a">${fmtNum(totChCartera)}</div>
+            <div style="font-size:9px;color:#15803d">${chequesCarteraSemana.length} a depositar esta sem.</div>
+          </td>
+          <td width="25%" style="text-align:center;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px 6px">
+            <div style="font-size:9px;color:#92400e;font-weight:600;text-transform:uppercase;margin-bottom:3px">VENC. ARCA PRÓX.</div>
+            <div style="font-size:18px;font-weight:800;color:#d97706">${fmtNum(totArcaProx)}</div>
+            <div style="font-size:9px;color:#92400e">${arcaVencProximos.length} obligación${arcaVencProximos.length!==1?'es':''}</div>
+          </td>
+          <td width="25%" style="text-align:center;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:10px 6px">
+            <div style="font-size:9px;color:#1e40af;font-weight:600;text-transform:uppercase;margin-bottom:3px">SALDO SOCIOS</div>
+            <div style="font-size:18px;font-weight:800;color:#1d4ed8">${fmtNum(totSaldoRet)}</div>
+            <div style="font-size:9px;color:#1e40af">disponible para retirar</div>
+          </td>
+          <td width="25%" style="text-align:center;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 6px">
+            <div style="font-size:9px;color:#475569;font-weight:600;text-transform:uppercase;margin-bottom:3px">ESTADOS DE CUENTA</div>
+            <div style="font-size:18px;font-weight:800;color:#334155">${Object.values(ectaPendientes||{}).reduce((s,arr)=>s+arr.length,0)}</div>
+            <div style="font-size:9px;color:#475569">clientes con deuda</div>
+          </td>
+        </tr>
+      </table>
     </div>`;
 
   // Tabla facturas a cobrar
@@ -20740,6 +20795,75 @@ function _buildReporteEmailHTML(data) {
       </tbody>
     </table>` : '<p style="color:#94a3b8;font-size:12px;margin:8px 0">Sin cheques que vencen esta semana. ✓</p>';
 
+  // Cheques en cartera a depositar esta semana
+  const tblCartera = chequesCarteraSemana.length ? `
+    <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin-top:8px">
+      <thead><tr>
+        <th style="${H.th}">Cliente / Descripción</th>
+        <th style="${H.th}">Tipo</th>
+        <th style="${H.th}">Banco</th>
+        <th style="${H.th}">N° Cheque</th>
+        <th style="${H.th}">Vencimiento</th>
+        <th style="${H.th};text-align:right">Monto</th>
+      </tr></thead>
+      <tbody>
+        ${chequesCarteraSemana.map((c,i) => {
+          const esFisico = (ST.chequesFisicos||[]).some(x=>x.id===c.id);
+          const hoy2 = new Date(); hoy2.setHours(0,0,0,0);
+          const venc2 = new Date(c.fechaVenc||c.fecha);
+          const esHoy2 = venc2.toDateString() === hoy2.toDateString();
+          const rowBg = esHoy2 ? 'background:#fffbeb' : (i%2===0?'background:#f8fafc':'');
+          return `<tr style="${rowBg}">
+            <td style="${H.td}"><strong>${c.cliente||c.desc||'—'}</strong></td>
+            <td style="${H.td}"><span style="font-size:10px;background:${esFisico?'#eff6ff':'#f0fdf4'};color:${esFisico?'#1e40af':'#15803d'};padding:2px 7px;border-radius:10px;font-weight:600">${esFisico?'Físico':'E-Cheque'}</span></td>
+            <td style="${H.td}">${c.banco||'—'}</td>
+            <td style="${H.td}">${c.numero||'—'}</td>
+            <td style="${H.td};font-weight:600;color:${esHoy2?'#d97706':'#334155'}">${fmtDate(c.fechaVenc||c.fecha)}${esHoy2?' 🔴':''}</td>
+            <td style="${H.tdR};font-weight:700;color:#16a34a">${fmtFull(+c.monto||0)}</td>
+          </tr>`;
+        }).join('')}
+        <tr style="background:#f0fdf4">
+          <td colspan="5" style="${H.td};font-weight:700">TOTAL A DEPOSITAR</td>
+          <td style="${H.tdR};font-weight:800;color:#16a34a;font-size:14px">${fmtFull(totChCartera)}</td>
+        </tr>
+      </tbody>
+    </table>` : '<p style="color:#94a3b8;font-size:12px;margin:8px 0">Sin cheques en cartera con vencimiento esta semana. ✓</p>';
+
+  // Vencimientos ARCA próximos (14 días) + vencidos
+  const tblArca = arcaVencProximos.length ? `
+    <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin-top:8px">
+      <thead><tr>
+        <th style="${H.th}">Obligación / Concepto</th>
+        <th style="${H.th}">Vencimiento</th>
+        <th style="${H.th}">Detalle</th>
+        <th style="${H.th};text-align:right">Importe estimado</th>
+        <th style="${H.th}">Estado</th>
+      </tr></thead>
+      <tbody>
+        ${arcaVencProximos.map((v,i) => {
+          const hoyA = new Date(); hoyA.setHours(0,0,0,0);
+          const vA = new Date(v.fecha);
+          const vencidoA = vA < hoyA;
+          const diasA = Math.round((vA - hoyA) / (1000*60*60*24));
+          const rowBg = vencidoA ? 'background:#fef2f2' : (diasA <= 3 ? 'background:#fffbeb' : (i%2===0?'background:#f8fafc':''));
+          const estadoColor = vencidoA ? '#dc2626' : (diasA <= 3 ? '#d97706' : '#64748b');
+          const estadoLabel = vencidoA ? '⚠ VENCIDA' : (diasA === 0 ? '🔴 HOY' : `⏰ En ${diasA}d`);
+          return `<tr style="${rowBg}">
+            <td style="${H.td}"><strong>${v.concepto||'—'}</strong></td>
+            <td style="${H.td};font-weight:600;color:${estadoColor}">${fmtDate(v.fecha)}</td>
+            <td style="${H.td};font-size:11px;color:#64748b">${v.detalle||'—'}</td>
+            <td style="${H.tdR};font-weight:700;color:#d97706">${v.importe ? fmtFull(+v.importe) : '—'}</td>
+            <td style="${H.td};font-weight:700;color:${estadoColor}">${estadoLabel}</td>
+          </tr>`;
+        }).join('')}
+        ${totArcaProx > 0 ? `<tr style="background:#fffbeb">
+          <td colspan="3" style="${H.td};font-weight:700">TOTAL OBLIGACIONES ARCA</td>
+          <td style="${H.tdR};font-weight:800;color:#d97706;font-size:14px">${fmtFull(totArcaProx)}</td>
+          <td style="${H.td}"></td>
+        </tr>` : ''}
+      </tbody>
+    </table>` : '<p style="color:#94a3b8;font-size:12px;margin:8px 0">Sin vencimientos ARCA en los próximos 14 días. ✓</p>';
+
   const generadoEn = now.toLocaleString('es-AR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
 
   return `
@@ -20796,6 +20920,14 @@ function _buildReporteEmailHTML(data) {
       ${tblChPagar}
     </div>
 
+    <!-- Cheques en cartera a depositar esta semana -->
+    <div style="${H.card}">
+      <div style="font-size:15px;font-weight:700;color:#1e1b4b;margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid #bbf7d0">
+        💰 Cheques en Cartera — A depositar esta semana
+      </div>
+      ${tblCartera}
+    </div>
+
     <!-- Estados de Cuenta por Vendedor (ECTA) -->
     <div style="${H.card}">
       <div style="font-size:15px;font-weight:700;color:#1e1b4b;margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid #bfdbfe">
@@ -20807,9 +20939,17 @@ function _buildReporteEmailHTML(data) {
     <!-- Retiros por Socio -->
     <div style="${H.card}">
       <div style="font-size:15px;font-weight:700;color:#1e1b4b;margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid #d9f99d">
-        👥 Socios — Equilibrio de Retiros
+        👥 Socios — Disponible para retirar
       </div>
       ${tblSocios}
+    </div>
+
+    <!-- Vencimientos ARCA -->
+    <div style="${H.card}">
+      <div style="font-size:15px;font-weight:700;color:#1e1b4b;margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid #fde68a">
+        🏛️ Vencimientos ARCA — Próximos 14 días
+      </div>
+      ${tblArca}
     </div>
   </div>
 
@@ -20864,13 +21004,19 @@ async function reporteEnviarAhora() {
     const semana = data.semana;
     const asunto = `Pendientes MUUK SRL — ${semana}`;
     const textoResumen =
-      `Reporte semanal de cuentas pendientes — MÜÜK SRL\n` +
-      `Semana: ${semana}\n\n` +
-      `📥 FACTURAS A COBRAR: ${data.facsCobrar.length} facturas · ${fmt(data.totFacCobrar)}\n` +
-      `📤 FACTURAS A PAGAR: ${data.facsPagar.length} facturas · ${fmt(data.totFacPagar)}\n` +
-      `💼 COMISIONES PENDIENTES: ${data.comisionesP.length} · ${fmt(data.totCom)}\n` +
-      `🏦 CHEQUES ESTA SEMANA: ${data.chequesPagarSemana.length} · ${fmt(data.totChPagar)}\n\n` +
-      `Ver reporte completo adjunto o en la app MÜÜK SRL.`;
+      `REPORTE SEMANAL DE CUENTAS PENDIENTES — MÜÜK SRL\n` +
+      `${semana}\n` +
+      `${'─'.repeat(50)}\n\n` +
+      `📥 FACTURAS A COBRAR (MÜÜK):  ${data.facsCobrar.length} facturas · ${fmt(data.totFacCobrar)}\n` +
+      `📤 FACTURAS A PAGAR (MÜÜK):   ${data.facsPagar.length} facturas · ${fmt(data.totFacPagar)}\n` +
+      `💼 COMISIONES PENDIENTES:     ${data.comisionesP.length} · ${fmt(data.totCom)}\n` +
+      `🏦 CHEQUES A PAGAR (sem.):    ${data.chequesPagarSemana.length} · ${fmt(data.totChPagar)}\n` +
+      `💰 CHEQUES CARTERA (depositar): ${data.chequesCarteraSemana.length} · ${fmt(data.totChCartera)}\n` +
+      `📋 CLIENTES CON DEUDA (ECTA): ${Object.values(data.ectaPendientes||{}).reduce((s,a)=>s+a.length,0)} clientes\n` +
+      `👥 SALDO DISPONIBLE SOCIOS:   ${fmt(data.totSaldoRet)}\n` +
+      `🏛️ VENCIMIENTOS ARCA (14d):   ${data.arcaVencProximos.length} · ${fmt(data.totArcaProx)}\n\n` +
+      `${'─'.repeat(50)}\n` +
+      `El reporte detallado completo está disponible en la app MÜÜK SRL.`;
 
     // Envío via REST API de EmailJS — una sola llamada (el template ya tiene To + CC con todos los destinatarios)
     // NO enviamos message_html para evitar superar el límite de tamaño de EmailJS (~50KB)
