@@ -18727,11 +18727,76 @@ function ectaPdfCliente(idx) {
 
   const hoyStr = new Date().toLocaleDateString('es-AR', { year:'numeric', month:'long', day:'numeric' });
 
+  // ── Agrupar pendientes por empresa ──────────────────────────────
+  const empMap = {};
+  c.pendientes.forEach(f => {
+    const emp = (f.empresa || '(Sin empresa)').trim();
+    if (!empMap[emp]) empMap[emp] = [];
+    empMap[emp].push(f);
+  });
+  const empList = Object.keys(empMap);
+  const multiEmp = empList.length > 1;
+  const tieneNC  = c.pendientes.some(f => /\bNC\b/i.test(f.factura));
+
+  // ── Construir filas agrupadas con subtotal por empresa ───────────
   let pendRows = '';
-  for (const f of c.pendientes) {
-    const isNC = /\bNC\b/i.test(f.factura);
-    pendRows += `<tr><td>${f.empresa}</td><td>${f.fecha}</td><td>${f.factura}${isNC ? ' <em>(NC)</em>' : ''}</td><td style="text-align:right;font-weight:600;color:#dc2626">${f.importe}</td><td>${f.fechaPago || '-'}</td></tr>`;
-  }
+  let rowIdx = 0;
+  empList.forEach((emp, ei) => {
+    const facts = empMap[emp];
+    const subtotalEmp = facts.reduce((s, f) => s + (f.monto || 0), 0);
+    const empNC = facts.some(f => /\bNC\b/i.test(f.factura));
+
+    // Encabezado de empresa (si hay más de una)
+    if (multiEmp) {
+      pendRows += `<tr class="emp-header">
+        <td colspan="5" style="background:#f1f5f9;font-weight:800;font-size:9px;text-transform:uppercase;letter-spacing:.05em;color:#334155;padding:5px 8px;border-top:${ei>0?'2px solid #cbd5e1':'none'}">
+          ▸ ${emp}
+        </td>
+      </tr>`;
+    }
+
+    // Filas de facturas
+    facts.forEach(f => {
+      const isNC  = /\bNC\b/i.test(f.factura);
+      const rowBg = rowIdx++ % 2 === 0 ? '#fff' : '#f8fafc';
+      pendRows += `<tr style="background:${rowBg}">
+        <td style="font-weight:600">${f.empresa || '-'}</td>
+        <td>${f.fecha || '-'}</td>
+        <td>${f.factura}${isNC ? ' <span style="background:#ede9fe;color:#6d28d9;font-size:8px;padding:1px 4px;border-radius:3px;font-weight:700">NC</span>' : ''}</td>
+        <td style="text-align:right;font-weight:600;color:${isNC ? '#6d28d9' : '#dc2626'}">${f.importe}</td>
+        <td style="color:#64748b">${f.fechaPago || '-'}</td>
+      </tr>`;
+    });
+
+    // Subtotal por empresa (siempre si hay NC, o con múltiples empresas)
+    if (multiEmp || empNC) {
+      const stColor = subtotalEmp < 0 ? '#6d28d9' : (subtotalEmp === 0 ? '#64748b' : '#dc2626');
+      const stBg    = subtotalEmp < 0 ? '#f5f3ff' : (subtotalEmp === 0 ? '#f1f5f9' : '#fef2f2');
+      pendRows += `<tr style="background:${stBg};border-top:1.5px solid #e2e8f0">
+        <td colspan="3" style="font-weight:700;font-size:9px;color:${stColor};padding:5px 8px">
+          SUBTOTAL ${emp.toUpperCase()}${empNC ? ' &nbsp;<span style="background:#ede9fe;color:#6d28d9;font-size:8px;padding:1px 4px;border-radius:3px;font-weight:700">NC descontada</span>' : ''}
+        </td>
+        <td style="text-align:right;font-weight:800;color:${stColor};padding:5px 8px">${_ectaFmt(subtotalEmp)}</td>
+        <td></td>
+      </tr>`;
+    }
+  });
+
+  // Fila total final
+  pendRows += `<tr class="total-row">
+    <td colspan="3"><strong>TOTAL A ABONAR — ${c.nombre.toUpperCase()}</strong></td>
+    <td style="text-align:right"><strong>${_ectaFmt(c.totalPendiente)}</strong></td>
+    <td></td>
+  </tr>`;
+
+  const notaNC = tieneNC
+    ? `<div style="background:#f5f3ff;border:1px solid #ddd6fe;border-radius:5px;padding:6px 10px;font-size:8px;color:#6d28d9;margin-top:8px">
+        <strong>Nota:</strong> Las Notas de Crédito (NC) están descontadas del subtotal de la empresa correspondiente. El total refleja el neto a abonar.
+       </div>` : '';
+
+  const notaEmpresas = multiEmp
+    ? `<div style="font-size:8px;color:#64748b;margin-top:6px;font-style:italic">* El total incluye deuda en ${empList.length} empresas: ${empList.join(', ')}. Cada empresa debe recibir su pago por separado.</div>`
+    : '';
 
   const w = window.open('', '_blank');
   w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Facturas Pendientes - ${c.nombre}</title>
@@ -18744,19 +18809,18 @@ function ectaPdfCliente(idx) {
   .doc-title { font-size:16px; font-weight:800; color:#0f172a; }
   .doc-subtitle { font-size:9px; color:#64748b; text-transform:uppercase; letter-spacing:.5px; margin-top:2px; }
   .doc-info { text-align:right; font-size:9px; color:#64748b; }
-  .client-box { background:#fef2f2; border:1px solid #fecaca; border-radius:6px; padding:10px 14px; margin-bottom:16px; }
+  .client-box { background:#fef2f2; border:1px solid #fecaca; border-radius:6px; padding:10px 14px; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center; }
   .client-name { font-size:14px; font-weight:700; color:#0f172a; }
   .client-meta { font-size:9px; color:#64748b; margin-top:2px; }
-  .total-box { background:#dc2626; color:#fff; border-radius:8px; padding:10px 16px; margin-bottom:16px; display:flex; align-items:center; justify-content:space-between; }
+  .total-box { background:#dc2626; color:#fff; border-radius:8px; padding:10px 16px; margin-bottom:14px; display:flex; align-items:center; justify-content:space-between; }
   .total-label { font-size:9px; text-transform:uppercase; letter-spacing:.06em; opacity:.85; }
   .total-val { font-size:20px; font-weight:900; }
-  table { width:100%; border-collapse:collapse; font-size:10px; margin-bottom:12px; }
+  table { width:100%; border-collapse:collapse; font-size:10px; margin-bottom:4px; }
   th { background:#f1f5f9; font-weight:700; text-align:left; padding:5px 8px; border-bottom:2px solid #cbd5e1; font-size:9px; text-transform:uppercase; letter-spacing:.04em; }
   td { padding:5px 8px; border-bottom:1px solid #f1f5f9; }
-  tr:last-child td { border-bottom:none; }
-  .total-row td { background:#fef2f2; font-weight:700; border-top:2px solid #dc2626; color:#dc2626; padding:6px 8px; }
-  .footer { margin-top:20px; padding-top:10px; border-top:1px solid #e2e8f0; font-size:8px; color:#94a3b8; text-align:center; }
-  .notice { background:#fffbeb; border:1px solid #fde68a; border-radius:5px; padding:7px 12px; font-size:9px; color:#92400e; margin-bottom:14px; }
+  .total-row td { background:#fef2f2; font-weight:700; border-top:2px solid #dc2626; color:#dc2626; padding:7px 8px; font-size:11px; }
+  .footer { margin-top:18px; padding-top:10px; border-top:1px solid #e2e8f0; font-size:8px; color:#94a3b8; text-align:center; }
+  .notice { background:#fffbeb; border:1px solid #fde68a; border-radius:5px; padding:7px 12px; font-size:9px; color:#92400e; margin-bottom:12px; }
 </style></head><body>
 <div class="header">
   <div>
@@ -18774,29 +18838,31 @@ function ectaPdfCliente(idx) {
 </div>
 
 <div class="client-box">
-  <div class="client-name">${c.nombre}</div>
-  <div class="client-meta">${c.pendientes.length} factura${c.pendientes.length !== 1 ? 's' : ''} pendiente${c.pendientes.length !== 1 ? 's' : ''} de pago</div>
+  <div>
+    <div class="client-name">${c.nombre}</div>
+    <div class="client-meta">${empList.length} empresa${empList.length > 1 ? 's' : ''} &middot; ${c.pendientes.length} factura${c.pendientes.length !== 1 ? 's' : ''} pendiente${c.pendientes.length !== 1 ? 's' : ''} de pago</div>
+  </div>
 </div>
 
 <div class="total-box">
   <div>
-    <div class="total-label">Total a cobrar</div>
+    <div class="total-label">Total neto a cobrar${tieneNC ? ' (NC descontadas)' : ''}</div>
     <div class="total-val">${_ectaFmt(c.totalPendiente)}</div>
   </div>
   <div style="font-size:28px;opacity:.4">&#9783;</div>
 </div>
 
-<div class="notice">Por favor regularizar el pago de las siguientes facturas. Para consultas comunicarse con su vendedor asignado.</div>
+<div class="notice">Por favor regularizar el pago de las siguientes facturas${multiEmp ? ', según corresponda a cada empresa' : ''}. Para consultas comunicarse con su vendedor asignado.</div>
 
 <table>
   <thead><tr><th>Empresa</th><th>Fecha</th><th>N° Factura</th><th style="text-align:right">Importe</th><th>Vto. de Pago</th></tr></thead>
-  <tbody>
-    ${pendRows}
-    <tr class="total-row"><td colspan="3"><strong>TOTAL A ABONAR</strong></td><td style="text-align:right"><strong>${_ectaFmt(c.totalPendiente)}</strong></td><td></td></tr>
-  </tbody>
+  <tbody>${pendRows}</tbody>
 </table>
 
-<div class="footer">Documento generado el ${hoyStr} &middot; Válido como notificación de deuda pendiente</div>
+${notaNC}
+${notaEmpresas}
+
+<div class="footer">Documento generado el ${hoyStr} &middot; Válido como notificación de deuda pendiente &middot; Las NC están descontadas del subtotal de cada empresa</div>
 </body></html>`);
   w.document.close();
 }
