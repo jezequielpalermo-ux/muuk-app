@@ -2796,6 +2796,47 @@ CREATE POLICY "acceso total" ON flujo_caja_versions FOR ALL USING (true) WITH CH
       </div>
     </div>
 
+    <!-- REPORTE SEMANAL AUTOMÁTICO -->
+    <div class="card mb-4">
+      <div class="card-header bg-white fw-bold"><i class="bi bi-send-fill me-2" style="color:#7c3aed"></i>Reporte Semanal — Pendientes MÜÜK</div>
+      <div class="card-body">
+        <p class="text-muted small mb-3">Cada lunes a las 8:00 AM se envía automáticamente un reporte con: <strong>Facturas a cobrar · Facturas a pagar · Comisiones pendientes · Estados de cuenta por socio</strong>.</p>
+
+        <div class="mb-3">
+          <div style="font-weight:600;font-size:.8rem;margin-bottom:6px"><i class="bi bi-people-fill me-1 text-primary"></i>Destinatarios</div>
+          <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 12px;font-size:.8rem">
+            <div style="display:flex;flex-direction:column;gap:4px" id="reporte-destinatarios-list">
+              <span><i class="bi bi-envelope me-1 text-success"></i>jonathan.palermo@hotmail.com</span>
+              <span><i class="bi bi-envelope me-1 text-success"></i>rbodini27@gmail.com</span>
+              <span><i class="bi bi-envelope me-1 text-success"></i>alberto.jpalermo@gmail.com</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <div style="font-weight:600;font-size:.8rem;margin-bottom:6px"><i class="bi bi-file-earmark-text me-1" style="color:#7c3aed"></i>El reporte incluye</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;font-size:.72rem">
+            <span style="background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;border-radius:20px;padding:3px 10px"><i class="bi bi-file-earmark-arrow-down me-1"></i>Facturas a Cobrar</span>
+            <span style="background:#fff7ed;color:#c2410c;border:1px solid #fed7aa;border-radius:20px;padding:3px 10px"><i class="bi bi-file-earmark-arrow-up me-1"></i>Facturas a Pagar</span>
+            <span style="background:#fdf4ff;color:#7e22ce;border:1px solid #e9d5ff;border-radius:20px;padding:3px 10px"><i class="bi bi-percent me-1"></i>Comisiones Pendientes</span>
+            <span style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;border-radius:20px;padding:3px 10px"><i class="bi bi-people-fill me-1"></i>Estados de Cuenta</span>
+          </div>
+        </div>
+
+        <div id="reporte-ultimo-envio" class="mb-3" style="font-size:.75rem;color:#64748b"></div>
+
+        <div class="d-flex gap-2 flex-wrap">
+          <button class="btn btn-sm" onclick="reporteEnviarAhora()" style="background:#7c3aed;color:#fff;border:none;border-radius:7px;font-size:.75rem;padding:6px 14px">
+            <i class="bi bi-send me-1"></i>Enviar reporte ahora
+          </button>
+          <button class="btn btn-sm" onclick="reporteVistaPrevia()" style="background:#0ea5e9;color:#fff;border:none;border-radius:7px;font-size:.75rem;padding:6px 14px">
+            <i class="bi bi-eye me-1"></i>Vista previa PDF
+          </button>
+        </div>
+        <div class="mt-2" style="font-size:.7rem;color:#94a3b8"><i class="bi bi-info-circle me-1"></i>Requiere EmailJS configurado arriba. El reporte automático de los lunes se ejecuta con Cowork en segundo plano.</div>
+      </div>
+    </div>
+
     <!-- DATOS LOCALES Y BACKUP -->
     <div class="card">
       <div class="card-header bg-white fw-bold"><i class="bi bi-shield-fill-check me-2 text-success"></i>Backup y Restauración</div>
@@ -20324,6 +20365,403 @@ function _checkAlertas() {
 // Verificar alertas al cargar y cada 6 horas
 setTimeout(() => { try { _checkAlertas(); } catch(e){} }, 5000);
 setInterval(() => { try { _checkAlertas(); } catch(e){} }, 6 * 60 * 60 * 1000);
+
+/* ═══════════════════════════════════════════
+   REPORTE SEMANAL — PENDIENTES MÜÜK
+═══════════════════════════════════════════ */
+const REPORTE_DESTINATARIOS = [
+  'jonathan.palermo@hotmail.com',
+  'rbodini27@gmail.com',
+  'alberto.jpalermo@gmail.com'
+];
+
+function _getSemanaLabel() {
+  const now = new Date();
+  const dow = now.getDay(); // 0=dom, 1=lun...
+  const lun = new Date(now);
+  lun.setDate(now.getDate() - ((dow + 6) % 7));
+  const dom = new Date(lun);
+  dom.setDate(lun.getDate() + 6);
+  const f = d => d.toLocaleDateString('es-AR', { day:'2-digit', month:'2-digit', year:'numeric' });
+  return `Semana del ${f(lun)} al ${f(dom)}`;
+}
+
+function _buildReporteData() {
+  const now = new Date();
+  const semana = _getSemanaLabel();
+
+  // Facturas a cobrar pendientes (no cobradas)
+  const facsCobrar = (ST.facturasACobrar||[])
+    .filter(f => f.estado !== 'cobrada')
+    .sort((a,b) => new Date(a.fechaVenc||a.fecha) - new Date(b.fechaVenc||b.fecha));
+
+  // Facturas a pagar pendientes (no pagadas)
+  const facsPagar = (ST.facturasPagar||[])
+    .filter(f => f.estado !== 'pagada')
+    .sort((a,b) => new Date(a.fechaVenc||a.fecha) - new Date(b.fechaVenc||b.fecha));
+
+  // Comisiones pendientes (saldo > 0)
+  const comisionesP = (ST.comisionesResumen||[])
+    .filter(c => (c.saldo||0) > 0)
+    .sort((a,b) => (b.saldo||0) - (a.saldo||0));
+
+  // Estados de cuenta por socio (retiros en cajaEfectivo)
+  const socios = ST.socios || [];
+  const retBySocio = {};
+  socios.forEach(s => { retBySocio[s.id] = 0; });
+  const RETIRO_KW = ['retiro','adelanto','distribuci','sueldo'];
+  [...(ST.cajaEfectivo||[]), ...(ST.cajaBancos||[])].forEach(m => {
+    if (m.tipo !== 'egreso') return;
+    const c = (m.concepto||'').toLowerCase();
+    if (!RETIRO_KW.some(k => c.includes(k))) return;
+    const soc = socios.find(s => m.socioId === s.id || c.includes(s.nombre.split(' ')[0].toLowerCase()));
+    if (soc) retBySocio[soc.id] = (retBySocio[soc.id]||0) + Math.abs(+m.monto);
+  });
+
+  // Totales
+  const totFacCobrar = facsCobrar.reduce((s,f)=>s+(+f.total||0),0);
+  const totFacPagar  = facsPagar.reduce((s,f)=>s+(+f.total||0),0);
+  const totCom       = comisionesP.reduce((s,c)=>s+(+c.saldo||0),0);
+
+  return { now, semana, facsCobrar, facsPagar, comisionesP, socios, retBySocio, totFacCobrar, totFacPagar, totCom };
+}
+
+function _buildReporteEmailHTML(data) {
+  const { semana, facsCobrar, facsPagar, comisionesP, socios, retBySocio, totFacCobrar, totFacPagar, totCom, now } = data;
+  const fmtNum = v => {
+    if (!v && v !== 0) return '$0';
+    const abs = Math.abs(v);
+    const formatted = abs >= 1e9 ? (abs/1e9).toFixed(2)+'B' : abs >= 1e6 ? (abs/1e6).toFixed(2)+'M' : abs >= 1e3 ? (abs/1e3).toFixed(0)+'K' : abs.toFixed(0);
+    return '$' + formatted.replace('.',',');
+  };
+  const fmtFull = v => {
+    if (!v && v!==0) return '$0';
+    return '$' + Math.round(Math.abs(v)).toLocaleString('es-AR');
+  };
+  const fmtDate = d => {
+    if (!d) return '—';
+    const dt = new Date(d);
+    if (isNaN(dt)) return d;
+    return dt.toLocaleDateString('es-AR', {day:'2-digit', month:'2-digit', year:'numeric'});
+  };
+  const isVencida = d => d && new Date(d) < new Date();
+  const diasHasta = d => {
+    if (!d) return null;
+    const diff = Math.round((new Date(d) - new Date()) / (1000*60*60*24));
+    return diff;
+  };
+
+  // Colores inline para email
+  const H = {
+    wrap:   'font-family:Arial,sans-serif;max-width:700px;margin:0 auto;background:#ffffff',
+    header: 'background:#1e1b4b;padding:24px 32px;border-radius:8px 8px 0 0',
+    body:   'padding:24px 32px;background:#f8fafc',
+    card:   'background:#ffffff;border-radius:8px;padding:20px 24px;margin-bottom:20px;border:1px solid #e2e8f0',
+    th:     'background:#1e1b4b;color:#ffffff;padding:8px 12px;font-size:12px;text-align:left;font-weight:600',
+    td:     'padding:8px 12px;font-size:12px;border-bottom:1px solid #f1f5f9;vertical-align:top',
+    tdR:    'padding:8px 12px;font-size:12px;border-bottom:1px solid #f1f5f9;text-align:right;vertical-align:top',
+    kpi:    'display:inline-block;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:12px 20px;margin:6px;text-align:center',
+    footer: 'background:#1e1b4b;padding:16px 32px;border-radius:0 0 8px 8px;text-align:center',
+  };
+
+  // KPI summary row
+  const kpiHtml = `
+    <div style="margin-bottom:20px">
+      <table width="100%" cellpadding="0" cellspacing="8"><tr>
+        <td width="33%" style="text-align:center;background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:14px">
+          <div style="font-size:11px;color:#9a3412;font-weight:600;text-transform:uppercase;margin-bottom:4px">A COBRAR</div>
+          <div style="font-size:22px;font-weight:800;color:#ea580c">${fmtNum(totFacCobrar)}</div>
+          <div style="font-size:11px;color:#9a3412">${facsCobrar.length} factura${facsCobrar.length!==1?'s':''}</div>
+        </td>
+        <td width="33%" style="text-align:center;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:14px">
+          <div style="font-size:11px;color:#991b1b;font-weight:600;text-transform:uppercase;margin-bottom:4px">A PAGAR</div>
+          <div style="font-size:22px;font-weight:800;color:#dc2626">${fmtNum(totFacPagar)}</div>
+          <div style="font-size:11px;color:#991b1b">${facsPagar.length} factura${facsPagar.length!==1?'s':''}</div>
+        </td>
+        <td width="33%" style="text-align:center;background:#fdf4ff;border:1px solid #e9d5ff;border-radius:8px;padding:14px">
+          <div style="font-size:11px;color:#6b21a8;font-weight:600;text-transform:uppercase;margin-bottom:4px">COMISIONES PEND.</div>
+          <div style="font-size:22px;font-weight:800;color:#7c3aed">${fmtNum(totCom)}</div>
+          <div style="font-size:11px;color:#6b21a8">${comisionesP.length} pendiente${comisionesP.length!==1?'s':''}</div>
+        </td>
+      </tr></table>
+    </div>`;
+
+  // Tabla facturas a cobrar
+  const tblCobrar = facsCobrar.length ? `
+    <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin-top:8px">
+      <thead><tr>
+        <th style="${H.th}">Cliente</th>
+        <th style="${H.th}">N° Factura</th>
+        <th style="${H.th}">Fecha emisión</th>
+        <th style="${H.th}">Vencimiento</th>
+        <th style="${H.th};text-align:right">Total</th>
+        <th style="${H.th}">Estado</th>
+      </tr></thead>
+      <tbody>
+        ${facsCobrar.map(f => {
+          const dias = diasHasta(f.fechaVenc);
+          const vencida = isVencida(f.fechaVenc);
+          const rowBg = vencida ? 'background:#fef2f2' : (dias !== null && dias <= 7 ? 'background:#fffbeb' : '');
+          const estadoColor = vencida ? '#dc2626' : (dias !== null && dias <= 7 ? '#d97706' : '#16a34a');
+          const estadoLabel = vencida ? '⚠ VENCIDA' : (dias !== null && dias <= 7 ? `⏰ Vence en ${dias}d` : '✓ Al día');
+          return `<tr style="${rowBg}">
+            <td style="${H.td}"><strong>${f.cliente||'—'}</strong></td>
+            <td style="${H.td}">${f.numero||'—'}</td>
+            <td style="${H.td}">${fmtDate(f.fecha)}</td>
+            <td style="${H.td}">${fmtDate(f.fechaVenc)}</td>
+            <td style="${H.tdR}"><strong>${fmtFull(f.total)}</strong></td>
+            <td style="${H.td};color:${estadoColor};font-weight:700">${estadoLabel}</td>
+          </tr>`;
+        }).join('')}
+        <tr style="background:#f0fdf4">
+          <td colspan="4" style="${H.td};font-weight:700">TOTAL A COBRAR</td>
+          <td style="${H.tdR};font-weight:800;color:#16a34a;font-size:14px">${fmtFull(totFacCobrar)}</td>
+          <td style="${H.td}"></td>
+        </tr>
+      </tbody>
+    </table>` : '<p style="color:#94a3b8;font-size:12px;margin:8px 0">Sin facturas pendientes de cobro.</p>';
+
+  // Tabla facturas a pagar
+  const tblPagar = facsPagar.length ? `
+    <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin-top:8px">
+      <thead><tr>
+        <th style="${H.th}">Proveedor</th>
+        <th style="${H.th}">N° Factura</th>
+        <th style="${H.th}">Fecha emisión</th>
+        <th style="${H.th}">Vencimiento</th>
+        <th style="${H.th};text-align:right">Total</th>
+        <th style="${H.th}">Estado</th>
+      </tr></thead>
+      <tbody>
+        ${facsPagar.map(f => {
+          const dias = diasHasta(f.fechaVenc);
+          const vencida = isVencida(f.fechaVenc);
+          const rowBg = vencida ? 'background:#fef2f2' : (dias !== null && dias <= 5 ? 'background:#fffbeb' : '');
+          const estadoColor = vencida ? '#dc2626' : (dias !== null && dias <= 5 ? '#d97706' : '#64748b');
+          const estadoLabel = vencida ? '⚠ VENCIDA' : (dias !== null && dias <= 5 ? `⏰ Vence en ${dias}d` : `En ${dias !== null ? dias : '?'}d`);
+          return `<tr style="${rowBg}">
+            <td style="${H.td}"><strong>${f.cliente||f.desc||'—'}</strong></td>
+            <td style="${H.td}">${f.numero||'—'}</td>
+            <td style="${H.td}">${fmtDate(f.fecha)}</td>
+            <td style="${H.td}">${fmtDate(f.fechaVenc)}</td>
+            <td style="${H.tdR}"><strong>${fmtFull(f.total)}</strong></td>
+            <td style="${H.td};color:${estadoColor};font-weight:700">${estadoLabel}</td>
+          </tr>`;
+        }).join('')}
+        <tr style="background:#fef2f2">
+          <td colspan="4" style="${H.td};font-weight:700">TOTAL A PAGAR</td>
+          <td style="${H.tdR};font-weight:800;color:#dc2626;font-size:14px">${fmtFull(totFacPagar)}</td>
+          <td style="${H.td}"></td>
+        </tr>
+      </tbody>
+    </table>` : '<p style="color:#94a3b8;font-size:12px;margin:8px 0">Sin facturas pendientes de pago.</p>';
+
+  // Tabla comisiones pendientes
+  const tblCom = comisionesP.length ? `
+    <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin-top:8px">
+      <thead><tr>
+        <th style="${H.th}">Cliente / Empresa</th>
+        <th style="${H.th};text-align:right">Total Comisión</th>
+        <th style="${H.th};text-align:right">Cobrado</th>
+        <th style="${H.th};text-align:right">Saldo Pendiente</th>
+        <th style="${H.th}">Observaciones</th>
+      </tr></thead>
+      <tbody>
+        ${comisionesP.map(c => `<tr>
+          <td style="${H.td}"><strong>${c.cliente||c.empresa||'—'}</strong>${c.empresa&&c.cliente?'<br><small style="color:#94a3b8">'+c.empresa+'</small>':''}</td>
+          <td style="${H.tdR}">${fmtFull(c.total||0)}</td>
+          <td style="${H.tdR};color:#64748b">${fmtFull((c.total||0)-(c.saldo||0))}</td>
+          <td style="${H.tdR};color:#7c3aed;font-weight:700">${fmtFull(c.saldo||0)}</td>
+          <td style="${H.td};color:#64748b;font-size:11px">${c.obs||'—'}</td>
+        </tr>`).join('')}
+        <tr style="background:#fdf4ff">
+          <td colspan="3" style="${H.td};font-weight:700">TOTAL COMISIONES PENDIENTES</td>
+          <td style="${H.tdR};font-weight:800;color:#7c3aed;font-size:14px">${fmtFull(totCom)}</td>
+          <td style="${H.td}"></td>
+        </tr>
+      </tbody>
+    </table>` : '<p style="color:#94a3b8;font-size:12px;margin:8px 0">Sin comisiones pendientes.</p>';
+
+  // Estados de cuenta socios
+  const tblSocios = socios.length ? `
+    <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin-top:8px">
+      <thead><tr>
+        <th style="${H.th}">Socio</th>
+        <th style="${H.th};text-align:right">Retiros acumulados</th>
+      </tr></thead>
+      <tbody>
+        ${socios.map((s,i) => `<tr style="${i%2===0?'background:#f8fafc':''}">
+          <td style="${H.td}"><strong>${s.nombre}</strong></td>
+          <td style="${H.tdR};color:#1d4ed8;font-weight:700">${fmtFull(retBySocio[s.id]||0)}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>` : '<p style="color:#94a3b8;font-size:12px;margin:8px 0">Sin socios configurados.</p>';
+
+  const generadoEn = now.toLocaleString('es-AR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+
+  return `
+<!DOCTYPE html><html><body>
+<div style="${H.wrap}">
+  <!-- Header -->
+  <div style="${H.header}">
+    <table width="100%" cellpadding="0" cellspacing="0"><tr>
+      <td>
+        <div style="color:#ffffff;font-size:24px;font-weight:900;letter-spacing:1px">MÜÜK SRL</div>
+        <div style="color:#a5b4fc;font-size:14px;margin-top:4px">Reporte de Cuentas Pendientes</div>
+      </td>
+      <td style="text-align:right;vertical-align:top">
+        <div style="color:#e0e7ff;font-size:12px">${semana}</div>
+        <div style="color:#a5b4fc;font-size:11px;margin-top:4px">Generado: ${generadoEn}</div>
+      </td>
+    </tr></table>
+  </div>
+
+  <!-- Body -->
+  <div style="${H.body}">
+    <!-- KPIs -->
+    ${kpiHtml}
+
+    <!-- Facturas a Cobrar -->
+    <div style="${H.card}">
+      <div style="font-size:15px;font-weight:700;color:#1e1b4b;margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid #e0e7ff">
+        📥 Facturas a Cobrar — Pendientes
+      </div>
+      ${tblCobrar}
+    </div>
+
+    <!-- Facturas a Pagar -->
+    <div style="${H.card}">
+      <div style="font-size:15px;font-weight:700;color:#1e1b4b;margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid #fecaca">
+        📤 Facturas a Pagar — Pendientes
+      </div>
+      ${tblPagar}
+    </div>
+
+    <!-- Comisiones Pendientes -->
+    <div style="${H.card}">
+      <div style="font-size:15px;font-weight:700;color:#1e1b4b;margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid #e9d5ff">
+        💼 Comisiones Pendientes de Cobro
+      </div>
+      ${tblCom}
+    </div>
+
+    <!-- Estados de Cuenta Socios -->
+    <div style="${H.card}">
+      <div style="font-size:15px;font-weight:700;color:#1e1b4b;margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid #bfdbfe">
+        👥 Estado de Cuenta — Retiros por Socio
+      </div>
+      ${tblSocios}
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div style="${H.footer}">
+    <div style="color:#a5b4fc;font-size:11px">Este reporte se genera automáticamente cada lunes · MÜÜK SRL · Sistema de gestión financiera</div>
+  </div>
+</div>
+</body></html>`;
+}
+
+function reporteVistaPrevia() {
+  const data = _buildReporteData();
+  const html = _buildReporteEmailHTML(data);
+  const w = window.open('', '_blank', 'width=800,height:900,scrollbars=yes');
+  if (!w) { toast('Habilitá los popups para ver la vista previa', 'warning'); return; }
+  w.document.write(`<html><head><title>Reporte Pendientes MÜÜK — ${data.semana}</title>
+  <style>
+    body { margin: 0; padding: 20px; background: #e2e8f0; font-family: Arial, sans-serif; }
+    @media print {
+      body { background: white; padding: 0; }
+      .no-print { display: none !important; }
+    }
+  </style></head><body>
+  <div class="no-print" style="text-align:center;margin-bottom:16px">
+    <button onclick="window.print()" style="background:#7c3aed;color:white;border:none;padding:10px 24px;border-radius:8px;font-size:14px;cursor:pointer;margin-right:8px">
+      🖨 Imprimir / Guardar como PDF
+    </button>
+    <button onclick="window.close()" style="background:#64748b;color:white;border:none;padding:10px 24px;border-radius:8px;font-size:14px;cursor:pointer">
+      ✕ Cerrar
+    </button>
+  </div>
+  ${html}
+  </body></html>`);
+  w.document.close();
+}
+
+function reporteEnviarAhora() {
+  const c = ST.emailjsConfig || {};
+  if (!c.serviceId || !c.templateId || !c.userId) {
+    toast('Configurá EmailJS primero (Service ID, Template ID y Public Key)', 'danger'); return;
+  }
+  const data = _buildReporteData();
+  const html = _buildReporteEmailHTML(data);
+  const semana = data.semana;
+  const asunto = `Pendientes MUUK SRL — ${semana}`;
+  const textoPlano = `Reporte de cuentas pendientes MÜÜK SRL\n${semana}\n\n` +
+    `FACTURAS A COBRAR: ${data.facsCobrar.length} facturas · Total ${fmt(data.totFacCobrar)}\n` +
+    `FACTURAS A PAGAR: ${data.facsPagar.length} facturas · Total ${fmt(data.totFacPagar)}\n` +
+    `COMISIONES PENDIENTES: ${data.comisionesP.length} · Total ${fmt(data.totCom)}\n\n` +
+    `Ver el reporte completo en la app MÜÜK SRL.`;
+
+  _loadEmailJS(() => {
+    if (!window.emailjs) { toast('EmailJS no disponible', 'danger'); return; }
+    emailjs.init(c.userId);
+
+    const enviarA = (email, idx) => new Promise((resolve, reject) => {
+      setTimeout(() => {
+        emailjs.send(c.serviceId, c.templateId, {
+          to_email: email,
+          subject: asunto,
+          message: textoPlano,
+          message_html: html,
+          empresa: 'MÜÜK SRL',
+          semana: semana
+        }).then(resolve).catch(reject);
+      }, idx * 800); // escalonar envíos 800ms c/u
+    });
+
+    toast('Enviando reporte a 3 destinatarios...', 'info');
+    Promise.allSettled(
+      REPORTE_DESTINATARIOS.map((email, i) => enviarA(email, i))
+    ).then(results => {
+      const ok = results.filter(r => r.status === 'fulfilled').length;
+      const fail = results.filter(r => r.status === 'rejected');
+      if (ok === REPORTE_DESTINATARIOS.length) {
+        toast(`✅ Reporte enviado a los ${ok} destinatarios`, 'success');
+        ST._lastReporteSent = new Date().toISOString();
+        save();
+        _actualizarUltimoEnvio();
+      } else {
+        toast(`Enviado a ${ok}/${REPORTE_DESTINATARIOS.length} · ${fail.length} error(es): ${fail[0]?.reason?.text||''}`, 'warning');
+      }
+    });
+  });
+}
+
+function _actualizarUltimoEnvio() {
+  const el = document.getElementById('reporte-ultimo-envio');
+  if (!el) return;
+  const ts = ST._lastReporteSent;
+  if (!ts) { el.textContent = ''; return; }
+  const d = new Date(ts);
+  el.innerHTML = `<i class="bi bi-check-circle-fill text-success me-1"></i>Último envío: ${d.toLocaleString('es-AR', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})}`;
+}
+
+// Chequear auto-envío lunes 8AM (si la app está abierta en ese horario)
+(function _checkAutoReporte() {
+  try {
+    const now = new Date();
+    const isLunes = now.getDay() === 1;
+    const isHora8 = now.getHours() >= 8 && now.getHours() < 9;
+    const lastSent = ST._lastReporteSent ? new Date(ST._lastReporteSent) : null;
+    const diasDesdeUltimo = lastSent ? (now - lastSent) / (1000*60*60*24) : 999;
+    if (isLunes && isHora8 && diasDesdeUltimo > 6) {
+      setTimeout(() => {
+        try { reporteEnviarAhora(); } catch(e) {}
+      }, 10000); // esperar 10s para que cargue todo
+    }
+  } catch(e) {}
+})();
 
 </script>
 <!-- ═══ DATALIST BANCOS BCRA ═══ -->
