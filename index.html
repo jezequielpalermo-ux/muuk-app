@@ -2834,6 +2834,11 @@ CREATE POLICY "acceso total" ON flujo_caja_versions FOR ALL USING (true) WITH CH
           </button>
         </div>
         <div class="mt-2" style="font-size:.7rem;color:#94a3b8"><i class="bi bi-info-circle me-1"></i>Requiere EmailJS configurado arriba. El reporte automático de los lunes se ejecuta con Cowork en segundo plano.</div>
+        <div class="mt-1 p-2 rounded" style="font-size:.7rem;background:#fffbeb;border:1px solid #fde68a;color:#92400e">
+          <i class="bi bi-exclamation-triangle me-1"></i><strong>Para ver el contenido del reporte en el email:</strong>
+          En EmailJS → tu template → "Edit Content" → reemplazá el texto por <code style="background:#fef3c7;padding:1px 4px;border-radius:3px">{{message}}</code>.
+          Si querés que el asunto sea dinámico, cambiá el campo Subject a <code style="background:#fef3c7;padding:1px 4px;border-radius:3px">{{subject}}</code>.
+        </div>
       </div>
     </div>
 
@@ -20867,55 +20872,40 @@ async function reporteEnviarAhora() {
       `🏦 CHEQUES ESTA SEMANA: ${data.chequesPagarSemana.length} · ${fmt(data.totChPagar)}\n\n` +
       `Ver reporte completo adjunto o en la app MÜÜK SRL.`;
 
-    // Envío via REST API de EmailJS (no requiere SDK — evita errores de carga y tamaño)
-    const enviarA = async (email, idx) => {
-      if (idx > 0) await new Promise(r => setTimeout(r, idx * 1000));
-      const payload = {
-        service_id:   c.serviceId,
-        template_id:  c.templateId,
-        user_id:      c.userId,
-        template_params: {
-          to_email:    email,
-          subject:     asunto,
-          message:     textoResumen,
-          message_html: html,
-          empresa:     'MÜÜK SRL',
-          semana:      semana
-        }
-      };
-      const res = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify(payload)
-      });
-      if (!res.ok) {
-        const errTxt = await res.text().catch(()=>'');
-        throw new Error(`HTTP ${res.status}${errTxt ? ': ' + errTxt : ''}`);
+    // Envío via REST API de EmailJS — una sola llamada (el template ya tiene To + CC con todos los destinatarios)
+    // NO enviamos message_html para evitar superar el límite de tamaño de EmailJS (~50KB)
+    toast('Enviando reporte...', 'info');
+    const payload = {
+      service_id:  c.serviceId,
+      template_id: c.templateId,
+      user_id:     c.userId,
+      template_params: {
+        to_email: REPORTE_DESTINATARIOS[0],   // el template usa To hardcodeado + CC para los demás
+        subject:  asunto,
+        message:  textoResumen,
+        empresa:  'MÜÜK SRL',
+        semana:   semana
       }
-      console.log(`EmailJS OK → ${email} (${res.status})`);
-      return res;
     };
+    console.log('EmailJS payload (sin message_html):', { ...payload, template_params: { ...payload.template_params } });
 
-    toast(`Enviando a ${REPORTE_DESTINATARIOS.length} destinatarios...`, 'info');
-    const results = await Promise.allSettled(
-      REPORTE_DESTINATARIOS.map((email, i) => enviarA(email, i))
-    );
+    const res = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify(payload)
+    });
 
-    const ok   = results.filter(r => r.status === 'fulfilled').length;
-    const fail = results.filter(r => r.status === 'rejected');
+    const resText = await res.text().catch(() => '');
+    console.log(`EmailJS response: ${res.status}`, resText);
 
-    if (ok === REPORTE_DESTINATARIOS.length) {
-      toast(`✅ Reporte enviado a los ${ok} destinatarios`, 'success');
+    if (res.ok) {
+      toast('✅ Reporte enviado a todos los destinatarios', 'success');
       ST._lastReporteSent = new Date().toISOString();
       save();
       _actualizarUltimoEnvio();
-    } else if (ok > 0) {
-      toast(`⚠️ Enviado a ${ok}/${REPORTE_DESTINATARIOS.length} · ${fail[0]?.reason?.message||''}`, 'warning');
-      console.error('Errores parciales:', fail.map(f=>f.reason));
     } else {
-      const errMsg = fail[0]?.reason?.message || 'Error desconocido';
-      toast(`❌ No se pudo enviar: ${errMsg}`, 'danger');
-      console.error('Error envío EmailJS:', fail);
+      // Mostrar el error exacto que devuelve EmailJS
+      throw new Error(`HTTP ${res.status}: ${resText || 'Sin detalle'}`);
     }
 
   } catch(err) {
