@@ -20377,7 +20377,7 @@ const REPORTE_DESTINATARIOS = [
 
 function _getSemanaLabel() {
   const now = new Date();
-  const dow = now.getDay(); // 0=dom, 1=lun...
+  const dow = now.getDay();
   const lun = new Date(now);
   lun.setDate(now.getDate() - ((dow + 6) % 7));
   const dom = new Date(lun);
@@ -20386,26 +20386,47 @@ function _getSemanaLabel() {
   return `Semana del ${f(lun)} al ${f(dom)}`;
 }
 
-function _buildReporteData() {
+function _getSemanaRango() {
+  const now = new Date();
+  const lun = new Date(now);
+  lun.setDate(now.getDate() - ((now.getDay() + 6) % 7));
+  lun.setHours(0,0,0,0);
+  const dom = new Date(lun);
+  dom.setDate(lun.getDate() + 6);
+  dom.setHours(23,59,59,999);
+  return { lun, dom };
+}
+
+async function _buildReporteData() {
   const now = new Date();
   const semana = _getSemanaLabel();
+  const { lun, dom } = _getSemanaRango();
 
-  // Facturas a cobrar pendientes (no cobradas)
+  // Facturas a cobrar pendientes
   const facsCobrar = (ST.facturasACobrar||[])
     .filter(f => f.estado !== 'cobrada')
     .sort((a,b) => new Date(a.fechaVenc||a.fecha) - new Date(b.fechaVenc||b.fecha));
 
-  // Facturas a pagar pendientes (no pagadas)
+  // Facturas a pagar pendientes
   const facsPagar = (ST.facturasPagar||[])
     .filter(f => f.estado !== 'pagada')
     .sort((a,b) => new Date(a.fechaVenc||a.fecha) - new Date(b.fechaVenc||b.fecha));
 
-  // Comisiones pendientes (saldo > 0)
+  // Comisiones pendientes
   const comisionesP = (ST.comisionesResumen||[])
     .filter(c => (c.saldo||0) > 0)
     .sort((a,b) => (b.saldo||0) - (a.saldo||0));
 
-  // Estados de cuenta por socio (retiros en cajaEfectivo)
+  // Cheques a pagar que vencen ESTA semana
+  const chequesPagarSemana = (ST.chequesPagar||[])
+    .filter(c => {
+      if (c.estado === 'pagado') return false;
+      const v = new Date(c.fechaVenc);
+      return v >= lun && v <= dom;
+    })
+    .sort((a,b) => new Date(a.fechaVenc) - new Date(b.fechaVenc));
+
+  // Retiros por socio — calcular SALDO A RETIRAR para equilibrar
   const socios = ST.socios || [];
   const retBySocio = {};
   socios.forEach(s => { retBySocio[s.id] = 0; });
@@ -20417,17 +20438,48 @@ function _buildReporteData() {
     const soc = socios.find(s => m.socioId === s.id || c.includes(s.nombre.split(' ')[0].toLowerCase()));
     if (soc) retBySocio[soc.id] = (retBySocio[soc.id]||0) + Math.abs(+m.monto);
   });
+  // Máximo retiro entre todos los socios
+  const maxRetiro = Math.max(0, ...socios.map(s => retBySocio[s.id]||0));
+  // Saldo a retirar = lo que le falta a cada socio para equipararse con el que más retiró
+  const saldoARetirar = {};
+  socios.forEach(s => { saldoARetirar[s.id] = Math.max(0, maxRetiro - (retBySocio[s.id]||0)); });
 
-  // Totales
+  // Estados de cuenta ECTA — clientes con deuda pendiente, por socio
+  // Intentar usar caché existente o fetchear desde Google Sheets
+  const VENDEDORES = ['Alberto', 'Ricardo', 'Jonathan'];
+  const ectaPendientes = {};
+  await Promise.allSettled(VENDEDORES.map(async v => {
+    try {
+      let data = _ectaCache[v];
+      if (!data) {
+        const url = `https://docs.google.com/spreadsheets/d/${ECTA_SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(v)}`;
+        const resp = await fetch(url);
+        if (!resp.ok) return;
+        const csv = await resp.text();
+        data = _ectaParseCsv(csv);
+        _ectaCache[v] = data; // guardar en cache
+      }
+      // Solo clientes con deuda pendiente (totalPendiente > 0)
+      ectaPendientes[v] = data.filter(c => (c.totalPendiente||0) > 0)
+        .sort((a,b) => (b.totalPendiente||0) - (a.totalPendiente||0));
+    } catch(e) {
+      ectaPendientes[v] = [];
+    }
+  }));
+
   const totFacCobrar = facsCobrar.reduce((s,f)=>s+(+f.total||0),0);
   const totFacPagar  = facsPagar.reduce((s,f)=>s+(+f.total||0),0);
   const totCom       = comisionesP.reduce((s,c)=>s+(+c.saldo||0),0);
+  const totChPagar   = chequesPagarSemana.reduce((s,c)=>s+(+c.monto||0),0);
+  const totSaldoRet  = socios.reduce((s,x)=>s+(saldoARetirar[x.id]||0),0);
 
-  return { now, semana, facsCobrar, facsPagar, comisionesP, socios, retBySocio, totFacCobrar, totFacPagar, totCom };
+  return { now, semana, facsCobrar, facsPagar, comisionesP, chequesPagarSemana,
+           socios, retBySocio, saldoARetirar, maxRetiro, ectaPendientes,
+           totFacCobrar, totFacPagar, totCom, totChPagar, totSaldoRet };
 }
 
 function _buildReporteEmailHTML(data) {
-  const { semana, facsCobrar, facsPagar, comisionesP, socios, retBySocio, totFacCobrar, totFacPagar, totCom, now } = data;
+  const { semana, facsCobrar, facsPagar, comisionesP, chequesPagarSemana, socios, retBySocio, saldoARetirar, maxRetiro, ectaPendientes, totFacCobrar, totFacPagar, totCom, totChPagar, now } = data;
   const fmtNum = v => {
     if (!v && v !== 0) return '$0';
     const abs = Math.abs(v);
@@ -20464,24 +20516,29 @@ function _buildReporteEmailHTML(data) {
     footer: 'background:#1e1b4b;padding:16px 32px;border-radius:0 0 8px 8px;text-align:center',
   };
 
-  // KPI summary row
+  // KPI summary row (4 columnas)
   const kpiHtml = `
     <div style="margin-bottom:20px">
-      <table width="100%" cellpadding="0" cellspacing="8"><tr>
-        <td width="33%" style="text-align:center;background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:14px">
-          <div style="font-size:11px;color:#9a3412;font-weight:600;text-transform:uppercase;margin-bottom:4px">A COBRAR</div>
-          <div style="font-size:22px;font-weight:800;color:#ea580c">${fmtNum(totFacCobrar)}</div>
-          <div style="font-size:11px;color:#9a3412">${facsCobrar.length} factura${facsCobrar.length!==1?'s':''}</div>
+      <table width="100%" cellpadding="0" cellspacing="6"><tr>
+        <td width="25%" style="text-align:center;background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:12px 8px">
+          <div style="font-size:10px;color:#9a3412;font-weight:600;text-transform:uppercase;margin-bottom:4px">A COBRAR</div>
+          <div style="font-size:20px;font-weight:800;color:#ea580c">${fmtNum(totFacCobrar)}</div>
+          <div style="font-size:10px;color:#9a3412">${facsCobrar.length} factura${facsCobrar.length!==1?'s':''}</div>
         </td>
-        <td width="33%" style="text-align:center;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:14px">
-          <div style="font-size:11px;color:#991b1b;font-weight:600;text-transform:uppercase;margin-bottom:4px">A PAGAR</div>
-          <div style="font-size:22px;font-weight:800;color:#dc2626">${fmtNum(totFacPagar)}</div>
-          <div style="font-size:11px;color:#991b1b">${facsPagar.length} factura${facsPagar.length!==1?'s':''}</div>
+        <td width="25%" style="text-align:center;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:12px 8px">
+          <div style="font-size:10px;color:#991b1b;font-weight:600;text-transform:uppercase;margin-bottom:4px">A PAGAR</div>
+          <div style="font-size:20px;font-weight:800;color:#dc2626">${fmtNum(totFacPagar)}</div>
+          <div style="font-size:10px;color:#991b1b">${facsPagar.length} factura${facsPagar.length!==1?'s':''}</div>
         </td>
-        <td width="33%" style="text-align:center;background:#fdf4ff;border:1px solid #e9d5ff;border-radius:8px;padding:14px">
-          <div style="font-size:11px;color:#6b21a8;font-weight:600;text-transform:uppercase;margin-bottom:4px">COMISIONES PEND.</div>
-          <div style="font-size:22px;font-weight:800;color:#7c3aed">${fmtNum(totCom)}</div>
-          <div style="font-size:11px;color:#6b21a8">${comisionesP.length} pendiente${comisionesP.length!==1?'s':''}</div>
+        <td width="25%" style="text-align:center;background:#fdf4ff;border:1px solid #e9d5ff;border-radius:8px;padding:12px 8px">
+          <div style="font-size:10px;color:#6b21a8;font-weight:600;text-transform:uppercase;margin-bottom:4px">COMISIONES PEND.</div>
+          <div style="font-size:20px;font-weight:800;color:#7c3aed">${fmtNum(totCom)}</div>
+          <div style="font-size:10px;color:#6b21a8">${comisionesP.length} pendiente${comisionesP.length!==1?'s':''}</div>
+        </td>
+        <td width="25%" style="text-align:center;background:#fff1f2;border:1px solid #fda4af;border-radius:8px;padding:12px 8px">
+          <div style="font-size:10px;color:#9f1239;font-weight:600;text-transform:uppercase;margin-bottom:4px">CHEQUES VENCEN HOY/SEM.</div>
+          <div style="font-size:20px;font-weight:800;color:#e11d48">${fmtNum(totChPagar)}</div>
+          <div style="font-size:10px;color:#9f1239">${chequesPagarSemana.length} cheque${chequesPagarSemana.length!==1?'s':''}</div>
         </td>
       </tr></table>
     </div>`;
@@ -20582,20 +20639,99 @@ function _buildReporteEmailHTML(data) {
       </tbody>
     </table>` : '<p style="color:#94a3b8;font-size:12px;margin:8px 0">Sin comisiones pendientes.</p>';
 
-  // Estados de cuenta socios
+  // Retiros por socio — saldo a retirar para equilibrar
   const tblSocios = socios.length ? `
     <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin-top:8px">
       <thead><tr>
         <th style="${H.th}">Socio</th>
         <th style="${H.th};text-align:right">Retiros acumulados</th>
+        <th style="${H.th};text-align:right">Saldo a retirar</th>
+        <th style="${H.th}">Estado</th>
       </tr></thead>
       <tbody>
-        ${socios.map((s,i) => `<tr style="${i%2===0?'background:#f8fafc':''}">
-          <td style="${H.td}"><strong>${s.nombre}</strong></td>
-          <td style="${H.tdR};color:#1d4ed8;font-weight:700">${fmtFull(retBySocio[s.id]||0)}</td>
-        </tr>`).join('')}
+        ${socios.map((s,i) => {
+          const ret = retBySocio[s.id]||0;
+          const saldo = saldoARetirar[s.id]||0;
+          const esMax = ret === maxRetiro;
+          const rowBg = esMax ? 'background:#f0fdf4' : (saldo > 0 ? 'background:#fffbeb' : '');
+          return `<tr style="${rowBg}">
+            <td style="${H.td}"><strong>${s.nombre}</strong>${esMax?' <span style="font-size:10px;background:#16a34a;color:white;padding:1px 6px;border-radius:10px">mayor retiro</span>':''}</td>
+            <td style="${H.tdR}">${fmtFull(ret)}</td>
+            <td style="${H.tdR};font-weight:700;color:${saldo>0?'#d97706':'#16a34a'}">${saldo>0?fmtFull(saldo):'Equiparado'}</td>
+            <td style="${H.td};font-size:11px;color:${saldo>0?'#92400e':'#15803d'}">${saldo>0?'⏳ Pendiente retirar':'✓ Al día'}</td>
+          </tr>`;
+        }).join('')}
       </tbody>
-    </table>` : '<p style="color:#94a3b8;font-size:12px;margin:8px 0">Sin socios configurados.</p>';
+    </table>
+    <p style="font-size:11px;color:#64748b;margin-top:8px;font-style:italic">* "Saldo a retirar" = monto que necesita retirar cada socio para equipararse con quien más retiró (${fmtFull(maxRetiro)}).</p>
+    ` : '<p style="color:#94a3b8;font-size:12px;margin:8px 0">Sin socios configurados.</p>';
+
+  // Estados de cuenta por vendedor — clientes con deuda pendiente
+  const VENDEDORES = ['Alberto', 'Ricardo', 'Jonathan'];
+  const tblEcta = VENDEDORES.map(v => {
+    const clientes = (ectaPendientes && ectaPendientes[v]) || [];
+    const totDeuda = clientes.reduce((s,c)=>s+(c.totalPendiente||0),0);
+    if (!clientes.length) return `<p style="font-size:12px;color:#94a3b8;margin:4px 0"><strong>${v}:</strong> Sin clientes con deuda pendiente.</p>`;
+    return `
+      <div style="margin-bottom:16px">
+        <div style="font-size:13px;font-weight:700;color:#1e1b4b;margin-bottom:6px;padding:6px 10px;background:#eff6ff;border-radius:6px;border-left:4px solid #3b82f6">
+          ${v} — ${clientes.length} cliente${clientes.length!==1?'s':''} · Deuda total: <span style="color:#dc2626">${fmtFull(totDeuda)}</span>
+        </div>
+        <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse">
+          <thead><tr>
+            <th style="${H.th}">Cliente</th>
+            <th style="${H.th};text-align:right">Total cobrado</th>
+            <th style="${H.th};text-align:right">Deuda pendiente</th>
+            <th style="${H.th}">Detalle pendiente</th>
+          </tr></thead>
+          <tbody>
+            ${clientes.map((c,i) => `<tr style="${i%2===0?'background:#f8fafc':''}">
+              <td style="${H.td}"><strong>${c.nombre||'—'}</strong></td>
+              <td style="${H.tdR};color:#64748b">${fmtFull(c.totalCobrado||0)}</td>
+              <td style="${H.tdR};color:#dc2626;font-weight:700">${fmtFull(c.totalPendiente||0)}</td>
+              <td style="${H.td};font-size:11px;color:#475569">
+                ${(c.pendientes||[]).slice(0,3).map(p=>`${p.empresa||''} ${p.factura||''} ${p.importe||''}`).join(' · ')}${(c.pendientes||[]).length>3?'…':''}
+              </td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>`;
+  }).join('');
+
+  // Cheques a pagar esta semana
+  const tblChPagar = chequesPagarSemana.length ? `
+    <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin-top:8px">
+      <thead><tr>
+        <th style="${H.th}">Descripción</th>
+        <th style="${H.th}">N° Cheque</th>
+        <th style="${H.th}">Banco</th>
+        <th style="${H.th}">Vencimiento</th>
+        <th style="${H.th};text-align:right">Monto</th>
+        <th style="${H.th}">Estado</th>
+      </tr></thead>
+      <tbody>
+        ${chequesPagarSemana.map((c,i) => {
+          const hoy = new Date(); hoy.setHours(0,0,0,0);
+          const venc = new Date(c.fechaVenc);
+          const esHoy = venc.toDateString() === hoy.toDateString();
+          const vencido = venc < hoy;
+          const rowBg = vencido ? 'background:#fef2f2' : (esHoy ? 'background:#fffbeb' : '');
+          return `<tr style="${rowBg}">
+            <td style="${H.td}"><strong>${c.desc||c.cliente||'—'}</strong></td>
+            <td style="${H.td}">${c.numero||'—'}</td>
+            <td style="${H.td}">${c.banco||'—'}</td>
+            <td style="${H.td}">${fmtDate(c.fechaVenc)}</td>
+            <td style="${H.tdR};font-weight:700;color:#dc2626">${fmtFull(+c.monto||0)}</td>
+            <td style="${H.td};font-weight:700;color:${vencido?'#dc2626':esHoy?'#d97706':'#64748b'}">${vencido?'⚠ VENCIDO':esHoy?'🔴 HOY':'⏰ Esta semana'}</td>
+          </tr>`;
+        }).join('')}
+        <tr style="background:#fff1f2">
+          <td colspan="4" style="${H.td};font-weight:700">TOTAL CHEQUES A PAGAR</td>
+          <td style="${H.tdR};font-weight:800;color:#e11d48;font-size:14px">${fmtFull(totChPagar)}</td>
+          <td style="${H.td}"></td>
+        </tr>
+      </tbody>
+    </table>` : '<p style="color:#94a3b8;font-size:12px;margin:8px 0">Sin cheques que vencen esta semana. ✓</p>';
 
   const generadoEn = now.toLocaleString('es-AR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
 
@@ -20645,10 +20781,26 @@ function _buildReporteEmailHTML(data) {
       ${tblCom}
     </div>
 
-    <!-- Estados de Cuenta Socios -->
+    <!-- Cheques a Pagar esta semana -->
+    <div style="${H.card}">
+      <div style="font-size:15px;font-weight:700;color:#1e1b4b;margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid #fda4af">
+        🏦 Cheques a Pagar — Vencimiento esta semana
+      </div>
+      ${tblChPagar}
+    </div>
+
+    <!-- Estados de Cuenta por Vendedor (ECTA) -->
     <div style="${H.card}">
       <div style="font-size:15px;font-weight:700;color:#1e1b4b;margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid #bfdbfe">
-        👥 Estado de Cuenta — Retiros por Socio
+        📋 Estados de Cuenta Clientes — Con deuda pendiente
+      </div>
+      ${tblEcta}
+    </div>
+
+    <!-- Retiros por Socio -->
+    <div style="${H.card}">
+      <div style="font-size:15px;font-weight:700;color:#1e1b4b;margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid #d9f99d">
+        👥 Socios — Equilibrio de Retiros
       </div>
       ${tblSocios}
     </div>
@@ -20662,8 +20814,9 @@ function _buildReporteEmailHTML(data) {
 </body></html>`;
 }
 
-function reporteVistaPrevia() {
-  const data = _buildReporteData();
+async function reporteVistaPrevia() {
+  toast('Cargando datos de estados de cuenta...', 'info');
+  const data = await _buildReporteData();
   const html = _buildReporteEmailHTML(data);
   const w = window.open('', '_blank', 'width=800,height:900,scrollbars=yes');
   if (!w) { toast('Habilitá los popups para ver la vista previa', 'warning'); return; }
@@ -20688,12 +20841,13 @@ function reporteVistaPrevia() {
   w.document.close();
 }
 
-function reporteEnviarAhora() {
+async function reporteEnviarAhora() {
   const c = ST.emailjsConfig || {};
   if (!c.serviceId || !c.templateId || !c.userId) {
     toast('Configurá EmailJS primero (Service ID, Template ID y Public Key)', 'danger'); return;
   }
-  const data = _buildReporteData();
+  toast('Recopilando datos...', 'info');
+  const data = await _buildReporteData();
   const html = _buildReporteEmailHTML(data);
   const semana = data.semana;
   const asunto = `Pendientes MUUK SRL — ${semana}`;
@@ -20757,7 +20911,7 @@ function _actualizarUltimoEnvio() {
     const diasDesdeUltimo = lastSent ? (now - lastSent) / (1000*60*60*24) : 999;
     if (isLunes && isHora8 && diasDesdeUltimo > 6) {
       setTimeout(() => {
-        try { reporteEnviarAhora(); } catch(e) {}
+        reporteEnviarAhora().catch(()=>{});
       }, 10000); // esperar 10s para que cargue todo
     }
   } catch(e) {}
