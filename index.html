@@ -2826,7 +2826,7 @@ CREATE POLICY "acceso total" ON flujo_caja_versions FOR ALL USING (true) WITH CH
         <div id="reporte-ultimo-envio" class="mb-3" style="font-size:.75rem;color:#64748b"></div>
 
         <div class="d-flex gap-2 flex-wrap">
-          <button class="btn btn-sm" onclick="reporteEnviarAhora()" style="background:#7c3aed;color:#fff;border:none;border-radius:7px;font-size:.75rem;padding:6px 14px">
+          <button id="btn-enviar-reporte" class="btn btn-sm" onclick="reporteEnviarAhora()" style="background:#7c3aed;color:#fff;border:none;border-radius:7px;font-size:.75rem;padding:6px 14px">
             <i class="bi bi-send me-1"></i>Enviar reporte ahora
           </button>
           <button class="btn btn-sm" onclick="reporteVistaPrevia()" style="background:#0ea5e9;color:#fff;border:none;border-radius:7px;font-size:.75rem;padding:6px 14px">
@@ -20257,13 +20257,15 @@ function crmEliminarEmpresa(id) {
 /* ═══════════════════════════════════════════
    ALERTAS POR EMAIL — EmailJS
 ═══════════════════════════════════════════ */
-function _loadEmailJS(cb) {
-  if (window.emailjs) { cb(); return; }
-  const s = document.createElement('script');
-  s.src = 'https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js';
-  s.onload = () => { if (window.emailjs && ST.emailjsConfig?.userId) { emailjs.init(ST.emailjsConfig.userId); } cb(); };
-  s.onerror = () => { toast('No se pudo cargar EmailJS (sin conexión?)', 'danger'); };
-  document.head.appendChild(s);
+function _loadEmailJS() {
+  return new Promise((resolve, reject) => {
+    if (window.emailjs) { resolve(); return; }
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js';
+    s.onload = () => { resolve(); };
+    s.onerror = () => { reject(new Error('No se pudo cargar EmailJS (sin conexión?)')); };
+    document.head.appendChild(s);
+  });
 }
 
 function _updateEmailjsStatus() {
@@ -20846,50 +20848,80 @@ async function reporteEnviarAhora() {
   if (!c.serviceId || !c.templateId || !c.userId) {
     toast('Configurá EmailJS primero (Service ID, Template ID y Public Key)', 'danger'); return;
   }
-  toast('Recopilando datos...', 'info');
-  const data = await _buildReporteData();
-  const html = _buildReporteEmailHTML(data);
-  const semana = data.semana;
-  const asunto = `Pendientes MUUK SRL — ${semana}`;
-  const textoPlano = `Reporte de cuentas pendientes MÜÜK SRL\n${semana}\n\n` +
-    `FACTURAS A COBRAR: ${data.facsCobrar.length} facturas · Total ${fmt(data.totFacCobrar)}\n` +
-    `FACTURAS A PAGAR: ${data.facsPagar.length} facturas · Total ${fmt(data.totFacPagar)}\n` +
-    `COMISIONES PENDIENTES: ${data.comisionesP.length} · Total ${fmt(data.totCom)}\n\n` +
-    `Ver el reporte completo en la app MÜÜK SRL.`;
 
-  _loadEmailJS(() => {
-    if (!window.emailjs) { toast('EmailJS no disponible', 'danger'); return; }
-    emailjs.init(c.userId);
+  // Deshabilitar botón mientras se envía
+  const btn = document.getElementById('btn-enviar-reporte');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Enviando...'; }
+
+  try {
+    toast('Recopilando datos...', 'info');
+    const data = await _buildReporteData();
+    const html = _buildReporteEmailHTML(data);
+    const semana = data.semana;
+    const asunto = `Pendientes MUUK SRL — ${semana}`;
+
+    // Texto plano resumido (evitar límite de tamaño en parámetros EmailJS)
+    const textoPlano =
+      `Reporte de cuentas pendientes MÜÜK SRL\n${semana}\n\n` +
+      `FACTURAS A COBRAR: ${data.facsCobrar.length} facturas · Total ${fmt(data.totFacCobrar)}\n` +
+      `FACTURAS A PAGAR: ${data.facsPagar.length} facturas · Total ${fmt(data.totFacPagar)}\n` +
+      `COMISIONES PENDIENTES: ${data.comisionesP.length} · Total ${fmt(data.totCom)}\n` +
+      `CHEQUES VENCEN ESTA SEMANA: ${data.chequesPagarSemana.length} · Total ${fmt(data.totChPagar)}\n\n` +
+      `Ver el reporte completo abriendo la app MÜÜK SRL.`;
+
+    // Cargar SDK EmailJS
+    toast('Cargando módulo de email...', 'info');
+    await _loadEmailJS();
+
+    if (!window.emailjs) { throw new Error('EmailJS no disponible después de cargar'); }
+
+    // Init v4 acepta { publicKey } o string directo — usamos objeto para compatibilidad
+    try { emailjs.init({ publicKey: c.userId }); }
+    catch(e) { emailjs.init(c.userId); } // fallback v3
+
+    toast(`Enviando a ${REPORTE_DESTINATARIOS.length} destinatarios...`, 'info');
 
     const enviarA = (email, idx) => new Promise((resolve, reject) => {
       setTimeout(() => {
         emailjs.send(c.serviceId, c.templateId, {
-          to_email: email,
-          subject: asunto,
-          message: textoPlano,
+          to_email:    email,
+          subject:     asunto,
+          message:     textoPlano,
           message_html: html,
-          empresa: 'MÜÜK SRL',
-          semana: semana
-        }).then(resolve).catch(reject);
-      }, idx * 800); // escalonar envíos 800ms c/u
+          empresa:     'MÜÜK SRL',
+          semana:      semana
+        })
+        .then(r => { console.log(`EmailJS OK → ${email}`, r); resolve(r); })
+        .catch(e => { console.error(`EmailJS ERROR → ${email}`, e); reject(e); });
+      }, idx * 900);
     });
 
-    toast('Enviando reporte a 3 destinatarios...', 'info');
-    Promise.allSettled(
+    const results = await Promise.allSettled(
       REPORTE_DESTINATARIOS.map((email, i) => enviarA(email, i))
-    ).then(results => {
-      const ok = results.filter(r => r.status === 'fulfilled').length;
-      const fail = results.filter(r => r.status === 'rejected');
-      if (ok === REPORTE_DESTINATARIOS.length) {
-        toast(`✅ Reporte enviado a los ${ok} destinatarios`, 'success');
-        ST._lastReporteSent = new Date().toISOString();
-        save();
-        _actualizarUltimoEnvio();
-      } else {
-        toast(`Enviado a ${ok}/${REPORTE_DESTINATARIOS.length} · ${fail.length} error(es): ${fail[0]?.reason?.text||''}`, 'warning');
-      }
-    });
-  });
+    );
+
+    const ok   = results.filter(r => r.status === 'fulfilled').length;
+    const fail = results.filter(r => r.status === 'rejected');
+
+    if (ok === REPORTE_DESTINATARIOS.length) {
+      toast(`✅ Reporte enviado a los ${ok} destinatarios`, 'success');
+      ST._lastReporteSent = new Date().toISOString();
+      save();
+      _actualizarUltimoEnvio();
+    } else if (ok > 0) {
+      const errMsg = fail[0]?.reason?.text || fail[0]?.reason?.message || JSON.stringify(fail[0]?.reason||'');
+      toast(`⚠️ Enviado a ${ok}/${REPORTE_DESTINATARIOS.length} · Error: ${errMsg}`, 'warning');
+    } else {
+      const errMsg = fail[0]?.reason?.text || fail[0]?.reason?.message || JSON.stringify(fail[0]?.reason||'Error desconocido');
+      toast(`❌ Error al enviar: ${errMsg}`, 'danger');
+    }
+
+  } catch(err) {
+    console.error('reporteEnviarAhora error:', err);
+    toast(`❌ Error: ${err.message || err}`, 'danger');
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="bi bi-send me-1"></i>Enviar reporte ahora'; }
+  }
 }
 
 function _actualizarUltimoEnvio() {
