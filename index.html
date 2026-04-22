@@ -6449,7 +6449,9 @@ function renderHistorial() {
     return;
   }
   
-  wrap.innerHTML = `<div class="table-responsive"><table class="table table-sm table-hover mb-0">
+  const truncado = items.length > 500;
+  wrap.innerHTML = (truncado ? `<div class="alert alert-warning py-2 px-3 mb-2" style="font-size:.8rem"><i class="bi bi-exclamation-triangle me-1"></i>Mostrando los primeros <strong>500</strong> de <strong>${items.length}</strong> movimientos. Aplicá filtros para ver registros específicos.</div>` : '')
+    + `<div class="table-responsive"><table class="table table-sm table-hover mb-0">
     <thead><tr><th class="ps-3">Fecha</th><th>Tipo</th><th>Descripción</th><th>Nro.</th><th class="text-end">Monto</th><th>Estado</th></tr></thead>
     <tbody>${items.slice(0,500).map(i => `<tr>
       <td class="ps-3"><small>${fmtF(i._fecha)}</small></td>
@@ -6765,7 +6767,7 @@ async function bcraCargarVariables() {
         .then(d => ({ ...v, data: d.results?.[0]?.detalle || d.results || [] }))
         .catch(() => ({ ...v, data: [] }))
     );
-    const vars = await Promise.all(fetches);
+    const vars = (await Promise.allSettled(fetches)).map(r => r.status === 'fulfilled' ? r.value : { data: [] });
 
     if (fechaEl) fechaEl.textContent = 'Última actualización: ' + new Date().toLocaleString('es-AR');
 
@@ -7339,12 +7341,13 @@ function renderTodo() {
 ═══════════════════════════════════════════ */
 // Helper: devuelve HTML de badge tendencial ▲/▼ comparando actual vs anterior
 function _trendBadge(current, prev) {
-  if (!prev || prev === 0) return '';
-  const pct = ((current - prev) / prev) * 100;
+  if (Math.abs(prev) < 0.01) return '';          // evita ÷0 y % astronómicos por bases ~0
+  const pct = ((current - prev) / Math.abs(prev)) * 100;
+  const capped = Math.min(Math.abs(pct), 999);   // cap en 999% para evitar badges absurdos
   const up = pct >= 0;
   const col = up ? '#16a34a' : '#dc2626';
   const arrow = up ? '▲' : '▼';
-  return ` <span style="font-size:.62rem;font-weight:700;color:${col}">${arrow}${Math.abs(pct).toFixed(1)}%</span>`;
+  return ` <span style="font-size:.62rem;font-weight:700;color:${col}">${arrow}${capped.toFixed(1)}%</span>`;
 }
 
 function renderDashboard() {
@@ -11748,8 +11751,10 @@ function guardarFactura() {
   const cat   = document.getElementById('mf-cat').value;
   const arr   = cat === 'cobrar' ? ST.facturasACobrar : ST.facturasPagar;
   const id    = document.getElementById('mf-id').value;
+  const fecha = document.getElementById('mf-fecha').value;
   const cli   = document.getElementById('mf-cliente').value.trim();
   const total = parseFloat(document.getElementById('mf-total').value) || 0;
+  if (!fecha) { toast('Ingresá la fecha de la factura','warning'); return; }
   if (!cli)   { toast('Ingresá el cliente/proveedor','warning'); return; }
   if (!total) { toast('Ingresá el importe total','warning'); return; }
 
@@ -18317,6 +18322,7 @@ async function _ectaLoadVendedor(vendedor) {
 }
 
 function _ectaParseCsv(csv) {
+  if (!csv || typeof csv !== 'string') return [];  // guard: CSV vacío o inválido
   // Parse CSV respecting quoted fields
   const rows = [];
   let current = '';
@@ -18743,7 +18749,7 @@ function ectaPdfCliente(idx) {
   let rowIdx = 0;
   empList.forEach((emp, ei) => {
     const facts = empMap[emp];
-    const subtotalEmp = facts.reduce((s, f) => s + (f.monto || 0), 0);
+    const subtotalEmp = facts.reduce((s, f) => s + (Number(f.monto) || 0), 0);
     const empNC = facts.some(f => /\bNC\b/i.test(f.factura));
 
     // Encabezado de empresa (si hay más de una)
@@ -18912,7 +18918,7 @@ function ectaPdfGeneral() {
     let rowIdx = 0;
     empresasList.forEach((emp, ei) => {
       const facts = empresaMap[emp];
-      const subtotalEmp = facts.reduce((s, f) => s + (f.monto || 0), 0);
+      const subtotalEmp = facts.reduce((s, f) => s + (Number(f.monto) || 0), 0);
       const empTieneNC  = facts.some(f => /\bNC\b/i.test(f.factura));
 
       // Separador de empresa (solo si hay más de una)
@@ -20630,8 +20636,8 @@ async function _buildReporteData() {
     const soc = socios.find(s => m.socioId === s.id || c.includes(s.nombre.split(' ')[0].toLowerCase()));
     if (soc) retBySocio[soc.id] = (retBySocio[soc.id]||0) + Math.abs(+m.monto);
   });
-  // Máximo retiro entre todos los socios
-  const maxRetiro = Math.max(0, ...socios.map(s => retBySocio[s.id]||0));
+  // Máximo retiro entre todos los socios (guard explícito para array vacío)
+  const maxRetiro = socios.length > 0 ? Math.max(0, ...socios.map(s => retBySocio[s.id]||0)) : 0;
   // Saldo a retirar = lo que le falta a cada socio para equipararse con el que más retiró
   const saldoARetirar = {};
   socios.forEach(s => { saldoARetirar[s.id] = Math.max(0, maxRetiro - (retBySocio[s.id]||0)); });
@@ -20655,6 +20661,7 @@ async function _buildReporteData() {
       ectaPendientes[v] = data.filter(c => (c.totalPendiente||0) > 0)
         .sort((a,b) => (b.totalPendiente||0) - (a.totalPendiente||0));
     } catch(e) {
+      console.warn(`ECTA error [${v}]:`, e);
       ectaPendientes[v] = [];
     }
   }));
@@ -21169,12 +21176,16 @@ async function reporteVistaPrevia() {
   w.document.close();
 }
 
+let _reporteSending = false;   // flag global para evitar doble-click / envíos duplicados
+
 async function reporteEnviarAhora() {
+  if (_reporteSending) { toast('El reporte ya se está enviando…', 'warning'); return; }
   const c = ST.emailjsConfig || {};
   if (!c.serviceId || !c.templateId || !c.userId) {
     toast('Configurá EmailJS primero (Service ID, Template ID y Public Key)', 'danger'); return;
   }
 
+  _reporteSending = true;
   const btn = document.getElementById('btn-enviar-reporte');
   if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Enviando...'; }
 
@@ -21239,6 +21250,7 @@ async function reporteEnviarAhora() {
     console.error('reporteEnviarAhora error:', err);
     toast(`❌ Error: ${err.message || String(err)}`, 'danger');
   } finally {
+    _reporteSending = false;
     if (btn) { btn.disabled = false; btn.innerHTML = '<i class="bi bi-send me-1"></i>Enviar reporte ahora'; }
   }
 }
