@@ -211,6 +211,15 @@
       display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45);
       z-index: 199; backdrop-filter: blur(2px);
     }
+    .gs-result { display:flex;align-items:center;gap:12px;padding:10px 16px;cursor:pointer;transition:background .1s; }
+    .gs-result:hover, .gs-result.active { background:#f1f5f9; }
+    .gs-result-icon { width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:.85rem;flex-shrink:0; }
+    .gs-result-main { flex:1;min-width:0; }
+    .gs-result-title { font-size:.84rem;font-weight:600;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+    .gs-result-sub { font-size:.72rem;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+    .gs-result-badge { font-size:.65rem;padding:2px 7px;border-radius:10px;flex-shrink:0; }
+    .gs-section { font-size:.65rem;font-weight:700;letter-spacing:.1em;color:#94a3b8;padding:8px 16px 4px;text-transform:uppercase; }
+    #global-search-overlay.open { display:flex !important; }
 
     /* ─── SMOOTH TRANSITIONS & HOVER EFFECTS ─── */
     .card { transition: box-shadow .25s ease, transform .25s ease; border: 1px solid rgba(0,0,0,.06); }
@@ -700,6 +709,25 @@
 </button>
 <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
 
+<!-- ══════════════════ BÚSQUEDA GLOBAL (Ctrl+K) ══════════════════ -->
+<div id="global-search-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9000;align-items:flex-start;justify-content:center;padding-top:80px" onclick="cerrarBusquedaGlobal(event)">
+  <div style="background:#fff;border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,.25);width:100%;max-width:600px;overflow:hidden" onclick="event.stopPropagation()">
+    <div style="display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid #e2e8f0">
+      <i class="bi bi-search" style="color:#94a3b8;font-size:.9rem;flex-shrink:0"></i>
+      <input id="global-search-input" type="text" placeholder="Buscar facturas, cheques, movimientos, socios..." autocomplete="off"
+        style="border:none;outline:none;font-size:.9rem;flex:1;background:transparent;color:#1e293b"
+        oninput="ejecutarBusquedaGlobal()" onkeydown="navBusquedaGlobal(event)">
+      <span style="font-size:.68rem;color:#94a3b8;background:#f1f5f9;border-radius:5px;padding:2px 6px;flex-shrink:0">ESC</span>
+    </div>
+    <div id="global-search-results" style="max-height:420px;overflow-y:auto;padding:6px 0"></div>
+    <div style="padding:8px 16px;border-top:1px solid #f1f5f9;display:flex;gap:16px">
+      <span style="font-size:.68rem;color:#94a3b8"><kbd style="background:#f1f5f9;border-radius:3px;padding:1px 5px">↑↓</kbd> Navegar</span>
+      <span style="font-size:.68rem;color:#94a3b8"><kbd style="background:#f1f5f9;border-radius:3px;padding:1px 5px">↵</kbd> Ir a sección</span>
+      <span style="font-size:.68rem;color:#94a3b8"><kbd style="background:#f1f5f9;border-radius:3px;padding:1px 5px">Ctrl K</kbd> Abrir/cerrar</span>
+    </div>
+  </div>
+</div>
+
 <!-- ══════════════════ SIDEBAR ══════════════════ -->
 <nav class="sidebar" id="sidebar">
   <div class="sidebar-logo" style="padding:10px 12px 8px">
@@ -717,6 +745,15 @@
     </div>
   </div>
   <ul class="nav flex-column mt-1 flex-grow-1" id="sidebar-nav">
+
+    <!-- ── Búsqueda global ── -->
+    <li style="padding:6px 8px 2px">
+      <button onclick="abrirBusquedaGlobal()" style="width:100%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:7px 10px;display:flex;align-items:center;gap:8px;cursor:pointer;color:#94a3b8;font-size:.78rem;transition:background .15s" onmouseover="this.style.background='rgba(255,255,255,.12)'" onmouseout="this.style.background='rgba(255,255,255,.07)'">
+        <i class="bi bi-search" style="font-size:.82rem"></i>
+        <span style="flex:1;text-align:left">Buscar...</span>
+        <span style="font-size:.65rem;opacity:.6;background:rgba(255,255,255,.1);border-radius:4px;padding:1px 5px">Ctrl K</span>
+      </button>
+    </li>
 
     <!-- ── Fijos ── -->
     <li><a class="nav-link active" data-page="dashboard"><i class="bi bi-speedometer2"></i>Dashboard</a></li>
@@ -1884,6 +1921,11 @@
   <div id="page-historial" class="page">
     <div class="page-hdr">
       <h4><i class="bi bi-clock-history me-2 text-primary"></i>Historial de Movimientos</h4>
+      <div class="d-flex gap-2">
+        <button class="btn btn-sm btn-outline-success" onclick="exportarHistorialCSV()" style="font-size:.78rem;border-radius:8px">
+          <i class="bi bi-download me-1"></i>Exportar CSV
+        </button>
+      </div>
     </div>
     <div class="card mb-2 border-0 bg-light">
       <div class="card-body py-2 px-3">
@@ -2115,6 +2157,7 @@
         <button id="btn-subir-vep" class="btn btn-sm btn-outline-danger" onclick="document.getElementById('vep-pdf-input').click()" style="font-size:.78rem;border-radius:8px"><i class="bi bi-upload me-1"></i>Subir VEP PDF</button>
         <input type="file" id="vep-pdf-input" accept=".pdf" style="display:none" onchange="handleVEPUpload(event)">
         <button class="btn btn-sm btn-outline-secondary" onclick="renderCalendarioARCA()" style="font-size:.78rem;border-radius:8px"><i class="bi bi-arrow-clockwise me-1"></i>Actualizar</button>
+        <button class="btn btn-sm btn-outline-warning" onclick="refreshARCAPlanes()" title="Fuerza la re-carga de los Planes de Pago (PFP)" style="font-size:.78rem;border-radius:8px"><i class="bi bi-recycle me-1"></i>Recargar PFP</button>
       </div>
     </div>
 
@@ -5538,6 +5581,173 @@ function closeSidebarMobile() {
   if (ic) ic.className = 'bi bi-list';
 }
 
+/* ══════════════════════════════════════════════════════
+   BÚSQUEDA GLOBAL — Ctrl+K
+══════════════════════════════════════════════════════ */
+let _gsActiveIdx = -1;
+
+function abrirBusquedaGlobal() {
+  const overlay = document.getElementById('global-search-overlay');
+  if (!overlay) return;
+  overlay.classList.add('open');
+  overlay.style.display = 'flex';
+  const input = document.getElementById('global-search-input');
+  if (input) { input.value = ''; input.focus(); }
+  document.getElementById('global-search-results').innerHTML = _gsPlaceholderHTML();
+  _gsActiveIdx = -1;
+}
+
+function cerrarBusquedaGlobal(e) {
+  if (e && e.target !== document.getElementById('global-search-overlay')) return;
+  const overlay = document.getElementById('global-search-overlay');
+  if (overlay) { overlay.classList.remove('open'); overlay.style.display = 'none'; }
+}
+
+function _gsPlaceholderHTML() {
+  return `<div style="padding:24px 16px;text-align:center;color:#94a3b8;font-size:.82rem">
+    <i class="bi bi-search" style="font-size:1.8rem;opacity:.4;display:block;margin-bottom:8px"></i>
+    Escribí para buscar en facturas, cheques, movimientos y socios
+  </div>`;
+}
+
+function ejecutarBusquedaGlobal() {
+  const q = (document.getElementById('global-search-input').value || '').toLowerCase().trim();
+  const resultsEl = document.getElementById('global-search-results');
+  if (!resultsEl) return;
+  _gsActiveIdx = -1;
+  if (q.length < 2) { resultsEl.innerHTML = _gsPlaceholderHTML(); return; }
+
+  const results = [];
+
+  // Facturas a cobrar
+  (ST.facturasACobrar || []).forEach(f => {
+    const hay = [f.cliente||'', f.numero||'', String(f.total||''), f.desc||''].join(' ').toLowerCase();
+    if (hay.includes(q)) results.push({
+      tipo:'fac-cobrar', icon:'bi-receipt text-success', bg:'#f0fdf4',
+      title: `${f.tipo||'Factura'} ${f.numero||''} — ${f.cliente||''}`,
+      sub: `A cobrar · ${fmt(f.total)} · ${f.estado||'pendiente'}`,
+      badge: 'A Cobrar', badgeBg:'#dcfce7',badgeColor:'#166534', page:'facturasACobrar'
+    });
+  });
+
+  // Facturas a pagar
+  (ST.facturasPagar || []).forEach(f => {
+    const hay = [f.cliente||'', f.numero||'', String(f.total||''), f.desc||''].join(' ').toLowerCase();
+    if (hay.includes(q)) results.push({
+      tipo:'fac-pagar', icon:'bi-receipt text-danger', bg:'#fef2f2',
+      title: `${f.tipo||'Factura'} ${f.numero||''} — ${f.cliente||''}`,
+      sub: `A pagar · ${fmt(f.total)} · ${f.estado||'pendiente'}`,
+      badge:'A Pagar', badgeBg:'#fee2e2',badgeColor:'#991b1b', page:'facturasPagar'
+    });
+  });
+
+  // Cheques físicos
+  (ST.chequesFisicos || []).forEach(c => {
+    const hay = [c.banco||'', c.numero||'', String(c.monto||''), c.cliente||'', c.desc||''].join(' ').toLowerCase();
+    if (hay.includes(q)) results.push({
+      tipo:'cheque', icon:'bi-cash-stack text-primary', bg:'#eff6ff',
+      title: `Cheque ${c.numero||'s/n'} — ${c.banco||''}`,
+      sub: `${fmt(c.monto)} · Vto: ${fmtF(c.fechaVenc||c.fecha)} · ${c.estado||''}`,
+      badge:'Cheque', badgeBg:'#dbeafe',badgeColor:'#1e40af', page:'chequesFisicos'
+    });
+  });
+
+  // E-Cheques
+  (ST.eCheques || []).forEach(c => {
+    const hay = [c.banco||'', c.numero||'', String(c.monto||''), c.cliente||''].join(' ').toLowerCase();
+    if (hay.includes(q)) results.push({
+      tipo:'echeque', icon:'bi-phone text-info', bg:'#f0fdff',
+      title: `E-Cheque ${c.numero||'s/n'} — ${c.banco||''}`,
+      sub: `${fmt(c.monto)} · Vto: ${fmtF(c.fechaVenc||c.fecha)} · ${c.estado||''}`,
+      badge:'E-Cheque', badgeBg:'#cffafe',badgeColor:'#155e75', page:'eCheques'
+    });
+  });
+
+  // Movimientos caja
+  [...(ST.cajaBancos||[]),...(ST.cajaEfectivo||[])].forEach(m => {
+    const hay = [m.concepto||'', m.desc||'', String(m.monto||'')].join(' ').toLowerCase();
+    if (hay.includes(q)) results.push({
+      tipo:'mov', icon:`bi-arrow-${m.tipo==='ingreso'?'down':'up'}-circle text-${m.tipo==='ingreso'?'success':'danger'}`, bg:'#f8fafc',
+      title: m.concepto || m.desc || '(Sin concepto)',
+      sub: `${m.tipo==='ingreso'?'Ingreso':'Egreso'} · ${fmt(m.monto)} · ${fmtF(m.fecha)}`,
+      badge: m.tipo==='ingreso'?'Ingreso':'Egreso',
+      badgeBg: m.tipo==='ingreso'?'#dcfce7':'#fee2e2',
+      badgeColor: m.tipo==='ingreso'?'#166534':'#991b1b',
+      page: m.tipo === 'ingreso' ? 'cajaBancos' : 'cajaEfectivo'
+    });
+  });
+
+  // Socios
+  (ST.socios || []).forEach(s => {
+    if ((s.nombre||'').toLowerCase().includes(q)) results.push({
+      tipo:'socio', icon:'bi-person-circle text-warning', bg:'#fffbeb',
+      title: s.nombre,
+      sub: 'Socio de MÜÜK SRL',
+      badge:'Socio', badgeBg:'#fef3c7',badgeColor:'#92400e', page:'socios'
+    });
+  });
+
+  if (results.length === 0) {
+    resultsEl.innerHTML = `<div style="padding:20px 16px;text-align:center;color:#94a3b8;font-size:.82rem">
+      <i class="bi bi-search" style="display:block;font-size:1.4rem;opacity:.3;margin-bottom:6px"></i>
+      Sin resultados para "<strong>${q}</strong>"
+    </div>`;
+    return;
+  }
+
+  const maxShow = 15;
+  const shown = results.slice(0, maxShow);
+  resultsEl.innerHTML = `<div class="gs-section">Resultados (${results.length}${results.length > maxShow ? ` — mostrando ${maxShow}` : ''})</div>` +
+    shown.map((r, i) => `
+      <div class="gs-result" data-idx="${i}" data-page="${r.page}" onclick="_gsIrA('${r.page}')">
+        <div class="gs-result-icon" style="background:${r.bg}"><i class="bi ${r.icon}"></i></div>
+        <div class="gs-result-main">
+          <div class="gs-result-title">${r.title}</div>
+          <div class="gs-result-sub">${r.sub}</div>
+        </div>
+        <span class="gs-result-badge" style="background:${r.badgeBg};color:${r.badgeColor}">${r.badge}</span>
+      </div>`).join('');
+}
+
+function _gsIrA(page) {
+  cerrarBusquedaGlobal({ target: document.getElementById('global-search-overlay') });
+  irA(page);
+}
+
+function navBusquedaGlobal(e) {
+  if (e.key === 'Escape') { cerrarBusquedaGlobal({ target: document.getElementById('global-search-overlay') }); return; }
+  const items = document.querySelectorAll('#global-search-results .gs-result');
+  if (!items.length) return;
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    _gsActiveIdx = Math.min(_gsActiveIdx + 1, items.length - 1);
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    _gsActiveIdx = Math.max(_gsActiveIdx - 1, 0);
+  } else if (e.key === 'Enter') {
+    if (_gsActiveIdx >= 0 && items[_gsActiveIdx]) {
+      const page = items[_gsActiveIdx].dataset.page;
+      if (page) _gsIrA(page);
+    }
+    return;
+  }
+  items.forEach((el, i) => el.classList.toggle('active', i === _gsActiveIdx));
+  if (items[_gsActiveIdx]) items[_gsActiveIdx].scrollIntoView({ block: 'nearest' });
+}
+
+// Keyboard shortcut Ctrl+K / Cmd+K
+document.addEventListener('keydown', function(e) {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+    e.preventDefault();
+    const overlay = document.getElementById('global-search-overlay');
+    if (overlay && overlay.classList.contains('open')) {
+      cerrarBusquedaGlobal({ target: overlay });
+    } else {
+      abrirBusquedaGlobal();
+    }
+  }
+});
+
 /* ─── TIPO DE CAMBIO / USD ─── */
 let TC_USD = { venta: null, fecha: null, moneda: 'ARS' };
 
@@ -5806,7 +6016,12 @@ function reRenderActivo() {
   }
 }
 const fmtF = d  => { if(!d) return '–'; const[y,m,v]=d.split('-'); return`${v}/${m}/${y}`; };
-const dHasta = f => Math.round((new Date(f+'T00:00:00') - new Date(hoy()+'T00:00:00'))/86400000);
+const dHasta = f => {
+  if (!f || typeof f !== 'string' || f.length < 10) return 9999; // fecha inválida → considerar lejana
+  const d = new Date(f + 'T00:00:00');
+  if (isNaN(d.getTime())) return 9999;
+  return Math.round((d - new Date(hoy() + 'T00:00:00')) / 86400000);
+};
 const hoy  = ()  => new Date().toISOString().split('T')[0];
 const calcSaldo = arr => arr.reduce((s,m)=>s+(m.tipo==='ingreso'?1:-1)* +m.monto,0);
 
@@ -5814,7 +6029,9 @@ function toast(msg, tipo='success') {
   const t=document.getElementById('toast');
   t.className=`toast align-items-center text-white border-0 bg-${tipo}`;
   document.getElementById('toast-msg').textContent=msg;
-  bootstrap.Toast.getOrCreateInstance(t,{delay:2800}).show();
+  // Errores y advertencias duran más para que el usuario pueda leerlos
+  const delay = (tipo === 'danger') ? 6000 : (tipo === 'warning') ? 4500 : 2800;
+  bootstrap.Toast.getOrCreateInstance(t,{delay}).show();
 }
 
 // ── Modal de confirmación reutilizable ────────────────────────────────────────
@@ -6367,6 +6584,7 @@ function limpiarHistorial() {
   ['hist-buscar','hist-tipo','hist-desde','hist-hasta','hist-monto'].forEach(id => {
     const el = document.getElementById(id); if(el) el.value = '';
   });
+  _histLimit = 500;
   renderHistorial();
 }
 
@@ -6396,14 +6614,50 @@ function historialPeriodo(periodo) {
   const setV = (id, v) => { const e = document.getElementById(id); if(e) e.value = v; };
   setV('hist-desde', desde);
   setV('hist-hasta', hasta);
+  _histLimit = 500;
   renderHistorial();
+}
+
+let _histLimit = 500;  // límite de filas visibles — se incrementa con "Cargar más"
+
+function exportarHistorialCSV() {
+  // Reusar la misma lógica de construcción y filtros de renderHistorial — sin límite de filas
+  let items = [];
+  ST.chequesFisicos.forEach(c => items.push({ ...c, _tipo:'fisico', _label:'Ch. Físico', _fecha: c.fechaVenc||c.fecha, _desc: c.banco||'', _color:'primary' }));
+  ST.eCheques.forEach(c => items.push({ ...c, _tipo:'echeque', _label:'E-Cheque', _fecha: c.fechaVenc||c.fecha, _desc: (c.cliente||'')+(c.banco?' · '+c.banco:''), _color:'info' }));
+  ST.chequesPagar.forEach(c => items.push({ ...c, _tipo:'pagar', _label:'Ch. a Pagar', _fecha: c.fechaVenc||c.fecha, _desc: c.desc||c.banco||'', _color:'danger' }));
+  ST.cajaBancos.forEach(m => items.push({ ...m, _tipo:'bancos', _label:'Banco', _fecha: m.fecha, _desc: m.desc||m.concepto||'', _color:'success', estado: m.tipo==='ingreso'?'ingreso':'egreso' }));
+  ST.cajaEfectivo.forEach(m => items.push({ ...m, _tipo:'efectivo', _label:'Efectivo', _fecha: m.fecha, _desc: m.desc||m.concepto||'', _color:'warning', estado: m.tipo==='ingreso'?'ingreso':'egreso' }));
+
+  const buscar = (document.getElementById('hist-buscar')||{}).value || '';
+  const tipo   = (document.getElementById('hist-tipo')||{}).value || '';
+  const desde  = (document.getElementById('hist-desde')||{}).value || '';
+  const hasta  = (document.getElementById('hist-hasta')||{}).value || '';
+  const montoMin = parseFloat((document.getElementById('hist-monto')||{}).value) || 0;
+  if (buscar.trim()) { const q=buscar.toLowerCase(); items=items.filter(i=>(i._desc||'').toLowerCase().includes(q)||(i.numero||'').toLowerCase().includes(q)||(i.banco||'').toLowerCase().includes(q)||String(i.monto||'').includes(q)); }
+  if (tipo)  items = items.filter(i => i._tipo === tipo);
+  if (desde) items = items.filter(i => i._fecha >= desde);
+  if (hasta) items = items.filter(i => i._fecha <= hasta);
+  if (montoMin > 0) items = items.filter(i => +i.monto >= montoMin);
+  items.sort((a,b) => (b._fecha||'').localeCompare(a._fecha||''));
+
+  const esc = v => `"${String(v||'').replace(/"/g,'""')}"`;
+  const header = ['Fecha','Tipo','Descripción','Número','Monto','Estado'];
+  const rows = items.map(i => [i._fecha||'', i._label||'', i._desc||'', i.numero||'', i.monto||0, i.estado||''].map(esc));
+  const csv = [header.map(esc), ...rows].map(r => r.join(',')).join('\n');
+  const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `historial_muuk_${hoy()}.csv`; a.click();
+  URL.revokeObjectURL(url);
+  toast(`✓ CSV exportado — ${items.length} registros`, 'success');
 }
 
 function renderHistorial() {
   const wrap = document.getElementById('wrap-historial');
   const sumEl = document.getElementById('hist-summary');
   if (!wrap) return;
-  
+
   // Build unified list
   let items = [];
   ST.chequesFisicos.forEach(c => items.push({ ...c, _tipo:'fisico', _label:'Ch. Físico', _fecha: c.fechaVenc||c.fecha, _desc: c.banco||'', _color:'primary' }));
@@ -6435,12 +6689,21 @@ function renderHistorial() {
   
   items.sort((a,b) => (b._fecha||'').localeCompare(a._fecha||''));
   
-  // Summary
+  // Summary — ingresos: movimientos de entrada, cheques en cartera/pendientes; egresos: salidas y cheques a pagar
+  const _histIngr = items.filter(i =>
+    i.estado === 'ingreso' ||
+    i.estado === 'en_cartera' ||
+    (i.estado === 'pendiente' && i._tipo !== 'pagar')
+  ).reduce((s, i) => s + (Number(i.monto) || 0), 0);
+  const _histEgr = items.filter(i =>
+    i.estado === 'egreso' ||
+    i._tipo === 'pagar'
+  ).reduce((s, i) => s + (Number(i.monto) || 0), 0);
   if (sumEl) {
     sumEl.innerHTML = `<div class="d-flex gap-3 px-1" style="font-size:.78rem">
       <span class="text-muted"><i class="bi bi-list-ul me-1"></i>${items.length} movimientos</span>
-      <span class="text-success fw-bold">Ingr: ${fmt(items.filter(i=>i.estado==='ingreso'||i.estado==='en_cartera'||i.estado==='pendiente'&&i._tipo!=='pagar').reduce((s,i)=>s+ +i.monto,0))}</span>
-      <span class="text-danger fw-bold">Egr: ${fmt(items.filter(i=>i.estado==='egreso'||i._tipo==='pagar').reduce((s,i)=>s+ +i.monto,0))}</span>
+      <span class="text-success fw-bold">Ingr: ${fmt(_histIngr)}</span>
+      <span class="text-danger fw-bold">Egr: ${fmt(_histEgr)}</span>
     </div>`;
   }
   
@@ -6449,11 +6712,18 @@ function renderHistorial() {
     return;
   }
   
-  const truncado = items.length > 500;
-  wrap.innerHTML = (truncado ? `<div class="alert alert-warning py-2 px-3 mb-2" style="font-size:.8rem"><i class="bi bi-exclamation-triangle me-1"></i>Mostrando los primeros <strong>500</strong> de <strong>${items.length}</strong> movimientos. Aplicá filtros para ver registros específicos.</div>` : '')
+  const truncado = items.length > _histLimit;
+  const hayMas = items.length > _histLimit;
+  wrap.innerHTML = (truncado ? `<div class="alert alert-warning py-2 px-3 mb-2 d-flex align-items-center justify-content-between" style="font-size:.8rem">
+      <span><i class="bi bi-exclamation-triangle me-1"></i>Mostrando <strong>${_histLimit}</strong> de <strong>${items.length}</strong> movimientos.</span>
+      <button class="btn btn-sm btn-warning ms-3" style="font-size:.75rem" onclick="_histLimit+=500;renderHistorial()"><i class="bi bi-chevron-double-down me-1"></i>Ver siguientes 500</button>
+    </div>` : (_histLimit > 500 ? `<div class="alert alert-success py-2 px-3 mb-2 d-flex align-items-center justify-content-between" style="font-size:.8rem">
+      <span><i class="bi bi-check-circle me-1"></i>Mostrando todos los <strong>${items.length}</strong> movimientos.</span>
+      <button class="btn btn-sm btn-outline-secondary ms-3" style="font-size:.75rem" onclick="_histLimit=500;renderHistorial()"><i class="bi bi-arrow-up me-1"></i>Volver a 500</button>
+    </div>` : ''))
     + `<div class="table-responsive"><table class="table table-sm table-hover mb-0">
     <thead><tr><th class="ps-3">Fecha</th><th>Tipo</th><th>Descripción</th><th>Nro.</th><th class="text-end">Monto</th><th>Estado</th></tr></thead>
-    <tbody>${items.slice(0,500).map(i => `<tr>
+    <tbody>${items.slice(0,_histLimit).map(i => `<tr>
       <td class="ps-3"><small>${fmtF(i._fecha)}</small></td>
       <td><span class="badge bg-${i._color}" style="font-size:.68rem">${i._label}</span></td>
       <td><small>${i._desc||'–'}</small></td>
@@ -7375,7 +7645,7 @@ function renderDashboard() {
 
   const mesActual=hoy().slice(0,7);
   // Mes anterior ISO (YYYY-MM)
-  const _dMesAnt=(function(){ const d=new Date(); d.setMonth(d.getMonth()-1); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); })();
+  const _dMesAnt=(function(){ const d=new Date(); d.setDate(1); d.setMonth(d.getMonth()-1); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); })();
 
   const comMes=(ST.comisiones||[]).filter(c=>c.fecha&&c.fecha.startsWith(mesActual));
 
@@ -7991,14 +8261,18 @@ function comFetchSheet(sheetName) {
   });
 }
 
+let _comLoading = false;  // flag para evitar requests simultáneos
+
 // Main: load Resumen and render summary cards
 async function cargarComisionesSheet() {
+  if (_comLoading) return;  // evitar race condition por doble clic o navegación rápida
+  _comLoading = true;
   try {
     const loading = document.getElementById('com-loading');
     const empty = document.getElementById('com-empty-state');
     const grid = document.getElementById('com-resumen-grid');
     const wrapper = document.getElementById('com-detalle-wrapper');
-    
+
     if (loading) loading.style.display = 'block';
     if (grid) grid.innerHTML = '';
     if (empty) empty.style.display = 'none';
@@ -8054,10 +8328,23 @@ async function cargarComisionesSheet() {
     if (comPage && comPage.classList.contains('active')) toast('Datos cargados', 'success');
   } catch (err) {
     console.error('cargarComisionesSheet error:', err);
-    const comPage = document.getElementById('page-comisiones');
-    if (comPage && comPage.classList.contains('active')) toast('Error al cargar datos: ' + err.message, 'danger');
     const loading = document.getElementById('com-loading');
     if (loading) loading.style.display = 'none';
+    const grid = document.getElementById('com-resumen-grid');
+    if (grid) {
+      grid.innerHTML = `<div class="col-12">
+        <div class="alert alert-danger d-flex align-items-center justify-content-between" style="border-radius:10px">
+          <span><i class="bi bi-exclamation-triangle me-2"></i><strong>Error al cargar comisiones:</strong> ${err.message || 'Sin conexión'}</span>
+          <button class="btn btn-sm btn-outline-danger ms-3" onclick="_comLoading=false;cargarComisionesSheet()">
+            <i class="bi bi-arrow-clockwise me-1"></i>Reintentar
+          </button>
+        </div>
+      </div>`;
+    }
+    const comPage = document.getElementById('page-comisiones');
+    if (comPage && comPage.classList.contains('active')) toast('Error al cargar datos: ' + err.message, 'danger');
+  } finally {
+    _comLoading = false;
   }
 }
 
@@ -8834,16 +9121,44 @@ function renderComisiones() {
 function renderSocios() {
   const tb=document.getElementById('tb-socios');
   if(!tb)return;
-  tb.innerHTML=ST.socios.length
-    ?ST.socios.map((s,i)=>`<tr>
-        <td class="ps-3">${i+1}</td>
-        <td class="fw-semibold">${s.nombre}</td>
-        <td>
-          <button class="btn btn-outline-primary btn-a me-1" onclick="editarSocio('${s.id}')"><i class="bi bi-pencil"></i></button>
-          <button class="btn btn-outline-danger btn-a" onclick="eliminarSocio('${s.id}')"><i class="bi bi-trash"></i></button>
-        </td>
-      </tr>`).join('')
-    :`<tr><td colspan="3"><div class="empty-state"><i class="bi bi-people"></i>Sin socios.</div></td></tr>`;
+
+  // Calcular último movimiento de retiro por socio
+  const RETIRO_KW = ['retiro','adelanto','distribuci','sueldo'];
+  const ultimoRetiro = {};
+  const todasMovs = [...(ST.cajaBancos||[]), ...(ST.cajaEfectivo||[])];
+  ST.socios.forEach(s => {
+    const movsSocio = todasMovs.filter(m => {
+      if (m.tipo !== 'egreso') return false;
+      const c = (m.concepto||'').toLowerCase();
+      if (!RETIRO_KW.some(k => c.includes(k))) return false;
+      return m.socioId === s.id || c.includes(s.nombre.split(' ')[0].toLowerCase());
+    });
+    // Ordenar por fecha descendente y tomar el más reciente
+    movsSocio.sort((a,b) => (b.fecha||'').localeCompare(a.fecha||''));
+    ultimoRetiro[s.id] = movsSocio[0] || null;
+  });
+
+  tb.innerHTML = ST.socios.length
+    ? ST.socios.map((s,i) => {
+        const ur = ultimoRetiro[s.id];
+        let lastMovHtml = '';
+        if (ur) {
+          const diasAtras = Math.round((new Date(hoy()+'T00:00:00') - new Date(ur.fecha+'T00:00:00')) / 86400000);
+          const diasTxt = diasAtras === 0 ? 'hoy' : diasAtras === 1 ? 'ayer' : `hace ${diasAtras}d`;
+          lastMovHtml = `<br><small class="text-muted" style="font-size:.72rem"><i class="bi bi-arrow-up-right-circle me-1 text-danger"></i>${fmt(ur.monto)} — ${diasTxt} · <span style="opacity:.7">${ur.concepto||ur.desc||''}</span></small>`;
+        } else {
+          lastMovHtml = `<br><small class="text-muted" style="font-size:.72rem;opacity:.5"><i class="bi bi-dash me-1"></i>Sin retiros registrados</small>`;
+        }
+        return `<tr>
+          <td class="ps-3">${i+1}</td>
+          <td class="fw-semibold">${s.nombre}${lastMovHtml}</td>
+          <td>
+            <button class="btn btn-outline-primary btn-a me-1" onclick="editarSocio('${s.id}')"><i class="bi bi-pencil"></i></button>
+            <button class="btn btn-outline-danger btn-a" onclick="eliminarSocio('${s.id}')"><i class="bi bi-trash"></i></button>
+          </td>
+        </tr>`;
+      }).join('')
+    : `<tr><td colspan="3"><div class="empty-state"><i class="bi bi-people"></i>Sin socios.</div></td></tr>`;
 }
 
 function actualizarSelects() {
@@ -11810,7 +12125,7 @@ function guardarFactura() {
     const tipoMov = esCobro ? 'ingreso' : 'egreso';
     const accionLabel = esCobro ? 'Cobro' : 'Pago';
 
-    if (medio === 'transferencia') {
+    if (medio === 'transferencia') {  // ─── else-if chain: solo UNA rama puede ejecutarse ───
       const banco = document.getElementById('mf-transfBanco')?.value || 'Banco Galicia - Cta. Corriente';
       const ref = document.getElementById('mf-transfRef')?.value || '';
       const concepto = `${accionLabel} por transferencia`;
@@ -11824,9 +12139,7 @@ function guardarFactura() {
       obj.medioPago = 'transferencia';
       obj.medioPagoDetalle = banco + (ref ? ' ('+ref+')' : '');
       toast(`✓ ${esCobro?'Ingreso':'Egreso'} por transferencia registrado en ${banco}: ${fmt(pagoMonto)}`, 'success');
-    }
-
-    if (medio === 'efectivo') {
+    } else if (medio === 'efectivo') {
       const concepto = `${accionLabel} en efectivo`;
       if (!ST.conceptos.includes(concepto)) ST.conceptos.push(concepto);
       ST.cajaEfectivo.push({
@@ -11837,9 +12150,7 @@ function guardarFactura() {
       });
       obj.medioPago = 'efectivo';
       toast(`✓ ${esCobro?'Ingreso':'Egreso'} en efectivo registrado: ${fmt(pagoMonto)}`, 'success');
-    }
-
-    if (medio === 'chequeFisico') {
+    } else if (medio === 'chequeFisico') {
       const chNro = document.getElementById('mf-chfNro')?.value || '';
       const chBanco = document.getElementById('mf-chfBanco')?.value || '';
       const chVenc = document.getElementById('mf-chfVenc')?.value || '';
@@ -11871,9 +12182,7 @@ function guardarFactura() {
       obj.medioPago = 'chequeFisico';
       obj.chequeId = chId;
       obj.medioPagoDetalle = `Cheque ${chNro} — ${chBanco}`;
-    }
-
-    if (medio === 'eCheque') {
+    } else if (medio === 'eCheque') {
       const echNro = document.getElementById('mf-echNro')?.value || '';
       const echBanco = document.getElementById('mf-echBanco')?.value || '';
       const echVenc = document.getElementById('mf-echVenc')?.value || '';
@@ -16113,6 +16422,26 @@ function _initPFPNuevos2025() {
   save();
 }
 
+// ── Refresh manual de Planes de Pago PFP ──────────────────────
+function refreshARCAPlanes() {
+  _confirmar(
+    '¿Recargar todos los Planes de Pago (PFP)? Los planes existentes no se duplicarán.',
+    () => {
+      if (!ST.arcaConfig) ST.arcaConfig = {};
+      ST.arcaConfig.pfpV883715Loaded = false;
+      ST.arcaConfig.pfpNuevos2025Loaded = false;
+      // Limpiar entradas PFP anteriores y re-cargar desde cero
+      ST.arcaVencimientos = (ST.arcaVencimientos || []).filter(v => v.origen !== 'pfp');
+      _initPFPV883715();
+      _initPFPNuevos2025();
+      save();
+      renderCalendarioARCA();
+      toast('✓ Planes de Pago recargados correctamente', 'success');
+    },
+    { title: 'Recargar Planes PFP', btnLabel: 'Recargar', btnIcon: 'recycle', danger: false }
+  );
+}
+
 // ── Parser de VEP (Volante Electrónico de Pago ARCA) ──────────
 function parsearVEP(texto) {
   const t = texto.replace(/\s+/g, ' ');
@@ -16427,12 +16756,25 @@ function renderCalendarioARCA() {
           else if (dias < 0) estadoBadge = '<span class="badge bg-danger" style="font-size:.6rem">Vencido</span>';
           else if (dias <= 7) estadoBadge = `<span class="badge bg-warning text-dark" style="font-size:.6rem">${dias}d</span>`;
           else estadoBadge = `<span class="badge bg-light text-secondary" style="font-size:.6rem">${dias}d</span>`;
-          const rowStyle = v.pagado ? 'opacity:.55;' : (dias<0&&!v.pagado?'background:#fff5f5;':'');
+          let rowStyle, importeColor;
+          if (v.pagado) {
+            rowStyle = 'background:#f0fdf4;opacity:.7;';
+            importeColor = '#22c55e';
+          } else if (dias < 0) {
+            rowStyle = 'background:#fef2f2;border-left:3px solid #ef4444;';
+            importeColor = '#dc2626';
+          } else if (dias <= 7) {
+            rowStyle = 'background:#fffbeb;border-left:3px solid #f59e0b;';
+            importeColor = '#d97706';
+          } else {
+            rowStyle = '';
+            importeColor = '#e11d48';
+          }
           return `<tr style="${rowStyle}">
             <td class="ps-2 fw-semibold">${v.concepto}</td>
             <td class="text-muted">${v.detalle||'–'}</td>
             <td style="white-space:nowrap">${fmtF(v.fecha)}</td>
-            <td class="text-end fw-bold" style="color:${v.pagado?'#22c55e':'#e11d48'}">${v.importe?fmt(v.importe):'–'}</td>
+            <td class="text-end fw-bold" style="color:${importeColor}">${v.importe?fmt(v.importe):'–'}</td>
             <td class="text-center">${estadoBadge}</td>
             <td class="text-nowrap text-end pe-2">
               <button class="btn btn-xs btn-outline-success me-1" onclick="togglePagadoARCA('${v.id}')" title="${v.pagado?'Marcar pendiente':'Marcar pagado'}" style="padding:1px 5px;font-size:.65rem;border-radius:5px">
@@ -18736,7 +19078,8 @@ function ectaPdfCliente(idx) {
   // ── Agrupar pendientes por empresa ──────────────────────────────
   const empMap = {};
   c.pendientes.forEach(f => {
-    const emp = (f.empresa || '(Sin empresa)').trim();
+    const emp = (f.empresa || '').trim() || '(Sin empresa)';
+    if (!f.empresa || !f.empresa.trim()) console.warn('[ECTA] Factura sin empresa:', f.factura || f);
     if (!empMap[emp]) empMap[emp] = [];
     empMap[emp].push(f);
   });
@@ -18905,7 +19248,8 @@ function ectaPdfGeneral() {
     // ── Agrupar pendientes por empresa ──────────────────────────────
     const empresaMap = {};
     c.pendientes.forEach(f => {
-      const emp = (f.empresa || '(Sin empresa)').trim();
+      const emp = (f.empresa || '').trim() || '(Sin empresa)';
+    if (!f.empresa || !f.empresa.trim()) console.warn('[ECTA] Factura sin empresa:', f.factura || f);
       if (!empresaMap[emp]) empresaMap[emp] = [];
       empresaMap[emp].push(f);
     });
@@ -21192,6 +21536,14 @@ async function reporteEnviarAhora() {
   try {
     toast('Recopilando datos...', 'info');
     const data = await _buildReporteData();
+
+    // Avisar si los estados de cuenta ECTA quedaron vacíos (todos los fetches fallaron)
+    const ectaTotal = Object.values(data.ectaPendientes || {}).reduce((s, a) => s + a.length, 0);
+    if (ectaTotal === 0) {
+      toast('⚠ Estados de cuenta ECTA sin datos (posible error de conexión). El reporte se enviará igual.', 'warning');
+      await new Promise(r => setTimeout(r, 1800)); // dar tiempo a que el usuario lo lea
+    }
+
     const html = _buildReporteEmailHTML(data);
     const semana = data.semana;
     const asunto = `Pendientes MUUK SRL — ${semana}`;
