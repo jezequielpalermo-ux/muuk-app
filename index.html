@@ -8099,7 +8099,7 @@ function initAutoRefresh() {
 ═══════════════════════════════════════════ */
 document.addEventListener('DOMContentLoaded', () => {
   const authUser = sessionStorage.getItem('muukAuth');
-  if (authUser && MUUK_USERS[authUser]) {
+  if (authUser && _getAllUsers()[authUser]) {
     // Ya autenticado — mostrar app directo
     document.getElementById('login-overlay').classList.add('hidden');
     document.getElementById('app-wrapper').classList.add('visible');
