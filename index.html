@@ -1246,7 +1246,7 @@
   <div id="page-chequesFisicos" class="page">
     <div class="page-hdr">
       <h4><i class="bi bi-file-earmark-check-fill me-2 text-primary"></i>Cheques Físicos en Cartera</h4>
-      <button class="btn btn-primary btn-sm" onclick="abrirModalCheque('fisico')"><i class="bi bi-plus-lg me-1"></i>Agregar</button>
+      <button class="btn btn-primary btn-sm" onclick="abrirModalCheque('fisico')" data-muuk-accion="chequesFisicos:agregar"><i class="bi bi-plus-lg me-1"></i>Agregar</button>
     </div>
     <!-- FILTROS -->
     <div class="card mb-2 border-0 bg-light" id="filtros-chequesFisicos">
@@ -1292,7 +1292,7 @@
   <div id="page-eCheques" class="page">
     <div class="page-hdr">
       <h4><i class="bi bi-credit-card-fill me-2 text-info"></i>E-Cheques en Cartera</h4>
-      <button class="btn btn-primary btn-sm" onclick="abrirModalCheque('echeque')"><i class="bi bi-plus-lg me-1"></i>Agregar</button>
+      <button class="btn btn-primary btn-sm" onclick="abrirModalCheque('echeque')" data-muuk-accion="eCheques:agregar"><i class="bi bi-plus-lg me-1"></i>Agregar</button>
     </div>
     <!-- FILTROS -->
     <div class="card mb-2 border-0 bg-light" id="filtros-eCheques">
@@ -1338,7 +1338,7 @@
   <div id="page-chequesPagar" class="page">
     <div class="page-hdr">
       <h4><i class="bi bi-file-earmark-minus-fill me-2 text-danger"></i>Cheques a Pagar</h4>
-      <button class="btn btn-primary btn-sm" onclick="abrirModalCheque('pagar')"><i class="bi bi-plus-lg me-1"></i>Agregar</button>
+      <button class="btn btn-primary btn-sm" onclick="abrirModalCheque('pagar')" data-muuk-accion="chequesPagar:agregar"><i class="bi bi-plus-lg me-1"></i>Agregar</button>
     </div>
     <!-- FILTROS -->
     <div class="card mb-2 border-0 bg-light" id="filtros-chequesPagar">
@@ -1385,9 +1385,9 @@
     <div class="page-hdr">
       <h4><i class="bi bi-bank2 me-2 text-success"></i>Caja — Bancos</h4>
       <div class="d-flex gap-2">
-        <button class="btn btn-outline-info btn-sm" onclick="abrirModalTraspaso()"><i class="bi bi-arrow-left-right me-1"></i>Traspaso</button>
-        <button class="btn btn-outline-warning btn-sm" onclick="abrirModalAjuste()"><i class="bi bi-pencil-square me-1"></i>Ajuste</button>
-        <button class="btn btn-primary btn-sm" onclick="abrirModalMov('banco')"><i class="bi bi-plus-lg me-1"></i>Nuevo Movimiento</button>
+        <button class="btn btn-outline-info btn-sm" onclick="abrirModalTraspaso()" data-muuk-accion="cajaBancos:traspaso"><i class="bi bi-arrow-left-right me-1"></i>Traspaso</button>
+        <button class="btn btn-outline-warning btn-sm" onclick="abrirModalAjuste()" data-muuk-accion="cajaBancos:ajuste"><i class="bi bi-pencil-square me-1"></i>Ajuste</button>
+        <button class="btn btn-primary btn-sm" onclick="abrirModalMov('banco')" data-muuk-accion="cajaBancos:nuevo"><i class="bi bi-plus-lg me-1"></i>Nuevo Movimiento</button>
       </div>
     </div>
     <div class="row g-3 mb-3" id="saldos-bancos"></div>
@@ -1446,7 +1446,7 @@
   <div id="page-cajaEfectivo" class="page">
     <div class="page-hdr">
       <h4><i class="bi bi-cash-coin me-2"></i>Caja — Efectivo</h4>
-      <button class="btn btn-primary btn-sm" onclick="abrirModalMov('efectivo')"><i class="bi bi-plus-lg me-1"></i>Nuevo Movimiento</button>
+      <button class="btn btn-primary btn-sm" onclick="abrirModalMov('efectivo')" data-muuk-accion="cajaEfectivo:nuevo"><i class="bi bi-plus-lg me-1"></i>Nuevo Movimiento</button>
     </div>
     <div class="row g-3 mb-3">
       <div class="col-sm-4">
@@ -1766,7 +1766,7 @@
       <h4><i class="bi bi-percent me-2 text-teal" style="color:#0f766e"></i>Comisiones — Cuenta Corriente</h4>
       <div class="d-flex gap-2 flex-wrap">
         <button class="btn btn-primary btn-sm" onclick="cargarComisionesSheet()"><i class="bi bi-arrow-clockwise me-1"></i>Refrescar</button>
-        <button class="btn btn-outline-danger btn-sm" onclick="comPdfSaldos()"><i class="bi bi-file-earmark-pdf me-1"></i>PDF Saldos</button>
+        <button class="btn btn-outline-danger btn-sm" onclick="comPdfSaldos()" data-muuk-accion="comisiones:exportar"><i class="bi bi-file-earmark-pdf me-1"></i>PDF Saldos</button>
         <small class="text-muted align-self-center" id="com-ultima-actualizacion"></small>
       </div>
     </div>
@@ -3429,6 +3429,7 @@ CREATE POLICY "acceso total" ON flujo_caja_versions FOR ALL USING (true) WITH CH
             <tr>
               <th class="ps-2">Mes</th>
               <th>Fecha</th>
+              <th>N° FC / Remito</th>
               <th>Cliente</th>
               <th>Empresa</th>
               <th class="text-end">Facturado</th>
@@ -3449,14 +3450,14 @@ CREATE POLICY "acceso total" ON flujo_caja_versions FOR ALL USING (true) WITH CH
     <div class="page-hdr">
       <h4><i class="bi bi-file-earmark-arrow-down-fill me-2 text-success"></i>Facturas a Cobrar</h4>
       <div class="d-flex gap-2">
-        <button class="btn btn-outline-info btn-sm" onclick="printReportePendientes('cobrar')">
+        <button class="btn btn-outline-info btn-sm" onclick="printReportePendientes('cobrar')" data-muuk-accion="facturasACobrar:imprimir">
           <i class="bi bi-printer me-1"></i>Imprimir Pendientes
         </button>
         <button class="btn btn-outline-secondary btn-sm" onclick="document.getElementById('pdf-cobrar').click()">
           <i class="bi bi-file-earmark-pdf me-1"></i>Subir PDF
         </button>
         <input type="file" id="pdf-cobrar" accept=".pdf" style="display:none" onchange="handlePDFUpload(event,'cobrar')">
-        <button class="btn btn-primary btn-sm" onclick="abrirModalFactura('cobrar',null)">
+        <button class="btn btn-primary btn-sm" onclick="abrirModalFactura('cobrar',null)" data-muuk-accion="facturasACobrar:nueva">
           <i class="bi bi-plus-lg me-1"></i>Nueva Factura
         </button>
       </div>
@@ -3528,14 +3529,14 @@ CREATE POLICY "acceso total" ON flujo_caja_versions FOR ALL USING (true) WITH CH
     <div class="page-hdr">
       <h4><i class="bi bi-file-earmark-arrow-up-fill me-2 text-danger"></i>Facturas a Pagar</h4>
       <div class="d-flex gap-2">
-        <button class="btn btn-outline-info btn-sm" onclick="printReportePendientes('pagar')">
+        <button class="btn btn-outline-info btn-sm" onclick="printReportePendientes('pagar')" data-muuk-accion="facturasPagar:imprimir">
           <i class="bi bi-printer me-1"></i>Imprimir Pendientes
         </button>
         <button class="btn btn-outline-secondary btn-sm" onclick="document.getElementById('pdf-pagar').click()">
           <i class="bi bi-file-earmark-pdf me-1"></i>Subir PDF
         </button>
         <input type="file" id="pdf-pagar" accept=".pdf" style="display:none" onchange="handlePDFUpload(event,'pagar')">
-        <button class="btn btn-primary btn-sm" onclick="abrirModalFactura('pagar',null)">
+        <button class="btn btn-primary btn-sm" onclick="abrirModalFactura('pagar',null)" data-muuk-accion="facturasPagar:nueva">
           <i class="bi bi-plus-lg me-1"></i>Nueva Factura
         </button>
       </div>
@@ -3844,8 +3845,8 @@ CREATE POLICY "acceso total" ON flujo_caja_versions FOR ALL USING (true) WITH CH
       <h4><i class="bi bi-box-seam-fill me-2" style="color:#7c3aed"></i>Control de Stock</h4>
       <div class="d-flex gap-2">
         <button class="btn btn-outline-info btn-sm" onclick="printReporteStock()" style="font-size:.75rem"><i class="bi bi-printer me-1"></i>Imprimir Reporte</button>
-        <button class="btn btn-outline-warning btn-sm" onclick="abrirModalStockMov(null)" style="font-size:.75rem"><i class="bi bi-arrow-left-right me-1"></i>Movimiento</button>
-        <button class="btn btn-primary btn-sm" onclick="abrirModalStockProd(null)" style="font-size:.75rem"><i class="bi bi-plus-lg me-1"></i>Nuevo Producto</button>
+        <button class="btn btn-outline-warning btn-sm" onclick="abrirModalStockMov(null)" style="font-size:.75rem" data-muuk-accion="stock:movimiento"><i class="bi bi-arrow-left-right me-1"></i>Movimiento</button>
+        <button class="btn btn-primary btn-sm" onclick="abrirModalStockProd(null)" style="font-size:.75rem" data-muuk-accion="stock:nuevo"><i class="bi bi-plus-lg me-1"></i>Nuevo Producto</button>
       </div>
     </div>
 
@@ -4339,7 +4340,7 @@ CREATE POLICY "acceso total" ON flujo_caja_versions FOR ALL USING (true) WITH CH
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
         <input type="text" id="crm-buscar" class="form-control form-control-sm" placeholder="Buscar empresa..." style="max-width:200px;font-size:.78rem" oninput="renderEmpresas()">
-        <button class="btn btn-sm" onclick="crmNuevaEmpresa()" style="background:#0ea5e9;color:#fff;border:none;border-radius:7px;font-size:.72rem;padding:5px 12px"><i class="bi bi-plus-lg me-1"></i>Nueva empresa</button>
+        <button class="btn btn-sm" onclick="crmNuevaEmpresa()" style="background:#0ea5e9;color:#fff;border:none;border-radius:7px;font-size:.72rem;padding:5px 12px" data-muuk-accion="empresas:nueva"><i class="bi bi-plus-lg me-1"></i>Nueva empresa</button>
       </div>
     </div>
 
@@ -4868,7 +4869,7 @@ CREATE POLICY "acceso total" ON flujo_caja_versions FOR ALL USING (true) WITH CH
 
 <!-- ══════════ MODAL: NUEVO / EDITAR USUARIO ══════════ -->
 <div class="modal fade" id="modalNuevoUsuario" tabindex="-1">
-  <div class="modal-dialog">
+  <div class="modal-dialog modal-lg">
     <div class="modal-content">
       <div class="modal-header" style="background:#0f172a;color:#fff">
         <h5 class="modal-title" id="modal-usuario-titulo">Nuevo Usuario</h5>
@@ -4917,6 +4918,18 @@ CREATE POLICY "acceso total" ON flujo_caja_versions FOR ALL USING (true) WITH CH
             <label class="form-check-label" for="nuu-chk-archivos"><i class="bi bi-gear-fill me-1 text-secondary"></i>CONFIGURACIÓN — Cuentas Bancarias, Config</label>
           </div>
         </div>
+        <hr class="mt-3">
+        <div class="d-flex align-items-center gap-2 mb-2">
+          <label class="form-label fw-bold mb-0">Acciones por Módulo</label>
+          <small class="text-muted">(restringe botones dentro de cada módulo)</small>
+        </div>
+        <div class="form-check mb-2">
+          <input class="form-check-input" type="checkbox" id="nuu-acc-acciones-total" onchange="_nuuToggleAcciones()">
+          <label class="form-check-label fw-semibold text-success" for="nuu-acc-acciones-total">
+            <i class="bi bi-unlock-fill me-1"></i>Sin restricciones de acciones
+          </label>
+        </div>
+        <div id="nuu-acciones-container" class="accordion accordion-flush border rounded" style="font-size:.82rem;max-height:280px;overflow-y:auto"></div>
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
@@ -7404,6 +7417,53 @@ const MUUK_ACCESS_BASE = {
 };
 const MUUK_ADMINS = ['JonathanPalermo'];
 
+/* Acciones permitidas por usuario: null = todo, object = restricciones por página */
+const MUUK_ACCIONES_BASE = {
+  'JonathanPalermo': null,
+  'RicardoBodini':   null,
+  'AlbertoPalermo':  null,
+  'PaulaSpinelli':   null,
+};
+
+const _ACCIONES_POR_PAGINA = {
+  cajaBancos:      { nuevo:'Nuevo Movimiento', traspaso:'Traspaso entre cuentas', ajuste:'Ajuste de saldo', editar:'Editar registro', eliminar:'Eliminar registro' },
+  cajaEfectivo:    { nuevo:'Nuevo Movimiento', editar:'Editar registro', eliminar:'Eliminar registro' },
+  chequesFisicos:  { agregar:'Agregar Cheque', editar:'Editar', eliminar:'Eliminar' },
+  eCheques:        { agregar:'Agregar E-Cheque', editar:'Editar', eliminar:'Eliminar' },
+  chequesPagar:    { agregar:'Agregar Cheque a Pagar', editar:'Editar', eliminar:'Eliminar' },
+  facturasACobrar: { nueva:'Nueva Factura', imprimir:'Imprimir / PDF', editar:'Editar', eliminar:'Eliminar' },
+  facturasPagar:   { nueva:'Nueva Factura', imprimir:'Imprimir / PDF', editar:'Editar', eliminar:'Eliminar' },
+  comisiones:      { exportar:'PDF Saldos' },
+  stock:           { nuevo:'Nuevo Producto', movimiento:'Movimiento de Stock', editar:'Editar', eliminar:'Eliminar' },
+  empresas:        { nueva:'Nueva Empresa', editar:'Editar', eliminar:'Eliminar' },
+};
+
+function _getAcciones() {
+  const extra = JSON.parse(localStorage.getItem('muuk_extra_acciones') || '{}');
+  return { ...MUUK_ACCIONES_BASE, ...extra };
+}
+
+function userCanAction(page, action) {
+  const user = sessionStorage.getItem('muukAuth');
+  if (!user) return true;
+  const acciones = _getAcciones()[user];
+  if (!acciones) return true;
+  const pageAcciones = acciones[page];
+  if (pageAcciones === null || pageAcciones === undefined) return true;
+  return Array.isArray(pageAcciones) && pageAcciones.includes(action);
+}
+
+function _applyActionRestrictions() {
+  const user = sessionStorage.getItem('muukAuth');
+  if (!user) return;
+  const acciones = _getAcciones()[user];
+  if (!acciones) return;
+  document.querySelectorAll('[data-muuk-accion]').forEach(el => {
+    const [page, action] = el.getAttribute('data-muuk-accion').split(':');
+    el.style.display = userCanAction(page, action) ? '' : 'none';
+  });
+}
+
 // Accesos efectivos: base + sobreescritura desde localStorage
 function _getAccess() {
   const acc = Object.assign({}, MUUK_ACCESS_BASE);
@@ -7452,6 +7512,8 @@ function _applyAccessToSidebar() {
   // Redirigir a primera página permitida si la actual no es accesible
   const curId = (document.querySelector('.page.active')||{id:'page-dashboard'}).id.replace('page-','');
   if (!acc.includes(curId) && acc.length > 0) irA(acc[0]);
+  // Aplicar restricciones de acciones (botones)
+  _applyActionRestrictions();
 }
 
 /* ═══════════════════════════════════════════
@@ -7499,6 +7561,7 @@ function uiNuevoUsuario() {
   document.getElementById('nuu-acc-total').checked = false;
   document.querySelectorAll('.nuu-grp-chk').forEach(c => c.checked = false);
   _nuuToggleTotal();
+  _nuuRenderAcciones(null);
   bootstrap.Modal.getOrCreateInstance(document.getElementById('modalNuevoUsuario')).show();
 }
 
@@ -7516,6 +7579,7 @@ function uiEditarAcceso(username) {
     c.checked = esTotal || (pages.length > 0 && pages.every(p => acc.includes(p)));
   });
   _nuuToggleTotal();
+  _nuuRenderAcciones(_getAcciones()[username]);
   bootstrap.Modal.getOrCreateInstance(document.getElementById('modalNuevoUsuario')).show();
 }
 
@@ -7525,6 +7589,65 @@ function _nuuToggleTotal() {
     el.style.opacity = total ? '0.4' : '1';
     el.style.pointerEvents = total ? 'none' : '';
   });
+}
+
+function _nuuToggleAcciones() {
+  const noRestrict = document.getElementById('nuu-acc-acciones-total').checked;
+  const container = document.getElementById('nuu-acciones-container');
+  container.style.opacity = noRestrict ? '0.4' : '1';
+  container.style.pointerEvents = noRestrict ? 'none' : '';
+}
+
+function _nuuTogglePageTotal(page) {
+  const total = document.getElementById(`nuu-acc-${page}-total`).checked;
+  const items = document.getElementById(`nuu-acc-${page}-items`);
+  items.style.opacity = total ? '0.4' : '1';
+  items.style.pointerEvents = total ? 'none' : '';
+}
+
+function _nuuRenderAcciones(userAcciones) {
+  const noRestrict = (userAcciones === null || userAcciones === undefined);
+  document.getElementById('nuu-acc-acciones-total').checked = noRestrict;
+  const _PAGE_LABEL = {
+    cajaBancos:'Caja Bancos', cajaEfectivo:'Caja Efectivo',
+    chequesFisicos:'Cheques Físicos', eCheques:'E-Cheques',
+    chequesPagar:'Cheques a Pagar', facturasACobrar:'Facturas a Cobrar',
+    facturasPagar:'Facturas a Pagar', comisiones:'Comisiones',
+    stock:'Stock', empresas:'CRM Empresas'
+  };
+  let html = '';
+  Object.entries(_ACCIONES_POR_PAGINA).forEach(([page, acciones], idx) => {
+    const pageAcciones = userAcciones ? userAcciones[page] : null;
+    const fullPage = (pageAcciones === null || pageAcciones === undefined);
+    const label = _PAGE_LABEL[page] || page;
+    const checkboxes = Object.entries(acciones).map(([k,v]) => {
+      const checked = fullPage || (Array.isArray(pageAcciones) && pageAcciones.includes(k));
+      return `<div class="form-check mb-1">
+        <input class="form-check-input nuu-acc-accion" type="checkbox" id="nuu-acc-${page}-${k}" data-page="${page}" data-action="${k}"${checked?' checked':''}>
+        <label class="form-check-label" for="nuu-acc-${page}-${k}">${v}</label>
+      </div>`;
+    }).join('');
+    html += `<div class="accordion-item">
+      <h2 class="accordion-header">
+        <button class="accordion-button collapsed py-2 px-3" style="font-size:.82rem" type="button" data-bs-toggle="collapse" data-bs-target="#nuu-acc-col-${idx}">
+          ${label}
+        </button>
+      </h2>
+      <div id="nuu-acc-col-${idx}" class="accordion-collapse collapse">
+        <div class="accordion-body py-2 px-3">
+          <div class="form-check mb-2">
+            <input class="form-check-input" type="checkbox" id="nuu-acc-${page}-total" data-page="${page}"${fullPage?' checked':''} onchange="_nuuTogglePageTotal('${page}')">
+            <label class="form-check-label fw-semibold text-success" for="nuu-acc-${page}-total">Acceso total al módulo</label>
+          </div>
+          <div id="nuu-acc-${page}-items" style="${fullPage?'opacity:.4;pointer-events:none':''}">
+            ${checkboxes}
+          </div>
+        </div>
+      </div>
+    </div>`;
+  });
+  document.getElementById('nuu-acciones-container').innerHTML = html;
+  _nuuToggleAcciones();
 }
 
 async function uiGuardarUsuario() {
@@ -7555,6 +7678,27 @@ async function uiGuardarUsuario() {
     ea[nombre] = ['bienvenida', ...new Set(pages)];
   }
   localStorage.setItem('muuk_extra_access', JSON.stringify(ea));
+  // Guardar acciones por módulo
+  const extraAcciones = JSON.parse(localStorage.getItem('muuk_extra_acciones')||'{}');
+  const noRestriccionAcciones = document.getElementById('nuu-acc-acciones-total').checked;
+  if (noRestriccionAcciones) {
+    extraAcciones[nombre] = null;
+  } else {
+    const accionesPorPagina = {};
+    Object.keys(_ACCIONES_POR_PAGINA).forEach(page => {
+      const totalEl = document.getElementById(`nuu-acc-${page}-total`);
+      if (!totalEl) return;
+      if (totalEl.checked) {
+        accionesPorPagina[page] = null;
+      } else {
+        const allowed = [];
+        document.querySelectorAll(`.nuu-acc-accion[data-page="${page}"]:checked`).forEach(c => allowed.push(c.dataset.action));
+        accionesPorPagina[page] = allowed;
+      }
+    });
+    extraAcciones[nombre] = accionesPorPagina;
+  }
+  localStorage.setItem('muuk_extra_acciones', JSON.stringify(extraAcciones));
   bootstrap.Modal.getInstance(document.getElementById('modalNuevoUsuario'))?.hide();
   renderUsuarios();
   if (typeof showToast==='function') showToast('Usuario guardado correctamente','success');
@@ -14363,6 +14507,11 @@ function _buildGestionData(rawRows /* array of arrays, row 0 = headers */) {
   if (iCom < 0) iCom = hdrs.findIndex(h => h.includes('comis') && !h.includes('%') && !h.includes('importe'));
   if (iCom < 0) iCom = 20;
   let iMes = ci('mes'); if (iMes < 0) iMes = 25;
+  // Nro FC / Remito: buscar columna con 'nro'/'n°'/'num' + 'fc'/'factura'/'remito'/'doc'
+  let iNroDoc = hdrs.findIndex(h => (h.includes('nro') || h.includes('n°') || h.includes('núm') || h.includes('num')) && (h.includes('fc') || h.includes('factura') || h.includes('remito') || h.includes('doc')));
+  if (iNroDoc < 0) iNroDoc = hdrs.findIndex(h => h.includes('remito'));
+  if (iNroDoc < 0) iNroDoc = hdrs.findIndex(h => (h.includes('nro') || h.includes('n°')) && !h.includes('mes') && !h.includes('cuit'));
+  // iNroDoc queda en -1 si no hay columna detectada
 
   const byMesMap = {}, byEmpresaMap = {}, byClienteMap = {};
   const rows = [], rows2025 = [];
@@ -14382,7 +14531,8 @@ function _buildGestionData(rawRows /* array of arrays, row 0 = headers */) {
     const fechaRaw = String(r[iFecha] || '').trim();
     const fecha = fechaRaw.includes(' ') ? fechaRaw.split(' ')[0] : fechaRaw;
     const pct = String(r[iPct] || '').trim();
-    const rowArr = [mes, fecha, cli, emp, Math.round(fac), Math.round(siv), pct, Math.round(com)];
+    const nroDoc = iNroDoc >= 0 ? String(r[iNroDoc] || '').trim() : '';
+    const rowArr = [mes, fecha, cli, emp, Math.round(fac), Math.round(siv), pct, Math.round(com), nroDoc];
     if (is2025) {
       rows2025.push(rowArr);
     } else {
@@ -15361,9 +15511,11 @@ function renderHistorialCobranzas() {
       const pctNum = typeof pctRaw === 'number' ? pctRaw : parseFloat(String(pctRaw).replace(',','.'));
       if (!isNaN(pctNum)) pct = (pctNum < 1 ? (pctNum * 100).toFixed(1) : pctNum.toFixed(1)) + '%';
     }
+    const nroDoc = r[8] || '';
     return `<tr>
       <td class="ps-2"><span class="badge bg-secondary">${r[0].replace(' 2026','')}</span></td>
       <td><small>${r[1]}</small></td>
+      <td><small class="text-muted">${nroDoc || '—'}</small></td>
       <td><small>${r[2]}</small></td>
       <td><small>${r[3]}</small></td>
       <td class="text-end"><small>${fmt(r[4])}</small></td>
