@@ -801,6 +801,8 @@
       <li><a class="nav-link" data-page="listasPrecios"><i class="bi bi-tags-fill"></i>Listas de Precios</a></li>
       <li><a class="nav-link" data-page="empresas"><i class="bi bi-building-check"></i>CRM Empresas</a></li>
       <li><a class="nav-link" data-page="documentos"><i class="bi bi-folder2-open"></i>Documentos</a></li>
+      <li><a class="nav-link" data-page="cuentasBancarias"><i class="bi bi-bank2"></i>Cuentas Bancarias</a></li>
+      <li><a class="nav-link" data-page="historialCobranzas"><i class="bi bi-receipt"></i>Historial de Cobranzas</a></li>
     </div>
 
     <!-- ── Análisis ── -->
@@ -826,7 +828,6 @@
       <i class="bi bi-chevron-down sl-chevron"></i>
     </div>
     <div class="sl-items" id="sg-archivos">
-      <li><a class="nav-link" data-page="cuentasBancarias"><i class="bi bi-bank2"></i>Cuentas Bancarias</a></li>
       <li><a class="nav-link" data-page="config"><i class="bi bi-gear-fill"></i>Configuración</a></li>
       <li><a class="nav-link" data-page="usuarios"><i class="bi bi-shield-lock-fill"></i>Usuarios</a></li>
     </div>
@@ -3339,6 +3340,68 @@ CREATE POLICY "acceso total" ON flujo_caja_versions FOR ALL USING (true) WITH CH
 
     </div><!-- /max-width -->
   </div><!-- /page-cuentasBancarias -->
+
+  <!-- HISTORIAL DE COBRANZAS -->
+  <div id="page-historialCobranzas" class="page">
+    <div class="page-hdr d-flex align-items-center justify-content-between flex-wrap gap-2">
+      <h4><i class="bi bi-receipt me-2"></i>Historial de Cobranzas</h4>
+      <button class="btn btn-sm btn-outline-primary" onclick="renderHistorialCobranzas()">
+        <i class="bi bi-arrow-clockwise me-1"></i>Actualizar
+      </button>
+    </div>
+    <div class="container-fluid px-2 px-md-4 pb-4">
+      <!-- Filtros -->
+      <div class="card shadow-sm border-0 mb-3">
+        <div class="card-body py-2">
+          <div class="row g-2 align-items-end">
+            <div class="col-6 col-md-3">
+              <label class="form-label small mb-1">Mes</label>
+              <select id="hc-fil-mes" class="form-select form-select-sm" onchange="renderHistorialCobranzas()">
+                <option value="">Todos</option>
+              </select>
+            </div>
+            <div class="col-6 col-md-3">
+              <label class="form-label small mb-1">Cliente</label>
+              <select id="hc-fil-cliente" class="form-select form-select-sm" onchange="renderHistorialCobranzas()">
+                <option value="">Todos</option>
+              </select>
+            </div>
+            <div class="col-6 col-md-3">
+              <label class="form-label small mb-1">Empresa</label>
+              <select id="hc-fil-empresa" class="form-select form-select-sm" onchange="renderHistorialCobranzas()">
+                <option value="">Todas</option>
+              </select>
+            </div>
+            <div class="col-6 col-md-3">
+              <label class="form-label small mb-1">Buscar</label>
+              <input id="hc-fil-buscar" type="text" class="form-control form-control-sm" placeholder="Cliente / Empresa…" oninput="renderHistorialCobranzas()">
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Estado / totales -->
+      <div id="hc-status" class="small text-muted mb-2"></div>
+      <!-- Tabla -->
+      <div class="table-responsive">
+        <table class="table table-sm table-hover align-middle mb-0">
+          <thead class="table-light sticky-top">
+            <tr>
+              <th class="ps-2">Mes</th>
+              <th>Fecha</th>
+              <th>Cliente</th>
+              <th>Empresa</th>
+              <th class="text-end">Facturado</th>
+              <th class="text-end">Sin IVA</th>
+              <th class="text-center">% Com.</th>
+              <th class="text-end pe-2">Comisión</th>
+            </tr>
+          </thead>
+          <tbody id="hc-tbody"></tbody>
+        </table>
+      </div>
+      <div id="hc-totales" class="small text-muted mt-2 text-end"></div>
+    </div>
+  </div><!-- /page-historialCobranzas -->
 
   <!-- FACTURAS A COBRAR -->
   <div id="page-facturasACobrar" class="page">
@@ -7296,7 +7359,7 @@ const MUUK_ACCESS_BASE = {
   'AlbertoPalermo':  null,
   'PaulaSpinelli':   ['bienvenida','comisiones','bcra','calendarioARCA','contabilidad',
                       'facturasACobrar','facturasPagar','estadosCuenta','stock',
-                      'listasPrecios','empresas','documentos'],
+                      'listasPrecios','empresas','documentos','cuentasBancarias','historialCobranzas'],
 };
 const MUUK_ADMINS = ['JonathanPalermo'];
 
@@ -7357,9 +7420,9 @@ const _GRUPOS_ACCESO = {
   dashboard: ['dashboard'],
   empresa:   ['socios','cuentaSocios','liquidacion'],
   caja:      ['cajaBancos','cajaEfectivo','chequesFisicos','eCheques','chequesPagar','kilometraje'],
-  gestion:   ['comisiones','bcra','calendarioARCA','contabilidad','facturasACobrar','facturasPagar','estadosCuenta','stock','listasPrecios','empresas','documentos'],
+  gestion:   ['comisiones','bcra','calendarioARCA','contabilidad','facturasACobrar','facturasPagar','estadosCuenta','stock','listasPrecios','empresas','documentos','cuentasBancarias','historialCobranzas'],
   analisis:  ['tesoreria','flujoProyectado','panelVencimientos','rentabilidad','gestion','reportes','historial','estrategicos','calculadora'],
-  archivos:  ['cuentasBancarias','config'],
+  archivos:  ['config'],
 };
 
 function renderUsuarios() {
@@ -7593,9 +7656,9 @@ function initApp() {
 const _SB_GROUPS = {
   empresa:  ['socios','cuentaSocios','liquidacion'],
   caja:     ['cajaBancos','cajaEfectivo','chequesFisicos','eCheques','chequesPagar','kilometraje'],
-  gestion:  ['comisiones','bcra','calendarioARCA','contabilidad','facturasACobrar','facturasPagar','estadosCuenta','stock','listasPrecios','empresas','documentos'],
+  gestion:  ['comisiones','bcra','calendarioARCA','contabilidad','facturasACobrar','facturasPagar','estadosCuenta','stock','listasPrecios','empresas','documentos','cuentasBancarias','historialCobranzas'],
   analisis: ['tesoreria','flujoProyectado','panelVencimientos','rentabilidad','gestion','reportes','historial','estrategicos','calculadora'],
-  archivos: ['cuentasBancarias','config'],
+  archivos: ['config'],
 };
 
 function toggleSBGroup(group) {
@@ -7667,7 +7730,7 @@ const _PAGE_LABELS = {
   tesoreria:'Tesorería Integral', flujoProyectado:'Flujo Proyectado',
   panelVencimientos:'Vencimientos', rentabilidad:'Rentabilidad',
   gestion:'Gestión', reportes:'Reportes', historial:'Historial',
-  estrategicos:'Estratégicos', calculadora:'Calculadora de Costo', documentos:'Documentos', cuentasBancarias:'Cuentas Bancarias', config:'Configuración',
+  estrategicos:'Estratégicos', calculadora:'Calculadora de Costo', documentos:'Documentos', cuentasBancarias:'Cuentas Bancarias', config:'Configuración', historialCobranzas:'Historial de Cobranzas',
   liquidacion:'Liquidación Socios', empresas:'CRM Empresas'
 };
 const _GROUP_LABELS = {
@@ -7911,6 +7974,7 @@ function irA(p) {
   if (p==='liquidacion')       renderLiquidacion();
   if (p==='empresas')          renderEmpresas();
   if (p==='usuarios')          renderUsuarios();
+  if (p==='historialCobranzas') renderHistorialCobranzas();
   if (p==='bienvenida') {
     const el = document.getElementById('bienvenida-username');
     if (el) el.textContent = sessionStorage.getItem('muukAuth') || '';
@@ -15193,6 +15257,83 @@ function _renderDetalleTabla(rows) {
     </tr>`;
   }).join('');
   if (tot) tot.innerHTML = `${rows.length} registros &nbsp;|&nbsp; Facturado: <span class="text-primary">${fmt(sumFac)}</span> &nbsp;|&nbsp; Sin IVA: ${fmt(sumSiv)} &nbsp;|&nbsp; Comisión: <span class="text-success">${fmt(sumCom)}</span>`;
+}
+
+function renderHistorialCobranzas() {
+  if (!GESTION_DATA || !GESTION_DATA.rows || !GESTION_DATA.rows.length) {
+    if (!_loadGestionData()) {
+      const st = document.getElementById('hc-status');
+      if (st) st.innerHTML = '<i class="bi bi-hourglass-split me-1 text-warning sync-spin"></i>Cargando datos… Sincronizá primero desde Análisis → Gestión.';
+      gestionSincronizar().then(() => renderHistorialCobranzas()).catch(() => {
+        const s = document.getElementById('hc-status');
+        if (s) s.innerHTML = '<i class="bi bi-exclamation-triangle text-warning me-1"></i>No se pudieron cargar los datos. Intentá sincronizar desde Análisis → Gestión.';
+      });
+      return;
+    }
+  }
+  const rows = (GESTION_DATA && GESTION_DATA.rows) || [];
+  // Populate filter dropdowns (only on first call or when needed)
+  const selMes = document.getElementById('hc-fil-mes');
+  const selCli = document.getElementById('hc-fil-cliente');
+  const selEmp = document.getElementById('hc-fil-empresa');
+  if (selMes && selMes.options.length <= 1) {
+    const meses = [...new Set(rows.map(r => r[0]))];
+    meses.forEach(m => { const o = document.createElement('option'); o.value = m; o.textContent = m.replace(' 2026',''); selMes.appendChild(o); });
+  }
+  if (selCli && selCli.options.length <= 1) {
+    const clis = [...new Set(rows.map(r => r[2]))].sort();
+    clis.forEach(c => { const o = document.createElement('option'); o.value = c; o.textContent = c; selCli.appendChild(o); });
+  }
+  if (selEmp && selEmp.options.length <= 1) {
+    const emps = [...new Set(rows.map(r => r[3]))].sort();
+    emps.forEach(e => { const o = document.createElement('option'); o.value = e; o.textContent = e; selEmp.appendChild(o); });
+  }
+  // Apply filters
+  const fMes = selMes ? selMes.value : '';
+  const fCli = selCli ? selCli.value : '';
+  const fEmp = selEmp ? selEmp.value : '';
+  const fBus = (document.getElementById('hc-fil-buscar') || {}).value || '';
+  const busq = fBus.toLowerCase();
+  let filtered = rows.filter(r => {
+    if (fMes && r[0] !== fMes) return false;
+    if (fCli && r[2] !== fCli) return false;
+    if (fEmp && r[3] !== fEmp) return false;
+    if (busq && !r[2].toLowerCase().includes(busq) && !r[3].toLowerCase().includes(busq)) return false;
+    return true;
+  });
+  // Sort: mes (chronological) then fecha
+  filtered.sort((a, b) => {
+    const MES_ORDER = ['Enero 2026','Febrero 2026','Marzo 2026','Abril 2026','Mayo 2026','Junio 2026','Julio 2026','Agosto 2026','Septiembre 2026','Octubre 2026','Noviembre 2026','Diciembre 2026'];
+    const mi = MES_ORDER.indexOf(a[0]) - MES_ORDER.indexOf(b[0]);
+    if (mi !== 0) return mi;
+    return String(a[1]).localeCompare(String(b[1]));
+  });
+  const tb = document.getElementById('hc-tbody');
+  if (!tb) return;
+  let sumFac = 0, sumSiv = 0, sumCom = 0;
+  tb.innerHTML = filtered.map(r => {
+    sumFac += r[4]; sumSiv += r[5]; sumCom += r[7];
+    const pctRaw = r[6];
+    let pct = '–';
+    if (pctRaw !== '' && pctRaw != null) {
+      const pctNum = typeof pctRaw === 'number' ? pctRaw : parseFloat(String(pctRaw).replace(',','.'));
+      if (!isNaN(pctNum)) pct = (pctNum < 1 ? (pctNum * 100).toFixed(1) : pctNum.toFixed(1)) + '%';
+    }
+    return `<tr>
+      <td class="ps-2"><span class="badge bg-secondary">${r[0].replace(' 2026','')}</span></td>
+      <td><small>${r[1]}</small></td>
+      <td><small>${r[2]}</small></td>
+      <td><small>${r[3]}</small></td>
+      <td class="text-end"><small>${fmt(r[4])}</small></td>
+      <td class="text-end"><small>${fmt(r[5])}</small></td>
+      <td class="text-center"><small>${pct}</small></td>
+      <td class="text-end pe-2 text-success fw-bold"><small>${fmt(r[7])}</small></td>
+    </tr>`;
+  }).join('');
+  const st = document.getElementById('hc-status');
+  if (st) st.innerHTML = `<i class="bi bi-check-circle-fill text-success me-1"></i>Datos al ${GESTION_DATA.updatedAt}`;
+  const tot = document.getElementById('hc-totales');
+  if (tot) tot.innerHTML = `${filtered.length} registros &nbsp;|&nbsp; Facturado: <span class="text-primary fw-bold">${fmt(sumFac)}</span> &nbsp;|&nbsp; Sin IVA: ${fmt(sumSiv)} &nbsp;|&nbsp; Comisión: <span class="text-success fw-bold">${fmt(sumCom)}</span>`;
 }
 
 function _renderEmpresaChart() {
