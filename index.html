@@ -800,6 +800,7 @@
       <li><a class="nav-link" data-page="stock"><i class="bi bi-box-seam-fill"></i>Stock</a></li>
       <li><a class="nav-link" data-page="listasPrecios"><i class="bi bi-tags-fill"></i>Listas de Precios</a></li>
       <li><a class="nav-link" data-page="empresas"><i class="bi bi-building-check"></i>CRM Empresas</a></li>
+      <li><a class="nav-link" data-page="documentos"><i class="bi bi-folder2-open"></i>Documentos</a></li>
     </div>
 
     <!-- ── Análisis ── -->
@@ -819,13 +820,12 @@
       <li><a class="nav-link" data-page="calculadora"><i class="bi bi-calculator-fill"></i>Calculadora</a></li>
     </div>
 
-    <!-- ── Archivos ── -->
+    <!-- ── Configuración ── -->
     <div class="sl" data-group="archivos" onclick="toggleSBGroup('archivos')">
-      <span><i class="bi bi-folder-fill me-1" style="font-size:.6rem;opacity:.7"></i>Archivos</span>
+      <span><i class="bi bi-gear-fill me-1" style="font-size:.6rem;opacity:.7"></i>Configuración</span>
       <i class="bi bi-chevron-down sl-chevron"></i>
     </div>
     <div class="sl-items" id="sg-archivos">
-      <li><a class="nav-link" data-page="documentos"><i class="bi bi-folder2-open"></i>Documentos</a></li>
       <li><a class="nav-link" data-page="cuentasBancarias"><i class="bi bi-bank2"></i>Cuentas Bancarias</a></li>
       <li><a class="nav-link" data-page="config"><i class="bi bi-gear-fill"></i>Configuración</a></li>
       <li><a class="nav-link" data-page="usuarios"><i class="bi bi-shield-lock-fill"></i>Usuarios</a></li>
@@ -4802,7 +4802,7 @@ CREATE POLICY "acceso total" ON flujo_caja_versions FOR ALL USING (true) WITH CH
           </div>
           <div class="form-check mb-1">
             <input class="form-check-input nuu-grp-chk" type="checkbox" id="nuu-chk-gestion" data-group="gestion">
-            <label class="form-check-label" for="nuu-chk-gestion"><i class="bi bi-percent me-1 text-warning"></i>GESTIÓN — Comisiones, Facturas, BCRA, Stock, CRM</label>
+            <label class="form-check-label" for="nuu-chk-gestion"><i class="bi bi-percent me-1 text-warning"></i>GESTIÓN — Comisiones, Facturas, BCRA, Stock, CRM, Documentos</label>
           </div>
           <div class="form-check mb-1">
             <input class="form-check-input nuu-grp-chk" type="checkbox" id="nuu-chk-analisis" data-group="analisis">
@@ -4810,7 +4810,7 @@ CREATE POLICY "acceso total" ON flujo_caja_versions FOR ALL USING (true) WITH CH
           </div>
           <div class="form-check mb-1">
             <input class="form-check-input nuu-grp-chk" type="checkbox" id="nuu-chk-archivos" data-group="archivos">
-            <label class="form-check-label" for="nuu-chk-archivos"><i class="bi bi-folder2-open me-1 text-secondary"></i>ARCHIVOS — Documentos, Cuentas Bancarias, Config</label>
+            <label class="form-check-label" for="nuu-chk-archivos"><i class="bi bi-gear-fill me-1 text-secondary"></i>CONFIGURACIÓN — Cuentas Bancarias, Config</label>
           </div>
         </div>
       </div>
@@ -7296,7 +7296,7 @@ const MUUK_ACCESS_BASE = {
   'AlbertoPalermo':  null,
   'PaulaSpinelli':   ['bienvenida','comisiones','bcra','calendarioARCA','contabilidad',
                       'facturasACobrar','facturasPagar','estadosCuenta','stock',
-                      'listasPrecios','empresas'],
+                      'listasPrecios','empresas','documentos'],
 };
 const MUUK_ADMINS = ['JonathanPalermo'];
 
@@ -7357,9 +7357,9 @@ const _GRUPOS_ACCESO = {
   dashboard: ['dashboard'],
   empresa:   ['socios','cuentaSocios','liquidacion'],
   caja:      ['cajaBancos','cajaEfectivo','chequesFisicos','eCheques','chequesPagar','kilometraje'],
-  gestion:   ['comisiones','bcra','calendarioARCA','contabilidad','facturasACobrar','facturasPagar','estadosCuenta','stock','listasPrecios','empresas'],
+  gestion:   ['comisiones','bcra','calendarioARCA','contabilidad','facturasACobrar','facturasPagar','estadosCuenta','stock','listasPrecios','empresas','documentos'],
   analisis:  ['tesoreria','flujoProyectado','panelVencimientos','rentabilidad','gestion','reportes','historial','estrategicos','calculadora'],
-  archivos:  ['documentos','cuentasBancarias','config'],
+  archivos:  ['cuentasBancarias','config'],
 };
 
 function renderUsuarios() {
@@ -7593,9 +7593,9 @@ function initApp() {
 const _SB_GROUPS = {
   empresa:  ['socios','cuentaSocios','liquidacion'],
   caja:     ['cajaBancos','cajaEfectivo','chequesFisicos','eCheques','chequesPagar','kilometraje'],
-  gestion:  ['comisiones','bcra','calendarioARCA','contabilidad','facturasACobrar','facturasPagar','estadosCuenta','stock','listasPrecios','empresas'],
+  gestion:  ['comisiones','bcra','calendarioARCA','contabilidad','facturasACobrar','facturasPagar','estadosCuenta','stock','listasPrecios','empresas','documentos'],
   analisis: ['tesoreria','flujoProyectado','panelVencimientos','rentabilidad','gestion','reportes','historial','estrategicos','calculadora'],
-  archivos: ['documentos','cuentasBancarias','config'],
+  archivos: ['cuentasBancarias','config'],
 };
 
 function toggleSBGroup(group) {
@@ -7671,7 +7671,7 @@ const _PAGE_LABELS = {
   liquidacion:'Liquidación Socios', empresas:'CRM Empresas'
 };
 const _GROUP_LABELS = {
-  empresa:'Empresa', caja:'Caja', gestion:'Gestión', analisis:'Análisis', archivos:'Archivos'
+  empresa:'Empresa', caja:'Caja', gestion:'Gestión', analisis:'Análisis', archivos:'Configuración'
 };
 function updateBreadcrumb(page) {
   const bcGroup = document.getElementById('bc-group');
