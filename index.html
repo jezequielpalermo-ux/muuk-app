@@ -129,10 +129,68 @@
     .sb-btn.sb-restore:hover { background: rgba(59,130,246,.18); }
     .sb-btn.sb-logout { color: #fca5a5; border-color: rgba(239,68,68,.2); margin-top:4px; }
     .sb-btn.sb-logout:hover { background: rgba(239,68,68,.15); }
-    .sb-user { display:flex; align-items:center; gap:6px; padding: 5px 4px 4px; 
+    .sb-user { display:flex; align-items:center; gap:6px; padding: 5px 4px 4px;
       font-size:.72rem; color:#64748b; border-top: 1px solid rgba(255,255,255,.05); margin-top:3px; }
     .sb-user i { font-size:.88rem; }
     #bcra-sidebar { border-top:1px solid rgba(255,255,255,.08); flex-shrink:0; padding: 6px 12px 5px; }
+
+    /* ── Colored left-border accents per group ── */
+    .sl[data-group="empresa"].sl-active  { border-left: 3px solid #3b82f6; padding-left: 11px; }
+    .sl[data-group="caja"].sl-active     { border-left: 3px solid #10b981; padding-left: 11px; }
+    .sl[data-group="gestion"].sl-active  { border-left: 3px solid #f59e0b; padding-left: 11px; }
+    .sl[data-group="analisis"].sl-active { border-left: 3px solid #8b5cf6; padding-left: 11px; }
+    .sl[data-group="archivos"].sl-active { border-left: 3px solid #64748b; padding-left: 11px; }
+
+    /* ── Smooth grid animation for groups ── */
+    .sl-items {
+      display: grid;
+      grid-template-rows: 1fr;
+      transition: grid-template-rows .28s ease, opacity .22s ease;
+      overflow: hidden;
+      opacity: 1;
+    }
+    .sl-items.collapsed {
+      grid-template-rows: 0fr;
+      opacity: 0;
+      pointer-events: none;
+    }
+    .sl-items-inner { min-height: 0; overflow: hidden; }
+
+    /* ── Active link left accent bar ── */
+    .sidebar .nav-link.active::before {
+      content: '';
+      position: absolute; left: 0; top: 50%; transform: translateY(-50%);
+      width: 3px; height: 55%; background: #a5b4fc; border-radius: 0 3px 3px 0;
+    }
+
+    /* ── Hover left accent ── */
+    .sidebar .nav-link:not(.active):hover::before {
+      content: '';
+      position: absolute; left: 0; top: 50%; transform: translateY(-50%);
+      width: 2px; height: 40%; background: rgba(255,255,255,.25); border-radius: 0 2px 2px 0;
+    }
+
+    /* ── Group expanded subtle tint ── */
+    .sl:not(.collapsed) {
+      background: rgba(255,255,255,.02);
+    }
+
+    /* ── Item count badge ── */
+    .sl-badge {
+      display: inline-flex; align-items: center; justify-content: center;
+      min-width: 18px; height: 16px; padding: 0 5px;
+      background: rgba(255,255,255,.1); border-radius: 8px;
+      font-size: .6rem; color: #94a3b8; font-weight: 700;
+      margin-right: 2px; letter-spacing: 0;
+      transition: opacity .2s;
+    }
+
+    /* ── Group icon color when active ── */
+    .sl[data-group="empresa"].sl-active > span > i { color: #3b82f6; }
+    .sl[data-group="caja"].sl-active > span > i    { color: #10b981; }
+    .sl[data-group="gestion"].sl-active > span > i { color: #f59e0b; }
+    .sl[data-group="analisis"].sl-active > span > i{ color: #8b5cf6; }
+    .sl[data-group="archivos"].sl-active > span > i{ color: #94a3b8; }
     .bcra-rate-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:2px; }
     .bcra-rate-lbl { font-size:.62rem; color:#475569; font-weight:600; text-transform:uppercase; letter-spacing:.04em; }
     .bcra-rate-val { font-size:.72rem; color:#94a3b8; font-weight:600; font-variant-numeric: tabular-nums; }
@@ -749,6 +807,10 @@
         <div style="font-size:1.05rem;font-weight:900;color:#E31E24;font-family:'Arial Black','Impact',sans-serif;letter-spacing:.5px;line-height:1">MÜÜK</div>
       </div>
     </div>
+    <div id="sb-user-chip" style="display:flex;align-items:center;gap:5px;margin-top:6px;padding:4px 6px;background:rgba(255,255,255,.06);border-radius:7px;font-size:.7rem;color:#64748b">
+      <i class="bi bi-person-circle" style="font-size:.85rem"></i>
+      <span id="sidebar-username2" style="flex:1;color:#94a3b8;font-weight:500">—</span>
+    </div>
   </div>
   <ul class="nav flex-column mt-1 flex-grow-1" id="sidebar-nav">
 
@@ -767,75 +829,85 @@
     <!-- ── Empresa ── -->
     <div class="sl" data-group="empresa" onclick="toggleSBGroup('empresa')">
       <span><i class="bi bi-building-fill me-1" style="font-size:.6rem;opacity:.7"></i>Empresa</span>
-      <i class="bi bi-chevron-down sl-chevron"></i>
+      <span style="display:flex;align-items:center;gap:4px"><span class="sl-badge" id="sb-badge-empresa" style="display:none">0</span><i class="bi bi-chevron-down sl-chevron"></i></span>
     </div>
     <div class="sl-items" id="sg-empresa">
-      <li><a class="nav-link" data-page="socios"><i class="bi bi-people-fill"></i>Socios</a></li>
-      <li><a class="nav-link" data-page="cuentaSocios"><i class="bi bi-bar-chart-steps"></i>Cuenta Socios</a></li>
-      <li><a class="nav-link" data-page="liquidacion"><i class="bi bi-cash-stack"></i>Liquidación Socios</a></li>
+      <div class="sl-items-inner">
+        <li><a class="nav-link" data-page="socios"><i class="bi bi-people-fill"></i>Socios</a></li>
+        <li><a class="nav-link" data-page="cuentaSocios"><i class="bi bi-bar-chart-steps"></i>Cuenta Socios</a></li>
+        <li><a class="nav-link" data-page="liquidacion"><i class="bi bi-cash-stack"></i>Liquidación Socios</a></li>
+      </div>
     </div>
 
     <!-- ── Cheques ── -->
     <!-- ── Caja ── -->
     <div class="sl" data-group="caja" onclick="toggleSBGroup('caja')">
       <span><i class="bi bi-cash-coin me-1" style="font-size:.6rem;opacity:.7"></i>Caja</span>
-      <i class="bi bi-chevron-down sl-chevron"></i>
+      <span style="display:flex;align-items:center;gap:4px"><span class="sl-badge" id="sb-badge-caja" style="display:none">0</span><i class="bi bi-chevron-down sl-chevron"></i></span>
     </div>
     <div class="sl-items" id="sg-caja">
-      <li><a class="nav-link" data-page="cajaBancos"><i class="bi bi-bank2"></i>Caja — Bancos</a></li>
-      <li><a class="nav-link" data-page="cajaEfectivo"><i class="bi bi-cash-coin"></i>Caja — Efectivo</a></li>
-      <li><a class="nav-link" data-page="chequesFisicos"><i class="bi bi-file-earmark-check-fill"></i>Cheques Físicos</a></li>
-      <li><a class="nav-link" data-page="eCheques"><i class="bi bi-credit-card-fill"></i>E-Cheques</a></li>
-      <li><a class="nav-link" data-page="chequesPagar"><i class="bi bi-file-earmark-minus-fill"></i>Cheques a Pagar</a></li>
-      <li><a class="nav-link" data-page="kilometraje"><i class="bi bi-speedometer2"></i>Kilometraje</a></li>
+      <div class="sl-items-inner">
+        <li><a class="nav-link" data-page="cajaBancos"><i class="bi bi-bank2"></i>Caja — Bancos</a></li>
+        <li><a class="nav-link" data-page="cajaEfectivo"><i class="bi bi-cash-coin"></i>Caja — Efectivo</a></li>
+        <li><a class="nav-link" data-page="chequesFisicos"><i class="bi bi-file-earmark-check-fill"></i>Cheques Físicos</a></li>
+        <li><a class="nav-link" data-page="eCheques"><i class="bi bi-credit-card-fill"></i>E-Cheques</a></li>
+        <li><a class="nav-link" data-page="chequesPagar"><i class="bi bi-file-earmark-minus-fill"></i>Cheques a Pagar</a></li>
+        <li><a class="nav-link" data-page="kilometraje"><i class="bi bi-speedometer2"></i>Kilometraje</a></li>
+      </div>
     </div>
 
     <!-- ── Gestión ── -->
     <div class="sl" data-group="gestion" onclick="toggleSBGroup('gestion')">
       <span><i class="bi bi-briefcase-fill me-1" style="font-size:.6rem;opacity:.7"></i>Gestión</span>
-      <i class="bi bi-chevron-down sl-chevron"></i>
+      <span style="display:flex;align-items:center;gap:4px"><span class="sl-badge" id="sb-badge-gestion" style="display:none">0</span><i class="bi bi-chevron-down sl-chevron"></i></span>
     </div>
     <div class="sl-items" id="sg-gestion">
-      <li><a class="nav-link" data-page="comisiones"><i class="bi bi-percent"></i>Comisiones</a></li>
-      <li><a class="nav-link" data-page="bcra"><i class="bi bi-building"></i>BCRA</a></li>
-      <li><a class="nav-link" data-page="calendarioARCA"><i class="bi bi-calendar2-check-fill"></i>Calendario ARCA</a></li>
-      <li><a class="nav-link" data-page="contabilidad"><i class="bi bi-calculator-fill"></i>Contabilidad</a></li>
-      <li><a class="nav-link" data-page="facturasACobrar"><i class="bi bi-file-earmark-arrow-down-fill"></i>Facturas a Cobrar</a></li>
-      <li><a class="nav-link" data-page="facturasPagar"><i class="bi bi-file-earmark-arrow-up-fill"></i>Facturas a Pagar</a></li>
-      <li><a class="nav-link" data-page="estadosCuenta"><i class="bi bi-person-lines-fill"></i>Estados de Cuenta</a></li>
-      <li><a class="nav-link" data-page="stock"><i class="bi bi-box-seam-fill"></i>Stock</a></li>
-      <li><a class="nav-link" data-page="listasPrecios"><i class="bi bi-tags-fill"></i>Listas de Precios</a></li>
-      <li><a class="nav-link" data-page="empresas"><i class="bi bi-building-check"></i>CRM Empresas</a></li>
-      <li><a class="nav-link" data-page="documentos"><i class="bi bi-folder2-open"></i>Documentos</a></li>
-      <li><a class="nav-link" data-page="cuentasBancarias"><i class="bi bi-bank2"></i>Cuentas Bancarias</a></li>
-      <li><a class="nav-link" data-page="historialCobranzas"><i class="bi bi-receipt"></i>Historial de Cobranzas</a></li>
+      <div class="sl-items-inner">
+        <li><a class="nav-link" data-page="comisiones"><i class="bi bi-percent"></i>Comisiones</a></li>
+        <li><a class="nav-link" data-page="bcra"><i class="bi bi-building"></i>BCRA</a></li>
+        <li><a class="nav-link" data-page="calendarioARCA"><i class="bi bi-calendar2-check-fill"></i>Calendario ARCA</a></li>
+        <li><a class="nav-link" data-page="contabilidad"><i class="bi bi-calculator-fill"></i>Contabilidad</a></li>
+        <li><a class="nav-link" data-page="facturasACobrar"><i class="bi bi-file-earmark-arrow-down-fill"></i>Facturas a Cobrar</a></li>
+        <li><a class="nav-link" data-page="facturasPagar"><i class="bi bi-file-earmark-arrow-up-fill"></i>Facturas a Pagar</a></li>
+        <li><a class="nav-link" data-page="estadosCuenta"><i class="bi bi-person-lines-fill"></i>Estados de Cuenta</a></li>
+        <li><a class="nav-link" data-page="stock"><i class="bi bi-box-seam-fill"></i>Stock</a></li>
+        <li><a class="nav-link" data-page="listasPrecios"><i class="bi bi-tags-fill"></i>Listas de Precios</a></li>
+        <li><a class="nav-link" data-page="empresas"><i class="bi bi-building-check"></i>CRM Empresas</a></li>
+        <li><a class="nav-link" data-page="documentos"><i class="bi bi-folder2-open"></i>Documentos</a></li>
+        <li><a class="nav-link" data-page="cuentasBancarias"><i class="bi bi-bank2"></i>Cuentas Bancarias</a></li>
+        <li><a class="nav-link" data-page="historialCobranzas"><i class="bi bi-receipt"></i>Historial de Cobranzas</a></li>
+      </div>
     </div>
 
     <!-- ── Análisis ── -->
     <div class="sl" data-group="analisis" onclick="toggleSBGroup('analisis')">
       <span><i class="bi bi-graph-up me-1" style="font-size:.6rem;opacity:.7"></i>Análisis</span>
-      <i class="bi bi-chevron-down sl-chevron"></i>
+      <span style="display:flex;align-items:center;gap:4px"><span class="sl-badge" id="sb-badge-analisis" style="display:none">0</span><i class="bi bi-chevron-down sl-chevron"></i></span>
     </div>
     <div class="sl-items" id="sg-analisis">
-      <li><a class="nav-link" data-page="tesoreria"><i class="bi bi-safe-fill"></i>Tesorería Integral</a></li>
-      <li><a class="nav-link" data-page="flujoProyectado"><i class="bi bi-graph-up"></i>Flujo Proyectado</a></li>
-      <li><a class="nav-link" data-page="panelVencimientos"><i class="bi bi-calendar-event"></i>Vencimientos</a></li>
-      <li><a class="nav-link" data-page="rentabilidad"><i class="bi bi-pie-chart-fill"></i>Rentabilidad</a></li>
-      <li><a class="nav-link" data-page="gestion"><i class="bi bi-graph-up-arrow"></i>Gestión</a></li>
-      <li><a class="nav-link" data-page="reportes"><i class="bi bi-bar-chart-line-fill"></i>Reportes</a></li>
-      <li><a class="nav-link" data-page="historial"><i class="bi bi-clock-history"></i>Historial</a></li>
-      <li><a class="nav-link" data-page="estrategicos"><i class="bi bi-lightbulb-fill"></i>Estratégicos</a></li>
-      <li><a class="nav-link" data-page="calculadora"><i class="bi bi-calculator-fill"></i>Calculadora</a></li>
+      <div class="sl-items-inner">
+        <li><a class="nav-link" data-page="tesoreria"><i class="bi bi-safe-fill"></i>Tesorería Integral</a></li>
+        <li><a class="nav-link" data-page="flujoProyectado"><i class="bi bi-graph-up"></i>Flujo Proyectado</a></li>
+        <li><a class="nav-link" data-page="panelVencimientos"><i class="bi bi-calendar-event"></i>Vencimientos</a></li>
+        <li><a class="nav-link" data-page="rentabilidad"><i class="bi bi-pie-chart-fill"></i>Rentabilidad</a></li>
+        <li><a class="nav-link" data-page="gestion"><i class="bi bi-graph-up-arrow"></i>Gestión</a></li>
+        <li><a class="nav-link" data-page="reportes"><i class="bi bi-bar-chart-line-fill"></i>Reportes</a></li>
+        <li><a class="nav-link" data-page="historial"><i class="bi bi-clock-history"></i>Historial</a></li>
+        <li><a class="nav-link" data-page="estrategicos"><i class="bi bi-lightbulb-fill"></i>Estratégicos</a></li>
+        <li><a class="nav-link" data-page="calculadora"><i class="bi bi-calculator-fill"></i>Calculadora</a></li>
+      </div>
     </div>
 
     <!-- ── Configuración ── -->
     <div class="sl" data-group="archivos" onclick="toggleSBGroup('archivos')">
       <span><i class="bi bi-gear-fill me-1" style="font-size:.6rem;opacity:.7"></i>Configuración</span>
-      <i class="bi bi-chevron-down sl-chevron"></i>
+      <span style="display:flex;align-items:center;gap:4px"><span class="sl-badge" id="sb-badge-archivos" style="display:none">0</span><i class="bi bi-chevron-down sl-chevron"></i></span>
     </div>
     <div class="sl-items" id="sg-archivos">
-      <li><a class="nav-link" data-page="config"><i class="bi bi-gear-fill"></i>Configuración</a></li>
-      <li><a class="nav-link" data-page="usuarios"><i class="bi bi-shield-lock-fill"></i>Usuarios</a></li>
+      <div class="sl-items-inner">
+        <li><a class="nav-link" data-page="config"><i class="bi bi-gear-fill"></i>Configuración</a></li>
+        <li><a class="nav-link" data-page="usuarios"><i class="bi bi-shield-lock-fill"></i>Usuarios</a></li>
+      </div>
     </div>
 
   </ul>
@@ -881,14 +953,11 @@
         <i class="bi bi-cloud-arrow-down"></i>↺ Nube
       </button>
     </div>
-    <!-- Usuario + Cerrar sesión -->
-    <div class="sb-user">
-      <i class="bi bi-person-circle" style="color:#64748b;font-size:.9rem"></i>
-      <span id="sidebar-username" style="flex:1;color:#64748b">—</span>
-      <button class="sb-btn sb-logout" style="width:auto;padding:3px 8px;margin:0;font-size:.68rem" onclick="doLogout()">
-        <i class="bi bi-box-arrow-left"></i>Salir
-      </button>
-    </div>
+    <!-- Cerrar sesión -->
+    <button class="sb-btn sb-logout" style="width:100%;margin-top:4px" onclick="doLogout()">
+      <i class="bi bi-box-arrow-left"></i>Cerrar sesión
+    </button>
+    <span id="sidebar-username" style="display:none">—</span>
   </div>
 </nav>
 
@@ -7775,6 +7844,8 @@ async function doLogin() {
       document.getElementById('app-wrapper').classList.add('visible');
       const el = document.getElementById('sidebar-username');
       if (el) el.textContent = user;
+      const el2 = document.getElementById('sidebar-username2');
+      if (el2) el2.textContent = user;
       initApp();
     } else {
       errEl.textContent = 'Usuario o contraseña incorrectos.';
@@ -7858,6 +7929,17 @@ function toggleSBGroup(group) {
   const closing = !items.classList.contains('collapsed');
   items.classList.toggle('collapsed', closing);
   if (hdr) hdr.classList.toggle('collapsed', closing);
+  // Badge count
+  const badge = document.getElementById('sb-badge-' + group);
+  if (badge) {
+    if (closing) {
+      const count = items.querySelectorAll('.nav-link').length;
+      badge.textContent = count;
+      badge.style.display = 'inline-flex';
+    } else {
+      badge.style.display = 'none';
+    }
+  }
   // Persist state
   try {
     const s = JSON.parse(localStorage.getItem('muuk_sb_groups') || '{}');
@@ -7875,6 +7957,12 @@ function initSBGroups() {
         const hdr   = document.querySelector(`.sl[data-group="${group}"]`);
         if (items) items.classList.add('collapsed');
         if (hdr)   hdr.classList.add('collapsed');
+        const badge = document.getElementById('sb-badge-' + group);
+        if (badge) {
+          const count = items ? items.querySelectorAll('.nav-link').length : 0;
+          badge.textContent = count;
+          badge.style.display = 'inline-flex';
+        }
       }
     });
   } catch(e) {}
@@ -7892,6 +7980,8 @@ function expandSBGroupForPage(page) {
         hdr.classList.remove('collapsed');
         hdr.classList.add('sl-active'); // Resaltar grupo activo
       }
+      const badge = document.getElementById('sb-badge-' + group);
+      if (badge) badge.style.display = 'none';
       // Update persisted state
       try {
         const s = JSON.parse(localStorage.getItem('muuk_sb_groups') || '{}');
@@ -8110,6 +8200,8 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('app-wrapper').classList.add('visible');
     const el = document.getElementById('sidebar-username');
     if (el) el.textContent = authUser;
+    const el2 = document.getElementById('sidebar-username2');
+    if (el2) el2.textContent = authUser;
     initApp();
   } else {
     // No autenticado — mostrar solo el login
