@@ -4698,6 +4698,33 @@ CREATE POLICY "acceso total" ON flujo_caja_versions FOR ALL USING (true) WITH CH
   </div>
   <!-- ══════════════════ FIN CALCULADORA ══════════════════ -->
 
+  <!-- ══════════════════ BIENVENIDA ══════════════════ -->
+  <div id="page-bienvenida" class="page">
+    <div style="display:flex;align-items:center;justify-content:center;min-height:70vh">
+      <div style="text-align:center;max-width:480px;padding:40px 20px">
+        <div style="margin-bottom:24px">
+          <svg width="72" height="72" viewBox="0 0 100 100" style="display:inline-block">
+            <rect x="2" y="2" width="44" height="44" rx="10" fill="#ef4444"/>
+            <rect x="54" y="2" width="44" height="44" rx="10" fill="#f97316"/>
+            <rect x="2" y="54" width="44" height="44" rx="10" fill="#eab308"/>
+            <rect x="54" y="54" width="44" height="44" rx="10" fill="#ef4444"/>
+          </svg>
+        </div>
+        <h2 style="font-weight:800;color:#0f172a;margin-bottom:8px;font-size:1.7rem">
+          Bienvenido al sistema de<br><span style="color:#1d4ed8">Müük SRL</span>
+        </h2>
+        <p style="color:#64748b;font-size:.95rem;margin-bottom:32px;line-height:1.6">
+          Usá el menú lateral para acceder a los módulos disponibles para tu usuario.
+        </p>
+        <div style="display:inline-flex;align-items:center;gap:8px;background:#f1f5f9;padding:10px 20px;border-radius:10px;font-size:.82rem;color:#475569">
+          <i class="bi bi-person-circle" style="font-size:1rem"></i>
+          <span id="bienvenida-username">—</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- ══════════════════ FIN BIENVENIDA ══════════════════ -->
+
   <!-- ══════════════════ GESTIÓN DE USUARIOS ══════════════════ -->
   <div id="page-usuarios" class="page">
     <div class="page-hdr">
@@ -7267,7 +7294,7 @@ const MUUK_ACCESS_BASE = {
   'JonathanPalermo': null,
   'RicardoBodini':   null,
   'AlbertoPalermo':  null,
-  'PaulaSpinelli':   ['dashboard','comisiones','bcra','calendarioARCA','contabilidad',
+  'PaulaSpinelli':   ['bienvenida','comisiones','bcra','calendarioARCA','contabilidad',
                       'facturasACobrar','facturasPagar','estadosCuenta','stock',
                       'listasPrecios','empresas'],
 };
@@ -7368,7 +7395,7 @@ function uiNuevoUsuario() {
   document.getElementById('nuu-acc-total').checked = false;
   document.querySelectorAll('.nuu-grp-chk').forEach(c => c.checked = false);
   _nuuToggleTotal();
-  bootstrap.Modal.getOrCreate(document.getElementById('modalNuevoUsuario')).show();
+  bootstrap.Modal.getOrCreateInstance(document.getElementById('modalNuevoUsuario')).show();
 }
 
 function uiEditarAcceso(username) {
@@ -7385,7 +7412,7 @@ function uiEditarAcceso(username) {
     c.checked = esTotal || (pages.length > 0 && pages.every(p => acc.includes(p)));
   });
   _nuuToggleTotal();
-  bootstrap.Modal.getOrCreate(document.getElementById('modalNuevoUsuario')).show();
+  bootstrap.Modal.getOrCreateInstance(document.getElementById('modalNuevoUsuario')).show();
 }
 
 function _nuuToggleTotal() {
@@ -7421,7 +7448,7 @@ async function uiGuardarUsuario() {
     document.querySelectorAll('.nuu-grp-chk:checked').forEach(c => {
       pages.push(...(_GRUPOS_ACCESO[c.dataset.group]||[]));
     });
-    ea[nombre] = [...new Set(pages)];
+    ea[nombre] = ['bienvenida', ...new Set(pages)];
   }
   localStorage.setItem('muuk_extra_access', JSON.stringify(ea));
   bootstrap.Modal.getInstance(document.getElementById('modalNuevoUsuario'))?.hide();
@@ -7884,6 +7911,10 @@ function irA(p) {
   if (p==='liquidacion')       renderLiquidacion();
   if (p==='empresas')          renderEmpresas();
   if (p==='usuarios')          renderUsuarios();
+  if (p==='bienvenida') {
+    const el = document.getElementById('bienvenida-username');
+    if (el) el.textContent = sessionStorage.getItem('muukAuth') || '';
+  }
   // Actualizar nav-links activos
   document.querySelectorAll('#sidebar-nav .nav-link').forEach(l => {
     l.classList.toggle('active', l.dataset.page === p);
