@@ -92,8 +92,8 @@
     .sl-chevron { font-size: .6rem; transition: transform .22s ease; opacity: .5; }
     .sl.collapsed .sl-chevron { transform: rotate(-90deg); }
     .sl-items {
-      overflow: hidden; transition: max-height .3s cubic-bezier(0.4,0,0.2,1), opacity .25s ease;
-      max-height: 700px; opacity: 1;
+      overflow: hidden; transition: max-height .35s cubic-bezier(0.4,0,0.2,1), opacity .25s ease;
+      max-height: 2000px; opacity: 1; flex-shrink: 0;
     }
     .sl-items.collapsed { max-height: 0 !important; opacity: 0; pointer-events: none; }
     #sidebar-nav {
@@ -129,6 +129,14 @@
     .sb-btn.sb-restore:hover { background: rgba(59,130,246,.18); }
     .sb-btn.sb-logout { color: #fca5a5; border-color: rgba(239,68,68,.2); margin-top:4px; }
     .sb-btn.sb-logout:hover { background: rgba(239,68,68,.15); }
+    .sb-scroll-btn {
+      flex-shrink: 0; width: 100%; padding: 3px 0; border: none;
+      background: rgba(255,255,255,.04); color: #475569;
+      cursor: pointer; font-size: .72rem; text-align: center;
+      transition: background .15s, color .15s; display: none;
+    }
+    .sb-scroll-btn.visible { display: block; }
+    .sb-scroll-btn:hover { background: rgba(255,255,255,.1); color: #94a3b8; }
     .sb-user { display:flex; align-items:center; gap:6px; padding: 5px 4px 4px;
       font-size:.72rem; color:#64748b; border-top: 1px solid rgba(255,255,255,.05); margin-top:3px; }
     .sb-user i { font-size:.88rem; }
@@ -141,20 +149,6 @@
     .sl[data-group="analisis"].sl-active { border-left: 3px solid #8b5cf6; padding-left: 11px; }
     .sl[data-group="archivos"].sl-active { border-left: 3px solid #64748b; padding-left: 11px; }
 
-    /* ── Smooth grid animation for groups ── */
-    .sl-items {
-      display: grid;
-      grid-template-rows: 1fr;
-      max-height: none !important;
-      transition: grid-template-rows .28s ease, opacity .22s ease;
-      overflow: hidden;
-      opacity: 1;
-    }
-    .sl-items.collapsed {
-      grid-template-rows: 0fr;
-      opacity: 0;
-      pointer-events: none;
-    }
     .sl-items-inner { min-height: 0; }
 
     /* ── Active link left accent bar ── */
@@ -886,7 +880,8 @@
       <span id="sidebar-username2" style="flex:1;color:#94a3b8;font-weight:500">—</span>
     </div>
   </div>
-  <ul class="nav flex-column mt-1 flex-grow-1" id="sidebar-nav">
+  <button class="sb-scroll-btn" id="sb-scroll-up" onclick="_sbScroll(-1)" title="Subir"><i class="bi bi-chevron-up"></i></button>
+  <ul class="nav flex-column mt-1 flex-grow-1" id="sidebar-nav" onscroll="_sbScrollCheck()">
 
     <!-- ── Búsqueda global ── -->
     <li style="padding:6px 8px 2px">
@@ -986,6 +981,7 @@
     </div>
 
   </ul>
+  <button class="sb-scroll-btn" id="sb-scroll-down" onclick="_sbScroll(1)" title="Bajar"><i class="bi bi-chevron-down"></i></button>
 
   <!-- BCRA TASAS -->
   <div id="bcra-sidebar">
@@ -1004,30 +1000,10 @@
     <div id="sync-status" class="sync-status-none mb-2" style="font-size:.68rem;text-align:center">
       <i class="bi bi-cloud-slash me-1"></i>Sin sincronización
     </div>
-    <!-- Fila 1: Sincronizar + PDF -->
-    <div style="display:flex;gap:4px;margin-bottom:3px">
-      <button class="sb-btn sb-sync flex-fill" onclick="testConexionSupabase()">
-        <i class="bi bi-arrow-clockwise"></i>Sincronizar
-      </button>
-      <button class="sb-btn sb-pdf" style="width:36px;flex-shrink:0;padding:5px 0" onclick="generarReportePDF()" title="Generar PDF">
-        <i class="bi bi-file-earmark-pdf" style="font-size:.85rem"></i>
-      </button>
-      <button class="sb-btn" style="width:36px;flex-shrink:0;padding:5px 0;color:#86efac;border-color:rgba(16,185,129,.25);background:rgba(16,185,129,.07)" onclick="exportarExcel()" title="Exportar Excel">
-        <i class="bi bi-file-earmark-spreadsheet" style="font-size:.85rem"></i>
-      </button>
-    </div>
-    <!-- Fila 2: Backup + Restaurar + Forzar Supabase -->
-    <div style="display:flex;gap:4px">
-      <button class="sb-btn sb-backup" style="flex:1" onclick="exportarBackupJSON()" title="Descargar backup JSON">
-        <i class="bi bi-download"></i>Backup
-      </button>
-      <button class="sb-btn sb-restore" style="flex:1" onclick="importarBackupJSON()" title="Restaurar desde backup JSON">
-        <i class="bi bi-upload"></i>Restaurar
-      </button>
-      <button class="sb-btn" style="flex:1;color:#fcd34d;border-color:rgba(251,191,36,.3);background:rgba(251,191,36,.07)" onclick="forceRestoreFromSupabase()" title="Forzar restauración completa desde Supabase">
-        <i class="bi bi-cloud-arrow-down"></i>↺ Nube
-      </button>
-    </div>
+    <!-- Sincronizar -->
+    <button class="sb-btn sb-sync" style="width:100%;margin-bottom:3px" onclick="testConexionSupabase()">
+      <i class="bi bi-arrow-clockwise"></i>Sincronizar
+    </button>
     <!-- Cerrar sesión -->
     <button class="sb-btn sb-logout" style="width:100%;margin-top:4px" onclick="doLogout()">
       <i class="bi bi-box-arrow-left"></i>Cerrar sesión
@@ -8145,6 +8121,7 @@ function initApp() {
     });
   });
   initSBGroups();
+  setTimeout(_sbScrollCheck, 400);
   updateBreadcrumb('dashboard');
   renderTodo();
   _aiRestoreConfig();
@@ -8196,6 +8173,21 @@ function toggleSBGroup(group) {
     s[group] = closing;
     localStorage.setItem('muuk_sb_groups', JSON.stringify(s));
   } catch(e) {}
+  setTimeout(_sbScrollCheck, 320);
+}
+
+function _sbScroll(dir) {
+  const nav = document.getElementById('sidebar-nav');
+  if (nav) nav.scrollBy({ top: dir * 160, behavior: 'smooth' });
+  setTimeout(_sbScrollCheck, 200);
+}
+function _sbScrollCheck() {
+  const nav = document.getElementById('sidebar-nav');
+  const up  = document.getElementById('sb-scroll-up');
+  const dn  = document.getElementById('sb-scroll-down');
+  if (!nav || !up || !dn) return;
+  up.classList.toggle('visible', nav.scrollTop > 8);
+  dn.classList.toggle('visible', nav.scrollTop + nav.clientHeight < nav.scrollHeight - 8);
 }
 
 function initSBGroups() {
