@@ -15079,7 +15079,11 @@ function _getGestionDataMerged() {
   if (!GESTION_DATA) return null;
   const manual = ST.cobranzasIngresadas || [];
   if (!manual.length) return GESTION_DATA;
-  const MES_ORDER = ['Enero 2026','Febrero 2026','Marzo 2026','Abril 2026','Mayo 2026','Junio 2026','Julio 2026','Agosto 2026','Septiembre 2026','Octubre 2026','Noviembre 2026','Diciembre 2026'];
+
+  const MES_ORDER = ['Enero 2026','Febrero 2026','Marzo 2026','Abril 2026','Mayo 2026','Junio 2026',
+    'Julio 2026','Agosto 2026','Septiembre 2026','Octubre 2026','Noviembre 2026','Diciembre 2026'];
+
+  // byMes
   const byMes = GESTION_DATA.byMes.map(m => [...m]);
   manual.forEach(c => {
     const idx = byMes.findIndex(m => m[0] === (c.mes||''));
@@ -15093,7 +15097,48 @@ function _getGestionDataMerged() {
     }
   });
   byMes.sort((a, b) => MES_ORDER.indexOf(a[0]) - MES_ORDER.indexOf(b[0]));
-  return { ...GESTION_DATA, byMes };
+
+  // rows — append synthetic rows in same format: [mes, fecha, cliente, empresa, fac, siv, pct, com, nroDoc]
+  const syntheticRows = manual.map(c => [
+    c.mes||'', c.fecha||'', c.cliente||'', c.empresa||'',
+    c.importeFac||0, c.importeSIVA||0, c.pct||0, c.comision||0,
+    [c.documento, c.nroFC].filter(Boolean).join(' ')
+  ]);
+  const rows = [...GESTION_DATA.rows, ...syntheticRows];
+
+  // clientes — deep-clone originals then add manual entries
+  const cliMap = {};
+  GESTION_DATA.clientes.forEach(c => { cliMap[c[0]] = [...c]; });
+  manual.forEach(c => {
+    if (!c.cliente) return;
+    if (cliMap[c.cliente]) {
+      cliMap[c.cliente][1] += 1;
+      cliMap[c.cliente][2] += c.importeFac  || 0;
+      cliMap[c.cliente][3] += c.importeSIVA || 0;
+      cliMap[c.cliente][4] += c.comision    || 0;
+    } else {
+      cliMap[c.cliente] = [c.cliente, 1, c.importeFac||0, c.importeSIVA||0, c.comision||0];
+    }
+  });
+  const clientes = Object.values(cliMap).sort((a, b) => b[4] - a[4]);
+
+  // empresas — same pattern
+  const empMap = {};
+  GESTION_DATA.empresas.forEach(e => { empMap[e[0]] = [...e]; });
+  manual.forEach(c => {
+    if (!c.empresa) return;
+    if (empMap[c.empresa]) {
+      empMap[c.empresa][1] += 1;
+      empMap[c.empresa][2] += c.importeFac  || 0;
+      empMap[c.empresa][3] += c.importeSIVA || 0;
+      empMap[c.empresa][4] += c.comision    || 0;
+    } else {
+      empMap[c.empresa] = [c.empresa, 1, c.importeFac||0, c.importeSIVA||0, c.comision||0];
+    }
+  });
+  const empresas = Object.values(empMap).sort((a, b) => b[2] - a[2]);
+
+  return { ...GESTION_DATA, byMes, rows, clientes, empresas };
 }
 
 function gestionTab(tab, btn) {
@@ -15108,17 +15153,19 @@ function gestionTab(tab, btn) {
 
 function gestionFiltrarClientes() {
   if (!GESTION_DATA) return;
+  const d = _getGestionDataMerged();
   const q = (document.getElementById('gest-buscar-cliente').value || '').toLowerCase();
-  const filtered = GESTION_DATA.clientes.filter(c => c[0].toLowerCase().includes(q));
+  const filtered = d.clientes.filter(c => c[0].toLowerCase().includes(q));
   _renderClienteTabla(filtered);
 }
 
 function gestionFiltrarDetalle() {
   if (!GESTION_DATA) return;
+  const d = _getGestionDataMerged();
   const mes = document.getElementById('gest-fil-mes').value;
   const emp = document.getElementById('gest-fil-empresa').value;
   const cli = (document.getElementById('gest-fil-cliente').value || '').toLowerCase();
-  const filtered = GESTION_DATA.rows.filter(r =>
+  const filtered = d.rows.filter(r =>
     (!mes || r[0] === mes) && (!emp || r[3] === emp) && (!cli || r[2].toLowerCase().includes(cli))
   );
   _renderDetalleTabla(filtered);
@@ -15672,7 +15719,8 @@ function printCrossSellPDF() {
 
   const filMes = document.getElementById('crosssell-mes-filter');
   const mesFilter = filMes ? filMes.value : '';
-  const rows = mesFilter ? GESTION_DATA.rows.filter(r => r[0] === mesFilter) : GESTION_DATA.rows;
+  const _mergedForPDF = _getGestionDataMerged() || GESTION_DATA;
+  const rows = mesFilter ? _mergedForPDF.rows.filter(r => r[0] === mesFilter) : _mergedForPDF.rows;
   if (rows.length === 0) { toast('No hay datos para el período seleccionado','warning'); return; }
 
   const periodoLabel = mesFilter || 'Todos los meses 2026';
@@ -15961,7 +16009,7 @@ function _renderEmpresaChart() {
   const ctxE = document.getElementById('gest-chart-empresa');
   if (!ctxE) return;
   if (_gestCharts.empresa) _gestCharts.empresa.destroy();
-  const top = GESTION_DATA.empresas.slice(0, 12);
+  const top = (_getGestionDataMerged() || GESTION_DATA).empresas.slice(0, 12);
   _gestCharts.empresa = new Chart(ctxE, {
     type: 'bar',
     data: {
@@ -15995,7 +16043,7 @@ function renderEstrategicos() {
       return;
     }
   }
-  const d = GESTION_DATA;
+  const d = _getGestionDataMerged();
   if (!d || !d.rows || !d.rows.length) {
     const st = document.getElementById('estrat-status');
     if (st) st.innerHTML = '<i class="bi bi-exclamation-triangle text-warning me-1"></i>Sin datos de Gestión. Sincronizá primero desde la pestaña Gestión.';
@@ -16495,12 +16543,13 @@ function _mergeAllSheets(sheets) {
 
   // Si no encontramos datos multi-year, complementar con GESTION_DATA
   if (!_HIST_DATA[2026] && GESTION_DATA && GESTION_DATA.byMes) {
+    const _gd26 = _getGestionDataMerged() || GESTION_DATA;
     const y = { ops:0, fac:0, siv:0, com:0, clientes:new Set(), empresas:new Set(), meses:{} };
-    GESTION_DATA.byMes.forEach((m,i) => {
+    _gd26.byMes.forEach((m,i) => {
       y.ops += m[1]; y.fac += m[2]; y.siv += (m[3]||0); y.com += m[4]; y.meses[i+1] = m[4];
     });
-    if (GESTION_DATA.clientes) GESTION_DATA.clientes.forEach(cl => y.clientes.add(cl[0]));
-    if (GESTION_DATA.empresas) GESTION_DATA.empresas.forEach(e => y.empresas.add(e[0]));
+    if (_gd26.clientes) _gd26.clientes.forEach(cl => y.clientes.add(cl[0]));
+    if (_gd26.empresas) _gd26.empresas.forEach(e => y.empresas.add(e[0]));
     _HIST_DATA[2026] = y;
   }
 
@@ -17229,10 +17278,11 @@ function renderFlujoProyectado() {
 function renderRentabilidad() {
   const empresas = {};
 
-  // ── Fuente principal: GESTION_DATA.empresas (ya agregado por empresa) ──
+  // ── Fuente principal: empresas mergeadas (incluye cobranzas manuales) ──
   // empresas[i] = [nombre, ops, facturado, sinIVA, comision]
-  if (GESTION_DATA && GESTION_DATA.empresas) {
-    GESTION_DATA.empresas.forEach(e => {
+  const _rentGD = (GESTION_DATA && _getGestionDataMerged()) || GESTION_DATA;
+  if (_rentGD && _rentGD.empresas) {
+    _rentGD.empresas.forEach(e => {
       const k = e[0] || 'Sin nombre';
       if (!empresas[k]) empresas[k] = { nombre: k, ops: 0, facturado: 0, sinIVA: 0, comision: 0, cobrado: 0, pendiente: 0 };
       empresas[k].ops      += (e[1] || 0);
