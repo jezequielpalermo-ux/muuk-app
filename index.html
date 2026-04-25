@@ -1064,6 +1064,17 @@
         <i class="bi bi-file-earmark-pdf me-1"></i>Reporte PDF
       </button>
     </div>
+    <!-- Alerta restauración de datos -->
+    <div id="dash-warn-caja" style="display:none;margin-bottom:12px;background:#fef3c7;border:1.5px solid #f59e0b;border-radius:10px;padding:12px 16px;align-items:center;gap:12px;flex-wrap:wrap">
+      <i class="bi bi-exclamation-triangle-fill" style="color:#d97706;font-size:1.1rem;flex-shrink:0"></i>
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:700;color:#92400e;font-size:.82rem">Sin registros de caja</div>
+        <div style="color:#78350f;font-size:.75rem">Los datos de Bancos y Efectivo están vacíos. Los saldos muestran $0.</div>
+      </div>
+      <button onclick="irA('configuracion')" style="flex-shrink:0;background:#d97706;color:#fff;border:none;border-radius:7px;padding:6px 14px;font-size:.75rem;font-weight:700;cursor:pointer">
+        <i class="bi bi-upload me-1"></i>Restaurar backup
+      </button>
+    </div>
     <!-- (filler div para compatibilidad) -->
     <div style="display:none"><div class="card-body p-0"></div>
     </div>
@@ -8573,10 +8584,17 @@ function renderDashboard() {
   document.getElementById('stat-pagar-n').textContent =
     `${pagarPend.length} cheque${pagarPend.length!==1?'s':''}${nVencPagar>0?' · '+nVencPagar+' vencido'+(nVencPagar!==1?'s':''):''}`;
 
-  const sB=calcSaldo(ST.cajaBancos), sE=calcSaldo(ST.cajaEfectivo);
+  const sB=calcSaldo(ST.cajaBancos||[]), sE=calcSaldo(ST.cajaEfectivo||[]);
   document.getElementById('stat-bancos').textContent   = fmt(sB);
   document.getElementById('stat-efectivo').textContent = fmt(sE);
   document.getElementById('saldo-efectivo-total').textContent = fmt(sE);
+
+  // Alerta de datos vacíos
+  const _warnEl = document.getElementById('dash-warn-caja');
+  if (_warnEl) {
+    const _empty = !(ST.cajaBancos||[]).length && !(ST.cajaEfectivo||[]).length;
+    _warnEl.style.display = _empty ? 'flex' : 'none';
+  }
 
   const mesActual=hoy().slice(0,7);
   // Mes anterior ISO (YYYY-MM)
@@ -8899,7 +8917,7 @@ function setFlujoDays(d) {
     if(b){ b.className = n==String(d) ? 'btn btn-primary' : 'btn btn-outline-secondary'; b.style.fontSize='.68rem'; b.style.padding='2px 8px'; }
   });
   // Re-renderizar solo el gráfico de flujo
-  const sB=calcSaldo(ST.cajaBancos), sE=calcSaldo(ST.cajaEfectivo);
+  const sB=calcSaldo(ST.cajaBancos||[]), sE=calcSaldo(ST.cajaEfectivo||[]);
   const cartera=[...ST.chequesFisicos.filter(c=>c.estado==='en_cartera'||c.estado==='pendiente'),...ST.eCheques.filter(c=>c.estado==='pendiente')];
   renderDashCharts(sB, sE, cartera.reduce((s,c)=>s+ +c.monto,0));
 }
@@ -11280,7 +11298,7 @@ async function syncGoogleSheets(){
 function generarReportePDF() {
   const f = hoy();
   const fFmt = fmtF(f);
-  const sB = calcSaldo(ST.cajaBancos), sE = calcSaldo(ST.cajaEfectivo);
+  const sB = calcSaldo(ST.cajaBancos||[]), sE = calcSaldo(ST.cajaEfectivo||[]);
 
   // Cheques físicos en cartera
   const fisEnCartera = ST.chequesFisicos.filter(c=>c.estado==='en_cartera'||c.estado==='pendiente');
