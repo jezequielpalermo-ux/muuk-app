@@ -4655,7 +4655,21 @@ CREATE POLICY "acceso total" ON flujo_caja_versions FOR ALL USING (true) WITH CH
                   <label class="form-label small fw-semibold">Importe S/IVA <span class="text-danger">*</span></label>
                   <div class="input-group input-group-sm">
                     <span class="input-group-text">$</span>
-                    <input type="number" class="form-control" id="ic-importe-siva" placeholder="0.00" min="0" step="0.01">
+                    <input type="number" class="form-control" id="ic-importe-siva" placeholder="0.00" min="0" step="0.01" oninput="_icAutoComision()">
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label small fw-semibold">% Comisión</label>
+                  <div class="input-group input-group-sm">
+                    <input type="number" class="form-control" id="ic-pct-com" placeholder="0.0" min="0" max="100" step="0.1" oninput="_icAutoComision()">
+                    <span class="input-group-text">%</span>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label small fw-semibold">Comisión calculada</label>
+                  <div class="input-group input-group-sm">
+                    <span class="input-group-text">$</span>
+                    <input type="number" class="form-control" id="ic-importe-com" placeholder="0.00" readonly style="background:var(--bg-card,#f8fafc)">
                   </div>
                 </div>
               </div>
@@ -15818,9 +15832,10 @@ function renderHistorialCobranzas() {
   // Map manual entries to same row format: [mes, fecha, cliente, empresa, fac, siv, pct, com, nroDoc]
   const manualRows = (ST.cobranzasIngresadas||[]).map(c => [
     c.mes||'', c.fecha||'', c.cliente||'', c.empresa||'',
-    c.importeFac||0, c.importeSIVA||0, c.tipoPago||'manual', 0,
+    c.importeFac||0, c.importeSIVA||0, c.tipoPago||'manual', c.comision||0,
     [c.documento, c.nroFC].filter(Boolean).join(' '),
     true, // _manual flag at index 9
+    c.pct||0, // index 10: pct for % column
   ]);
   const allRows = [...rows, ...manualRows];
   // Populate filter dropdowns (only on first call or when needed)
@@ -15871,7 +15886,9 @@ function renderHistorialCobranzas() {
       const pctNum = typeof pctRaw === 'number' ? pctRaw : parseFloat(String(pctRaw).replace(',','.'));
       if (!isNaN(pctNum)) pct = (pctNum < 1 ? (pctNum * 100).toFixed(1) : pctNum.toFixed(1)) + '%';
     } else if (isManual) {
-      pct = `<span class="badge" style="background:#e0f2fe;color:#0369a1;font-size:.58rem">${r[6]||'manual'}</span>`;
+      const pctM = r[10];
+      pct = pctM ? `<span class="badge" style="background:#e0f2fe;color:#0369a1;font-size:.58rem">${pctM}%</span>`
+                 : `<span class="badge" style="background:#e0f2fe;color:#0369a1;font-size:.58rem">${r[6]||'manual'}</span>`;
     }
     const nroDoc = r[8] || '';
     return `<tr${isManual ? ' style="background:rgba(79,70,229,.03)"' : ''}>
@@ -21967,11 +21984,18 @@ function _icAutoSIVA() {
   if (!fac) return;
   const siva = document.getElementById('ic-importe-siva');
   if (siva && !siva.value) siva.value = (fac / 1.21).toFixed(2);
+  _icAutoComision();
+}
+function _icAutoComision() {
+  const siva = parseFloat(document.getElementById('ic-importe-siva')?.value||'0');
+  const pct  = parseFloat(document.getElementById('ic-pct-com')?.value||'0');
+  const el   = document.getElementById('ic-importe-com');
+  if (el) el.value = (siva && pct) ? (siva * pct / 100).toFixed(2) : '';
 }
 
 function _icLimpiar() {
   ['ic-cliente','ic-empresa','ic-documento','ic-tipopago'].forEach(id => { const el=document.getElementById(id); if(el) el.selectedIndex=0; });
-  ['ic-nrofc','ic-nropedido','ic-detalle','ic-importe-fac','ic-importe-siva'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+  ['ic-nrofc','ic-nropedido','ic-detalle','ic-importe-fac','ic-importe-siva','ic-pct-com','ic-importe-com'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
 }
 
 function ingresarCobranzaGuardar() {
@@ -21981,6 +22005,8 @@ function ingresarCobranzaGuardar() {
   if (!importeFac || importeFac <= 0) { toast('Ingresá el Importe Facturado', 'danger'); return; }
   if (!importeSIVA || importeSIVA <= 0) { toast('Ingresá el Importe S/IVA', 'danger'); return; }
   if (!tipoPago) { toast('Seleccioná el Tipo de pago', 'danger'); return; }
+  const pct      = parseFloat(document.getElementById('ic-pct-com')?.value||'0') || 0;
+  const comision = pct ? Math.round(importeSIVA * pct / 100) : 0;
   if (!Array.isArray(ST.cobranzasIngresadas)) ST.cobranzasIngresadas = [];
   ST.cobranzasIngresadas.push({
     id: uid(), mes: document.getElementById('ic-mes')?.value||'', fecha: hoy(),
@@ -21991,7 +22017,7 @@ function ingresarCobranzaGuardar() {
     nroFC:     document.getElementById('ic-nrofc')?.value||'',
     nroPedido: document.getElementById('ic-nropedido')?.value||'',
     importeFac: Math.round(importeFac), importeSIVA: Math.round(importeSIVA),
-    tipoPago, createdAt: new Date().toISOString(), _manual: true,
+    pct, comision, tipoPago, createdAt: new Date().toISOString(), _manual: true,
   });
   save(); _icLimpiar(); _icRenderUltimas();
   toast('Cobranza guardada ✓', 'success');
