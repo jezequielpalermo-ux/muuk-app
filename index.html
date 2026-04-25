@@ -4648,14 +4648,14 @@ CREATE POLICY "acceso total" ON flujo_caja_versions FOR ALL USING (true) WITH CH
                   <label class="form-label small fw-semibold">Importe Facturado (con IVA) <span class="text-danger">*</span></label>
                   <div class="input-group input-group-sm">
                     <span class="input-group-text">$</span>
-                    <input type="number" class="form-control" id="ic-importe-fac" placeholder="0.00" min="0" step="0.01" oninput="_icAutoSIVA()">
+                    <input type="text" inputmode="numeric" class="form-control" id="ic-importe-fac" placeholder="0" oninput="_icAutoSIVA()" onblur="_icFmtAmt(this)" onfocus="_icUnfmtAmt(this)">
                   </div>
                 </div>
                 <div class="col-md-6">
                   <label class="form-label small fw-semibold">Importe S/IVA <span class="text-danger">*</span></label>
                   <div class="input-group input-group-sm">
                     <span class="input-group-text">$</span>
-                    <input type="number" class="form-control" id="ic-importe-siva" placeholder="0.00" min="0" step="0.01" oninput="_icAutoComision()">
+                    <input type="text" inputmode="numeric" class="form-control" id="ic-importe-siva" placeholder="0" oninput="_icAutoComision()" onblur="_icFmtAmt(this)" onfocus="_icUnfmtAmt(this)">
                   </div>
                 </div>
                 <div class="col-md-6">
@@ -4669,7 +4669,7 @@ CREATE POLICY "acceso total" ON flujo_caja_versions FOR ALL USING (true) WITH CH
                   <label class="form-label small fw-semibold">Comisión calculada</label>
                   <div class="input-group input-group-sm">
                     <span class="input-group-text">$</span>
-                    <input type="number" class="form-control" id="ic-importe-com" placeholder="0.00" readonly style="background:var(--bg-card,#f8fafc)">
+                    <input type="text" class="form-control" id="ic-importe-com" placeholder="0" readonly style="background:var(--bg-card,#f8fafc)">
                   </div>
                 </div>
               </div>
@@ -15057,6 +15057,27 @@ function _loadGestionData() {
   return false;
 }
 
+function _getGestionDataMerged() {
+  if (!GESTION_DATA) return null;
+  const manual = ST.cobranzasIngresadas || [];
+  if (!manual.length) return GESTION_DATA;
+  const MES_ORDER = ['Enero 2026','Febrero 2026','Marzo 2026','Abril 2026','Mayo 2026','Junio 2026','Julio 2026','Agosto 2026','Septiembre 2026','Octubre 2026','Noviembre 2026','Diciembre 2026'];
+  const byMes = GESTION_DATA.byMes.map(m => [...m]);
+  manual.forEach(c => {
+    const idx = byMes.findIndex(m => m[0] === (c.mes||''));
+    if (idx >= 0) {
+      byMes[idx][1] += 1;
+      byMes[idx][2] += c.importeFac  || 0;
+      byMes[idx][3] += c.importeSIVA || 0;
+      byMes[idx][4] += c.comision    || 0;
+    } else if (c.mes) {
+      byMes.push([c.mes, 1, c.importeFac||0, c.importeSIVA||0, c.comision||0]);
+    }
+  });
+  byMes.sort((a, b) => MES_ORDER.indexOf(a[0]) - MES_ORDER.indexOf(b[0]));
+  return { ...GESTION_DATA, byMes };
+}
+
 function gestionTab(tab, btn) {
   document.querySelectorAll('.gest-tab').forEach(el => el.style.display = 'none');
   document.querySelectorAll('#gestion-tabs .nav-link').forEach(b => b.classList.remove('active'));
@@ -15106,7 +15127,7 @@ function renderGestion() {
     gestionSincronizar();
     return;
   }
-  const d = GESTION_DATA;
+  const d = _getGestionDataMerged();
   if (!d.rows || d.rows.length === 0) {
     const st = document.getElementById('gest-status');
     if (st) st.innerHTML = '<i class="bi bi-exclamation-triangle text-warning me-1"></i>No hay datos 2026 en caché. Hacé clic en "Actualizar".';
@@ -21979,18 +22000,32 @@ function _icEliminarCobranza(id) {
   save(); _icRenderUltimas(); toast('Cobranza eliminada', 'info');
 }
 
+function _icParseAmt(id) {
+  const v = document.getElementById(id)?.value || '';
+  return parseFloat(v.replace(/\./g,'').replace(',','.')) || 0;
+}
+function _icFmtAmt(el) {
+  const n = parseFloat((el.value||'').replace(/\./g,'').replace(',','.'));
+  if (n > 0) el.value = Math.round(n).toLocaleString('es-AR');
+  else el.value = '';
+}
+function _icUnfmtAmt(el) {
+  const n = parseFloat((el.value||'').replace(/\./g,'').replace(',','.'));
+  el.value = n > 0 ? n : '';
+}
+
 function _icAutoSIVA() {
-  const fac = parseFloat(document.getElementById('ic-importe-fac')?.value||'0');
+  const fac = _icParseAmt('ic-importe-fac');
   if (!fac) return;
   const siva = document.getElementById('ic-importe-siva');
-  if (siva && !siva.value) siva.value = (fac / 1.21).toFixed(2);
+  if (siva && !siva.value) siva.value = Math.round(fac / 1.21);
   _icAutoComision();
 }
 function _icAutoComision() {
-  const siva = parseFloat(document.getElementById('ic-importe-siva')?.value||'0');
+  const siva = _icParseAmt('ic-importe-siva');
   const pct  = parseFloat(document.getElementById('ic-pct-com')?.value||'0');
   const el   = document.getElementById('ic-importe-com');
-  if (el) el.value = (siva && pct) ? (siva * pct / 100).toFixed(2) : '';
+  if (el) el.value = (siva && pct) ? Math.round(siva * pct / 100).toLocaleString('es-AR') : '';
 }
 
 function _icLimpiar() {
@@ -21999,8 +22034,8 @@ function _icLimpiar() {
 }
 
 function ingresarCobranzaGuardar() {
-  const importeFac  = parseFloat(document.getElementById('ic-importe-fac')?.value||'0');
-  const importeSIVA = parseFloat(document.getElementById('ic-importe-siva')?.value||'0');
+  const importeFac  = _icParseAmt('ic-importe-fac');
+  const importeSIVA = _icParseAmt('ic-importe-siva');
   const tipoPago    = document.getElementById('ic-tipopago')?.value||'';
   if (!importeFac || importeFac <= 0) { toast('Ingresá el Importe Facturado', 'danger'); return; }
   if (!importeSIVA || importeSIVA <= 0) { toast('Ingresá el Importe S/IVA', 'danger'); return; }
