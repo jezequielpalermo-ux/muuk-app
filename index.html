@@ -2940,7 +2940,18 @@ CREATE TABLE flujo_caja_versions (
   saved_by TEXT DEFAULT ''
 );
 ALTER TABLE flujo_caja_versions ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "acceso total" ON flujo_caja_versions FOR ALL USING (true) WITH CHECK (true);</pre>
+CREATE POLICY "acceso total" ON flujo_caja_versions FOR ALL USING (true) WITH CHECK (true);
+
+CREATE TABLE muuk_daily_backups (
+  id BIGSERIAL PRIMARY KEY,
+  backup_date DATE NOT NULL DEFAULT CURRENT_DATE,
+  data JSONB NOT NULL,
+  saved_at TIMESTAMPTZ DEFAULT NOW(),
+  saved_by TEXT DEFAULT '',
+  size_kb INTEGER
+);
+ALTER TABLE muuk_daily_backups ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "acceso total" ON muuk_daily_backups FOR ALL USING (true) WITH CHECK (true);</pre>
                 <ol start="4">
                   <li>Andá a <strong>Settings → API</strong> y copiá:<br>
                     — <strong>Project URL</strong> (ej: <code>https://abcd1234.supabase.co</code>)<br>
@@ -2952,6 +2963,28 @@ CREATE POLICY "acceso total" ON flujo_caja_versions FOR ALL USING (true) WITH CH
             </div>
           </div>
         </div>
+
+        <!-- Backups diarios -->
+        <div style="margin-top:16px;border-top:1px solid #e2e8f0;padding-top:14px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+            <div>
+              <strong style="font-size:.85rem"><i class="bi bi-calendar-check-fill me-2 text-success"></i>Backups diarios automáticos</strong>
+              <div style="font-size:.72rem;color:#64748b;margin-top:2px">1 backup por día, guardados 30 días en la nube · Restauración con un click</div>
+            </div>
+            <div style="display:flex;gap:6px">
+              <button onclick="_supabaseDailyBackup(true)" style="background:#16a34a;color:#fff;border:none;border-radius:7px;padding:5px 12px;cursor:pointer;font-size:.75rem;font-weight:600">
+                <i class="bi bi-cloud-arrow-up me-1"></i>Backup ahora
+              </button>
+              <button onclick="_renderBackupsList()" style="background:#f1f5f9;color:#475569;border:1px solid #e2e8f0;border-radius:7px;padding:5px 12px;cursor:pointer;font-size:.75rem">
+                <i class="bi bi-arrow-clockwise me-1"></i>Actualizar lista
+              </button>
+            </div>
+          </div>
+          <div id="sb-backups-list" style="font-size:.8rem;color:#94a3b8">
+            <div style="text-align:center;padding:12px;color:#94a3b8;font-size:.78rem"><i class="bi bi-cloud me-1"></i>Cargando backups...</div>
+          </div>
+        </div>
+
       </div>
     </div>
 
@@ -4910,11 +4943,11 @@ CREATE POLICY "acceso total" ON flujo_caja_versions FOR ALL USING (true) WITH CH
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
           <div>
             <label style="font-size:.75rem;font-weight:600;color:#475569;display:block;margin-bottom:4px">Cantidad *</label>
-            <input id="cron-f-cantidad" type="number" min="1" class="form-control form-control-sm" placeholder="Ej: 26">
+            <input id="cron-f-cantidad" type="number" min="1" class="form-control form-control-sm" placeholder="Ej: 26" oninput="_cronCalcTotalPrecio()">
           </div>
           <div>
             <label style="font-size:.75rem;font-weight:600;color:#475569;display:block;margin-bottom:4px">Tipo</label>
-            <select id="cron-f-tipo" class="form-select form-select-sm">
+            <select id="cron-f-tipo" class="form-select form-select-sm" onchange="_cronCalcTotalPrecio()">
               <option value="Pallets">Pallets</option>
               <option value="Bolsas">Bolsas</option>
               <option value="Unidades">Unidades</option>
@@ -4934,7 +4967,7 @@ CREATE POLICY "acceso total" ON flujo_caja_versions FOR ALL USING (true) WITH CH
           </div>
           <div>
             <label style="font-size:.75rem;font-weight:600;color:#475569;display:block;margin-bottom:4px">Peso</label>
-            <select id="cron-f-peso" class="form-select form-select-sm">
+            <select id="cron-f-peso" class="form-select form-select-sm" onchange="_cronCalcTotalPrecio()">
               <option value="1 kg">x 1 kg</option>
               <option value="25 kg">x 25 kg</option>
               <option value="50 kg">x 50 kg</option>
@@ -4943,11 +4976,12 @@ CREATE POLICY "acceso total" ON flujo_caja_versions FOR ALL USING (true) WITH CH
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
           <div>
-            <label style="font-size:.75rem;font-weight:600;color:#475569;display:block;margin-bottom:4px">Precio pedido (opcional)</label>
+            <label style="font-size:.75rem;font-weight:600;color:#475569;display:block;margin-bottom:4px">Precio x unidad (opcional)</label>
             <div style="position:relative">
               <span style="position:absolute;left:8px;top:50%;transform:translateY(-50%);font-size:.75rem;color:#94a3b8;pointer-events:none">$</span>
-              <input id="cron-f-precio" type="number" min="0" step="1" class="form-control form-control-sm" placeholder="0" style="padding-left:18px">
+              <input id="cron-f-precio" type="number" min="0" step="0.01" class="form-control form-control-sm" placeholder="$ por bolsa" style="padding-left:18px" oninput="_cronCalcTotalPrecio()">
             </div>
+            <div id="cron-f-precio-total" style="font-size:.68rem;font-weight:700;color:#4f46e5;margin-top:4px;min-height:14px"></div>
           </div>
           <div>
             <label style="font-size:.75rem;font-weight:600;color:#475569;display:block;margin-bottom:4px">Notas (opcional)</label>
@@ -7090,6 +7124,103 @@ async function _guardarVersion(user) {
       body: JSON.stringify({ data: ST, saved_by: user })
     });
   } catch(e) { /* versioning es secundario, no bloquear */ }
+  // También intentar backup diario (solo hace algo si todavía no se hizo hoy)
+  _supabaseDailyBackup(false);
+}
+
+/* ── BACKUP DIARIO EN LA NUBE ───────────────────────────────────── */
+
+async function _supabaseDailyBackup(force) {
+  if (!sbReady() || !_online) return;
+  const today = new Date().toISOString().slice(0, 10);
+  const lastBackup = localStorage.getItem('muuk_last_daily_backup');
+  if (!force && lastBackup === today) return; // Ya se hizo hoy
+  try {
+    const { comisionesResumen, comisionesTotal, comisionesTimestamp, ...backupData } = ST;
+    const jsonStr = JSON.stringify(backupData);
+    const sizeKb  = Math.round(jsonStr.length / 1024);
+    const user     = sessionStorage.getItem('muukAuth') || 'sistema';
+    const res = await fetch(SB_URL + '/rest/v1/muuk_daily_backups', {
+      method: 'POST',
+      headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ backup_date: today, data: backupData, saved_by: user, size_kb: sizeKb })
+    });
+    if (res.ok) {
+      localStorage.setItem('muuk_last_daily_backup', today);
+      if (force) toast('☁️ Backup diario guardado correctamente (' + sizeKb + ' KB)', 'success');
+      _renderBackupsList();
+    } else {
+      const errBody = await res.text();
+      // Si el error es unique-constraint (ya existe para hoy), marcar igualmente
+      if (errBody.includes('duplicate') || errBody.includes('unique') || res.status === 409) {
+        localStorage.setItem('muuk_last_daily_backup', today);
+      } else if (force) {
+        toast('⚠ No se pudo guardar el backup: ' + res.status, 'warning');
+      }
+    }
+  } catch(e) {
+    if (force) toast('Error al guardar backup: ' + e.message, 'danger');
+  }
+}
+
+async function _renderBackupsList() {
+  const el = document.getElementById('sb-backups-list');
+  if (!el) return;
+  if (!sbReady()) {
+    el.innerHTML = '<div style="color:#94a3b8;font-size:.78rem;padding:8px">Supabase no configurado — activá la base de datos primero.</div>';
+    return;
+  }
+  el.innerHTML = '<div style="text-align:center;padding:12px;color:#94a3b8;font-size:.78rem"><i class="bi bi-hourglass-split me-1"></i>Cargando backups...</div>';
+  try {
+    const res = await fetch(
+      SB_URL + '/rest/v1/muuk_daily_backups?select=id,backup_date,saved_at,saved_by,size_kb&order=backup_date.desc&limit=30',
+      { headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY }, cache: 'no-store' }
+    );
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const rows = await res.json();
+    if (!Array.isArray(rows) || !rows.length) {
+      el.innerHTML = '<div style="color:#94a3b8;font-size:.78rem;padding:8px 0"><i class="bi bi-info-circle me-1"></i>Sin backups aún — se creará el primero automáticamente hoy al guardar datos.</div>';
+      return;
+    }
+    const today = new Date().toISOString().slice(0, 10);
+    el.innerHTML = rows.map(function(r) {
+      const isToday = r.backup_date === today;
+      const dt = new Date(r.saved_at).toLocaleString('es-AR', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+      return '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:' + (isToday?'#f0fdf4':'#f8fafc') + ';border:1px solid ' + (isToday?'#86efac':'#e2e8f0') + ';border-radius:8px;margin-bottom:6px;gap:8px;flex-wrap:wrap">' +
+        '<div style="flex:1;min-width:0">' +
+          '<span style="font-weight:700;font-size:.82rem">' + r.backup_date + '</span>' +
+          (isToday ? '<span style="background:#16a34a;color:#fff;border-radius:4px;padding:1px 7px;font-size:.63rem;font-weight:700;margin-left:6px">HOY</span>' : '') +
+          '<div style="font-size:.7rem;color:#94a3b8;margin-top:1px">' + dt + ' · ' + (r.saved_by||'sistema') + ' · ' + (r.size_kb||'?') + ' KB</div>' +
+        '</div>' +
+        '<button onclick="_restaurarDesdeBackup(' + r.id + ',\'' + r.backup_date + '\')" style="background:#4f46e5;color:#fff;border:none;border-radius:6px;padding:4px 11px;font-size:.72rem;cursor:pointer;white-space:nowrap;flex-shrink:0">' +
+          '<i class="bi bi-cloud-download me-1"></i>Restaurar' +
+        '</button>' +
+      '</div>';
+    }).join('');
+  } catch(e) {
+    el.innerHTML = '<div style="color:#dc2626;font-size:.78rem;padding:8px 0"><i class="bi bi-exclamation-triangle me-1"></i>Error al cargar backups: ' + e.message + '</div>';
+  }
+}
+
+async function _restaurarDesdeBackup(backupId, backupDate) {
+  if (!confirm('¿Restaurar backup del ' + backupDate + '?\n\nLos datos actuales se sobreescribirán. Esta acción no se puede deshacer.')) return;
+  try {
+    toast('⏳ Restaurando backup...', 'info');
+    const res = await fetch(
+      SB_URL + '/rest/v1/muuk_daily_backups?id=eq.' + backupId + '&select=data,backup_date',
+      { headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY }, cache: 'no-store' }
+    );
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const rows = await res.json();
+    if (!rows || !rows.length) { toast('Backup no encontrado', 'danger'); return; }
+    Object.assign(ST, rows[0].data);
+    ST._syncTs = Date.now();
+    save();
+    reRenderActivo();
+    toast('✅ Backup del ' + rows[0].backup_date + ' restaurado correctamente', 'success');
+  } catch(e) {
+    toast('Error al restaurar: ' + e.message, 'danger');
+  }
 }
 
 async function pullRemoto(silent) {
@@ -7192,6 +7323,8 @@ function iniciarAutoSync() {
     if (_sbPushErrors >= 3) return; // dejar de intentar hasta que el usuario reintente manualmente
     pullRemoto(true);
   }, 8000);
+  // Intentar backup diario al iniciar (solo actúa si no se hizo hoy)
+  setTimeout(() => _supabaseDailyBackup(false), 5000);
 }
 
 async function testConexionSupabase() {
@@ -8865,7 +8998,7 @@ function irA(p) {
   if (p==='historial')         renderHistorial();
   if (p==='facturasACobrar')   renderFacturasACobrar();
   if (p==='facturasPagar')     renderFacturasPagar();
-  if (p==='config')            { renderListaConceptos(); _updateSbStatusCard(); _renderConfigEmailjs(); }
+  if (p==='config')            { renderListaConceptos(); _updateSbStatusCard(); _renderConfigEmailjs(); _renderBackupsList(); }
   if (p==='gestion')           renderGestion();
   if (p==='estrategicos')      renderEstrategicos();
   if (p==='estadosCuenta')     renderEstadosCuenta();
@@ -18766,6 +18899,7 @@ function _cronAbrirFormEntrega(dateStr, entregaId) {
   document.getElementById('cron-f-peso').value     = '25 kg';
   document.getElementById('cron-f-precio').value   = '';
   document.getElementById('cron-f-notas').value    = '';
+  const _tot = document.getElementById('cron-f-precio-total'); if (_tot) _tot.textContent = '';
 
   if (entregaId) {
     const e = ((ST.cronogramaHarina || {})[dateStr] || []).find(x => x.id === entregaId);
@@ -18775,8 +18909,9 @@ function _cronAbrirFormEntrega(dateStr, entregaId) {
       document.getElementById('cron-f-tipo').value     = e.tipo;
       document.getElementById('cron-f-harina').value   = e.harina;
       document.getElementById('cron-f-peso').value     = e.peso;
-      document.getElementById('cron-f-precio').value   = e.precio || '';
+      document.getElementById('cron-f-precio').value   = e.precioUnitario || '';
       document.getElementById('cron-f-notas').value    = e.notas || '';
+      _cronCalcTotalPrecio();
     }
     if (title) title.textContent = 'Editar entrega';
   } else {
@@ -18792,6 +18927,24 @@ function _cronCerrarModal() {
   if (m) m.style.display = 'none';
 }
 
+function _cronCalcTotalPrecio() {
+  const cantEl  = document.getElementById('cron-f-cantidad');
+  const pesoEl  = document.getElementById('cron-f-peso');
+  const tipoEl  = document.getElementById('cron-f-tipo');
+  const precEl  = document.getElementById('cron-f-precio');
+  const totalEl = document.getElementById('cron-f-precio-total');
+  if (!totalEl || !cantEl || !pesoEl || !precEl) return;
+  const cantidad    = parseInt(cantEl.value) || 0;
+  const peso        = pesoEl.value;
+  const tipo        = tipoEl ? tipoEl.value : 'Pallets';
+  const precioUnit  = parseFloat(precEl.value) || 0;
+  if (!precioUnit || cantidad < 1 || tipo !== 'Pallets') { totalEl.textContent = ''; return; }
+  const unidades    = peso === '1 kg' ? 1040 : peso === '25 kg' ? 50 : peso === '50 kg' ? 25 : 50;
+  const total       = cantidad * unidades * precioUnit;
+  totalEl.innerHTML = '<i class="bi bi-calculator me-1"></i>Total: ' + fmt(total)
+    + ' <span style="font-weight:400;color:#64748b">(' + cantidad + ' P × ' + unidades + ' u × ' + fmt(precioUnit) + ')</span>';
+}
+
 function _cronGuardarEntrega() {
   const dateStr   = document.getElementById('cron-modal-fecha').value;
   const entregaId = document.getElementById('cron-modal-entrega-id').value;
@@ -18800,8 +18953,11 @@ function _cronGuardarEntrega() {
   const tipo      = document.getElementById('cron-f-tipo').value;
   const harina    = document.getElementById('cron-f-harina').value;
   const peso      = document.getElementById('cron-f-peso').value;
-  const precio    = parseFloat(document.getElementById('cron-f-precio').value) || 0;
+  const precioUnitario = parseFloat(document.getElementById('cron-f-precio').value) || 0;
   const notas     = (document.getElementById('cron-f-notas').value || '').trim();
+  // Calcular precio total según tipo de unidad
+  const _unidXPallet = tipo === 'Pallets' ? (peso === '1 kg' ? 1040 : peso === '25 kg' ? 50 : peso === '50 kg' ? 25 : 50) : 1;
+  const precio    = precioUnitario > 0 ? cantidad * _unidXPallet * precioUnitario : 0;
 
   if (!cliente)    { alert('Ingresá el nombre del cliente.'); return; }
   if (cantidad < 1){ alert('Ingresá una cantidad válida (mínimo 1).'); return; }
@@ -18814,13 +18970,13 @@ function _cronGuardarEntrega() {
     if (idx !== -1) {
       ST.cronogramaHarina[dateStr][idx] = {
         ...ST.cronogramaHarina[dateStr][idx],
-        cliente, cantidad, tipo, harina, peso, precio, notas
+        cliente, cantidad, tipo, harina, peso, precio, precioUnitario, notas
       };
     }
   } else {
     ST.cronogramaHarina[dateStr].push({
       id: Date.now().toString(36) + Math.random().toString(36).slice(2,6),
-      cliente, cantidad, tipo, harina, peso, precio, notas,
+      cliente, cantidad, tipo, harina, peso, precio, precioUnitario, notas,
       estado: 'pendiente'
     });
   }
