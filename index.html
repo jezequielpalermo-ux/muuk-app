@@ -3922,6 +3922,8 @@ CREATE POLICY "acceso total" ON muuk_daily_backups FOR ALL USING (true) WITH CHE
       <h4><i class="bi bi-box-seam-fill me-2" style="color:#7c3aed"></i>Control de Stock</h4>
       <div class="d-flex gap-2">
         <button class="btn btn-outline-info btn-sm" onclick="printReporteStock()" style="font-size:.75rem"><i class="bi bi-printer me-1"></i>Imprimir Reporte</button>
+        <button class="btn btn-outline-success btn-sm" onclick="abrirModalRemito('entrada')" style="font-size:.75rem"><i class="bi bi-file-arrow-down me-1"></i>Remito Entrada</button>
+        <button class="btn btn-outline-danger btn-sm" onclick="abrirModalRemito('salida')" style="font-size:.75rem"><i class="bi bi-file-arrow-up me-1"></i>Remito Salida</button>
         <button class="btn btn-outline-warning btn-sm" onclick="abrirModalStockMov(null)" style="font-size:.75rem" data-muuk-accion="stock:movimiento"><i class="bi bi-arrow-left-right me-1"></i>Movimiento</button>
         <button class="btn btn-primary btn-sm" onclick="abrirModalStockProd(null)" style="font-size:.75rem" data-muuk-accion="stock:nuevo"><i class="bi bi-plus-lg me-1"></i>Nuevo Producto</button>
       </div>
@@ -4021,6 +4023,15 @@ CREATE POLICY "acceso total" ON muuk_daily_backups FOR ALL USING (true) WITH CHE
         <small class="text-muted" style="font-size:.62rem" id="stk-mov-count"></small>
       </div>
       <div class="card"><div class="card-body p-0" id="wrap-stock-movs"></div></div>
+    </div>
+
+    <!-- Remitos -->
+    <div class="mt-3">
+      <div class="d-flex align-items-center gap-2 mb-2">
+        <span style="font-size:.78rem;font-weight:700;color:#0f172a"><i class="bi bi-file-earmark-text me-1" style="color:#16a34a"></i>Remitos de Depósito</span>
+        <small class="text-muted" style="font-size:.62rem" id="stk-rem-count"></small>
+      </div>
+      <div class="card"><div class="card-body p-0" id="wrap-stock-remitos"></div></div>
     </div>
   </div>
 
@@ -6090,6 +6101,65 @@ CREATE POLICY "acceso total" ON muuk_daily_backups FOR ALL USING (true) WITH CHE
       <div class="modal-footer">
         <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
         <button class="btn btn-primary" onclick="guardarStockMov()"><i class="bi bi-check-lg me-1"></i>Registrar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Modal Remito de Entrada / Salida ── -->
+<div class="modal fade" id="modalRemito" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header" id="rem-modal-header" style="background:linear-gradient(135deg,#16a34a,#4ade80);color:#fff">
+        <h5 class="modal-title" id="rem-modal-title"><i class="bi bi-file-arrow-down me-2"></i>Remito de Entrada</h5>
+        <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label fw-bold small">Producto (opcional)</label>
+            <select class="form-select form-select-sm" id="rem-producto">
+              <option value="">— Sin producto específico —</option>
+            </select>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label fw-bold small">Fecha <span class="text-danger">*</span></label>
+            <input type="date" class="form-control form-control-sm" id="rem-fecha">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label fw-bold small">N° Remito / Comprobante</label>
+            <input type="text" class="form-control form-control-sm" id="rem-numero" placeholder="Ej: R-0001-00012345">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-bold small" id="rem-empresa-label">Proveedor / Empresa</label>
+            <input type="text" class="form-control form-control-sm" id="rem-empresa" placeholder="Nombre del proveedor o empresa">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-bold small">Observaciones</label>
+            <input type="text" class="form-control form-control-sm" id="rem-notas" placeholder="Detalle, condiciones, etc.">
+          </div>
+          <div class="col-12">
+            <label class="form-label fw-bold small">Archivo del Remito (PDF / imagen)</label>
+            <div id="rem-dropzone"
+                 onclick="document.getElementById('rem-file').click()"
+                 style="border:2px dashed #d1d5db;border-radius:10px;padding:28px 20px;text-align:center;cursor:pointer;background:#f9fafb;transition:border-color .2s"
+                 ondragover="event.preventDefault();this.style.borderColor='#7c3aed'"
+                 ondragleave="this.style.borderColor='#d1d5db'"
+                 ondrop="_remDrop(event)">
+              <i class="bi bi-cloud-arrow-up" style="font-size:1.8rem;color:#9ca3af"></i>
+              <div id="rem-dropzone-txt" style="font-size:.8rem;color:#6b7280;margin-top:8px">
+                Hacé clic o arrastrá un archivo aquí<br>
+                <small>PDF, JPG, PNG — máx. 5 MB</small>
+              </div>
+            </div>
+            <input type="file" id="rem-file" accept=".pdf,.jpg,.jpeg,.png,.webp" style="display:none" onchange="_remFileSelected(event)">
+            <div id="rem-file-preview" style="display:none;margin-top:10px"></div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button class="btn btn-success" id="rem-save-btn" onclick="guardarRemito()"><i class="bi bi-check-lg me-1"></i>Guardar Remito</button>
       </div>
     </div>
   </div>
@@ -14081,6 +14151,8 @@ function renderStock() {
 
   // Render movements
   _renderStockMovs();
+  // Render remitos
+  _renderRemitos();
 }
 
 function _fmtStock(val, unidad) {
@@ -14301,6 +14373,201 @@ function guardarStockMov() {
   } else {
     toast('Movimiento registrado ✓');
   }
+}
+
+/* ══════════════════════════════════════════════════════════
+   REMITOS DE DEPÓSITO — Entrada y Salida
+══════════════════════════════════════════════════════════ */
+
+let _remArchivoTemp = null; // { nombre, tipo, dataB64 }
+
+function abrirModalRemito(tipo) {
+  if (!ST.stockProductos || !ST.stockProductos.length) {
+    toast('Primero cargá al menos un producto', 'warning'); return;
+  }
+  _remArchivoTemp = null;
+  const esEntrada = tipo === 'entrada';
+
+  // Cabecera dinámica
+  const hdr = document.getElementById('rem-modal-header');
+  hdr.style.background = esEntrada
+    ? 'linear-gradient(135deg,#16a34a,#4ade80)'
+    : 'linear-gradient(135deg,#dc2626,#f87171)';
+  hdr.dataset.tipo = tipo;
+  document.getElementById('rem-modal-title').innerHTML =
+    `<i class="bi bi-file-arrow-${esEntrada?'down':'up'} me-2"></i>Remito de ${esEntrada?'Entrada':'Salida'}`;
+  const saveBtn = document.getElementById('rem-save-btn');
+  saveBtn.className = `btn btn-${esEntrada?'success':'danger'}`;
+  document.getElementById('rem-empresa-label').textContent = esEntrada ? 'Proveedor / Empresa' : 'Cliente / Destino';
+  document.getElementById('rem-empresa').placeholder = esEntrada ? 'Nombre del proveedor' : 'Nombre del cliente o destino';
+
+  // Selector de productos
+  document.getElementById('rem-producto').innerHTML =
+    '<option value="">— Sin producto específico —</option>' +
+    ST.stockProductos.map(p=>`<option value="${p.id}">${p.codigo} — ${p.nombre}</option>`).join('');
+
+  // Reset campos
+  const hoy = new Date().toISOString().slice(0,10);
+  document.getElementById('rem-fecha').value = hoy;
+  document.getElementById('rem-numero').value = '';
+  document.getElementById('rem-empresa').value = '';
+  document.getElementById('rem-notas').value = '';
+  document.getElementById('rem-dropzone-txt').innerHTML =
+    'Hacé clic o arrastrá un archivo aquí<br><small>PDF, JPG, PNG — máx. 5 MB</small>';
+  document.getElementById('rem-dropzone').style.borderColor = '#d1d5db';
+  const prev = document.getElementById('rem-file-preview');
+  prev.style.display = 'none'; prev.innerHTML = '';
+  document.getElementById('rem-file').value = '';
+
+  new bootstrap.Modal(document.getElementById('modalRemito')).show();
+}
+
+function _remDrop(e) {
+  e.preventDefault();
+  document.getElementById('rem-dropzone').style.borderColor = '#d1d5db';
+  const file = e.dataTransfer?.files?.[0];
+  if (file) _remProcesarArchivo(file);
+}
+
+function _remFileSelected(e) {
+  const file = e.target.files?.[0];
+  if (file) _remProcesarArchivo(file);
+}
+
+function _remProcesarArchivo(file) {
+  const maxMB = 5;
+  if (file.size > maxMB * 1024 * 1024) {
+    toast(`El archivo supera los ${maxMB} MB permitidos`, 'warning'); return;
+  }
+  const allowed = ['application/pdf','image/jpeg','image/png','image/webp'];
+  if (!allowed.includes(file.type)) {
+    toast('Solo se aceptan PDF, JPG, PNG o WEBP', 'warning'); return;
+  }
+  const reader = new FileReader();
+  reader.onload = ev => {
+    _remArchivoTemp = { nombre: file.name, tipo: file.type, dataB64: ev.target.result };
+    document.getElementById('rem-dropzone-txt').innerHTML =
+      `<i class="bi bi-check-circle-fill" style="color:#16a34a"></i> <strong>${file.name}</strong><br><small>${(file.size/1024).toFixed(1)} KB — clic para cambiar</small>`;
+    document.getElementById('rem-dropzone').style.borderColor = '#16a34a';
+    const prev = document.getElementById('rem-file-preview');
+    if (file.type.startsWith('image/')) {
+      prev.innerHTML = `<img src="${ev.target.result}" style="max-height:130px;border-radius:8px;border:1px solid #e2e8f0">`;
+    } else {
+      prev.innerHTML = `<div style="background:#f1f5f9;border-radius:8px;padding:8px 12px;font-size:.78rem;color:#475569"><i class="bi bi-file-earmark-pdf me-1" style="color:#dc2626"></i>${file.name}</div>`;
+    }
+    prev.style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+}
+
+function guardarRemito() {
+  const tipo = document.getElementById('rem-modal-header').dataset.tipo;
+  const fecha = document.getElementById('rem-fecha').value;
+  if (!fecha) { toast('Ingresá la fecha del remito', 'warning'); return; }
+
+  if (!ST.stockRemitos) ST.stockRemitos = [];
+  ST.stockRemitos.unshift({
+    id: uid(),
+    tipo,
+    prodId: document.getElementById('rem-producto').value || null,
+    fecha,
+    numero: document.getElementById('rem-numero').value.trim(),
+    empresa: document.getElementById('rem-empresa').value.trim(),
+    notas: document.getElementById('rem-notas').value.trim(),
+    archivo: _remArchivoTemp || null,
+    updatedAt: new Date().toISOString()
+  });
+
+  save();
+  bootstrap.Modal.getInstance(document.getElementById('modalRemito')).hide();
+  _renderRemitos();
+  toast(`Remito de ${tipo} guardado ✓`);
+}
+
+function verRemito(id) {
+  const rem = (ST.stockRemitos||[]).find(r=>r.id===id);
+  if (!rem || !rem.archivo) { toast('Este remito no tiene archivo adjunto','warning'); return; }
+  const { dataB64, tipo: mimeType, nombre } = rem.archivo;
+  try {
+    const byteStr = atob(dataB64.split(',')[1]);
+    const ab = new ArrayBuffer(byteStr.length);
+    const ia = new Uint8Array(ab);
+    for (let i=0; i<byteStr.length; i++) ia[i] = byteStr.charCodeAt(i);
+    const blob = new Blob([ab], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const w = window.open(url, '_blank');
+    if (!w) {
+      const a = document.createElement('a');
+      a.href = url; a.download = nombre || 'remito';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    }
+  } catch(e) { toast('Error al abrir el archivo: ' + e.message, 'danger'); }
+}
+
+function eliminarRemito(id) {
+  _confirmar('¿Eliminar este remito? Esta acción no se puede deshacer.', () => {
+    ST.stockRemitos = (ST.stockRemitos||[]).filter(r=>r.id!==id);
+    save();
+    _renderRemitos();
+    toast('Remito eliminado');
+  }, { title:'Eliminar Remito', btnLabel:'Eliminar', btnIcon:'trash' });
+}
+
+function _renderRemitos() {
+  if (!ST.stockRemitos) ST.stockRemitos = [];
+  const wrap = document.getElementById('wrap-stock-remitos'); if (!wrap) return;
+  const cntEl = document.getElementById('stk-rem-count');
+
+  const rems = ST.stockRemitos.slice().sort(
+    (a,b) => b.fecha.localeCompare(a.fecha) || b.updatedAt.localeCompare(a.updatedAt)
+  );
+  if (cntEl) cntEl.textContent = `${rems.length} remito${rems.length!==1?'s':''}`;
+
+  if (!rems.length) {
+    wrap.innerHTML = '<div style="text-align:center;padding:28px;color:#94a3b8;font-size:.8rem"><i class="bi bi-file-earmark-text" style="font-size:1.8rem;display:block;margin-bottom:8px"></i>No hay remitos cargados aún.<br><small>Usá los botones <strong>Remito Entrada</strong> / <strong>Remito Salida</strong> para agregar.</small></div>';
+    return;
+  }
+
+  const fFecha = s => { if(!s) return '—'; const [y,m,d]=s.split('-'); return `${d}/${m}/${y}`; };
+
+  const rows = rems.map(r => {
+    const esEnt = r.tipo === 'entrada';
+    const prod = r.prodId ? (ST.stockProductos||[]).find(p=>p.id===r.prodId) : null;
+    return `<tr>
+      <td style="padding:8px 12px;white-space:nowrap">
+        <span style="background:${esEnt?'#dcfce7':'#fee2e2'};color:${esEnt?'#15803d':'#dc2626'};border-radius:20px;padding:2px 9px;font-size:.68rem;font-weight:700">
+          <i class="bi bi-file-arrow-${esEnt?'down':'up'} me-1"></i>${esEnt?'ENTRADA':'SALIDA'}
+        </span>
+      </td>
+      <td style="padding:8px 12px;white-space:nowrap">${fFecha(r.fecha)}</td>
+      <td style="padding:8px 12px;font-family:monospace;color:#475569;font-size:.75rem">${r.numero||'—'}</td>
+      <td style="padding:8px 12px">${r.empresa||'—'}</td>
+      <td style="padding:8px 12px;color:#6b7280">${prod?prod.nombre:'—'}</td>
+      <td style="padding:8px 12px;color:#9ca3af;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${r.notas||''}">${r.notas||'—'}</td>
+      <td style="padding:8px 12px;text-align:center">
+        ${r.archivo
+          ? `<button class="btn btn-xs btn-outline-primary" style="font-size:.65rem;padding:2px 8px" onclick="verRemito('${r.id}')"><i class="bi bi-eye me-1"></i>Ver</button>`
+          : '<span style="color:#d1d5db;font-size:.72rem">Sin archivo</span>'}
+      </td>
+      <td style="padding:8px 12px;text-align:center">
+        <button class="btn btn-xs btn-outline-danger" style="font-size:.65rem;padding:2px 7px" onclick="eliminarRemito('${r.id}')"><i class="bi bi-trash3"></i></button>
+      </td>
+    </tr>`;
+  }).join('');
+
+  wrap.innerHTML = `<div class="table-responsive"><table class="table table-hover mb-0" style="font-size:.8rem">
+    <thead style="background:#f8fafc"><tr>
+      <th style="padding:8px 12px">Tipo</th>
+      <th style="padding:8px 12px">Fecha</th>
+      <th style="padding:8px 12px">N° Remito</th>
+      <th style="padding:8px 12px">Empresa / Proveedor</th>
+      <th style="padding:8px 12px">Producto</th>
+      <th style="padding:8px 12px">Observaciones</th>
+      <th style="padding:8px 12px;text-align:center">Archivo</th>
+      <th style="padding:8px 12px"></th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+  </table></div>`;
 }
 
 function _limpiarFiltrosStock() {
