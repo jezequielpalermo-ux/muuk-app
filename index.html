@@ -1072,7 +1072,7 @@
         <div style="font-weight:700;color:#92400e;font-size:.82rem">Sin registros de caja</div>
         <div style="color:#78350f;font-size:.75rem">Los datos de Bancos y Efectivo están vacíos. Los saldos muestran $0.</div>
       </div>
-      <button onclick="irA('configuracion')" style="flex-shrink:0;background:#d97706;color:#fff;border:none;border-radius:7px;padding:6px 14px;font-size:.75rem;font-weight:700;cursor:pointer">
+      <button onclick="irA('config')" style="flex-shrink:0;background:#d97706;color:#fff;border:none;border-radius:7px;padding:6px 14px;font-size:.75rem;font-weight:700;cursor:pointer">
         <i class="bi bi-upload me-1"></i>Restaurar backup
       </button>
     </div>
@@ -1111,6 +1111,15 @@
           </div>
         </div>
       </div>
+    </div>
+    <!-- ALERTA UMBRAL DE SALDO (Feature 2) -->
+    <div id="dash-umbral-alerta" class="mb-3" style="display:none;background:#fef2f2;border:2px solid #dc2626;border-radius:10px;padding:12px 16px;align-items:center;gap:12px;flex-wrap:wrap">
+      <i class="bi bi-exclamation-triangle-fill" style="color:#dc2626;font-size:1.3rem;flex-shrink:0"></i>
+      <div style="flex:1">
+        <div style="font-weight:700;color:#991b1b;font-size:.85rem">Alerta: Saldo bajo umbral minimo</div>
+        <div id="dash-umbral-diff" style="font-size:.78rem;color:#b91c1c;margin-top:2px"></div>
+      </div>
+      <button onclick="irA('config')" style="background:#dc2626;color:#fff;border:none;border-radius:7px;padding:5px 12px;font-size:.72rem;cursor:pointer;font-weight:600;flex-shrink:0">Configurar</button>
     </div>
     <!-- ALERTAS URGENTES -->
     <div id="dash-alertas" class="mb-3"></div>
@@ -1309,6 +1318,8 @@
       <h6 class="fw-bold mb-3"><i class="bi bi-calendar-event text-warning me-2"></i>Próximos Vencimientos — 15 días</h6>
       <div id="dash-venc"></div>
     </div>
+    <!-- PROYECCION FLUJO DE CAJA (Feature 1) -->
+    <div id="dash-proyeccion-flujo" class="mt-3"></div>
     <!-- ACTIVIDAD RECIENTE -->
     <div class="card p-3 mt-3">
       <div class="d-flex align-items-center justify-content-between mb-3">
@@ -1517,6 +1528,7 @@
     <div class="page-hdr">
       <h4><i class="bi bi-bank2 me-2 text-success"></i>Caja — Bancos</h4>
       <div class="d-flex gap-2">
+        <button class="btn btn-outline-secondary btn-sm" onclick="abrirModalReconciliacion()" data-muuk-accion="cajaBancos:reconciliar"><i class="bi bi-check2-circle me-1"></i>Reconciliar</button>
         <button class="btn btn-outline-info btn-sm" onclick="abrirModalTraspaso()" data-muuk-accion="cajaBancos:traspaso"><i class="bi bi-arrow-left-right me-1"></i>Traspaso</button>
         <button class="btn btn-outline-warning btn-sm" onclick="abrirModalAjuste()" data-muuk-accion="cajaBancos:ajuste"><i class="bi bi-pencil-square me-1"></i>Ajuste</button>
         <button class="btn btn-primary btn-sm" onclick="abrirModalMov('banco')" data-muuk-accion="cajaBancos:nuevo"><i class="bi bi-plus-lg me-1"></i>Nuevo Movimiento</button>
@@ -2053,6 +2065,10 @@
       <h6 class="fw-bold mb-3"><i class="bi bi-table me-2"></i>Detalle — Cheques a Vencer (30 días)</h6>
       <div id="rep-tabla-venc"></div>
     </div>
+    <!-- FEATURE 4: PRESUPUESTO VS REAL -->
+    <div class="card p-3 mt-4" id="rep-presupuesto-wrap">
+      <div id="rep-presupuesto-panel"></div>
+    </div>
   </div>
 
 
@@ -2498,12 +2514,19 @@
   <div id="page-panelVencimientos" class="page">
     <div class="page-hdr">
       <h4><i class="bi bi-calendar-event me-2" style="color:#d97706"></i>Panel de Vencimientos</h4>
-      <select class="form-select form-select-sm" id="pv-dias" onchange="renderPanelVencimientos()" style="width:auto;border-radius:8px;font-size:.78rem">
-        <option value="7">7 días</option><option value="15">15 días</option><option value="30" selected>30 días</option>
-      </select>
+      <div class="d-flex gap-2 align-items-center flex-wrap">
+        <select class="form-select form-select-sm" id="pv-dias" onchange="renderPanelVencimientos()" style="width:auto;border-radius:8px;font-size:.78rem">
+          <option value="7">7 días</option><option value="15">15 días</option><option value="30" selected>30 días</option>
+        </select>
+        <button id="btn-pv-calendario" onclick="_toggleCalVenc(this)" style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:5px 12px;font-size:.78rem;font-weight:600;cursor:pointer;color:#0f172a;transition:all .15s" onmouseover="this.style.borderColor='#d97706'" onmouseout="this.style.borderColor='#e2e8f0'">
+          <i class="bi bi-calendar3 me-1"></i>Vista Calendario
+        </button>
+      </div>
     </div>
     <div class="row g-2 mb-3" id="pv-kpis"></div>
     <div id="pv-timeline"></div>
+    <!-- FEATURE 5: Calendario de vencimientos -->
+    <div id="pv-calendar-wrap" style="display:none"></div>
   </div>
 
   <!-- ══════════════════ RENTABILIDAD ══════════════════ -->
@@ -2982,6 +3005,34 @@ CREATE POLICY "acceso total" ON flujo_caja_versions FOR ALL USING (true) WITH CH
       </div>
     </div>
 
+    <!-- FEATURE 2: ALERTAS DE SALDO MÍNIMO -->
+    <div class="card mb-4" id="cfg-umbral-saldo-card">
+      <div class="card-header bg-white fw-bold"><i class="bi bi-shield-exclamation me-2 text-danger"></i>Alertas de Saldo Minimo</div>
+      <div class="card-body">
+        <p class="text-muted small mb-3">Recibi una alerta en el dashboard cuando el saldo total consolidado (Bancos + Efectivo + Cheques en cartera) cae por debajo del monto configurado.</p>
+        <div class="row g-3 align-items-end" style="max-width:480px">
+          <div class="col-sm-7">
+            <label class="form-label small fw-bold">Monto minimo de alerta ($)</label>
+            <div style="position:relative">
+              <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:.8rem;color:#94a3b8;pointer-events:none">$</span>
+              <input type="number" min="0" step="10000" class="form-control form-control-sm" id="cfg-umbral-monto" placeholder="Ej: 500000" style="padding-left:22px"
+                oninput="if(!ST.alertasConfig)ST.alertasConfig={};ST.alertasConfig.umbralSaldo=parseFloat(this.value)||0;save();if(typeof _checkUmbralSaldo==='function')_checkUmbralSaldo()">
+            </div>
+          </div>
+          <div class="col-sm-5">
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" id="cfg-umbral-activo" role="switch"
+                onchange="if(!ST.alertasConfig)ST.alertasConfig={};ST.alertasConfig.umbralSaldoActivo=this.checked;save();if(typeof _checkUmbralSaldo==='function')_checkUmbralSaldo()">
+              <label class="form-check-label small fw-bold" for="cfg-umbral-activo">Activar alerta</label>
+            </div>
+          </div>
+        </div>
+        <div class="mt-3" id="cfg-umbral-preview" style="font-size:.78rem;color:#64748b;display:none">
+          <i class="bi bi-info-circle me-1"></i>La alerta aparecera destacada en rojo en la parte superior del dashboard.
+        </div>
+      </div>
+    </div>
+
     <!-- REPORTE SEMANAL AUTOMÁTICO -->
     <div class="card mb-4">
       <div class="card-header bg-white fw-bold"><i class="bi bi-send-fill me-2" style="color:#7c3aed"></i>Reporte Semanal — Pendientes MÜÜK</div>
@@ -3037,12 +3088,17 @@ CREATE POLICY "acceso total" ON flujo_caja_versions FOR ALL USING (true) WITH CH
       <div class="card-header bg-white fw-bold"><i class="bi bi-shield-fill-check me-2 text-success"></i>Backup y Restauración</div>
       <div class="card-body">
         <p class="text-muted small mb-3">Además de Supabase, podés descargar un backup JSON en cualquier momento. El archivo contiene todos los datos y puede restaurarse en caso de emergencia.</p>
-        <div class="d-flex flex-wrap gap-2">
-          <button class="btn btn-success btn-sm" onclick="exportarBackupJSON()"><i class="bi bi-download me-1"></i>Descargar backup JSON</button>
-          <button class="btn btn-outline-secondary btn-sm" onclick="importarBackupJSON()"><i class="bi bi-upload me-1"></i>Restaurar desde backup</button>
+        <div class="d-flex flex-wrap gap-2 align-items-center">
+          <button class="btn btn-success btn-sm" onclick="exportarBackupJSON()"><i class="bi bi-download me-1"></i>Descargar / Compartir backup</button>
+          <!-- Botón visible para mobile (file input real, no programático) -->
+          <label class="btn btn-outline-secondary btn-sm mb-0" style="cursor:pointer">
+            <i class="bi bi-upload me-1"></i>Restaurar desde archivo
+            <input type="file" accept=".json,application/json" onchange="_onBackupFileSelected(this)" style="position:absolute;opacity:0;pointer-events:none;width:0;height:0">
+          </label>
+          <button class="btn btn-outline-secondary btn-sm" onclick="importarBackupJSON()"><i class="bi bi-clipboard me-1"></i>Pegar JSON</button>
           <button class="btn btn-outline-danger btn-sm" onclick="confirmarLimpiar()"><i class="bi bi-trash me-1"></i>Borrar datos locales</button>
         </div>
-        <div class="mt-2 text-muted" style="font-size:.78rem"><i class="bi bi-info-circle me-1"></i>El backup se descarga como archivo <code>.json</code> — guardalo en Drive o una carpeta segura.</div>
+        <div class="mt-2 text-muted" style="font-size:.78rem"><i class="bi bi-info-circle me-1"></i>El backup se descarga como <code>.json</code> — guardalo en Drive. En iPhone/Android, usá <strong>Compartir</strong> para enviarlo por WhatsApp o guardarlo en Archivos.</div>
       </div>
     </div>
 
@@ -3916,6 +3972,8 @@ CREATE POLICY "acceso total" ON flujo_caja_versions FOR ALL USING (true) WITH CH
           </table>
         </div>
       </div>
+      <!-- FEATURE 3: Aging de deudores -->
+      <div id="gest-aging-panel"></div>
     </div>
 
     <!-- ╔══ TAB: DETALLE ══╗ -->
@@ -4788,6 +4846,7 @@ CREATE POLICY "acceso total" ON flujo_caja_versions FOR ALL USING (true) WITH CH
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:16px">
       <h4 style="margin:0;font-weight:700;font-size:1.1rem"><i class="bi bi-truck me-2" style="color:#4f46e5"></i>Cronograma de Camiones</h4>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <button onclick="_cronShowRentabilidad()" style="font-size:.75rem;background:#f5f3ff;color:#7c3aed;border:1px solid #ddd6fe;border-radius:7px;padding:5px 12px;cursor:pointer;font-weight:600"><i class="bi bi-graph-up me-1"></i>Rentabilidad</button>
         <button onclick="_cronToggleVista()" id="btn-cron-vista" style="font-size:.75rem;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:7px;padding:5px 12px;cursor:pointer;font-weight:600"><i class="bi bi-list-ul me-1"></i>Vista Lista</button>
         <button onclick="_cronHoy()" style="font-size:.75rem;background:#ede9fe;color:#4f46e5;border:none;border-radius:7px;padding:5px 12px;cursor:pointer;font-weight:600"><i class="bi bi-calendar-check me-1"></i>Hoy</button>
       </div>
@@ -4882,13 +4941,37 @@ CREATE POLICY "acceso total" ON flujo_caja_versions FOR ALL USING (true) WITH CH
             </select>
           </div>
         </div>
-        <div style="margin-bottom:16px">
-          <label style="font-size:.75rem;font-weight:600;color:#475569;display:block;margin-bottom:4px">Notas (opcional)</label>
-          <input id="cron-f-notas" type="text" class="form-control form-control-sm" placeholder="Observaciones...">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
+          <div>
+            <label style="font-size:.75rem;font-weight:600;color:#475569;display:block;margin-bottom:4px">Precio pedido (opcional)</label>
+            <div style="position:relative">
+              <span style="position:absolute;left:8px;top:50%;transform:translateY(-50%);font-size:.75rem;color:#94a3b8;pointer-events:none">$</span>
+              <input id="cron-f-precio" type="number" min="0" step="1" class="form-control form-control-sm" placeholder="0" style="padding-left:18px">
+            </div>
+          </div>
+          <div>
+            <label style="font-size:.75rem;font-weight:600;color:#475569;display:block;margin-bottom:4px">Notas (opcional)</label>
+            <input id="cron-f-notas" type="text" class="form-control form-control-sm" placeholder="Observaciones...">
+          </div>
         </div>
         <div style="display:flex;gap:8px;justify-content:flex-end">
           <button onclick="_cronCerrarModal()" style="background:#f1f5f9;border:1px solid #e2e8f0;border-radius:8px;padding:7px 18px;cursor:pointer;font-size:.8rem">Cancelar</button>
           <button onclick="_cronGuardarEntrega()" style="background:#4f46e5;color:#fff;border:none;border-radius:8px;padding:7px 18px;cursor:pointer;font-size:.8rem;font-weight:700">Guardar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL: filtro pendientes/entregados -->
+    <div id="cron-filtro-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1500;align-items:flex-start;justify-content:center;padding-top:60px">
+      <div style="background:#fff;border-radius:14px;padding:0;width:700px;max-width:95vw;max-height:82vh;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.3);display:flex;flex-direction:column">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid #e2e8f0">
+          <h6 id="cron-filtro-title" style="margin:0;font-weight:700;font-size:.95rem"></h6>
+          <button onclick="document.getElementById('cron-filtro-overlay').style.display='none'" style="background:none;border:none;cursor:pointer;color:#94a3b8;font-size:1.2rem">✕</button>
+        </div>
+        <div id="cron-filtro-body" style="overflow-y:auto;padding:16px 22px;flex:1"></div>
+        <div style="padding:14px 22px;border-top:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+          <button onclick="_cronReportePendientes()" id="cron-filtro-report-btn" style="background:#4f46e5;color:#fff;border:none;border-radius:8px;padding:7px 16px;cursor:pointer;font-size:.78rem;font-weight:700;display:none"><i class="bi bi-printer me-1"></i>Imprimir reporte</button>
+          <button onclick="document.getElementById('cron-filtro-overlay').style.display='none'" style="background:#f1f5f9;border:1px solid #e2e8f0;border-radius:8px;padding:7px 18px;cursor:pointer;font-size:.8rem;margin-left:auto">Cerrar</button>
         </div>
       </div>
     </div>
@@ -7171,34 +7254,109 @@ function exportarExcel() {
 function exportarBackupJSON() {
   const json = JSON.stringify(ST, null, 2);
   const blob = new Blob([json], { type: 'application/json' });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  a.href = url;
-  a.download = 'muuk-backup-' + new Date().toISOString().slice(0,10) + '.json';
-  a.click();
-  URL.revokeObjectURL(url);
-  toast('✅ Backup descargado', 'success');
+  const fname = 'muuk-backup-' + new Date().toISOString().slice(0,10) + '.json';
+  // Usar Web Share API en mobile si está disponible
+  if (navigator.share && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+    const file = new File([blob], fname, { type: 'application/json' });
+    navigator.share({ files: [file], title: 'MÜÜK Backup', text: 'Backup de datos MÜÜK' })
+      .catch(() => _cronDescargarBlob(blob, fname));
+  } else {
+    _cronDescargarBlob(blob, fname);
+  }
+  toast('✅ Backup generado', 'success');
+}
+
+function _cronDescargarBlob(blob, fname) {
+  const url = URL.createObjectURL(blob);
+  const a   = document.createElement('a');
+  a.href = url; a.download = fname;
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 500);
 }
 
 function importarBackupJSON() {
+  // Siempre mostrar modal con opciones (archivo + pegar JSON)
+  _abrirModalRestaurarMobile();
+}
+
+function _importarViaFileInput() {
   const input = document.createElement('input');
-  input.type = 'file'; input.accept = '.json';
+  input.type = 'file'; input.accept = '.json,application/json';
+  input.style.cssText = 'position:fixed;top:-999px;left:-999px;opacity:0';
+  document.body.appendChild(input);
   input.onchange = async e => {
+    document.body.removeChild(input);
     const file = e.target.files[0]; if (!file) return;
-    try {
-      const text = await file.text();
-      const data = JSON.parse(text);
-      if (!data.cajaBancos || !data.cajaEfectivo) throw new Error('Archivo no reconocido como backup MUUK');
-      if (!confirm('¿Restaurar desde el backup "' + file.name + '"?\n\nLos datos actuales serán reemplazados. Esta acción se guardará en la nube.')) return;
-      Object.assign(ST, data);
-      save();
-      reRenderActivo();
-      toast('✅ Backup "' + file.name + '" restaurado', 'success');
-    } catch(err) {
-      toast('❌ Error: ' + err.message, 'danger');
-    }
+    await _procesarArchivoBackup(file, file.name);
   };
   input.click();
+}
+
+async function _procesarArchivoBackup(file, nombre) {
+  try {
+    const text = typeof file === 'string' ? file : await file.text();
+    const data = JSON.parse(text);
+    if (!data.cajaBancos || !data.cajaEfectivo) throw new Error('Archivo no reconocido como backup MUUK');
+    if (!confirm('¿Restaurar desde el backup "' + nombre + '"?\n\nLos datos actuales serán reemplazados.')) return;
+    Object.assign(ST, data);
+    save();
+    reRenderActivo();
+    toast('✅ Backup "' + nombre + '" restaurado', 'success');
+  } catch(err) {
+    toast('❌ Error: ' + err.message, 'danger');
+  }
+}
+
+function _abrirModalRestaurarMobile() {
+  // Overlay de restauración para mobile
+  let ov = document.getElementById('_backup-mobile-overlay');
+  if (!ov) {
+    ov = document.createElement('div');
+    ov.id = '_backup-mobile-overlay';
+    ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:flex-end;justify-content:center';
+    ov.innerHTML = `<div style="background:#fff;border-radius:16px 16px 0 0;padding:24px;width:100%;max-width:520px;max-height:85vh;overflow-y:auto">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <h6 style="margin:0;font-weight:700">Restaurar Backup</h6>
+        <button onclick="document.getElementById('_backup-mobile-overlay').remove()" style="background:none;border:none;font-size:1.2rem;cursor:pointer;color:#94a3b8">✕</button>
+      </div>
+      <p style="font-size:.8rem;color:#64748b;margin-bottom:16px">Seleccioná cómo restaurar los datos:</p>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <label style="display:flex;align-items:center;gap:12px;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:14px 16px;cursor:pointer">
+          <i class="bi bi-folder2-open" style="font-size:1.3rem;color:#4f46e5;flex-shrink:0"></i>
+          <div>
+            <div style="font-weight:700;font-size:.85rem">Seleccionar archivo</div>
+            <div style="font-size:.72rem;color:#94a3b8">Abrí el .json desde Files / Archivos</div>
+          </div>
+          <input type="file" accept=".json,application/json" onchange="_onBackupFileSelected(this)" style="position:absolute;opacity:0;pointer-events:none">
+        </label>
+        <div style="background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:14px 16px">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+            <i class="bi bi-clipboard" style="font-size:1.1rem;color:#4f46e5"></i>
+            <div><div style="font-weight:700;font-size:.85rem">Pegar JSON</div>
+            <div style="font-size:.72rem;color:#94a3b8">Copiá el contenido del backup y pegalo aquí</div></div>
+          </div>
+          <textarea id="_backup-paste-area" rows="5" placeholder='{"cajaBancos":[...],...}' style="width:100%;border:1px solid #e2e8f0;border-radius:8px;padding:8px;font-size:.72rem;font-family:monospace;resize:vertical;box-sizing:border-box"></textarea>
+          <button onclick="_restaurarDesdeTextarea()" style="margin-top:8px;width:100%;background:#4f46e5;color:#fff;border:none;border-radius:8px;padding:9px;cursor:pointer;font-size:.82rem;font-weight:700">Restaurar desde JSON</button>
+        </div>
+      </div>
+    </div>`;
+    document.body.appendChild(ov);
+  } else {
+    ov.style.display = 'flex';
+  }
+}
+
+function _onBackupFileSelected(input) {
+  const file = input.files[0]; if (!file) return;
+  document.getElementById('_backup-mobile-overlay')?.remove();
+  _procesarArchivoBackup(file, file.name);
+}
+
+function _restaurarDesdeTextarea() {
+  const text = (document.getElementById('_backup-paste-area')?.value || '').trim();
+  if (!text) { toast('Pegá el contenido del backup primero', 'warning'); return; }
+  document.getElementById('_backup-mobile-overlay')?.remove();
+  _procesarArchivoBackup(text, 'backup-pegado.json');
 }
 
 /* ═══════════════════════════════════════════
@@ -8998,6 +9156,8 @@ function renderDashboard() {
   renderAlertas();
   renderActividadReciente();
   if(typeof _renderMetaCobranza==='function') _renderMetaCobranza();
+  if(typeof _checkUmbralSaldo==='function') _checkUmbralSaldo();
+  if(typeof _renderProyeccionFlujo==='function') _renderProyeccionFlujo();
 
   // ── Sync Gestión en header ──
   const syncEl = document.getElementById('dash-gest-sync');
@@ -9140,11 +9300,29 @@ function renderDashCharts(sB,sE,sC) {
 
   if(CHARTS.d)CHARTS.d.destroy();
   const c2=document.getElementById('ch-dist');
-  if(c2)CHARTS.d=new Chart(c2,{type:'doughnut',data:{
-    labels:['Bancos','Efectivo','Cartera'],
-    datasets:[{data:[Math.max(0,sB),Math.max(0,sE),sC],backgroundColor:['#2563eb','#7c3aed','#059669'],borderWidth:0}]
-  },options:{responsive:true,cutout:'65%',plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:10}}},
-    tooltip:{callbacks:{label:c=>`${c.label}: ${fmt(c.raw)}`}}}}});
+  if(c2){
+    const distData=[Math.max(0,sB),Math.max(0,sE),sC];
+    const allZero=distData.every(v=>v===0);
+    if(allZero){
+      c2.style.display='none';
+      if(!c2.nextElementSibling||!c2.nextElementSibling.classList.contains('ch-dist-empty')){
+        const emp=document.createElement('div');
+        emp.className='ch-dist-empty text-center text-muted py-3';
+        emp.style.cssText='font-size:.8rem';
+        emp.innerHTML='<i class="bi bi-pie-chart" style="font-size:2rem;opacity:.3;display:block;margin-bottom:6px"></i>Sin activos registrados';
+        c2.parentNode.insertBefore(emp,c2.nextSibling);
+      }
+    } else {
+      c2.style.display='';
+      const prev=c2.nextElementSibling;
+      if(prev&&prev.classList.contains('ch-dist-empty'))prev.remove();
+      CHARTS.d=new Chart(c2,{type:'doughnut',data:{
+        labels:['Bancos','Efectivo','Cartera'],
+        datasets:[{data:distData,backgroundColor:['#2563eb','#7c3aed','#059669'],borderWidth:0}]
+      },options:{responsive:true,cutout:'65%',plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:10}}},
+        tooltip:{callbacks:{label:c=>`${c.label}: ${fmt(c.raw)}`}}}}});
+    }
+  }
 }
 
 /* ═══════════════════════════════════════════
@@ -11325,11 +11503,27 @@ function renderReportes(){
   const PAL=['#2563eb','#10b981','#8b5cf6','#f59e0b','#ef4444','#06b6d4'];
   if(CHARTS.rS)CHARTS.rS.destroy();
   const rs=document.getElementById('rep-socios');
-  if(rs)CHARTS.rS=new Chart(rs,{type:'doughnut',data:{
-    labels:sL.length?sL:['Sin datos'],
-    datasets:[{data:sL.length?sD.map(Math.abs):[1],backgroundColor:PAL,borderWidth:0}]
-  },options:{responsive:true,cutout:'60%',plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:10}}},
-    tooltip:{callbacks:{label:c=>`${c.label}: ${fmt(sD[c.dataIndex])}`}}}}});
+  if(rs){
+    if(!sL.length){
+      rs.style.display='none';
+      if(!rs.nextElementSibling||!rs.nextElementSibling.classList.contains('rep-socios-empty')){
+        const emp=document.createElement('div');
+        emp.className='rep-socios-empty text-center text-muted py-4';
+        emp.style.cssText='font-size:.8rem';
+        emp.innerHTML='<i class="bi bi-pie-chart" style="font-size:2rem;opacity:.3;display:block;margin-bottom:6px"></i>Sin movimientos en el período';
+        rs.parentNode.insertBefore(emp,rs.nextSibling);
+      }
+    } else {
+      rs.style.display='';
+      const prev=rs.nextElementSibling;
+      if(prev&&prev.classList.contains('rep-socios-empty'))prev.remove();
+      CHARTS.rS=new Chart(rs,{type:'doughnut',data:{
+        labels:sL,
+        datasets:[{data:sD.map(Math.abs),backgroundColor:PAL,borderWidth:0}]
+      },options:{responsive:true,cutout:'60%',plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:10}}},
+        tooltip:{callbacks:{label:c=>`${c.label}: ${fmt(sD[c.dataIndex])}`}}}}});
+    }
+  }
 
   // 3. Vencimientos próximos 30d
   const todosChq=[...ST.chequesFisicos,...ST.eCheques,...ST.chequesPagar].filter(c=>c.estado==='pendiente');
@@ -11402,6 +11596,8 @@ function renderReportes(){
       </table></div>`;
     }
   }
+  // Feature 4: presupuesto vs real
+  if (typeof renderPresupuesto === 'function') renderPresupuesto();
 }
 
 /* ═══════════════════════════════════════════
@@ -16133,6 +16329,8 @@ function _renderClienteTabla(clientes) {
       <td class="text-end pe-3"><small class="text-muted">${comPct}%</small> <small class="badge bg-primary bg-opacity-10 text-primary" style="font-size:.6rem">${sharePct}%</small></td>
     </tr>`;
   }).join('');
+  // Feature 3: render aging panel below
+  if (typeof _renderAgingDeudores === 'function') _renderAgingDeudores(clientes);
 }
 
 function _renderDetalleTabla(rows, totalRows, page, pages) {
@@ -18372,6 +18570,7 @@ function _arcaGetVencimientos(cuitTerm, categoria) {
 /* ═══════════════════════════════════════════
    CRONOGRAMA DE CAMIONES
 ═══════════════════════════════════════════ */
+const CRON_PALLETS_POR_CAMION = 26;
 let _cronYear  = new Date().getFullYear();
 let _cronMonth = new Date().getMonth();  // 0-based
 let _cronSelectedDate = null;
@@ -18505,15 +18704,34 @@ function _cronSelectDay(dateStr) {
       <span style="font-size:.78rem">Sin entregas programadas</span>
     </div>`;
   } else {
-    panelBody.innerHTML = entries.map(e => {
+    // Truck capacity bar — only for Pallets
+    const totalPallets = entries.filter(e => e.tipo === 'Pallets' && e.estado !== 'anulado').reduce((s,e) => s+(e.cantidad||0), 0);
+    const camiones = Math.floor(totalPallets / CRON_PALLETS_POR_CAMION);
+    const resto    = totalPallets % CRON_PALLETS_POR_CAMION;
+    const pct      = Math.min(100, Math.round((totalPallets % CRON_PALLETS_POR_CAMION) / CRON_PALLETS_POR_CAMION * 100));
+    const camionColor = camiones >= 1 ? '#22c55e' : (totalPallets > 0 ? '#f59e0b' : '#94a3b8');
+    const camionHtml = totalPallets > 0 ? `
+      <div style="background:${camionColor}12;border:1px solid ${camionColor}30;border-radius:8px;padding:8px 10px;margin-bottom:10px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">
+          <span style="font-size:.7rem;font-weight:700;color:${camionColor}"><i class="bi bi-truck me-1"></i>${camiones > 0 ? camiones + ' camión' + (camiones>1?'es':'')+' completo'+(camiones>1?'s':'') : ''}${camiones>0&&resto>0?' + ':''} ${resto>0?resto+' pallets extra':''}</span>
+          <span style="font-size:.65rem;font-weight:800;color:${camionColor}">${totalPallets}/${camiones*CRON_PALLETS_POR_CAMION + CRON_PALLETS_POR_CAMION} P</span>
+        </div>
+        <div style="background:#e2e8f0;border-radius:20px;height:5px;overflow:hidden">
+          <div style="width:${pct}%;background:${camionColor};height:100%;border-radius:20px;transition:width .3s"></div>
+        </div>
+        <div style="font-size:.6rem;color:#94a3b8;margin-top:3px">${CRON_PALLETS_POR_CAMION - resto} pallets para completar camión</div>
+      </div>` : '';
+
+    panelBody.innerHTML = camionHtml + entries.map(e => {
       const sColor = {pendiente:'#f59e0b', entregado:'#22c55e', anulado:'#94a3b8'}[e.estado] || '#94a3b8';
       const sLabel = {pendiente:'Pendiente', entregado:'Entregado', anulado:'Anulado'}[e.estado] || e.estado;
       const sIcon  = {pendiente:'bi-clock', entregado:'bi-check-circle-fill', anulado:'bi-x-circle'}[e.estado] || 'bi-circle';
+      const precioHtml = e.precio ? `<span style="font-size:.68rem;font-weight:700;color:#4f46e5;margin-left:6px">${fmt(e.precio)}</span>` : '';
       return `<div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:9px 10px;margin-bottom:7px;border-left:3px solid ${sColor}">
         <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:6px">
           <div style="flex:1;min-width:0">
             <div style="font-weight:700;font-size:.8rem;color:#0f172a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${e.cliente}">${e.cliente}</div>
-            <div style="font-size:.71rem;color:#475569;margin-top:2px">${e.cantidad} ${e.tipo} · ${e.harina} ${e.peso}</div>
+            <div style="font-size:.71rem;color:#475569;margin-top:2px">${e.cantidad} ${e.tipo} · ${e.harina} ${e.peso}${precioHtml}</div>
             ${e.notas?`<div style="font-size:.67rem;color:#94a3b8;margin-top:2px;font-style:italic">${e.notas}</div>`:''}
           </div>
           <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0">
@@ -18546,6 +18764,7 @@ function _cronAbrirFormEntrega(dateStr, entregaId) {
   document.getElementById('cron-f-tipo').value     = 'Pallets';
   document.getElementById('cron-f-harina').value   = '000';
   document.getElementById('cron-f-peso').value     = '25 kg';
+  document.getElementById('cron-f-precio').value   = '';
   document.getElementById('cron-f-notas').value    = '';
 
   if (entregaId) {
@@ -18556,6 +18775,7 @@ function _cronAbrirFormEntrega(dateStr, entregaId) {
       document.getElementById('cron-f-tipo').value     = e.tipo;
       document.getElementById('cron-f-harina').value   = e.harina;
       document.getElementById('cron-f-peso').value     = e.peso;
+      document.getElementById('cron-f-precio').value   = e.precio || '';
       document.getElementById('cron-f-notas').value    = e.notas || '';
     }
     if (title) title.textContent = 'Editar entrega';
@@ -18580,6 +18800,7 @@ function _cronGuardarEntrega() {
   const tipo      = document.getElementById('cron-f-tipo').value;
   const harina    = document.getElementById('cron-f-harina').value;
   const peso      = document.getElementById('cron-f-peso').value;
+  const precio    = parseFloat(document.getElementById('cron-f-precio').value) || 0;
   const notas     = (document.getElementById('cron-f-notas').value || '').trim();
 
   if (!cliente)    { alert('Ingresá el nombre del cliente.'); return; }
@@ -18593,13 +18814,13 @@ function _cronGuardarEntrega() {
     if (idx !== -1) {
       ST.cronogramaHarina[dateStr][idx] = {
         ...ST.cronogramaHarina[dateStr][idx],
-        cliente, cantidad, tipo, harina, peso, notas
+        cliente, cantidad, tipo, harina, peso, precio, notas
       };
     }
   } else {
     ST.cronogramaHarina[dateStr].push({
       id: Date.now().toString(36) + Math.random().toString(36).slice(2,6),
-      cliente, cantidad, tipo, harina, peso, notas,
+      cliente, cantidad, tipo, harina, peso, precio, notas,
       estado: 'pendiente'
     });
   }
@@ -18680,7 +18901,7 @@ function _cronStats(year, month) {
   const prefix = _cronDateStr(year, month + 1, 1).slice(0, 7);
   const cron = ST.cronogramaHarina || {};
 
-  let total = 0, pend = 0, entg = 0, dias = 0;
+  let total = 0, pend = 0, entg = 0, dias = 0, totalPallets = 0, totalFacturado = 0;
   const clientes = new Set();
 
   Object.entries(cron).forEach(([date, entries]) => {
@@ -18689,25 +18910,194 @@ function _cronStats(year, month) {
     entries.forEach(e => {
       total++;
       clientes.add(e.cliente);
+      if (e.estado !== 'anulado') { totalPallets += (e.tipo === 'Pallets' ? (e.cantidad||0) : 0); totalFacturado += (e.precio||0); }
       if (e.estado === 'pendiente')  pend++;
       if (e.estado === 'entregado')  entg++;
     });
   });
 
-  const s = (icon, val, label, color) =>
-    `<div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:7px 13px;display:flex;align-items:center;gap:8px">
-       <i class="bi ${icon}" style="color:${color};font-size:.9rem;flex-shrink:0"></i>
-       <div><div style="font-weight:800;font-size:.9rem;color:#0f172a;line-height:1.1">${val}</div>
-            <div style="font-size:.6rem;color:#94a3b8;margin-top:1px">${label}</div></div>
-     </div>`;
+  const camiones = Math.floor(totalPallets / CRON_PALLETS_POR_CAMION);
+
+  const s = (icon, val, label, color, onclick) => {
+    const clickable = onclick ? 'cursor:pointer;transition:box-shadow .15s' : '';
+    const hover = onclick ? 'onmouseover="this.style.boxShadow=\'0 0 0 3px ' + color + '30\'" onmouseout="this.style.boxShadow=\'none\'"' : '';
+    return '<div onclick="' + (onclick||'') + '" ' + hover + ' style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:7px 13px;display:flex;align-items:center;gap:8px;' + clickable + '">' +
+      '<i class="bi ' + icon + '" style="color:' + color + ';font-size:.9rem;flex-shrink:0"></i>' +
+      '<div><div style="font-weight:800;font-size:.9rem;color:#0f172a;line-height:1.1">' + val + '</div>' +
+      '<div style="font-size:.6rem;color:#94a3b8;margin-top:1px">' + label + '</div></div></div>';
+  };
 
   el.innerHTML = [
-    s('bi-truck',           total,            'Total entregas',    '#4f46e5'),
-    s('bi-clock',           pend,             'Pendientes',        '#f59e0b'),
-    s('bi-check-circle-fill',entg,            'Entregados',        '#22c55e'),
-    s('bi-calendar-day',    dias,             'Días con entrega',  '#3b82f6'),
-    s('bi-people',          clientes.size,    'Clientes',          '#8b5cf6'),
+    s('bi-truck',            total,            'Total entregas',      '#4f46e5', "_cronShowFiltro('todos')"),
+    s('bi-clock',            pend,             'Pendientes',          '#f59e0b', "_cronShowFiltro('pendiente')"),
+    s('bi-check-circle-fill',entg,             'Entregados',          '#22c55e', "_cronShowFiltro('entregado')"),
+    s('bi-truck-flatbed',    camiones,         `Camiones (${totalPallets}P)`, '#3b82f6', ''),
+    s('bi-cash-stack',       totalFacturado?fmt(totalFacturado):'—', 'Facturación mes', '#10b981', ''),
+    s('bi-people',           clientes.size,    'Clientes',            '#8b5cf6', ''),
   ].join('');
+}
+
+function _cronShowFiltro(estado) {
+  const overlay = document.getElementById('cron-filtro-overlay');
+  const title   = document.getElementById('cron-filtro-title');
+  const body    = document.getElementById('cron-filtro-body');
+  const repBtn  = document.getElementById('cron-filtro-report-btn');
+  if (!overlay || !body) return;
+
+  const prefix = _cronDateStr(_cronYear, _cronMonth + 1, 1).slice(0, 7);
+  const cron   = ST.cronogramaHarina || {};
+  const labels = { pendiente:'🕐 Pendientes', entregado:'✅ Entregados', todos:'🚚 Todas las entregas' };
+
+  if (title) title.textContent = `${labels[estado]||estado} — ${new Date(_cronYear, _cronMonth, 1).toLocaleDateString('es-AR',{month:'long',year:'numeric'})}`;
+  if (repBtn) repBtn.style.display = estado === 'pendiente' ? 'inline-flex' : 'none';
+
+  // Gather all matching entries across the month
+  const rows = [];
+  Object.entries(cron)
+    .filter(([d]) => d.startsWith(prefix))
+    .sort(([a],[b]) => a.localeCompare(b))
+    .forEach(([date, entries]) => {
+      entries.forEach(e => {
+        if (estado === 'todos' || e.estado === estado) rows.push({ date, ...e });
+      });
+    });
+
+  if (rows.length === 0) {
+    body.innerHTML = `<div style="text-align:center;padding:40px 0;color:#94a3b8">
+      <i class="bi bi-inbox" style="font-size:2rem;display:block;margin-bottom:8px"></i>
+      <div style="font-size:.85rem">Sin entregas ${estado === 'pendiente' ? 'pendientes' : estado === 'entregado' ? 'entregadas' : ''} este mes</div>
+    </div>`;
+  } else {
+    let totalPallets = 0, totalFacturado = 0;
+    rows.forEach(r => { if (r.tipo === 'Pallets') totalPallets += (r.cantidad||0); totalFacturado += (r.precio||0); });
+    const camiones = Math.floor(totalPallets / CRON_PALLETS_POR_CAMION);
+
+    body.innerHTML = `
+      <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+        <div style="background:#f1f5f9;border-radius:8px;padding:6px 12px;font-size:.75rem;font-weight:700;color:#0f172a">${rows.length} entregas</div>
+        ${totalPallets > 0 ? `<div style="background:#ede9fe;border-radius:8px;padding:6px 12px;font-size:.75rem;font-weight:700;color:#4f46e5">${totalPallets} pallets · ${camiones} camión${camiones!==1?'es':''}</div>` : ''}
+        ${totalFacturado > 0 ? `<div style="background:#d1fae5;border-radius:8px;padding:6px 12px;font-size:.75rem;font-weight:700;color:#065f46">Total: ${fmt(totalFacturado)}</div>` : ''}
+      </div>
+      <table style="width:100%;border-collapse:collapse;font-size:.78rem">
+        <thead>
+          <tr style="border-bottom:2px solid #e2e8f0">
+            <th style="padding:6px 8px;text-align:left;font-weight:700;color:#64748b;font-size:.7rem">FECHA</th>
+            <th style="padding:6px 8px;text-align:left;font-weight:700;color:#64748b;font-size:.7rem">CLIENTE</th>
+            <th style="padding:6px 8px;text-align:center;font-weight:700;color:#64748b;font-size:.7rem">CANT.</th>
+            <th style="padding:6px 8px;text-align:left;font-weight:700;color:#64748b;font-size:.7rem">PRODUCTO</th>
+            <th style="padding:6px 8px;text-align:right;font-weight:700;color:#64748b;font-size:.7rem">PRECIO</th>
+            <th style="padding:6px 8px;text-align:center;font-weight:700;color:#64748b;font-size:.7rem">ESTADO</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map((r,i) => {
+            const [ry,rm,rd] = r.date.split('-').map(Number);
+            const fechaLabel = new Date(ry,rm-1,rd).toLocaleDateString('es-AR',{weekday:'short',day:'numeric',month:'short'});
+            const sc = {pendiente:'#f59e0b',entregado:'#22c55e',anulado:'#94a3b8'}[r.estado]||'#94a3b8';
+            const sl = {pendiente:'Pendiente',entregado:'Entregado',anulado:'Anulado'}[r.estado]||r.estado;
+            return `<tr style="border-bottom:1px solid #f1f5f9;background:${i%2===0?'#fff':'#fafafa'}">
+              <td style="padding:7px 8px;white-space:nowrap;color:#475569;font-size:.73rem">${fechaLabel}</td>
+              <td style="padding:7px 8px;font-weight:600;color:#0f172a;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.cliente}</td>
+              <td style="padding:7px 8px;text-align:center;font-weight:700;color:#0f172a">${r.cantidad} ${r.tipo}</td>
+              <td style="padding:7px 8px;color:#64748b;font-size:.73rem">${r.harina} ${r.peso}</td>
+              <td style="padding:7px 8px;text-align:right;font-weight:700;color:#4f46e5">${r.precio ? fmt(r.precio) : '—'}</td>
+              <td style="padding:7px 8px;text-align:center"><span style="background:${sc}18;color:${sc};border-radius:5px;padding:2px 7px;font-size:.65rem;font-weight:700;white-space:nowrap">${sl}</span></td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>`;
+  }
+
+  overlay.style.display = 'flex';
+}
+
+function _cronReportePendientes() {
+  const prefix = _cronDateStr(_cronYear, _cronMonth + 1, 1).slice(0, 7);
+  const cron   = ST.cronogramaHarina || {};
+  const mesLabel = new Date(_cronYear, _cronMonth, 1).toLocaleDateString('es-AR', { month: 'long', year: 'numeric' });
+
+  const rows = [];
+  Object.entries(cron)
+    .filter(([d]) => d.startsWith(prefix))
+    .sort(([a],[b]) => a.localeCompare(b))
+    .forEach(([date, entries]) => {
+      entries.filter(e => e.estado === 'pendiente').forEach(e => rows.push({ date, ...e }));
+    });
+
+  if (!rows.length) { toast('No hay entregas pendientes este mes', 'info'); return; }
+
+  const totalPallets  = rows.filter(r => r.tipo === 'Pallets').reduce((s,r) => s+(r.cantidad||0), 0);
+  const totalFacturado = rows.reduce((s,r) => s+(r.precio||0), 0);
+  const camiones = Math.floor(totalPallets / CRON_PALLETS_POR_CAMION);
+
+  const html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
+    <title>Entregas Pendientes — ${mesLabel}</title>
+    <style>
+      body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;margin:0;padding:24px;color:#0f172a;font-size:13px}
+      h2{margin:0 0 4px;font-size:18px;color:#0f172a}
+      .sub{color:#64748b;font-size:12px;margin-bottom:20px}
+      .kpis{display:flex;gap:16px;margin-bottom:20px;flex-wrap:wrap}
+      .kpi{background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 16px}
+      .kpi-val{font-size:20px;font-weight:800;color:#4f46e5}
+      .kpi-label{font-size:11px;color:#94a3b8;margin-top:2px}
+      table{width:100%;border-collapse:collapse}
+      th{background:#f1f5f9;padding:8px 10px;text-align:left;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.5px}
+      td{padding:9px 10px;border-bottom:1px solid #f1f5f9;vertical-align:middle}
+      tr:nth-child(even) td{background:#fafafa}
+      .badge{background:#fef3c7;color:#92400e;border-radius:5px;padding:2px 8px;font-size:11px;font-weight:700}
+      .precio{font-weight:700;color:#4f46e5}
+      tfoot td{font-weight:800;background:#f1f5f9;border-top:2px solid #e2e8f0}
+      @media print{body{padding:0} .no-print{display:none}}
+    </style></head><body>
+    <button onclick="window.print()" class="no-print" style="background:#4f46e5;color:#fff;border:none;border-radius:8px;padding:8px 18px;cursor:pointer;font-size:13px;font-weight:700;margin-bottom:16px">🖨 Imprimir</button>
+    <h2>🚚 Entregas Pendientes</h2>
+    <div class="sub">MÜÜK · ${mesLabel.charAt(0).toUpperCase()+mesLabel.slice(1)} · Generado ${new Date().toLocaleDateString('es-AR')}</div>
+    <div class="kpis">
+      <div class="kpi"><div class="kpi-val">${rows.length}</div><div class="kpi-label">Entregas pendientes</div></div>
+      <div class="kpi"><div class="kpi-val">${totalPallets}</div><div class="kpi-label">Total pallets</div></div>
+      <div class="kpi"><div class="kpi-val">${camiones}</div><div class="kpi-label">Camiones completos</div></div>
+      ${totalFacturado > 0 ? `<div class="kpi"><div class="kpi-val">${fmt(totalFacturado)}</div><div class="kpi-label">Total facturación</div></div>` : ''}
+    </div>
+    <table>
+      <thead><tr><th>Fecha</th><th>Cliente</th><th>Cantidad</th><th>Producto</th><th>Precio</th><th>Notas</th></tr></thead>
+      <tbody>
+        ${rows.map(r => {
+          const [ry,rm,rd] = r.date.split('-').map(Number);
+          const fLabel = new Date(ry,rm-1,rd).toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'});
+          return `<tr>
+            <td>${fLabel}</td>
+            <td><strong>${r.cliente}</strong></td>
+            <td><strong>${r.cantidad}</strong> ${r.tipo}</td>
+            <td>${r.harina} ${r.peso}</td>
+            <td class="precio">${r.precio ? fmt(r.precio) : '—'}</td>
+            <td style="color:#94a3b8;font-size:11px">${r.notas||''}</td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+      <tfoot><tr>
+        <td colspan="2">TOTALES</td>
+        <td>${totalPallets} Pallets</td>
+        <td>${camiones} camiones</td>
+        <td class="precio">${totalFacturado ? fmt(totalFacturado) : '—'}</td>
+        <td></td>
+      </tr></tfoot>
+    </table>
+  </body></html>`;
+
+  const w = window.open('', '_blank', 'width=900,height=700');
+  if (!w) {
+    // Popup blocked — fallback: open as data URL in same tab
+    const blob = new Blob([html], {type: 'text/html'});
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url; a.target = '_blank'; a.rel = 'noopener';
+    document.body.appendChild(a); a.click();
+    setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 2000);
+    toast('Reporte abierto (si no se abrió, habilitá los popups para este sitio)', 'info');
+    return;
+  }
+  w.document.write(html);
+  w.document.close();
 }
 
 function _cronRenderLista(year, month) {
@@ -18734,11 +19124,18 @@ function _cronRenderLista(year, month) {
     const [y,m,d] = date.split('-').map(Number);
     const label = new Date(y,m-1,d).toLocaleDateString('es-AR',{weekday:'short',day:'numeric',month:'short'});
     const isToday = date === todayStr;
+    const dayPallets = entries.filter(e => e.tipo==='Pallets' && e.estado!=='anulado').reduce((s,e)=>s+(e.cantidad||0),0);
+    const dayPrice   = entries.reduce((s,e)=>s+(e.precio||0),0);
+    const camionesDay = Math.floor(dayPallets / CRON_PALLETS_POR_CAMION);
+    const truckBadge = dayPallets > 0 ? `<span style="background:#ede9fe;color:#4f46e5;border-radius:4px;padding:1px 6px;font-size:.6rem;font-weight:700;margin-left:5px"><i class="bi bi-truck me-1"></i>${dayPallets}P ${camionesDay>0?'('+camionesDay+' cam.)':''}</span>` : '';
+    const priceBadge = dayPrice > 0 ? `<span style="background:#d1fae5;color:#065f46;border-radius:4px;padding:1px 6px;font-size:.6rem;font-weight:700;margin-left:3px">${fmt(dayPrice)}</span>` : '';
 
     return `<div style="margin-bottom:12px">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
-        <div style="font-size:.75rem;font-weight:700;color:${isToday?'#4f46e5':'#475569'};text-transform:capitalize">
-          ${isToday?'<span style="background:#ede9fe;color:#4f46e5;border-radius:4px;padding:1px 6px;font-size:.62rem;font-weight:800;margin-right:5px">HOY</span>':''}${label}
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;flex-wrap:wrap;gap:4px">
+        <div style="display:flex;align-items:center;flex-wrap:wrap;gap:3px">
+          ${isToday?'<span style="background:#ede9fe;color:#4f46e5;border-radius:4px;padding:1px 6px;font-size:.62rem;font-weight:800">HOY</span>':''}
+          <span style="font-size:.75rem;font-weight:700;color:${isToday?'#4f46e5':'#475569'};text-transform:capitalize">${label}</span>
+          ${truckBadge}${priceBadge}
         </div>
         <button onclick="_cronAbrirFormEntrega('${date}')" style="background:#f1f5f9;border:1px solid #e2e8f0;border-radius:6px;padding:2px 8px;cursor:pointer;font-size:.65rem;color:#4f46e5;font-weight:600"><i class="bi bi-plus-lg me-1"></i>Agregar</button>
       </div>
@@ -18746,10 +19143,12 @@ function _cronRenderLista(year, month) {
         const sc = {pendiente:'#f59e0b',entregado:'#22c55e',anulado:'#94a3b8'}[e.estado]||'#94a3b8';
         const si = {pendiente:'bi-clock',entregado:'bi-check-circle-fill',anulado:'bi-x-circle'}[e.estado];
         const sl = {pendiente:'Pendiente',entregado:'Entregado',anulado:'Anulado'}[e.estado];
+        const precioHtml = e.precio ? `<span style="font-size:.68rem;font-weight:700;color:#4f46e5;margin-left:6px">${fmt(e.precio)}</span>` : '';
         return `<div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:8px 12px;margin-bottom:4px;display:flex;align-items:center;justify-content:space-between;gap:8px;border-left:3px solid ${sc}">
           <div style="flex:1;min-width:0">
             <span style="font-weight:700;font-size:.8rem;color:#0f172a">${e.cliente}</span>
             <span style="font-size:.71rem;color:#64748b;margin-left:8px">${e.cantidad} ${e.tipo} · ${e.harina} ${e.peso}</span>
+            ${precioHtml}
             ${e.notas?`<span style="font-size:.67rem;color:#94a3b8;margin-left:6px;font-style:italic">${e.notas}</span>`:''}
           </div>
           <div style="display:flex;align-items:center;gap:3px;flex-shrink:0">
@@ -19246,7 +19645,7 @@ const CONTABILIDAD_SHEETS = {
   '2026-12': { label: 'Dic 2026' },
 };
 
-let _contabMesActivo = '2026-03';
+let _contabMesActivo = (()=>{ const n=new Date(); return n.getFullYear()+'-'+(String(n.getMonth()+1).padStart(2,'0')); })();
 
 // Obtener ID de la hoja para un mes (user config tiene prioridad sobre default)
 function _getSheetId(key) {
@@ -23112,6 +23511,11 @@ function _renderConfigEmailjs() {
   setChk('cfg-alerta-cheques', a.chequesVenc !== false);
   setChk('cfg-alerta-arca', a.arcaOblig !== false);
   setChk('cfg-alerta-diario', a.resumenDiario === true);
+  // Feature 2: umbral saldo
+  set('cfg-umbral-monto', a.umbralSaldo || '');
+  setChk('cfg-umbral-activo', a.umbralSaldoActivo === true);
+  const prevEl = document.getElementById('cfg-umbral-preview');
+  if (prevEl) prevEl.style.display = a.umbralSaldoActivo ? 'block' : 'none';
   _updateEmailjsStatus();
 }
 
@@ -23913,6 +24317,590 @@ function _actualizarUltimoEnvio() {
   } catch(e) {}
 })();
 
+/* ═══════════════════════════════════════════
+   FEATURE 6: RECONCILIACIÓN BANCARIA
+═══════════════════════════════════════════ */
+function abrirModalReconciliacion() {
+  if (!ST.reconciliaciones) ST.reconciliaciones = [];
+  const saldoApp = calcSaldo(ST.cajaBancos || []);
+  document.getElementById('rec-saldo-banco').value = '';
+  const resEl = document.getElementById('rec-resultado');
+  if (resEl) resEl.style.display = 'none';
+  _renderRecHistorial();
+  document.getElementById('rec-saldo-banco').dataset.saldoApp = saldoApp;
+  const modal = new bootstrap.Modal(document.getElementById('modal-reconciliacion'));
+  modal.show();
+}
+
+function _recalcReconciliacion() {
+  const inp = document.getElementById('rec-saldo-banco');
+  const saldoBanco = parseFloat(inp.value);
+  if (isNaN(saldoBanco)) { document.getElementById('rec-resultado').style.display = 'none'; return; }
+  const saldoApp = parseFloat(inp.dataset.saldoApp || calcSaldo(ST.cajaBancos || []));
+  const diff = saldoBanco - saldoApp;
+  document.getElementById('rec-saldo-app').textContent = fmt(saldoApp);
+  document.getElementById('rec-saldo-bco').textContent = fmt(saldoBanco);
+  const diffEl = document.getElementById('rec-diferencia-badge');
+  if (Math.abs(diff) < 1) {
+    diffEl.innerHTML = '<span class="badge bg-success fs-6"><i class="bi bi-check-circle me-1"></i>Cuadra</span>';
+  } else {
+    const sign = diff > 0 ? '+' : '';
+    diffEl.innerHTML = `<span class="badge bg-warning text-dark fs-6"><i class="bi bi-exclamation-triangle me-1"></i>Diferencia de ${sign}${fmt(diff)}</span>`;
+  }
+  document.getElementById('rec-resultado').style.display = 'block';
+}
+
+function guardarReconciliacion() {
+  const inp = document.getElementById('rec-saldo-banco');
+  const saldoBanco = parseFloat(inp.value);
+  if (isNaN(saldoBanco)) { toast('Ingresá el saldo bancario primero', 'warning'); return; }
+  const saldoApp = parseFloat(inp.dataset.saldoApp || calcSaldo(ST.cajaBancos || []));
+  if (!ST.reconciliaciones) ST.reconciliaciones = [];
+  ST.reconciliaciones.unshift({
+    fecha: new Date().toISOString().slice(0,10),
+    hora: new Date().toLocaleTimeString('es-AR', {hour:'2-digit', minute:'2-digit'}),
+    saldoBanco,
+    saldoApp,
+    diferencia: saldoBanco - saldoApp
+  });
+  if (ST.reconciliaciones.length > 20) ST.reconciliaciones.length = 20;
+  save();
+  _renderRecHistorial();
+  toast('Reconciliación guardada', 'success');
+}
+
+function _renderRecHistorial() {
+  const el = document.getElementById('rec-historial');
+  if (!el) return;
+  const recs = (ST.reconciliaciones || []).slice(0, 5);
+  if (!recs.length) { el.innerHTML = '<small class="text-muted">Sin reconciliaciones previas.</small>'; return; }
+  el.innerHTML = `<table class="table table-sm mb-0" style="font-size:.78rem">
+    <thead><tr><th>Fecha</th><th class="text-end">App</th><th class="text-end">Banco</th><th class="text-end">Diferencia</th></tr></thead>
+    <tbody>${recs.map(r => {
+      const ok = Math.abs(r.diferencia) < 1;
+      const sign = r.diferencia >= 0 ? '+' : '';
+      return `<tr>
+        <td>${r.fecha} ${r.hora||''}</td>
+        <td class="text-end">${fmt(r.saldoApp)}</td>
+        <td class="text-end">${fmt(r.saldoBanco)}</td>
+        <td class="text-end ${ok?'text-success fw-bold':'text-warning fw-bold'}">${ok ? '&#10003; Cuadra' : sign+fmt(r.diferencia)}</td>
+      </tr>`;
+    }).join('')}</tbody>
+  </table>`;
+}
+
+/* ═══════════════════════════════════════════
+   FEATURE 7: RENTABILIDAD POR FLETE (CRONOGRAMA)
+═══════════════════════════════════════════ */
+function _cronShowRentabilidad() {
+  const overlay = document.getElementById('cron-filtro-overlay');
+  const title   = document.getElementById('cron-filtro-title');
+  const body    = document.getElementById('cron-filtro-body');
+  const repBtn  = document.getElementById('cron-filtro-report-btn');
+  if (!overlay || !body) return;
+
+  const prefix = `${_cronYear}-${String(_cronMonth+1).padStart(2,'0')}`;
+  const cron   = ST.cronogramaHarina || {};
+  const mesNombre = new Date(_cronYear, _cronMonth, 1).toLocaleDateString('es-AR', {month:'long', year:'numeric'});
+  if (title) title.textContent = `Analisis de Rentabilidad - ${mesNombre}`;
+  if (repBtn) repBtn.style.display = 'none';
+
+  const mapa = {};
+  let totalPallets = 0, totalFacturado = 0, totalEntregas = 0;
+  Object.entries(cron).forEach(([date, entries]) => {
+    if (!date.startsWith(prefix)) return;
+    entries.forEach(e => {
+      if (e.estado === 'anulado') return;
+      if (!mapa[e.cliente]) mapa[e.cliente] = { entregas:0, pallets:0, facturado:0 };
+      mapa[e.cliente].entregas++;
+      mapa[e.cliente].pallets += e.tipo === 'Pallets' ? (e.cantidad||0) : 0;
+      mapa[e.cliente].facturado += (e.precio||0);
+      totalPallets += e.tipo === 'Pallets' ? (e.cantidad||0) : 0;
+      totalFacturado += (e.precio||0);
+      totalEntregas++;
+    });
+  });
+
+  const clientes = Object.entries(mapa).sort((a,b) => b[1].facturado - a[1].facturado);
+
+  if (!clientes.length) {
+    body.innerHTML = '<div class="text-center text-muted py-4"><i class="bi bi-inbox fs-3 d-block mb-2"></i>Sin datos para este mes.</div>';
+    overlay.style.display = 'flex';
+    return;
+  }
+
+  const maxFac = clientes[0][1].facturado || 1;
+
+  let html = `<div class="row g-2 mb-3">
+    <div class="col-4"><div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px;text-align:center">
+      <div style="font-size:1.2rem;font-weight:800;color:#16a34a">${totalEntregas}</div>
+      <div style="font-size:.65rem;color:#64748b">Entregas totales</div>
+    </div></div>
+    <div class="col-4"><div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:10px;text-align:center">
+      <div style="font-size:1.2rem;font-weight:800;color:#1d4ed8">${totalPallets}</div>
+      <div style="font-size:.65rem;color:#64748b">Pallets totales</div>
+    </div></div>
+    <div class="col-4"><div style="background:#faf5ff;border:1px solid #e9d5ff;border-radius:8px;padding:10px;text-align:center">
+      <div style="font-size:1rem;font-weight:800;color:#7c3aed">${totalFacturado ? fmt(totalFacturado) : '—'}</div>
+      <div style="font-size:.65rem;color:#64748b">Facturacion mes</div>
+    </div></div>
+  </div>
+  <table class="table table-sm" style="font-size:.78rem">
+    <thead class="table-dark"><tr>
+      <th>#</th><th>Cliente</th><th class="text-center">Entregas</th><th class="text-center">Pallets</th><th class="text-end">Facturado</th><th class="text-end">Prom/viaje</th>
+    </tr></thead>
+    <tbody>${clientes.map(([cli, d], i) => `<tr>
+      <td class="text-muted">${i+1}</td>
+      <td><strong>${cli}</strong></td>
+      <td class="text-center">${d.entregas}</td>
+      <td class="text-center">${d.pallets||'—'}</td>
+      <td class="text-end fw-bold text-success">${d.facturado ? fmt(d.facturado) : '—'}</td>
+      <td class="text-end text-muted">${d.entregas && d.facturado ? fmt(Math.round(d.facturado/d.entregas)) : '—'}</td>
+    </tr>`).join('')}</tbody>
+  </table>
+  <div style="margin-top:8px;font-size:.75rem;font-weight:700;color:#475569;margin-bottom:6px">Ranking por facturacion</div>
+  ${clientes.map(([cli, d]) => {
+    const pct = maxFac ? Math.round((d.facturado/maxFac)*100) : 0;
+    return `<div style="margin-bottom:6px">
+      <div style="display:flex;justify-content:space-between;font-size:.72rem;margin-bottom:2px"><span>${cli}</span><span class="fw-bold">${d.facturado?fmt(d.facturado):'—'}</span></div>
+      <div style="background:#e2e8f0;border-radius:4px;height:8px"><div style="background:#7c3aed;border-radius:4px;height:8px;width:${pct}%"></div></div>
+    </div>`;
+  }).join('')}`;
+
+  body.innerHTML = html;
+  overlay.style.display = 'flex';
+}
+
+/* ═══════════════════════════════════════════
+   FEATURE 2: ALERTAS POR UMBRAL DE SALDO
+═══════════════════════════════════════════ */
+function _checkUmbralSaldo() {
+  const cfg = ST.alertasConfig || {};
+  const el = document.getElementById('dash-umbral-alerta');
+  if (!el) return;
+  if (!cfg.umbralSaldoActivo || !cfg.umbralSaldo) { el.style.display = 'none'; return; }
+  const sB = calcSaldo(ST.cajaBancos || []);
+  const sE = calcSaldo(ST.cajaEfectivo || []);
+  const cartera = [...(ST.chequesFisicos||[]).filter(c=>c.estado==='en_cartera'||c.estado==='pendiente'),
+                   ...(ST.eCheques||[]).filter(c=>c.estado==='pendiente')];
+  const totCartera = cartera.reduce((s,c)=>s+(+c.monto),0);
+  const total = sB + sE + totCartera;
+  if (total < +cfg.umbralSaldo) {
+    el.style.display = 'flex';
+    const dEl = document.getElementById('dash-umbral-diff');
+    if (dEl) dEl.textContent = `El saldo total (${fmt(total)}) esta por debajo del umbral configurado de ${fmt(+cfg.umbralSaldo)}. Diferencia: ${fmt(+cfg.umbralSaldo - total)}.`;
+  } else {
+    el.style.display = 'none';
+  }
+}
+
+/* ═══════════════════════════════════════════
+   FEATURE 1: PROYECCION DE FLUJO DE CAJA
+═══════════════════════════════════════════ */
+function _renderProyeccionFlujo() {
+  const el = document.getElementById('dash-proyeccion-flujo');
+  if (!el) return;
+
+  const sB = calcSaldo(ST.cajaBancos || []);
+  const sE = calcSaldo(ST.cajaEfectivo || []);
+  const cartera = [...(ST.chequesFisicos||[]).filter(c=>c.estado==='en_cartera'||c.estado==='pendiente'),
+                   ...(ST.eCheques||[]).filter(c=>c.estado==='pendiente')];
+  const totCartera = cartera.reduce((s,c)=>s+(+c.monto),0);
+  const saldoActual = sB + sE + totCartera;
+
+  const todos = [...(ST.cajaBancos||[]), ...(ST.cajaEfectivo||[])];
+  const ahora = new Date();
+  const meses = [0,1,2].map(i => {
+    const d = new Date(ahora.getFullYear(), ahora.getMonth()-i, 1);
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+  });
+  let totalIng = 0, totalEgr = 0, mesesConDatos = 0;
+  meses.forEach(mes => {
+    const movMes = todos.filter(m => m.fecha && m.fecha.startsWith(mes));
+    if (!movMes.length) return;
+    mesesConDatos++;
+    totalIng += movMes.filter(m=>m.tipo==='ingreso').reduce((s,m)=>s+(+m.monto),0);
+    totalEgr += movMes.filter(m=>m.tipo==='egreso').reduce((s,m)=>s+(+m.monto),0);
+  });
+  const divisor = mesesConDatos || 1;
+  const promIng = totalIng / divisor;
+  const promEgr = totalEgr / divisor;
+  const flujoNeto = promIng - promEgr;
+
+  const proy30 = saldoActual + flujoNeto;
+  const proy60 = saldoActual + flujoNeto * 2;
+
+  const colorFlujo = flujoNeto >= 0 ? '#16a34a' : '#dc2626';
+  const badgeClass = flujoNeto >= 0 ? 'bg-success' : 'bg-danger';
+  const badgeLabel = flujoNeto >= 0 ? 'Tendencia positiva' : 'Tendencia negativa';
+
+  const maxVal = Math.max(Math.abs(saldoActual), Math.abs(proy30), Math.abs(proy60), 1);
+  const pct = v => Math.max(0, Math.min(100, Math.round((Math.abs(v) / maxVal) * 100)));
+  const barColor = v => v >= 0 ? '#16a34a' : '#dc2626';
+
+  el.innerHTML = `<div class="card p-3 mb-3" style="border-left:4px solid #3b82f6;border-radius:10px">
+    <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+      <h6 class="fw-bold mb-0"><i class="bi bi-graph-up-arrow me-2 text-primary"></i>Proyeccion de Flujo de Caja</h6>
+      <span class="badge ${badgeClass}" style="font-size:.72rem">${badgeLabel}</span>
+    </div>
+    <div class="row g-3 mb-3">
+      <div class="col-4 text-center">
+        <div style="font-size:.65rem;color:#94a3b8;font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Hoy</div>
+        <div style="font-weight:800;font-size:1rem;color:#0f172a">${fmt(saldoActual)}</div>
+        <div style="background:#e2e8f0;border-radius:4px;height:8px;margin-top:6px"><div style="background:${barColor(saldoActual)};height:8px;border-radius:4px;width:${pct(saldoActual)}%"></div></div>
+      </div>
+      <div class="col-4 text-center">
+        <div style="font-size:.65rem;color:#94a3b8;font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">+30 dias</div>
+        <div style="font-weight:800;font-size:1rem;color:${barColor(proy30)}">${fmt(proy30)}</div>
+        <div style="background:#e2e8f0;border-radius:4px;height:8px;margin-top:6px"><div style="background:${barColor(proy30)};height:8px;border-radius:4px;width:${pct(proy30)}%"></div></div>
+      </div>
+      <div class="col-4 text-center">
+        <div style="font-size:.65rem;color:#94a3b8;font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">+60 dias</div>
+        <div style="font-weight:800;font-size:1rem;color:${barColor(proy60)}">${fmt(proy60)}</div>
+        <div style="background:#e2e8f0;border-radius:4px;height:8px;margin-top:6px"><div style="background:${barColor(proy60)};height:8px;border-radius:4px;width:${pct(proy60)}%"></div></div>
+      </div>
+    </div>
+    <div style="font-size:.72rem;color:#64748b;background:#f8fafc;border-radius:7px;padding:8px 12px">
+      <i class="bi bi-info-circle me-1"></i>
+      Prom. mensual: <span class="text-success fw-bold">${fmt(promIng)} ingresos</span> / <span class="text-danger fw-bold">${fmt(promEgr)} egresos</span>
+      &mdash; Flujo neto: <span style="color:${colorFlujo};font-weight:700">${flujoNeto>=0?'+':''}${fmt(flujoNeto)}/mes</span>
+      ${mesesConDatos < 2 ? ' <span class="badge bg-warning text-dark ms-1" style="font-size:.6rem">Datos insuficientes</span>' : ''}
+    </div>
+  </div>`;
+}
+
+/* ═══════════════════════════════════════════
+   FEATURE 3: AGING DE DEUDORES
+═══════════════════════════════════════════ */
+function _renderAgingDeudores(clientes) {
+  const el = document.getElementById('gest-aging-panel');
+  if (!el) return;
+  if (!clientes || !clientes.length) { el.innerHTML = ''; return; }
+
+  const hoyTs = new Date().getTime();
+  const MS_DIA = 1000*60*60*24;
+
+  const rows = (GESTION_DATA && GESTION_DATA.rows) || [];
+  const lastOpDate = {};
+  rows.forEach(r => {
+    const cli = r[2];
+    const fecha = r[1];
+    if (!cli || !fecha) return;
+    if (!lastOpDate[cli] || fecha > lastOpDate[cli]) lastOpDate[cli] = fecha;
+  });
+
+  const clientesConDeuda = clientes.filter(c => c[4] > 0);
+  if (!clientesConDeuda.length) {
+    el.innerHTML = '<div class="alert alert-success py-2 mb-0"><i class="bi bi-check-circle me-1"></i>Sin deudores pendientes.</div>';
+    return;
+  }
+
+  const rows_aging = clientesConDeuda.map(c => {
+    const lastDate = lastOpDate[c[0]];
+    let diasPend = 0;
+    if (lastDate) {
+      try {
+        const d = new Date(lastDate);
+        diasPend = Math.floor((hoyTs - d.getTime()) / MS_DIA);
+        if (isNaN(diasPend) || diasPend < 0) diasPend = 0;
+      } catch(e) {}
+    }
+    const monto = c[4];
+    let bucket;
+    if (diasPend <= 30)       bucket = '0-30';
+    else if (diasPend <= 60)  bucket = '31-60';
+    else if (diasPend <= 90)  bucket = '61-90';
+    else                       bucket = '+90';
+
+    let riesgoClass, riesgoLabel;
+    if (diasPend <= 30)       { riesgoClass='success'; riesgoLabel='Al dia'; }
+    else if (diasPend <= 60)  { riesgoClass='warning text-dark'; riesgoLabel='1-30d atras'; }
+    else if (diasPend <= 90)  { riesgoClass='warning'; riesgoLabel='31-60d atras'; }
+    else                       { riesgoClass='danger'; riesgoLabel='+60d atras'; }
+
+    return { nombre:c[0], monto, diasPend, bucket, riesgoClass, riesgoLabel };
+  }).sort((a,b) => b.diasPend - a.diasPend);
+
+  const csvData = [['Cliente','Dias pendientes','Bucket','Monto','Riesgo']].concat(
+    rows_aging.map(r => [r.nombre, r.diasPend, r.bucket, r.monto.toFixed(2), r.riesgoLabel])
+  );
+
+  el.innerHTML = `<div class="card p-3 mt-3" style="border-left:4px solid #f59e0b;border-radius:10px">
+    <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+      <h6 class="fw-bold mb-0"><i class="bi bi-exclamation-triangle me-2 text-warning"></i>Analisis de Deuda (Aging)</h6>
+      <button class="btn btn-sm btn-outline-success" onclick="_exportAgingCSV()" style="font-size:.72rem;border-radius:7px"><i class="bi bi-download me-1"></i>Exportar CSV</button>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-sm table-hover mb-0" style="font-size:.78rem">
+        <thead class="table-dark"><tr>
+          <th>Cliente</th>
+          <th class="text-center">0-30 dias</th>
+          <th class="text-center">31-60 dias</th>
+          <th class="text-center">61-90 dias</th>
+          <th class="text-center">+90 dias</th>
+          <th class="text-end">Total</th>
+          <th class="text-center">Riesgo</th>
+        </tr></thead>
+        <tbody>${rows_aging.map(r => `<tr>
+          <td class="fw-bold">${r.nombre}</td>
+          <td class="text-center ${r.bucket==='0-30'?'fw-bold text-success':''}">${r.bucket==='0-30'?fmt(r.monto):'—'}</td>
+          <td class="text-center ${r.bucket==='31-60'?'fw-bold text-warning':''}">${r.bucket==='31-60'?fmt(r.monto):'—'}</td>
+          <td class="text-center ${r.bucket==='61-90'?'fw-bold text-warning':''}">${r.bucket==='61-90'?fmt(r.monto):'—'}</td>
+          <td class="text-center ${r.bucket==='+90'?'fw-bold text-danger':''}">${r.bucket==='+90'?fmt(r.monto):'—'}</td>
+          <td class="text-end fw-bold">${fmt(r.monto)}</td>
+          <td class="text-center"><span class="badge bg-${r.riesgoClass}" style="font-size:.65rem">${r.riesgoLabel}</span></td>
+        </tr>`).join('')}</tbody>
+      </table>
+    </div>
+  </div>`;
+  window._agingCSVData = csvData;
+}
+
+function _exportAgingCSV() {
+  const data = window._agingCSVData || [];
+  if (!data.length) return;
+  const csv = data.map(row => row.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,%EF%BB%BF' + encodeURIComponent(csv);
+  a.download = `aging_deudores_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+}
+
+/* ═══════════════════════════════════════════
+   FEATURE 4: PRESUPUESTO VS REAL
+═══════════════════════════════════════════ */
+function renderPresupuesto() {
+  const el = document.getElementById('rep-presupuesto-panel');
+  if (!el) return;
+  if (!ST.presupuestoConfig) ST.presupuestoConfig = {};
+
+  const ahora = new Date();
+  const mesActual = `${ahora.getFullYear()}-${String(ahora.getMonth()+1).padStart(2,'0')}`;
+  const todos = [...(ST.cajaBancos||[]), ...(ST.cajaEfectivo||[])];
+  const egresosMes = todos.filter(m => m.tipo==='egreso' && m.fecha && m.fecha.startsWith(mesActual));
+
+  const realPorConcepto = {};
+  egresosMes.forEach(m => {
+    const c = m.concepto || 'Sin concepto';
+    realPorConcepto[c] = (realPorConcepto[c]||0) + (+m.monto);
+  });
+
+  const conceptos = ST.conceptos && ST.conceptos.length ? ST.conceptos : Object.keys(realPorConcepto);
+
+  const rows = conceptos.map(c => {
+    const presup = ST.presupuestoConfig[c] || 0;
+    const real = realPorConcepto[c] || 0;
+    const diff = presup - real;
+    const pct = presup > 0 ? Math.round((real/presup)*100) : (real > 0 ? 999 : 0);
+    return { concepto:c, presup, real, diff, pct };
+  }).filter(r => r.presup > 0 || r.real > 0);
+
+  const totalPresup = rows.reduce((s,r)=>s+r.presup,0);
+  const totalReal   = rows.reduce((s,r)=>s+r.real,0);
+
+  el.innerHTML = `<div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+    <h6 class="fw-bold mb-0"><i class="bi bi-bar-chart-steps me-2 text-primary"></i>Presupuesto vs Real &mdash; ${ahora.toLocaleDateString('es-AR',{month:'long',year:'numeric'})}</h6>
+    <button class="btn btn-sm btn-primary" onclick="_editarPresupuesto()" style="font-size:.72rem;border-radius:7px"><i class="bi bi-pencil me-1"></i>Editar Presupuesto</button>
+  </div>
+  ${!rows.length ? '<div class="text-center text-muted py-4"><i class="bi bi-inbox fs-3 d-block mb-2"></i>Sin datos. Configura presupuesto por concepto.</div>' : `
+  <div class="table-responsive mb-3">
+    <table class="table table-sm table-hover mb-0" style="font-size:.78rem">
+      <thead class="table-dark"><tr>
+        <th>Concepto</th><th class="text-end">Presupuestado</th><th class="text-end">Real</th><th class="text-end">Diferencia</th><th class="text-center">% Cumplido</th>
+      </tr></thead>
+      <tbody>${rows.map(r => {
+        const pctCap = Math.min(r.pct, 100);
+        const pctColor = r.pct <= 80 ? '#16a34a' : r.pct <= 100 ? '#f59e0b' : '#dc2626';
+        return `<tr>
+          <td>${r.concepto}</td>
+          <td class="text-end">${r.presup ? fmt(r.presup) : '<span class="text-muted">—</span>'}</td>
+          <td class="text-end fw-bold ${r.real>r.presup&&r.presup>0?'text-danger':''}">${fmt(r.real)}</td>
+          <td class="text-end ${r.diff>=0?'text-success':'text-danger'}">${r.presup>0?(r.diff>=0?'+':'')+fmt(r.diff):'—'}</td>
+          <td class="text-center"><div style="display:flex;align-items:center;gap:6px">
+            <div style="flex:1;background:#e2e8f0;border-radius:4px;height:7px"><div style="background:${pctColor};height:7px;border-radius:4px;width:${pctCap}%"></div></div>
+            <span style="font-size:.68rem;width:34px;text-align:right;color:${pctColor}">${r.presup>0?r.pct+'%':'—'}</span>
+          </div></td>
+        </tr>`;
+      }).join('')}
+      <tr class="table-light fw-bold"><td>TOTAL</td><td class="text-end">${fmt(totalPresup)}</td><td class="text-end">${fmt(totalReal)}</td>
+        <td class="text-end ${totalPresup-totalReal>=0?'text-success':'text-danger'}">${totalPresup>0?(totalPresup-totalReal>=0?'+':'')+fmt(totalPresup-totalReal):'—'}</td>
+        <td class="text-center">${totalPresup>0?Math.round((totalReal/totalPresup)*100)+'%':'—'}</td></tr>
+      </tbody>
+    </table>
+  </div>
+  `}`;
+}
+
+function _editarPresupuesto() {
+  if (!ST.presupuestoConfig) ST.presupuestoConfig = {};
+  const conceptos = ST.conceptos && ST.conceptos.length ? ST.conceptos : [];
+  if (!conceptos.length) { toast('Primero agrega conceptos en Configuracion','warning'); return; }
+
+  const existing = document.getElementById('presup-edit-panel');
+  if (existing) { existing.remove(); return; }
+  const panel = document.createElement('div');
+  panel.id = 'presup-edit-panel';
+  panel.className = 'card p-3 mt-3';
+  panel.style.cssText = 'border:1.5px dashed #3b82f6;border-radius:10px';
+  panel.innerHTML = `<h6 class="fw-bold mb-3">Editar Presupuesto Mensual por Concepto</h6>
+    ${conceptos.map(c => `<div class="d-flex align-items-center gap-2 mb-2">
+      <label style="flex:1;font-size:.8rem;min-width:120px">${c}</label>
+      <div style="position:relative;max-width:140px">
+        <span style="position:absolute;left:8px;top:50%;transform:translateY(-50%);font-size:.75rem;color:#94a3b8;pointer-events:none">$</span>
+        <input type="number" min="0" step="1000" class="form-control form-control-sm" style="padding-left:18px"
+          placeholder="0" value="${ST.presupuestoConfig[c]||''}"
+          data-concepto="${c.replace(/"/g,'&quot;')}"
+          oninput="if(!ST.presupuestoConfig)ST.presupuestoConfig={};ST.presupuestoConfig[this.dataset.concepto]=parseFloat(this.value)||0;save();renderPresupuesto()">
+      </div>
+    </div>`).join('')}
+    <button class="btn btn-sm btn-outline-secondary mt-2" onclick="document.getElementById('presup-edit-panel').remove()">Cerrar</button>`;
+  const repEl = document.getElementById('rep-presupuesto-panel');
+  if (repEl) repEl.appendChild(panel);
+}
+
+/* ═══════════════════════════════════════════
+   FEATURE 5: CALENDARIO UNIFICADO DE VENCIMIENTOS
+═══════════════════════════════════════════ */
+let _calVencYear  = new Date().getFullYear();
+let _calVencMonth = new Date().getMonth();
+
+function _renderCalendarioVencimientos(year, month) {
+  const el = document.getElementById('pv-calendar-wrap');
+  if (!el) return;
+
+  const mesNombre = new Date(year, month, 1).toLocaleDateString('es-AR',{month:'long',year:'numeric'});
+  const prefijo = `${year}-${String(month+1).padStart(2,'0')}`;
+  const eventos = {};
+
+  const addEv = (fecha, item) => {
+    if (!fecha || !fecha.startsWith(prefijo)) return;
+    const dia = parseInt(fecha.slice(8,10));
+    if (!eventos[dia]) eventos[dia] = [];
+    eventos[dia].push(item);
+  };
+
+  (ST.chequesFisicos||[]).filter(c=>c.estado==='en_cartera'||c.estado==='pendiente').forEach(c =>
+    addEv(c.fechaVenc, {tipo:'cheque-cobrar', label:`Cobrar: ${fmt(+c.monto)}`, color:'#2563eb', icon:'bi-file-earmark-check'}));
+  (ST.eCheques||[]).filter(c=>c.estado==='pendiente').forEach(c =>
+    addEv(c.fechaVenc, {tipo:'cheque-cobrar', label:`E-Cheque: ${fmt(+c.monto)}`, color:'#2563eb', icon:'bi-credit-card'}));
+  (ST.chequesPagar||[]).filter(c=>c.estado==='pendiente').forEach(c =>
+    addEv(c.fechaVenc, {tipo:'cheque-pagar', label:`Pagar: ${fmt(+c.monto)}`, color:'#dc2626', icon:'bi-file-earmark-x'}));
+  (ST.arcaVencimientos||[]).forEach(v =>
+    addEv(v.fecha, {tipo:'arca', label:`ARCA: ${v.descripcion||'Vencimiento'}`, color:'#d97706', icon:'bi-building'}));
+  (ST.facturasACobrar||[]).filter(f=>f.estado!=='cobrada'&&f.fechaVenc).forEach(f =>
+    addEv(f.fechaVenc, {tipo:'factura', label:`Fac cobrar: ${fmt(+f.total)}`, color:'#16a34a', icon:'bi-receipt'}));
+  (ST.facturasPagar||[]).filter(f=>f.estado!=='pagada'&&f.fechaVenc).forEach(f =>
+    addEv(f.fechaVenc, {tipo:'factura-pagar', label:`Fac pagar: ${fmt(+f.total)}`, color:'#7c3aed', icon:'bi-receipt-cutoff'}));
+
+  const primerDia = new Date(year, month, 1).getDay();
+  const diasMes   = new Date(year, month+1, 0).getDate();
+  const hoyStr    = new Date().toISOString().slice(0,10);
+  const hoyDia    = hoyStr.startsWith(prefijo) ? parseInt(hoyStr.slice(8,10)) : -1;
+
+  let grid = `<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:4px">
+    ${['Dom','Lun','Mar','Mie','Jue','Vie','Sab'].map(d=>
+      `<div style="text-align:center;font-size:.6rem;font-weight:700;color:#94a3b8;padding:3px">${d}</div>`
+    ).join('')}
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px">`;
+  for (let i=0; i<primerDia; i++) grid += `<div></div>`;
+  for (let d=1; d<=diasMes; d++) {
+    const evs = eventos[d] || [];
+    const isHoy = d === hoyDia;
+    const hasEvs = evs.length > 0;
+    const dots = evs.slice(0,4).map(e=>
+      `<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:${e.color};margin:1px"></span>`
+    ).join('');
+    grid += `<div onclick="_calVencDiaClick(${d},${year},${month})" style="
+      background:${isHoy?'#eff6ff':hasEvs?'#fafafa':'#fff'};
+      border:${isHoy?'2px solid #3b82f6':'1.5px solid '+(hasEvs?'#cbd5e1':'#f1f5f9')};
+      border-radius:7px;padding:4px 3px;min-height:48px;cursor:pointer;position:relative
+    ">
+      <div style="font-size:.72rem;font-weight:${isHoy?'800':'600'};color:${isHoy?'#1d4ed8':'#374151'};line-height:1">${d}</div>
+      <div style="margin-top:3px">${dots}</div>
+      ${evs.length>4?`<div style="font-size:.55rem;color:#94a3b8">+${evs.length-4}</div>`:''}
+    </div>`;
+  }
+  grid += `</div>`;
+
+  el.innerHTML = `<div class="card p-3 mt-3" style="border-radius:10px">
+    <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+      <div class="d-flex align-items-center gap-2">
+        <button onclick="_calVencNavMes(-1)" style="background:none;border:1px solid #e2e8f0;border-radius:6px;padding:3px 10px;cursor:pointer;font-size:.9rem">&#8249;</button>
+        <h6 class="fw-bold mb-0 text-capitalize">${mesNombre}</h6>
+        <button onclick="_calVencNavMes(1)" style="background:none;border:1px solid #e2e8f0;border-radius:6px;padding:3px 10px;cursor:pointer;font-size:.9rem">&#8250;</button>
+      </div>
+      <div class="d-flex gap-2 flex-wrap" style="font-size:.65rem">
+        <span><span style="display:inline-block;width:8px;height:8px;background:#2563eb;border-radius:50%;margin-right:3px"></span>A cobrar</span>
+        <span><span style="display:inline-block;width:8px;height:8px;background:#dc2626;border-radius:50%;margin-right:3px"></span>A pagar</span>
+        <span><span style="display:inline-block;width:8px;height:8px;background:#d97706;border-radius:50%;margin-right:3px"></span>ARCA</span>
+        <span><span style="display:inline-block;width:8px;height:8px;background:#16a34a;border-radius:50%;margin-right:3px"></span>Facturas</span>
+      </div>
+    </div>
+    ${grid}
+    <div id="pv-cal-detalle" style="margin-top:12px;display:none"></div>
+  </div>`;
+}
+
+function _calVencNavMes(dir) {
+  _calVencMonth += dir;
+  if (_calVencMonth > 11) { _calVencMonth = 0; _calVencYear++; }
+  if (_calVencMonth < 0)  { _calVencMonth = 11; _calVencYear--; }
+  _renderCalendarioVencimientos(_calVencYear, _calVencMonth);
+}
+
+function _calVencDiaClick(dia, year, month) {
+  const prefijo = `${year}-${String(month+1).padStart(2,'0')}-${String(dia).padStart(2,'0')}`;
+  const eventos = [];
+  (ST.chequesFisicos||[]).filter(c=>(c.estado==='en_cartera'||c.estado==='pendiente')&&c.fechaVenc===prefijo)
+    .forEach(c=>eventos.push({label:`Cheque a cobrar: ${c.librador||c.banco||''}`, monto:+c.monto, color:'#2563eb', icon:'bi-file-earmark-check-fill'}));
+  (ST.eCheques||[]).filter(c=>c.estado==='pendiente'&&c.fechaVenc===prefijo)
+    .forEach(c=>eventos.push({label:`E-Cheque a cobrar: ${c.librador||''}`, monto:+c.monto, color:'#2563eb', icon:'bi-credit-card-fill'}));
+  (ST.chequesPagar||[]).filter(c=>c.estado==='pendiente'&&c.fechaVenc===prefijo)
+    .forEach(c=>eventos.push({label:`Cheque a pagar: ${c.beneficiario||''}`, monto:+c.monto, color:'#dc2626', icon:'bi-file-earmark-x-fill'}));
+  (ST.arcaVencimientos||[]).filter(v=>v.fecha===prefijo)
+    .forEach(v=>eventos.push({label:`ARCA: ${v.descripcion||'Vencimiento'}`, monto:v.monto||0, color:'#d97706', icon:'bi-building-fill'}));
+  (ST.facturasACobrar||[]).filter(f=>f.estado!=='cobrada'&&f.fechaVenc===prefijo)
+    .forEach(f=>eventos.push({label:`Factura cobrar: ${f.razonSocial||f.cliente||''}`, monto:+f.total, color:'#16a34a', icon:'bi-receipt'}));
+  (ST.facturasPagar||[]).filter(f=>f.estado!=='pagada'&&f.fechaVenc===prefijo)
+    .forEach(f=>eventos.push({label:`Factura pagar: ${f.razonSocial||f.proveedor||''}`, monto:+f.total, color:'#7c3aed', icon:'bi-receipt-cutoff'}));
+
+  const det = document.getElementById('pv-cal-detalle');
+  if (!det) return;
+  if (!eventos.length) { det.style.display='none'; return; }
+
+  const fechaLabel = new Date(year, month, dia).toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'});
+  det.innerHTML = `<div style="border:1.5px solid #e2e8f0;border-radius:8px;padding:12px">
+    <div class="fw-bold mb-2 text-capitalize" style="font-size:.82rem"><i class="bi bi-calendar-day me-1 text-primary"></i>${fechaLabel}</div>
+    ${eventos.map(e=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #f1f5f9">
+      <span style="font-size:.78rem"><i class="bi ${e.icon} me-1" style="color:${e.color}"></i>${e.label}</span>
+      ${e.monto?`<span class="fw-bold" style="font-size:.78rem;color:${e.color}">${fmt(e.monto)}</span>`:''}
+    </div>`).join('')}
+  </div>`;
+  det.style.display = 'block';
+}
+
+// Toggle helper for the Vencimientos calendar view (Feature 5)
+let _pvCalVisible = false;
+function _toggleCalVenc(btn) {
+  _pvCalVisible = !_pvCalVisible;
+  const calEl = document.getElementById('pv-calendar-wrap');
+  const tlEl  = document.getElementById('pv-timeline');
+  if (!calEl) return;
+  if (_pvCalVisible) {
+    calEl.style.display = 'block';
+    if (tlEl) tlEl.style.display = 'none';
+    if (btn) btn.innerHTML = '<i class="bi bi-list-ul me-1"></i>Vista Lista';
+    _calVencYear  = new Date().getFullYear();
+    _calVencMonth = new Date().getMonth();
+    _renderCalendarioVencimientos(_calVencYear, _calVencMonth);
+  } else {
+    calEl.style.display = 'none';
+    if (tlEl) tlEl.style.display = '';
+    if (btn) btn.innerHTML = '<i class="bi bi-calendar3 me-1"></i>Vista Calendario';
+  }
+}
+
 </script>
 <!-- ═══ DATALIST BANCOS BCRA ═══ -->
 <datalist id="bcra-banks-list">
@@ -24102,6 +25090,50 @@ function _actualizarUltimoEnvio() {
   <div class="assist-input-bar">
     <input type="text" id="assist-input" placeholder="Preguntá algo..." onkeydown="if(event.key==='Enter')_assistSend()">
     <button onclick="_assistSend()"><i class="bi bi-send-fill"></i></button>
+  </div>
+</div>
+
+
+<!-- ══════════════════ MODAL: RECONCILIACIÓN BANCARIA ══════════════════ -->
+<div id="modal-reconciliacion" class="modal fade" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border-radius:14px;overflow:hidden">
+      <div class="modal-header" style="background:linear-gradient(135deg,#0f172a,#1e3a5f);color:#fff;border:none">
+        <h5 class="modal-title"><i class="bi bi-check2-circle me-2"></i>Reconciliación Bancaria</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-4">
+        <div class="row g-3 mb-3">
+          <div class="col-12">
+            <label class="form-label small fw-bold">Saldo según tu banco ($)</label>
+            <input type="number" class="form-control" id="rec-saldo-banco" placeholder="0" oninput="_recalcReconciliacion()">
+          </div>
+        </div>
+        <div id="rec-resultado" style="display:none;margin-bottom:16px;padding:14px;border-radius:10px;background:#f8fafc;border:1.5px solid #e2e8f0">
+          <div class="d-flex justify-content-between mb-2">
+            <span class="text-muted small">Saldo según registros:</span>
+            <span id="rec-saldo-app" class="fw-bold"></span>
+          </div>
+          <div class="d-flex justify-content-between mb-2">
+            <span class="text-muted small">Saldo según banco:</span>
+            <span id="rec-saldo-bco" class="fw-bold text-primary"></span>
+          </div>
+          <hr class="my-2">
+          <div class="d-flex justify-content-between align-items-center">
+            <span class="fw-bold">Diferencia:</span>
+            <span id="rec-diferencia-badge"></span>
+          </div>
+        </div>
+        <div id="rec-historial-section" style="margin-top:12px">
+          <div class="fw-bold small mb-2" style="color:#64748b"><i class="bi bi-clock-history me-1"></i>Últimas reconciliaciones</div>
+          <div id="rec-historial"></div>
+        </div>
+      </div>
+      <div class="modal-footer" style="border-top:1px solid #f1f5f9">
+        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cerrar</button>
+        <button type="button" class="btn btn-primary btn-sm" onclick="guardarReconciliacion()"><i class="bi bi-save me-1"></i>Guardar</button>
+      </div>
+    </div>
   </div>
 </div>
 
