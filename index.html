@@ -5988,6 +5988,28 @@ CREATE POLICY "acceso total" ON muuk_daily_backups FOR ALL USING (true) WITH CHE
             <label class="form-label fw-bold small">Notas</label>
             <input type="text" class="form-control form-control-sm" id="sp-notas" placeholder="Observaciones adicionales...">
           </div>
+          <!-- Trazabilidad -->
+          <div class="col-12">
+            <div style="display:flex;align-items:center;gap:8px;margin:4px 0 2px">
+              <div style="flex:1;height:1px;background:#e2e8f0"></div>
+              <span style="font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#7c3aed">
+                <i class="bi bi-qr-code me-1"></i>Trazabilidad
+              </span>
+              <div style="flex:1;height:1px;background:#e2e8f0"></div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-bold small">Lote / N° de Lote</label>
+            <input type="text" class="form-control form-control-sm" id="sp-lote" placeholder="Ej: LOT-2026-001">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-bold small">Fecha de Elaboración</label>
+            <input type="date" class="form-control form-control-sm" id="sp-fechaElab">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-bold small">Fecha de Vencimiento</label>
+            <input type="date" class="form-control form-control-sm" id="sp-fechaVenc">
+          </div>
         </div>
       </div>
       <div class="modal-footer">
@@ -13987,6 +14009,11 @@ function renderStock() {
   if (!prods.length) { wrap.innerHTML = '<div class="empty-state"><i class="bi bi-box-seam"></i>Sin productos registrados.<br><small>Usá "Nuevo Producto" para cargar el inventario.</small></div>'; return; }
   if (!filtered.length) { wrap.innerHTML = '<div class="empty-state"><i class="bi bi-funnel"></i>Sin resultados para los filtros aplicados.</div>'; return; }
 
+  const hoyIso = new Date().toISOString().slice(0,10);
+  const en30 = new Date(); en30.setDate(en30.getDate() + 30);
+  const en30Iso = en30.toISOString().slice(0,10);
+  const fFecha = s => { if (!s) return '—'; const [y,m,d]=s.split('-'); return `${d}/${m}/${y}`; };
+
   const rows = filtered.map(p => {
     const val = (p.stockActual||0) * (p.precioCosto||0);
     let estadoBadge = '<span class="bdg bg-success text-white">OK</span>';
@@ -13995,9 +14022,24 @@ function renderStock() {
     else if (p.stockMax > 0 && p.stockActual > p.stockMax) estadoBadge = '<span class="bdg bg-warning text-dark">Sobre Máx.</span>';
     const pctBar = p.stockMax > 0 ? Math.min(100, Math.round(p.stockActual / p.stockMax * 100)) : -1;
     const barColor = p.stockMin > 0 && p.stockActual < p.stockMin ? '#ef4444' : pctBar > 80 ? '#d97706' : '#16a34a';
-    return `<tr>
+
+    // Lote / Trazabilidad
+    const vencido   = p.fechaVenc && p.fechaVenc < hoyIso;
+    const proxVenc  = p.fechaVenc && !vencido && p.fechaVenc <= en30Iso;
+    let vencBadge = '';
+    if (vencido)  vencBadge = `<span style="background:#dc2626;color:#fff;border-radius:3px;padding:1px 5px;font-size:.6rem;font-weight:700;margin-left:4px">VENCIDO</span>`;
+    else if (proxVenc) vencBadge = `<span style="background:#f59e0b;color:#fff;border-radius:3px;padding:1px 5px;font-size:.6rem;font-weight:700;margin-left:4px">VENCE PRONTO</span>`;
+
+    const trazInfo = (p.lote || p.fechaElab || p.fechaVenc) ? `
+      <div style="font-size:.62rem;color:#64748b;margin-top:3px;display:flex;flex-wrap:wrap;gap:6px">
+        ${p.lote    ? `<span><i class="bi bi-upc-scan" style="color:#7c3aed"></i> ${p.lote}</span>` : ''}
+        ${p.fechaElab ? `<span><i class="bi bi-calendar-check" style="color:#0891b2"></i> Elab: ${fFecha(p.fechaElab)}</span>` : ''}
+        ${p.fechaVenc ? `<span style="color:${vencido?'#dc2626':proxVenc?'#d97706':'#64748b'}"><i class="bi bi-calendar-x${vencido||proxVenc?' text-danger':''}"></i> Venc: ${fFecha(p.fechaVenc)}${vencBadge}</span>` : ''}
+      </div>` : '';
+
+    return `<tr${vencido?' style="background:rgba(220,38,38,.04)"':proxVenc?' style="background:rgba(245,158,11,.04)"':''}>
       <td class="ps-2"><small class="text-muted">${p.codigo||'—'}</small></td>
-      <td><strong>${p.nombre}</strong>${p.categoria?`<br><small class="text-muted">${p.categoria}</small>`:''}</td>
+      <td><strong>${p.nombre}</strong>${p.categoria?`<br><small class="text-muted">${p.categoria}</small>`:''}${trazInfo}</td>
       <td class="text-center"><strong style="font-size:.9rem">${_fmtStock(p.stockActual, p.unidad)}</strong>
         ${pctBar>=0?`<div style="width:50px;height:4px;background:#e2e8f0;border-radius:2px;margin:2px auto 0"><div style="width:${pctBar}%;height:100%;background:${barColor};border-radius:2px"></div></div>`:''}
       </td>
@@ -14016,7 +14058,7 @@ function renderStock() {
 
   wrap.innerHTML = `<div class="table-responsive"><table class="table table-hover mb-0" style="font-size:.82rem">
     <thead><tr>
-      <th class="ps-2">Código</th><th>Producto</th><th class="text-center">Stock</th>
+      <th class="ps-2">Código</th><th>Producto / Lote</th><th class="text-center">Stock</th>
       <th class="text-center">Mín / Máx</th><th class="text-end">P. Costo</th><th class="text-end">P. Venta</th>
       <th class="text-end">Valor</th><th class="text-center">Estado</th><th></th>
     </tr></thead><tbody>${rows}</tbody></table></div>`;
@@ -14080,6 +14122,9 @@ function abrirModalStockProd(id) {
   document.getElementById('sp-proveedor').value = p?.proveedor || '';
   document.getElementById('sp-codigoBarras').value = p?.codigoBarras || '';
   document.getElementById('sp-notas').value = p?.notas || '';
+  document.getElementById('sp-lote').value = p?.lote || '';
+  document.getElementById('sp-fechaElab').value = p?.fechaElab || '';
+  document.getElementById('sp-fechaVenc').value = p?.fechaVenc || '';
   renderStock(); // refresh datalists
   new bootstrap.Modal(document.getElementById('modalStockProd')).show();
 }
@@ -14111,6 +14156,9 @@ function guardarStockProd() {
     proveedor: document.getElementById('sp-proveedor').value.trim(),
     codigoBarras: document.getElementById('sp-codigoBarras').value.trim(),
     notas: document.getElementById('sp-notas').value.trim(),
+    lote: document.getElementById('sp-lote').value.trim(),
+    fechaElab: document.getElementById('sp-fechaElab').value,
+    fechaVenc: document.getElementById('sp-fechaVenc').value,
     updatedAt: new Date().toISOString()
   };
   const idx = ST.stockProductos.findIndex(p=>p.id===id);
