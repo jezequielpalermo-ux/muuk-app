@@ -766,10 +766,6 @@
     body.dark-mode .gest-table tbody tr:hover { background: rgba(99,102,241,.12); }
     body.dark-mode .gest-table thead.table-dark { --bs-table-bg: #1e293b !important; --bs-table-color: #e2e8f0 !important; }
     body.dark-mode .gest-table thead.table-dark th { color: #e2e8f0 !important; background: #1e293b !important; border-bottom-color: #6366f1 !important; }
-    body.dark-mode #wa-panel { background: #1e293b; }
-    body.dark-mode #wa-panel input, body.dark-mode #wa-panel select, body.dark-mode #wa-panel textarea {
-      background: #0f172a; border-color: #334155; color: #e2e8f0; }
-
     /* Responsive Gestión */
     @media (max-width: 1100px) {
       .gest-stat-val { font-size: 1.1rem; }
@@ -1061,8 +1057,8 @@
         <div style="color:#e2e8f0;font-weight:600;font-size:.8rem" id="fecha-hoy"></div>
         <div id="dash-gest-sync" style="font-size:.6rem;color:#64748b;margin-top:1px"></div>
       </div>
-      <button onclick="generarReportePDF()" style="flex-shrink:0;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);color:#e2e8f0;border-radius:7px;padding:5px 12px;font-size:.72rem;cursor:pointer;white-space:nowrap">
-        <i class="bi bi-file-earmark-pdf me-1"></i>Reporte PDF
+      <button onclick="generarReporteSemanal()" style="flex-shrink:0;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);color:#e2e8f0;border-radius:7px;padding:5px 12px;font-size:.72rem;cursor:pointer;white-space:nowrap">
+        <i class="bi bi-calendar-week me-1"></i>Reporte Semana
       </button>
     </div>
     <!-- Alerta restauración de datos -->
@@ -3165,176 +3161,6 @@ CREATE POLICY "acceso total" ON muuk_daily_backups FOR ALL USING (true) WITH CHE
           <i class="bi bi-shield-check me-1"></i>La key se guarda solo en este navegador (localStorage). Nunca se envía a terceros excepto al proveedor de IA seleccionado.
           <br><i class="bi bi-cash-coin me-1"></i><b>Costo estimado:</b> ~$0.01 USD por consulta con GPT-4o-mini / Claude Haiku. Muy económico.
         </div>
-      </div>
-    </div>
-
-    <!-- TELEGRAM BOT -->
-    <div class="card mb-4">
-      <div class="card-header bg-white fw-bold"><i class="bi bi-telegram me-2" style="color:#0088cc"></i>Bot de Telegram</div>
-      <div class="card-body">
-        <div id="tg-bot-status" class="alert alert-info mb-3" style="font-size:.84rem">
-          <i class="bi bi-telegram me-2" style="color:#0088cc"></i><b>Bot disponible para configurar</b> — Los 3 socios pueden consultar datos desde el celular por Telegram.
-        </div>
-
-        <div class="accordion mb-3" id="tgBotAccordion">
-          <div class="accordion-item border-0">
-            <h6 class="accordion-header">
-              <button class="accordion-button collapsed bg-light fw-bold" style="font-size:.84rem;border-radius:8px" type="button" data-bs-toggle="collapse" data-bs-target="#tgBotInstructions">
-                <i class="bi bi-journal-text me-2"></i>Instrucciones de configuración (10 minutos)
-              </button>
-            </h6>
-            <div id="tgBotInstructions" class="accordion-collapse collapse" data-bs-parent="#tgBotAccordion">
-              <div class="accordion-body" style="font-size:.82rem">
-
-                <h6 class="fw-bold text-primary mb-2">Paso 1 — Crear el bot en Telegram (2 min)</h6>
-                <ol class="mb-3">
-                  <li>Abrí Telegram en el celular y buscá <b>@BotFather</b></li>
-                  <li>Mandá el comando <code>/newbot</code></li>
-                  <li>Nombre del bot: <code>MÜÜK Finanzas</code> (o el que quieras)</li>
-                  <li>Username del bot: <code>muuk_finanzas_bot</code> (tiene que terminar en <code>bot</code>)</li>
-                  <li>BotFather te da un <b>token</b> que empieza con números. <b>Copialo.</b></li>
-                </ol>
-
-                <h6 class="fw-bold text-primary mb-2">Paso 2 — Conseguir los Telegram IDs de los socios (2 min)</h6>
-                <ol class="mb-3">
-                  <li>Cada socio busca <b>@userinfobot</b> en Telegram y le manda <code>/start</code></li>
-                  <li>El bot responde con su <b>ID</b> (un número). Cada socio anota el suyo.</li>
-                  <li>Juntá los 3 IDs separados por coma, ej: <code>123456789,987654321,555555555</code></li>
-                </ol>
-
-                <h6 class="fw-bold text-primary mb-2">Paso 3 — Deploy en Supabase (5 min)</h6>
-                <ol class="mb-3">
-                  <li>Asegurate de tener el CLI de Supabase: <code>npm install -g supabase</code></li>
-                  <li>Logueate: <code>supabase login</code></li>
-                  <li>Descargá la carpeta <b>telegram-bot</b> que creamos y hacé deploy:
-                    <pre class="bg-light p-2 rounded mt-1" style="font-size:.75rem;overflow-x:auto">supabase functions deploy muuk-telegram-bot --project-ref TU_PROJECT_REF</pre>
-                  </li>
-                  <li>Configurá los secrets (reemplazá con tus datos):
-                    <pre class="bg-light p-2 rounded mt-1" style="font-size:.75rem;overflow-x:auto">supabase secrets set \
-  TELEGRAM_BOT_TOKEN=TU_TOKEN_DE_BOTFATHER \
-  ANTHROPIC_API_KEY=sk-ant-TU_KEY \
-  MUUK_ALLOWED_USERS=ID1,ID2,ID3 \
-  --project-ref TU_PROJECT_REF</pre>
-                  </li>
-                </ol>
-
-                <h6 class="fw-bold text-primary mb-2">Paso 4 — Conectar el webhook (1 min)</h6>
-                <ol class="mb-3">
-                  <li>Abrí esta URL en el navegador (reemplazá los datos):
-                    <pre class="bg-light p-2 rounded mt-1" style="font-size:.75rem;overflow-x:auto">https://api.telegram.org/bot<b>TU_TOKEN</b>/setWebhook?url=https://<b>TU_PROJECT_REF</b>.supabase.co/functions/v1/muuk-telegram-bot</pre>
-                  </li>
-                  <li>Tiene que responder <code>{"ok":true}</code></li>
-                  <li>¡Listo! Abrí el bot en Telegram y mandá <code>/start</code> para probar 🚀</li>
-                </ol>
-
-                <div class="alert alert-success mb-2" style="font-size:.78rem">
-                  <i class="bi bi-chat-dots me-1"></i><b>Comandos del bot:</b><br>
-                  <code>/start</code> — Ver ayuda y opciones<br>
-                  <code>/resumen</code> — Resumen financiero rápido<br>
-                  <b>Cualquier pregunta</b> — "cuánto nos debe Pérez?", "qué vence mañana?", etc.
-                </div>
-
-                <div class="alert alert-info mb-0" style="font-size:.78rem">
-                  <i class="bi bi-shield-check me-1"></i><b>Seguridad:</b> Solo los Telegram IDs que configures tienen acceso. Si alguien no autorizado escribe, el bot rechaza el mensaje y muestra su ID para que puedas agregarlo.
-                  <br><i class="bi bi-cash-coin me-1"></i><b>Costo:</b> Telegram es 100% gratis, sin límites. Solo se paga la API de Claude (~$0.01/consulta).
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="alert alert-light border mb-0" style="font-size:.78rem">
-          <i class="bi bi-info-circle me-1 text-primary"></i>
-          <b>Requisito:</b> Supabase tiene que estar configurado y sincronizando datos (ver sección más arriba). El bot lee los datos directamente de Supabase.
-        </div>
-      </div>
-    </div>
-
-    <!-- WHATSAPP BOT -->
-    <div class="card">
-      <div class="card-header bg-white fw-bold"><i class="bi bi-whatsapp me-2" style="color:#25D366"></i>WhatsApp Bot</div>
-      <div class="card-body">
-        <div id="wa-bot-status" class="alert mb-3" style="font-size:.84rem"></div>
-        <script>
-          (() => {
-            const el = document.getElementById('wa-bot-status');
-            const ok = (typeof WA_BOT_CONFIG !== 'undefined') && WA_BOT_CONFIG.phoneId && WA_BOT_CONFIG.accessToken;
-            el.className = 'alert mb-3 ' + (ok ? 'alert-success' : 'alert-info');
-            el.innerHTML = ok
-              ? '<i class="bi bi-check-circle-fill me-2"></i><strong>Bot conectado</strong> — Phone ID: ' + WA_BOT_CONFIG.phoneId.substring(0,8) + '...'
-              : '<i class="bi bi-whatsapp me-2" style="color:#25D366"></i><strong>Bot disponible para configurar</strong> — Seguí los pasos de abajo para activar el bot de WhatsApp';
-          })();
-        </script>
-
-        <div class="accordion mb-3" id="waBotAccordion">
-          <div class="accordion-item border-0">
-            <h6 class="accordion-header">
-              <button class="accordion-button collapsed bg-light fw-bold" style="font-size:.84rem;border-radius:8px" type="button" data-bs-toggle="collapse" data-bs-target="#waBotInstructions">
-                <i class="bi bi-journal-text me-2"></i>Instrucciones de configuración (paso a paso)
-              </button>
-            </h6>
-            <div id="waBotInstructions" class="accordion-collapse collapse" data-bs-parent="#waBotAccordion">
-              <div class="accordion-body" style="font-size:.82rem">
-                <h6 class="fw-bold text-primary mb-2">Paso 1 — Crear app en Meta for Developers</h6>
-                <ol class="mb-3">
-                  <li>Andá a <a href="https://developers.facebook.com" target="_blank"><strong>developers.facebook.com</strong></a></li>
-                  <li>Iniciá sesión con tu cuenta de Facebook</li>
-                  <li>Hacé clic en <strong>"Mis apps"</strong> → <strong>"Crear app"</strong></li>
-                  <li>Seleccioná <strong>"Otro"</strong> como tipo → <strong>"Business"</strong> como categoría</li>
-                  <li>Nombre: <em>MUUK Bot</em> → clic en <strong>"Crear app"</strong></li>
-                </ol>
-
-                <h6 class="fw-bold text-primary mb-2">Paso 2 — Activar WhatsApp</h6>
-                <ol class="mb-3">
-                  <li>En el dashboard de la app, buscá <strong>"WhatsApp"</strong> y hacé clic en <strong>"Configurar"</strong></li>
-                  <li>Seleccioná o creá una cuenta Business</li>
-                  <li>Meta te da un <strong>número de prueba</strong> gratis (o podés vincular uno propio después)</li>
-                  <li>En <strong>WhatsApp → Configuración de la API</strong> copiá:
-                    <br>— <strong>Phone Number ID</strong> (número largo)
-                    <br>— <strong>Token de acceso temporal</strong> (empieza con <code>EAA...</code>)
-                  </li>
-                </ol>
-
-                <h6 class="fw-bold text-primary mb-2">Paso 3 — Deploy del webhook en Supabase</h6>
-                <ol class="mb-3">
-                  <li>Instalá el CLI de Supabase: <code>npm install -g supabase</code></li>
-                  <li>Logueate: <code>supabase login</code></li>
-                  <li>Descargá el archivo del bot (link abajo) y hacé deploy:
-                    <pre class="bg-light p-2 rounded mt-1" style="font-size:.75rem;overflow-x:auto">supabase functions deploy whatsapp-webhook --project-ref qvfmexkcyrvyidugnaoo</pre>
-                  </li>
-                  <li>Configurá las variables de entorno:
-                    <pre class="bg-light p-2 rounded mt-1" style="font-size:.75rem;overflow-x:auto">supabase secrets set WA_ACCESS_TOKEN=EAA... WA_PHONE_ID=123... WA_VERIFY_TOKEN=muuk-bot-verify-2026 --project-ref qvfmexkcyrvyidugnaoo</pre>
-                  </li>
-                </ol>
-
-                <h6 class="fw-bold text-primary mb-2">Paso 4 — Conectar el webhook a Meta</h6>
-                <ol class="mb-3">
-                  <li>La URL del webhook es:
-                    <pre class="bg-light p-2 rounded mt-1" style="font-size:.75rem">https://qvfmexkcyrvyidugnaoo.supabase.co/functions/v1/whatsapp-webhook</pre>
-                  </li>
-                  <li>En Meta → WhatsApp → <strong>Configuración</strong> → <strong>Webhooks</strong></li>
-                  <li>Hacé clic en <strong>"Editar"</strong> y pegá la URL del webhook</li>
-                  <li>Token de verificación: <code>muuk-bot-verify-2026</code></li>
-                  <li>Suscribite al campo: <strong>messages</strong></li>
-                  <li>¡Listo! Mandá "hola" al número del bot para probar</li>
-                </ol>
-
-                <div class="alert alert-success mb-2" style="font-size:.78rem">
-                  <i class="bi bi-lightbulb me-1"></i><strong>Comandos del bot:</strong> resumen, saldos, comisiones, cheques, vencimientos, facturas, km, semanal, debe [empresa]
-                </div>
-                <div class="alert alert-info mb-0" style="font-size:.78rem">
-                  <i class="bi bi-file-earmark-pdf me-1"></i><strong>Cargar facturas por PDF:</strong> Mandá un PDF de factura AFIP al bot. El bot lee el contenido, extrae los datos (tipo, N°, CUIT, importes) y te pregunta si es <em>a cobrar</em> o <em>a pagar</em>. Podés escribir "cobrar" o "pagar" como texto del archivo para saltear la pregunta.
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="alert alert-light border" style="font-size:.78rem">
-          <i class="bi bi-info-circle me-1 text-primary"></i>
-          <strong>Gratis:</strong> WhatsApp Cloud API incluye 1.000 conversaciones/mes sin costo. El bot funciona las 24hs desde Supabase Edge Functions.
-        </div>
-
       </div>
     </div>
 
@@ -21050,189 +20876,7 @@ const _iraHook = setInterval(() => {
 }, 50);
 
 
-/* ═══════════════════════════════════════════
-   WHATSAPP INTEGRATION
-═══════════════════════════════════════════ */
-let WA_PANEL_OPEN = false;
-
-// WhatsApp Business API config (para implementación futura)
-const WA_API = {
-  enabled: false,
-  endpoint: '',  // URL del webhook (Twilio, Meta Cloud API, etc.)
-  token: '',     // Auth token
-  phoneNumberId: '' // ID del número Business
-};
-
-// WhatsApp Bot Configuration (completar después del setup en Meta)
-const WA_BOT_CONFIG = {
-  phoneId: '',       // Phone Number ID de Meta
-  accessToken: '',   // Token de acceso EAA...
-  webhookUrl: 'https://qvfmexkcyrvyidugnaoo.supabase.co/functions/v1/whatsapp-webhook',
-  verifyToken: 'muuk-bot-verify-2026'
-};
-
-function toggleWhatsAppPanel() {
-  WA_PANEL_OPEN = !WA_PANEL_OPEN;
-  const panel = document.getElementById('wa-panel');
-  panel.style.display = WA_PANEL_OPEN ? 'block' : 'none';
-  // Restore saved phone
-  const saved = localStorage.getItem('waPhone');
-  if (saved) document.getElementById('wa-phone').value = saved;
-}
-
-function waTypeChanged() {
-  const type = document.getElementById('wa-type').value;
-  const msg = document.getElementById('wa-message');
-  switch(type) {
-    case 'resumen':
-      msg.value = _buildResumenDia();
-      break;
-    case 'gestion':
-      msg.value = _buildResumenGestion();
-      break;
-    case 'vencimientos':
-      msg.value = _buildVencimientos();
-      break;
-    case 'semanal':
-      msg.value = (typeof _buildResumenSemanal==='function') ? _buildResumenSemanal() : 'Función no disponible';
-      break;
-    default:
-      msg.value = '';
-  }
-}
-
-function _buildResumenDia() {
-  const hoyStr = new Date().toLocaleDateString('es-AR');
-  let txt = `📊 *MUUK — Resumen del día* (${hoyStr})\n\n`;
-  if (ST.cajaBancos) {
-    const saldo = calcSaldo(ST.cajaBancos);
-    txt += `🏦 Caja Bancos: ${fmtARS(saldo)}\n`;
-  }
-  if (ST.cajaEfectivo) {
-    const saldo = calcSaldo(ST.cajaEfectivo);
-    txt += `💵 Caja Efectivo: ${fmtARS(saldo)}\n`;
-  }
-  if (TC_USD.venta) {
-    txt += `💱 Dólar Oficial: $${TC_USD.venta.toLocaleString('es-AR')}\n`;
-  }
-  return txt;
-}
-
-function _buildResumenGestion() {
-  let txt = '📈 *MUUK — Gestión*\n\n';
-  if (GESTION_DATA && GESTION_DATA.byMes) {
-    const d = GESTION_DATA;
-    const totFac = d.byMes.reduce((s,m)=>s+m[2],0);
-    const totSiv = d.byMes.reduce((s,m)=>s+m[3],0);
-    const totCom = d.byMes.reduce((s,m)=>s+m[4],0);
-    const totOps = d.byMes.reduce((s,m)=>s+m[1],0);
-    txt += `📋 Operaciones: ${totOps}\n`;
-    txt += `💰 Facturado: ${fmtARS(totFac)}\n`;
-    txt += `📄 Sin IVA: ${fmtARS(totSiv)}\n`;
-    txt += `✅ Comisiones: ${fmtARS(totCom)}\n\n`;
-    txt += `📅 *Por mes:*\n`;
-    d.byMes.forEach(m => {
-      txt += `  ${m[0].replace(' 2026','')}: ${fmtARS(m[4])} com. (${m[1]} ops)\n`;
-    });
-  } else {
-    txt += 'No hay datos cargados. Sincronice primero.';
-  }
-  return txt;
-}
-
-function _buildVencimientos() {
-  let txt = '⏰ *Cheques por vencer — próximos 7 días*\n\n';
-  const hoyDate = new Date();
-  const en7 = new Date(hoyDate.getTime() + 7*86400000);
-  let found = 0;
-  ['chequesFisicos','eCheques'].forEach(tipo => {
-    if (ST[tipo]) {
-      ST[tipo].filter(c => c.estado === 'cartera' || c.estado === 'en cartera').forEach(c => {
-        const fv = new Date(c.fechaVto + 'T00:00:00');
-        if (fv >= hoyDate && fv <= en7) {
-          found++;
-          const dias = Math.round((fv - hoyDate)/86400000);
-          txt += `📌 ${tipo === 'eCheques' ? 'E-Cheque' : 'Cheque'}: ${fmtARS(+c.monto)} — vence ${fmtF(c.fechaVto)} (${dias}d)\n`;
-          if (c.librador) txt += `   Librador: ${c.librador}\n`;
-        }
-      });
-    }
-  });
-  if (!found) txt += 'No hay cheques por vencer en los próximos 7 días. ✅';
-  return txt;
-}
-
-function enviarWhatsApp() {
-  const phone = document.getElementById('wa-phone').value.replace(/[^\d+]/g,'');
-  const msg = document.getElementById('wa-message').value;
-  if (!phone) { toast('Ingresá un número de WhatsApp','warning'); return; }
-  if (!msg.trim()) { toast('Escribí un mensaje','warning'); return; }
-
-  // Si la API Business está habilitada, usar esa vía
-  if (WA_API.enabled && WA_API.endpoint) {
-    _sendViaBusinessAPI(phone, msg);
-    return;
-  }
-
-  // Modo directo: abrir WhatsApp Web/App
-  const cleanPhone = phone.replace('+','');
-  const encoded = encodeURIComponent(msg);
-  const url = `https://wa.me/${cleanPhone}?text=${encoded}`;
-  window.open(url, '_blank');
-  toast('Abriendo WhatsApp...','success');
-}
-
-function enviarWhatsAppPDF() {
-  const phone = document.getElementById('wa-phone').value.replace(/[^\d+]/g,'');
-  if (!phone) { toast('Ingresá un número de WhatsApp','warning'); return; }
-
-  if (WA_API.enabled && WA_API.endpoint) {
-    // Futuro: enviar PDF via Business API
-    toast('Generando y enviando PDF vía API...','info');
-    _sendPDFViaBusinessAPI(phone);
-    return;
-  }
-
-  // Modo directo: generar PDF y luego abrir WhatsApp con mensaje
-  toast('Generando PDF... Compartilo manualmente en WhatsApp','info');
-  generarReportePDF();
-  setTimeout(() => {
-    const msg = '📎 Te comparto el reporte PDF de MUUK Gestión Financiera. Lo encontrás adjunto.';
-    const cleanPhone = phone.replace('+','');
-    window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}`, '_blank');
-  }, 1500);
-}
-
-// ── WhatsApp Business API (estructura preparada) ──
-async function _sendViaBusinessAPI(phone, message) {
-  if (!WA_API.endpoint || !WA_API.token) {
-    toast('API Business no configurada','warning');
-    return;
-  }
-  try {
-    const resp = await fetch(WA_API.endpoint + '/messages', {
-      method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + WA_API.token, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        messaging_product: 'whatsapp',
-        to: phone.replace('+',''),
-        type: 'text',
-        text: { body: message }
-      })
-    });
-    if (resp.ok) toast('Mensaje enviado vía WhatsApp Business ✓','success');
-    else throw new Error('HTTP ' + resp.status);
-  } catch(e) {
-    console.error('WA Business API error:', e);
-    toast('Error al enviar: ' + e.message,'danger');
-  }
-}
-
-async function _sendPDFViaBusinessAPI(phone) {
-  // Placeholder for future implementation
-  // Would: 1) Generate PDF blob, 2) Upload to media endpoint, 3) Send document message
-  toast('Función PDF vía API Business — próximamente','info');
-}
+/* WhatsApp integration eliminada — se reinstala cuando se necesite */
 
 /* ═══════════════════════════════════════════
    ESTADOS DE CUENTA POR CLIENTE
@@ -24474,6 +24118,418 @@ function _actualizarUltimoEnvio() {
 })();
 
 /* ═══════════════════════════════════════════
+   REPORTE SEMANAL — DASHBOARD (Lunes→Domingo)
+═══════════════════════════════════════════ */
+function generarReporteSemanal() {
+  // ── Rango de la semana actual (Lun 00:00 → Dom 23:59) ──
+  const now   = new Date();
+  const dow   = now.getDay();
+  const lun   = new Date(now); lun.setDate(now.getDate() - ((dow + 6) % 7)); lun.setHours(0,0,0,0);
+  const dom   = new Date(lun); dom.setDate(lun.getDate() + 6); dom.setHours(23,59,59,999);
+  const fD    = d => d.toLocaleDateString('es-AR', {day:'2-digit',month:'2-digit',year:'numeric'});
+  const fDC   = d => d.toLocaleDateString('es-AR', {weekday:'long',day:'2-digit',month:'long',year:'numeric'});
+  const fFech = s => { if (!s) return '—'; const p=s.split('-'); return `${p[2]}/${p[1]}/${p[0]}`; };
+  const inSem = s => { if (!s) return false; const d=new Date(s+'T00:00:00'); return d>=lun && d<=dom; };
+  const semLabel = `Semana del ${fD(lun)} al ${fD(dom)}`;
+
+  // ── 1. Facturas a cobrar (todas pendientes) ──
+  const facsCobrar = (ST.facturasACobrar||[])
+    .filter(f => f.estado !== 'cobrada')
+    .sort((a,b) => new Date(a.fechaVenc||a.fecha||'2099-01-01') - new Date(b.fechaVenc||b.fecha||'2099-01-01'));
+  const totCobrar   = facsCobrar.reduce((s,f) => s + (+f.total||0), 0);
+  const facsCobrarSem = facsCobrar.filter(f => inSem(f.fechaVenc||f.fecha));
+
+  // ── 2. Facturas a pagar (todas pendientes) ──
+  const facsPagar = (ST.facturasPagar||[])
+    .filter(f => f.estado !== 'pagada')
+    .sort((a,b) => new Date(a.fechaVenc||a.fecha||'2099-01-01') - new Date(b.fechaVenc||b.fecha||'2099-01-01'));
+  const totPagar  = facsPagar.reduce((s,f) => s + (+f.total||0), 0);
+  const facsPagarSem = facsPagar.filter(f => inSem(f.fechaVenc||f.fecha));
+
+  // ── 3. Obligaciones de la semana (ARCA/AFIP que vencen en la semana) ──
+  const obligSem = (ST.arcaVencimientos||[])
+    .filter(v => !v.pagado && v.fecha && inSem(v.fecha))
+    .sort((a,b) => new Date(a.fecha) - new Date(b.fecha));
+  const totOblig = obligSem.reduce((s,v) => s + (+v.importe||0), 0);
+
+  // ── 4. ECheq y cheques físicos en cartera a vencer esta semana ──
+  const chqCarteraSem = [
+    ...(ST.chequesFisicos||[]).filter(c => c.estado === 'en_cartera' || c.estado === 'pendiente'),
+    ...(ST.eCheques||[]).filter(c => c.estado === 'pendiente')
+  ].filter(c => inSem(c.fechaVenc || c.fecha))
+   .sort((a,b) => new Date(a.fechaVenc||a.fecha) - new Date(b.fechaVenc||b.fecha));
+  const totChqCartera = chqCarteraSem.reduce((s,c) => s + (+c.monto||0), 0);
+
+  // ── 5. Vencimientos de la semana (facturas que vencen esta semana) ──
+  // facsCobrarSem y facsPagarSem ya calculados arriba
+  const totVencSem = facsCobrarSem.reduce((s,f)=>s+(+f.total||0),0)
+                   + facsPagarSem.reduce((s,f)=>s+(+f.total||0),0);
+
+  // ── 6. Diferencia de retiros entre los socios ──
+  const socios = ST.socios || [];
+  const retBySocio = {};
+  socios.forEach(s => { retBySocio[s.id] = 0; });
+  const RET_KW = ['retiro','adelanto','distribuci','sueldo'];
+  [...(ST.cajaEfectivo||[]), ...(ST.cajaBancos||[])].forEach(m => {
+    if (m.tipo !== 'egreso') return;
+    const c = (m.concepto||'').toLowerCase();
+    if (!RET_KW.some(k => c.includes(k))) return;
+    const soc = socios.find(s => m.socioId === s.id || c.includes((s.nombre||'').split(' ')[0].toLowerCase()));
+    if (soc) retBySocio[soc.id] = (retBySocio[soc.id]||0) + Math.abs(+m.monto);
+  });
+  const maxRet = socios.length > 0 ? Math.max(0, ...socios.map(s => retBySocio[s.id]||0)) : 0;
+  const saldoARetirar = {};
+  socios.forEach(s => { saldoARetirar[s.id] = Math.max(0, maxRet - (retBySocio[s.id]||0)); });
+  const maxDiff = socios.length > 1
+    ? Math.max(...socios.map(s => retBySocio[s.id]||0)) - Math.min(...socios.map(s => retBySocio[s.id]||0))
+    : 0;
+
+  // ── 7. Comisiones pendientes ──
+  const comPend = (ST.comisionesResumen||[]).filter(c => (c.saldo||0) > 0)
+    .sort((a,b) => (b.saldo||0) - (a.saldo||0));
+  const totComTodo = (ST.comisionesResumen||[]).reduce((s,c) => s + (+c.totalComision||0), 0);
+  const totComPend = comPend.reduce((s,c) => s + (+c.saldo||0), 0);
+  const pctComPend = totComTodo > 0 ? ((totComPend / totComTodo) * 100).toFixed(1) : '0.0';
+
+  // ── Helpers de formateo ──
+  const fm  = v => fmt(v||0);
+  const fcl = s => `<span style="color:#dc2626;font-weight:700">${s}</span>`;
+  const fok = s => `<span style="color:#16a34a;font-weight:700">${s}</span>`;
+  const fNeutral = s => `<span style="color:#0f172a">${s}</span>`;
+
+  // ── Helper: badge de estado vencimiento ──
+  const hoyStr = new Date().toISOString().slice(0,10);
+  const badgeVenc = fechaStr => {
+    if (!fechaStr) return '';
+    if (fechaStr < hoyStr) return '<span style="background:#dc2626;color:#fff;border-radius:4px;padding:1px 6px;font-size:.68rem;font-weight:700">VENCIDA</span>';
+    if (fechaStr <= dom.toISOString().slice(0,10)) return '<span style="background:#f59e0b;color:#fff;border-radius:4px;padding:1px 6px;font-size:.68rem;font-weight:700">ESTA SEMANA</span>';
+    return '<span style="background:#e2e8f0;color:#475569;border-radius:4px;padding:1px 6px;font-size:.68rem">prox.</span>';
+  };
+
+  // ── Estilos ──
+  const CSS = `
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:'Segoe UI',Arial,sans-serif; background:#f1f5f9; color:#0f172a; }
+    .wrap { max-width:880px; margin:0 auto; padding:24px 16px; }
+    .hdr { background:linear-gradient(135deg,#1e1b4b,#4f46e5); color:#fff; border-radius:14px; padding:24px 28px; margin-bottom:20px; }
+    .hdr h1 { font-size:1.3rem; font-weight:800; letter-spacing:-.01em; }
+    .hdr .sub { font-size:.82rem; opacity:.8; margin-top:4px; }
+    .hdr .semana { font-size:.78rem; background:rgba(255,255,255,.15); border-radius:6px; padding:4px 12px; display:inline-block; margin-top:8px; }
+    .kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:10px; margin-bottom:20px; }
+    .kpi { background:#fff; border-radius:12px; padding:14px 16px; box-shadow:0 1px 4px rgba(0,0,0,.07); border-left:4px solid #e2e8f0; }
+    .kpi.cobrar { border-color:#16a34a; } .kpi.pagar { border-color:#dc2626; }
+    .kpi.oblig  { border-color:#f59e0b; } .kpi.cartera { border-color:#0891b2; }
+    .kpi.retiro { border-color:#7c3aed; } .kpi.com { border-color:#db2777; }
+    .kpi-lbl { font-size:.62rem; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#64748b; margin-bottom:4px; }
+    .kpi-val { font-size:1.05rem; font-weight:800; color:#0f172a; }
+    .kpi-sub { font-size:.65rem; color:#94a3b8; margin-top:2px; }
+    .sec { background:#fff; border-radius:12px; padding:16px 18px; margin-bottom:14px; box-shadow:0 1px 4px rgba(0,0,0,.07); }
+    .sec-hdr { display:flex; align-items:center; gap:8px; font-size:.82rem; font-weight:800; text-transform:uppercase; letter-spacing:.05em; color:#475569; border-bottom:2px solid #f1f5f9; padding-bottom:10px; margin-bottom:12px; }
+    .sec-hdr .dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+    table { width:100%; border-collapse:collapse; font-size:.78rem; }
+    th { text-align:left; padding:5px 8px; font-size:.65rem; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:#94a3b8; border-bottom:1px solid #e2e8f0; }
+    td { padding:7px 8px; border-bottom:1px solid #f8fafc; vertical-align:middle; }
+    tr:last-child td { border-bottom:none; }
+    tr:hover td { background:#f8fafc; }
+    .empty { text-align:center; color:#94a3b8; font-size:.8rem; padding:16px 0; }
+    .tot-row td { font-weight:700; background:#f8fafc; border-top:2px solid #e2e8f0; }
+    .footer { text-align:center; font-size:.68rem; color:#94a3b8; margin-top:24px; padding-top:14px; border-top:1px solid #e2e8f0; }
+    @media print {
+      body { background:#fff; }
+      .no-print { display:none!important; }
+      .sec { box-shadow:none!important; border:1px solid #e2e8f0!important; }
+      .hdr { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+      .kpi { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    }
+  `;
+
+  // ── Filas de facturas ──
+  const rowsFacsCobrar = facsCobrar.slice(0,50).map(f => `
+    <tr>
+      <td>${f.empresa||f.cliente||'—'}</td>
+      <td>${fFech(f.fecha)}</td>
+      <td>${fFech(f.fechaVenc||f.fecha)}</td>
+      <td>${badgeVenc(f.fechaVenc||f.fecha)}</td>
+      <td style="text-align:right;font-weight:700;color:#16a34a">${fm(+f.total)}</td>
+    </tr>`).join('');
+
+  const rowsFacsPagar = facsPagar.slice(0,50).map(f => `
+    <tr>
+      <td>${f.empresa||f.proveedor||'—'}</td>
+      <td>${fFech(f.fecha)}</td>
+      <td>${fFech(f.fechaVenc||f.fecha)}</td>
+      <td>${badgeVenc(f.fechaVenc||f.fecha)}</td>
+      <td style="text-align:right;font-weight:700;color:#dc2626">${fm(+f.total)}</td>
+    </tr>`).join('');
+
+  const rowsOblig = obligSem.map(v => `
+    <tr>
+      <td>${v.concepto||'—'}</td>
+      <td>${fFech(v.fecha)}</td>
+      <td style="text-align:right;font-weight:700;color:#f59e0b">${fm(+v.importe)}</td>
+    </tr>`).join('');
+
+  const rowsCartera = chqCarteraSem.map(c => `
+    <tr>
+      <td>${c.tipo==='eCheque'||c.tipo==='echeq'?'E-Cheq':'Físico'}</td>
+      <td>${c.librador||c.emisor||'—'}</td>
+      <td>${fFech(c.fechaVenc||c.fecha)}</td>
+      <td style="text-align:right;font-weight:700;color:#0891b2">${fm(+c.monto)}</td>
+    </tr>`).join('');
+
+  // Sección vencimientos esta semana (facturas cobrar + pagar con venc en la semana)
+  const rowsVencSem = [
+    ...facsCobrarSem.map(f=>`<tr>
+      <td><span style="background:#dcfce7;color:#166534;border-radius:4px;padding:1px 6px;font-size:.65rem">COBRAR</span></td>
+      <td>${f.empresa||f.cliente||'—'}</td>
+      <td>${fFech(f.fechaVenc||f.fecha)}</td>
+      <td style="text-align:right;color:#16a34a;font-weight:700">${fm(+f.total)}</td>
+    </tr>`),
+    ...facsPagarSem.map(f=>`<tr>
+      <td><span style="background:#fee2e2;color:#991b1b;border-radius:4px;padding:1px 6px;font-size:.65rem">PAGAR</span></td>
+      <td>${f.empresa||f.proveedor||'—'}</td>
+      <td>${fFech(f.fechaVenc||f.fecha)}</td>
+      <td style="text-align:right;color:#dc2626;font-weight:700">${fm(+f.total)}</td>
+    </tr>`)
+  ].join('');
+
+  // Sección retiros socios
+  const rowsRetiros = socios.length ? socios.map(s => {
+    const ret = retBySocio[s.id]||0;
+    const diff = saldoARetirar[s.id]||0;
+    return `<tr>
+      <td>${s.nombre||s.id}</td>
+      <td style="text-align:right">${fm(ret)}</td>
+      <td style="text-align:right;font-weight:700;color:${diff>0?'#dc2626':'#16a34a'}">${diff>0?'+'+fm(diff):'Equilibrado ✓'}</td>
+    </tr>`;
+  }).join('') : `<tr><td colspan="3" class="empty">Sin socios configurados</td></tr>`;
+
+  // Sección comisiones
+  const rowsCom = comPend.slice(0,20).map(c => {
+    const pct = totComTodo > 0 ? ((+c.saldo / totComTodo) * 100).toFixed(1) : '0.0';
+    return `<tr>
+      <td>${c.cliente||c.nombre||'—'}</td>
+      <td style="text-align:right">${fm(+c.totalComision)}</td>
+      <td style="text-align:right;color:#db2777;font-weight:700">${fm(+c.saldo)}</td>
+      <td style="text-align:right;font-size:.72rem;color:#94a3b8">${pct}%</td>
+    </tr>`;
+  }).join('');
+
+  // ── Armar HTML completo ──
+  const html = `<!DOCTYPE html>
+<html lang="es">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Reporte Semanal MÜÜK — ${semLabel}</title>
+<style>${CSS}</style>
+</head>
+<body>
+<div class="wrap">
+  <!-- Botones de acción (solo en pantalla) -->
+  <div class="no-print" style="text-align:right;margin-bottom:14px;display:flex;gap:8px;justify-content:flex-end">
+    <button onclick="window.print()" style="background:#4f46e5;color:#fff;border:none;padding:9px 20px;border-radius:8px;font-size:.8rem;font-weight:700;cursor:pointer">
+      🖨 Imprimir / PDF
+    </button>
+    <button onclick="window.close()" style="background:#64748b;color:#fff;border:none;padding:9px 16px;border-radius:8px;font-size:.8rem;cursor:pointer">✕ Cerrar</button>
+  </div>
+
+  <!-- Encabezado -->
+  <div class="hdr">
+    <div style="display:flex;align-items:center;gap:14px">
+      <div>
+        <h1>📊 Reporte Semanal — MÜÜK SRL</h1>
+        <div class="sub">Generado el ${fDC(new Date())}</div>
+        <div class="semana">📅 ${semLabel}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- KPIs resumen -->
+  <div class="kpis">
+    <div class="kpi cobrar">
+      <div class="kpi-lbl">📥 Facturas a Cobrar</div>
+      <div class="kpi-val">${fm(totCobrar)}</div>
+      <div class="kpi-sub">${facsCobrar.length} pendiente${facsCobrar.length!==1?'s':''} · ${facsCobrarSem.length} vencen esta semana</div>
+    </div>
+    <div class="kpi pagar">
+      <div class="kpi-lbl">📤 Facturas a Pagar</div>
+      <div class="kpi-val">${fm(totPagar)}</div>
+      <div class="kpi-sub">${facsPagar.length} pendiente${facsPagar.length!==1?'s':''} · ${facsPagarSem.length} vencen esta semana</div>
+    </div>
+    <div class="kpi oblig">
+      <div class="kpi-lbl">🏛 Obligaciones Semana</div>
+      <div class="kpi-val">${fm(totOblig)}</div>
+      <div class="kpi-sub">${obligSem.length} vencimiento${obligSem.length!==1?'s':''} ARCA</div>
+    </div>
+    <div class="kpi cartera">
+      <div class="kpi-lbl">💰 Cartera a Depositar</div>
+      <div class="kpi-val">${fm(totChqCartera)}</div>
+      <div class="kpi-sub">${chqCarteraSem.length} cheque${chqCarteraSem.length!==1?'s':''} esta semana</div>
+    </div>
+    <div class="kpi retiro">
+      <div class="kpi-lbl">👥 Diferencia Retiros</div>
+      <div class="kpi-val">${fm(maxDiff)}</div>
+      <div class="kpi-sub">${socios.length} socio${socios.length!==1?'s':''} configurados</div>
+    </div>
+    <div class="kpi com">
+      <div class="kpi-lbl">💼 Comisiones Pendientes</div>
+      <div class="kpi-val">${pctComPend}%</div>
+      <div class="kpi-sub">${fm(totComPend)} de ${fm(totComTodo)}</div>
+    </div>
+  </div>
+
+  <!-- 1. FACTURAS A COBRAR -->
+  <div class="sec">
+    <div class="sec-hdr">
+      <div class="dot" style="background:#16a34a"></div>
+      1 · Facturas a Cobrar — Pendientes
+      <span style="margin-left:auto;font-size:.72rem;font-weight:400;color:#94a3b8">${facsCobrar.length} facturas · Total: ${fm(totCobrar)}</span>
+    </div>
+    ${facsCobrar.length ? `
+    <table>
+      <thead><tr><th>Empresa / Cliente</th><th>Fecha</th><th>Vencimiento</th><th>Estado</th><th style="text-align:right">Importe</th></tr></thead>
+      <tbody>${rowsFacsCobrar}</tbody>
+      <tfoot><tr class="tot-row"><td colspan="4">Total pendiente a cobrar</td><td style="text-align:right;color:#16a34a">${fm(totCobrar)}</td></tr></tfoot>
+    </table>
+    ${facsCobrar.length > 50 ? `<div style="font-size:.7rem;color:#94a3b8;margin-top:6px;text-align:center">Mostrando 50 de ${facsCobrar.length} facturas</div>` : ''}
+    ` : '<div class="empty">✅ Sin facturas pendientes a cobrar</div>'}
+  </div>
+
+  <!-- 2. FACTURAS A PAGAR -->
+  <div class="sec">
+    <div class="sec-hdr">
+      <div class="dot" style="background:#dc2626"></div>
+      2 · Facturas a Pagar — Pendientes
+      <span style="margin-left:auto;font-size:.72rem;font-weight:400;color:#94a3b8">${facsPagar.length} facturas · Total: ${fm(totPagar)}</span>
+    </div>
+    ${facsPagar.length ? `
+    <table>
+      <thead><tr><th>Empresa / Proveedor</th><th>Fecha</th><th>Vencimiento</th><th>Estado</th><th style="text-align:right">Importe</th></tr></thead>
+      <tbody>${rowsFacsPagar}</tbody>
+      <tfoot><tr class="tot-row"><td colspan="4">Total pendiente a pagar</td><td style="text-align:right;color:#dc2626">${fm(totPagar)}</td></tr></tfoot>
+    </table>
+    ${facsPagar.length > 50 ? `<div style="font-size:.7rem;color:#94a3b8;margin-top:6px;text-align:center">Mostrando 50 de ${facsPagar.length} facturas</div>` : ''}
+    ` : '<div class="empty">✅ Sin facturas pendientes a pagar</div>'}
+  </div>
+
+  <!-- 3. OBLIGACIONES DE LA SEMANA -->
+  <div class="sec">
+    <div class="sec-hdr">
+      <div class="dot" style="background:#f59e0b"></div>
+      3 · Obligaciones de la Semana — ARCA / AFIP
+      <span style="margin-left:auto;font-size:.72rem;font-weight:400;color:#94a3b8">${obligSem.length} vencimiento${obligSem.length!==1?'s':''} · ${fm(totOblig)}</span>
+    </div>
+    ${obligSem.length ? `
+    <table>
+      <thead><tr><th>Concepto / Impuesto</th><th>Fecha Venc.</th><th style="text-align:right">Importe</th></tr></thead>
+      <tbody>${rowsOblig}</tbody>
+      <tfoot><tr class="tot-row"><td colspan="2">Total obligaciones esta semana</td><td style="text-align:right;color:#f59e0b">${fm(totOblig)}</td></tr></tfoot>
+    </table>
+    ` : '<div class="empty">✅ Sin obligaciones ARCA que vencen esta semana</div>'}
+  </div>
+
+  <!-- 4. ECHEQ Y CHEQUES EN CARTERA -->
+  <div class="sec">
+    <div class="sec-hdr">
+      <div class="dot" style="background:#0891b2"></div>
+      4 · ECheq y Cheques en Cartera — Vencen Esta Semana
+      <span style="margin-left:auto;font-size:.72rem;font-weight:400;color:#94a3b8">${chqCarteraSem.length} cheque${chqCarteraSem.length!==1?'s':''} · ${fm(totChqCartera)}</span>
+    </div>
+    ${chqCarteraSem.length ? `
+    <table>
+      <thead><tr><th>Tipo</th><th>Librador / Emisor</th><th>Fecha Venc.</th><th style="text-align:right">Monto</th></tr></thead>
+      <tbody>${rowsCartera}</tbody>
+      <tfoot><tr class="tot-row"><td colspan="3">Total a depositar esta semana</td><td style="text-align:right;color:#0891b2">${fm(totChqCartera)}</td></tr></tfoot>
+    </table>
+    ` : '<div class="empty">Sin cheques en cartera que vencen esta semana</div>'}
+  </div>
+
+  <!-- 5. VENCIMIENTOS DE LA SEMANA -->
+  <div class="sec">
+    <div class="sec-hdr">
+      <div class="dot" style="background:#7c3aed"></div>
+      5 · Vencimientos de la Semana — Facturas a Cobrar y Pagar
+      <span style="margin-left:auto;font-size:.72rem;font-weight:400;color:#94a3b8">${facsCobrarSem.length+facsPagarSem.length} factura${(facsCobrarSem.length+facsPagarSem.length)!==1?'s':''}</span>
+    </div>
+    ${(facsCobrarSem.length + facsPagarSem.length) ? `
+    <table>
+      <thead><tr><th>Tipo</th><th>Empresa</th><th>Vencimiento</th><th style="text-align:right">Importe</th></tr></thead>
+      <tbody>${rowsVencSem}</tbody>
+      <tfoot><tr class="tot-row"><td colspan="3">Total que vence esta semana</td><td style="text-align:right">${fm(totVencSem)}</td></tr></tfoot>
+    </table>
+    ` : '<div class="empty">✅ Sin facturas que vencen esta semana</div>'}
+  </div>
+
+  <!-- 6. DIFERENCIA DE RETIROS -->
+  <div class="sec">
+    <div class="sec-hdr">
+      <div class="dot" style="background:#7c3aed"></div>
+      6 · Diferencia de Retiros entre Socios
+      <span style="margin-left:auto;font-size:.72rem;font-weight:400;color:#94a3b8">Diferencia máxima: ${fm(maxDiff)}</span>
+    </div>
+    ${socios.length ? `
+    <table>
+      <thead><tr><th>Socio</th><th style="text-align:right">Total Retirado</th><th style="text-align:right">Para Equiparar</th></tr></thead>
+      <tbody>${rowsRetiros}</tbody>
+    </table>
+    <div style="font-size:.7rem;color:#94a3b8;margin-top:6px">
+      <i>* "Para Equiparar" indica cuánto le falta al socio para igualar al que más retiró. $0 = equilibrado.</i>
+    </div>
+    ` : '<div class="empty">Sin socios configurados</div>'}
+  </div>
+
+  <!-- 7. COMISIONES PENDIENTES -->
+  <div class="sec">
+    <div class="sec-hdr">
+      <div class="dot" style="background:#db2777"></div>
+      7 · Comisiones Pendientes de Cobro
+      <span style="margin-left:auto;font-size:.72rem;font-weight:400;color:#94a3b8">${pctComPend}% pendiente · ${fm(totComPend)} de ${fm(totComTodo)}</span>
+    </div>
+    ${comPend.length ? `
+    <!-- Barra de progreso -->
+    <div style="background:#f1f5f9;border-radius:8px;overflow:hidden;height:10px;margin-bottom:12px">
+      <div style="height:100%;background:linear-gradient(90deg,#db2777,#f472b6);width:${pctComPend}%;transition:width .4s;border-radius:8px"></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;font-size:.72rem;color:#64748b;margin-bottom:12px">
+      <span>Cobrado: ${fm(totComTodo - totComPend)} (${(100-parseFloat(pctComPend)).toFixed(1)}%)</span>
+      <span style="color:#db2777;font-weight:700">Pendiente: ${fm(totComPend)} (${pctComPend}%)</span>
+    </div>
+    <table>
+      <thead><tr><th>Cliente</th><th style="text-align:right">Comisión Total</th><th style="text-align:right">Saldo Pendiente</th><th style="text-align:right">% del Total</th></tr></thead>
+      <tbody>${rowsCom}</tbody>
+      <tfoot><tr class="tot-row">
+        <td>TOTAL</td>
+        <td style="text-align:right">${fm(totComTodo)}</td>
+        <td style="text-align:right;color:#db2777">${fm(totComPend)}</td>
+        <td style="text-align:right;color:#db2777">${pctComPend}%</td>
+      </tr></tfoot>
+    </table>
+    ${comPend.length > 20 ? `<div style="font-size:.7rem;color:#94a3b8;margin-top:6px;text-align:center">Mostrando top 20 de ${comPend.length}</div>` : ''}
+    ` : '<div class="empty">✅ Sin comisiones pendientes</div>'}
+  </div>
+
+  <div class="footer">
+    MÜÜK SRL — Reporte Semanal generado el ${new Date().toLocaleString('es-AR')} · Sistema de Gestión Financiera
+  </div>
+</div>
+</body></html>`;
+
+  // Abrir en nueva ventana (con fallback blob si hay popup blocker)
+  const w = window.open('', '_blank', 'width=960,height=850,scrollbars=yes');
+  if (!w) {
+    const blob = new Blob([html], {type:'text/html'});
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url; a.target = '_blank'; a.rel = 'noopener';
+    document.body.appendChild(a); a.click();
+    setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 2000);
+    toast('Reporte semanal abierto (habilitá popups si no se ve)', 'info');
+    return;
+  }
+  w.document.write(html);
+  w.document.close();
+}
+
+/* ═══════════════════════════════════════════
    FEATURE 6: RECONCILIACIÓN BANCARIA
 ═══════════════════════════════════════════ */
 function abrirModalReconciliacion() {
@@ -25120,87 +25176,7 @@ function _toggleCalVenc(btn) {
 
 
 
-<!-- ══════════ WHATSAPP INTEGRATION ══════════ -->
-<!-- Floating WhatsApp Button -->
-<div id="wa-fab" onclick="toggleWhatsAppPanel()" title="WhatsApp" style="
-  position:fixed; bottom:24px; right:24px; z-index:999;
-  width:52px; height:52px; border-radius:50%;
-  background:#25D366; color:#fff; cursor:pointer;
-  display:flex; align-items:center; justify-content:center;
-  box-shadow:0 4px 12px rgba(37,211,102,.4);
-  transition:transform .2s, box-shadow .2s;
-" onmouseenter="this.style.transform='scale(1.1)'" onmouseleave="this.style.transform='scale(1)'">
-  <svg width="28" height="28" viewBox="0 0 24 24" fill="white">
-    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-  </svg>
-</div>
-
-<!-- WhatsApp Panel -->
-<div id="wa-panel" style="
-  display:none; position:fixed; bottom:86px; right:24px; z-index:998;
-  width:340px; max-height:420px; border-radius:14px;
-  background:#fff; box-shadow:0 8px 32px rgba(0,0,0,.18);
-  overflow:hidden; font-family:inherit;
-">
-  <!-- Header -->
-  <div style="background:#075E54; color:#fff; padding:14px 16px; display:flex; align-items:center; gap:10px">
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-    <div style="flex:1">
-      <div style="font-weight:700;font-size:.88rem">MUUK — WhatsApp</div>
-      <div style="font-size:.65rem;opacity:.8">Enviar consultas y reportes</div>
-    </div>
-    <button onclick="toggleWhatsAppPanel()" style="background:none;border:none;color:#fff;font-size:1.2rem;cursor:pointer;padding:0">&times;</button>
-  </div>
-  <!-- Body -->
-  <div style="padding:14px 16px">
-    <!-- Número destino -->
-    <div style="margin-bottom:10px">
-      <label style="font-size:.68rem;color:#64748b;font-weight:600;display:block;margin-bottom:3px">Número WhatsApp destino</label>
-      <input type="tel" id="wa-phone" placeholder="+54 9 11 XXXX-XXXX" 
-        style="width:100%;padding:8px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:.82rem;outline:none"
-        oninput="localStorage.setItem('waPhone',this.value)">
-    </div>
-    <!-- Tipo de mensaje -->
-    <div style="margin-bottom:10px">
-      <label style="font-size:.68rem;color:#64748b;font-weight:600;display:block;margin-bottom:3px">Tipo de mensaje</label>
-      <select id="wa-type" onchange="waTypeChanged()" style="width:100%;padding:8px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:.82rem;outline:none">
-        <option value="custom">Mensaje personalizado</option>
-        <option value="resumen">Resumen del día</option>
-        <option value="gestion">Resumen Gestión</option>
-        <option value="vencimientos">Cheques por vencer</option>
-        <option value="semanal">Resumen Semanal</option>
-      </select>
-    </div>
-    <!-- Mensaje -->
-    <div style="margin-bottom:10px">
-      <label style="font-size:.68rem;color:#64748b;font-weight:600;display:block;margin-bottom:3px">Mensaje</label>
-      <textarea id="wa-message" rows="4" placeholder="Escribí tu mensaje..."
-        style="width:100%;padding:8px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:.82rem;outline:none;resize:vertical"></textarea>
-    </div>
-    <!-- Buttons -->
-    <div style="display:flex;gap:6px">
-      <button onclick="enviarWhatsApp()" style="
-        flex:1; padding:10px; border:none; border-radius:8px;
-        background:#25D366; color:#fff; font-weight:700; font-size:.82rem;
-        cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px;
-      ">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
-        Enviar por WhatsApp
-      </button>
-      <button onclick="enviarWhatsAppPDF()" title="Generar y compartir PDF" style="
-        padding:10px 14px; border:none; border-radius:8px;
-        background:#1d4ed8; color:#fff; font-size:.82rem;
-        cursor:pointer; display:flex; align-items:center; gap:4px;
-      ">
-        <i class="bi bi-file-earmark-pdf"></i> PDF
-      </button>
-    </div>
-    <!-- API Business placeholder -->
-    <div id="wa-api-status" style="margin-top:10px;font-size:.62rem;color:#94a3b8;text-align:center">
-      <i class="bi bi-info-circle me-1"></i>Modo: Enlace directo a WhatsApp Web/App
-    </div>
-  </div>
-</div>
+<!-- WhatsApp Integration eliminada — se reinstala cuando se necesite -->
 
 
 <!-- BÚSQUEDA GLOBAL -->
