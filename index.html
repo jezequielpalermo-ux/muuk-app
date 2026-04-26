@@ -1057,8 +1057,8 @@
         <div style="color:#e2e8f0;font-weight:600;font-size:.8rem" id="fecha-hoy"></div>
         <div id="dash-gest-sync" style="font-size:.6rem;color:#64748b;margin-top:1px"></div>
       </div>
-      <button onclick="generarReporteSemanal()" style="flex-shrink:0;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);color:#e2e8f0;border-radius:7px;padding:5px 12px;font-size:.72rem;cursor:pointer;white-space:nowrap">
-        <i class="bi bi-calendar-week me-1"></i>Reporte Semana
+      <button onclick="generarReportePDF()" style="flex-shrink:0;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);color:#e2e8f0;border-radius:7px;padding:5px 12px;font-size:.72rem;cursor:pointer;white-space:nowrap">
+        <i class="bi bi-file-earmark-pdf me-1"></i>Reporte PDF
       </button>
     </div>
     <!-- Alerta restauración de datos -->
@@ -12129,26 +12129,34 @@ ${(()=>{
     if(socio) retiros[socio.id]=(retiros[socio.id]||0)+ +m.monto;
   });
   const maxRet = Math.max(...ST.socios.map(s=>retiros[s.id]||0));
-  let out = '<div style="display:flex;gap:12px;margin-bottom:10px;flex-wrap:wrap">';
+  let out = '<div style="display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap">';
   ST.socios.forEach(s=>{
     const ret = retiros[s.id]||0;
     const falta = maxRet - ret;
-    const bg = falta < 100 ? '#fef2f2' : '#f0fdf4';
-    const color = falta < 100 ? '#dc2626' : '#16a34a';
-    out += '<div style="flex:1;min-width:140px;background:'+bg+';border-radius:8px;padding:12px;text-align:center">';
-    out += '<div style="font-size:10px;font-weight:600;color:#0f172a;margin-bottom:4px">'+s.nombre+'</div>';
-    out += '<div style="font-size:14px;font-weight:700;color:'+color+'">'+fmt(ret)+'</div>';
-    out += '<div style="font-size:8px;color:#64748b;margin-top:2px">'+(falta<100?'Mayor retirador':'Disponible: '+fmt(falta))+'</div>';
+    const esMax = falta < 100;
+    const bg    = esMax ? '#fef2f2' : '#f0fdf4';
+    const color = esMax ? '#dc2626' : '#16a34a';
+    out += '<div style="flex:1;min-width:160px;background:'+bg+';border:1.5px solid '+(esMax?'#fca5a5':'#86efac')+';border-radius:10px;padding:14px;text-align:center">';
+    out += '<div style="font-size:11px;font-weight:700;color:#0f172a;margin-bottom:6px">'+s.nombre+'</div>';
+    out += '<div style="font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px">Total retirado</div>';
+    out += '<div style="font-size:15px;font-weight:700;color:#0f172a;margin-bottom:8px">'+fmt(ret)+'</div>';
+    out += '<div style="font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px">Disponible para retirar</div>';
+    out += '<div style="font-size:14px;font-weight:800;color:'+color+'">'+(esMax?'—&nbsp;Mayor retirador':fmt(falta))+'</div>';
     out += '</div>';
   });
   out += '</div>';
-  out += '<table><thead><tr><th>Socio</th><th style="text-align:right">Total Retirado</th><th style="text-align:right">Disponible</th><th>Estado</th></tr></thead><tbody>';
+  out += '<table><thead><tr><th>Socio</th><th style="text-align:right">Total Retirado</th><th style="text-align:right">Disponible para retirar</th><th>Estado</th></tr></thead><tbody>';
   ST.socios.forEach(s=>{
     const ret = retiros[s.id]||0;
     const falta = maxRet - ret;
-    out += '<tr><td style="font-weight:600">'+s.nombre+'</td><td style="text-align:right;font-weight:700">'+fmt(ret)+'</td><td style="text-align:right;color:#16a34a">'+fmt(falta)+'</td><td>'+(falta<100?'<span class="badge bg-danger">Máximo</span>':'<span class="badge bg-success">Puede retirar</span>')+'</td></tr>';
+    const esMax = falta < 100;
+    out += '<tr><td style="font-weight:600">'+s.nombre+'</td>'
+         +'<td style="text-align:right;font-weight:700">'+fmt(ret)+'</td>'
+         +'<td style="text-align:right;font-weight:700;color:'+(esMax?'#94a3b8':'#16a34a')+'">'+(esMax?'—':fmt(falta))+'</td>'
+         +'<td>'+(esMax?'<span class="badge bg-danger">Mayor retirador</span>':'<span class="badge bg-success">Disponible para retirar</span>')+'</td></tr>';
   });
   out += '</tbody></table>';
+  out += '<p style="font-size:9px;color:#94a3b8;margin-top:6px;font-style:italic">* Disponible para retirar = diferencia respecto al socio con mayor retiro acumulado ('+fmt(maxRet)+'). Fuente: Cuenta Socios → Retiros.</p>';
   return out;
 })()}
 
