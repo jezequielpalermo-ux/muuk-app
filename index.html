@@ -937,7 +937,7 @@
         <li><a class="nav-link" data-page="estadosCuenta"><i class="bi bi-person-lines-fill"></i>Estados de Cuenta</a></li>
         <li><a class="nav-link" data-page="stock"><i class="bi bi-box-seam-fill"></i>Stock</a></li>
         <li><a class="nav-link" data-page="listasPrecios"><i class="bi bi-tags-fill"></i>Listas de Precios</a></li>
-        <li><a class="nav-link" data-page="empresas"><i class="bi bi-building-check"></i>CRM Empresas</a></li>
+        <li><a class="nav-link" data-page="empresas"><i class="bi bi-diagram-3-fill"></i>CRM</a></li>
         <li><a class="nav-link" data-page="documentos"><i class="bi bi-folder2-open"></i>Documentos</a></li>
         <li><a class="nav-link" data-page="cuentasBancarias"><i class="bi bi-bank2"></i>Cuentas Bancarias</a></li>
         <li><a class="nav-link" data-page="historialCobranzas"><i class="bi bi-receipt"></i>Historial de Cobranzas</a></li>
@@ -4477,6 +4477,7 @@ CREATE POLICY "acceso total" ON muuk_daily_backups FOR ALL USING (true) WITH CHE
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
         <input type="text" id="crm-buscar" class="form-control form-control-sm" placeholder="Buscar..." style="max-width:180px;font-size:.78rem" oninput="_crmRenderActive()">
+        <button class="btn btn-sm btn-outline-secondary" onclick="printCRM()" style="font-size:.72rem;padding:5px 11px;border-radius:7px"><i class="bi bi-printer me-1"></i>Imprimir</button>
         <button class="btn btn-sm" id="crm-btn-nuevo" onclick="_crmNuevoActivo()" style="background:#0ea5e9;color:#fff;border:none;border-radius:7px;font-size:.72rem;padding:5px 12px" data-muuk-accion="empresas:nueva"><i class="bi bi-plus-lg me-1"></i><span id="crm-btn-label">Nueva</span></button>
       </div>
     </div>
@@ -4499,21 +4500,7 @@ CREATE POLICY "acceso total" ON muuk_daily_backups FOR ALL USING (true) WITH CHE
 
     <!-- Tab content -->
     <div id="crm-tab-content-clientes">
-      <div id="crm-clientes-table-wrap" class="table-responsive">
-        <table class="table table-sm table-hover align-middle mb-0">
-          <thead class="table-light sticky-top">
-            <tr>
-              <th class="ps-2">Cliente</th>
-              <th class="text-center">Ops</th>
-              <th class="text-end">Facturado</th>
-              <th class="text-end">Sin IVA</th>
-              <th class="text-end pe-2">Comisión</th>
-            </tr>
-          </thead>
-          <tbody id="crm-clientes-tbody"></tbody>
-        </table>
-      </div>
-      <div id="crm-clientes-cards" class="row g-3 mt-1"></div>
+      <div id="crm-clientes-cards" class="row g-3"></div>
     </div>
 
     <div id="crm-tab-content-proveedores" style="display:none">
@@ -4534,42 +4521,60 @@ CREATE POLICY "acceso total" ON muuk_daily_backups FOR ALL USING (true) WITH CHE
           </div>
           <div class="modal-body">
             <input type="hidden" id="crm-f-tipo" value="empresa">
-            <div class="row g-3">
-              <div class="col-md-6">
-                <label class="form-label small fw-bold"><span id="crm-f-nombre-label">Nombre *</span></label>
-                <input type="text" class="form-control form-control-sm" id="crm-f-nombre" placeholder="Nombre...">
+            <div class="row g-2">
+              <!-- Datos de la entidad -->
+              <div class="col-md-8">
+                <label class="form-label small fw-bold"><span id="crm-f-nombre-label">Razón Social *</span></label>
+                <input type="text" class="form-control form-control-sm" id="crm-f-nombre" placeholder="Nombre o razón social...">
               </div>
-              <div class="col-md-6">
+              <div class="col-md-4">
                 <label class="form-label small fw-bold">CUIT</label>
                 <input type="text" class="form-control form-control-sm" id="crm-f-cuit" placeholder="30-XXXXXXXX-X">
               </div>
-              <div class="col-md-6">
-                <label class="form-label small fw-bold">Contacto principal</label>
-                <input type="text" class="form-control form-control-sm" id="crm-f-contacto" placeholder="Juan Pérez">
+              <!-- Separador Contacto -->
+              <div class="col-12 mt-1">
+                <div style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#64748b;border-bottom:1px solid #e2e8f0;padding-bottom:3px;margin-bottom:2px"><i class="bi bi-person me-1"></i>Contacto</div>
               </div>
-              <div class="col-md-6">
-                <label class="form-label small fw-bold">Teléfono</label>
+              <div class="col-md-3">
+                <label class="form-label small fw-bold">Nombre</label>
+                <input type="text" class="form-control form-control-sm" id="crm-f-contacto" placeholder="Juan">
+              </div>
+              <div class="col-md-3">
+                <label class="form-label small fw-bold">Apellido</label>
+                <input type="text" class="form-control form-control-sm" id="crm-f-apellido" placeholder="García">
+              </div>
+              <div class="col-md-3">
+                <label class="form-label small fw-bold">Teléfono 1</label>
                 <input type="text" class="form-control form-control-sm" id="crm-f-tel" placeholder="+54 9 11 1234-5678">
               </div>
+              <div class="col-md-3">
+                <label class="form-label small fw-bold">Teléfono 2</label>
+                <input type="text" class="form-control form-control-sm" id="crm-f-tel2" placeholder="+54 11 4567-8901">
+              </div>
               <div class="col-md-6">
-                <label class="form-label small fw-bold">Email</label>
+                <label class="form-label small fw-bold">Mail</label>
                 <input type="email" class="form-control form-control-sm" id="crm-f-email" placeholder="contacto@empresa.com">
               </div>
               <div class="col-md-6">
-                <label class="form-label small fw-bold">Condición de pago</label>
-                <select class="form-select form-select-sm" id="crm-f-condpago">
-                  <option value="">Sin especificar</option>
-                  <option value="contado">Contado</option>
-                  <option value="cheque30">Cheque 30 días</option>
-                  <option value="cheque60">Cheque 60 días</option>
-                  <option value="cheque90">Cheque 90 días</option>
-                  <option value="echeque">E-Cheque</option>
-                  <option value="transferencia">Transferencia</option>
-                </select>
+                <label class="form-label small fw-bold">Horarios</label>
+                <input type="text" class="form-control form-control-sm" id="crm-f-horarios" placeholder="Lun–Vie 9–18 hs">
               </div>
-              <div class="col-12">
+              <!-- Separador Dirección -->
+              <div class="col-12 mt-1">
+                <div style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#64748b;border-bottom:1px solid #e2e8f0;padding-bottom:3px;margin-bottom:2px"><i class="bi bi-geo-alt me-1"></i>Dirección</div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label small fw-bold">Dirección de entrega</label>
+                <input type="text" class="form-control form-control-sm" id="crm-f-dir" placeholder="Av. Corrientes 1234, CABA">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label small fw-bold">Dirección alternativa</label>
+                <input type="text" class="form-control form-control-sm" id="crm-f-dirAlt" placeholder="Depósito, sucursal...">
+              </div>
+              <!-- Notas -->
+              <div class="col-12 mt-1">
                 <label class="form-label small fw-bold">Notas</label>
-                <textarea class="form-control form-control-sm" id="crm-f-notas" rows="3" placeholder="Observaciones, acuerdos, historial..."></textarea>
+                <textarea class="form-control form-control-sm" id="crm-f-notas" rows="2" placeholder="Observaciones, acuerdos, condiciones..."></textarea>
               </div>
             </div>
           </div>
@@ -15401,10 +15406,27 @@ function printReporteStock() {
     cats[cat].valorVenta += (p.stockActual||0) * (p.precioVenta||0);
   });
 
+  const hoyIso = new Date().toISOString().slice(0,10);
+  const en30 = new Date(); en30.setDate(en30.getDate()+30); const en30Iso = en30.toISOString().slice(0,10);
+  const _fFecha = s => { if(!s) return '—'; const [y,m,d]=s.split('-'); return `${d}/${m}/${y}`; };
+
   const rows = sorted.map(p => {
     const alerta = p.stockMin > 0 && p.stockActual < p.stockMin;
     const sinStk = (p.stockActual||0) <= 0;
     const bg = sinStk ? '#fef2f2' : alerta ? '#fffbeb' : '';
+    // Trazabilidad
+    const vencido  = p.fechaVenc && p.fechaVenc < hoyIso;
+    const proxVenc = p.fechaVenc && !vencido && p.fechaVenc <= en30Iso;
+    const vencColor = vencido ? '#dc2626' : proxVenc ? '#d97706' : '#16a34a';
+    const vencLabel = vencido ? ' <b style="color:#dc2626;font-size:7px">VENCIDO</b>' : proxVenc ? ' <b style="color:#d97706;font-size:7px">PROX</b>' : '';
+    let diasDepTxt = '—', diasDepColor = '#333';
+    if (p.fechaIngreso) {
+      const diff = Math.floor((new Date() - new Date(p.fechaIngreso+'T00:00:00'))/86400000);
+      if (diff >= 0) {
+        diasDepTxt = diff===0 ? 'Hoy' : diff===1 ? '1d' : diff+'d';
+        diasDepColor = diff>90 ? '#dc2626' : diff>30 ? '#d97706' : '#16a34a';
+      }
+    }
     return `<tr style="${bg ? 'background:'+bg : ''}">
       <td style="font-weight:600">${p.codigo||'—'}</td>
       <td>${p.nombre||'—'}</td>
@@ -15417,6 +15439,11 @@ function printReporteStock() {
       <td style="text-align:right">$${_f(p.precioVenta)}</td>
       <td style="text-align:right;font-weight:600">$${_f((p.stockActual||0)*(p.precioCosto||0))}</td>
       <td>${p.proveedor||'—'}</td>
+      <td style="font-size:8px">${p.lote||'—'}</td>
+      <td style="font-size:8px;text-align:center">${_fFecha(p.fechaElab)}</td>
+      <td style="font-size:8px;text-align:center;color:${vencColor};font-weight:${vencido||proxVenc?'700':'400'}">${_fFecha(p.fechaVenc)}${vencLabel}</td>
+      <td style="font-size:8px;text-align:center">${_fFecha(p.fechaIngreso)}</td>
+      <td style="font-size:8px;text-align:center;font-weight:700;color:${diasDepColor}">${diasDepTxt}</td>
     </tr>`;
   }).join('');
 
@@ -15486,6 +15513,11 @@ function printReporteStock() {
         <th style="text-align:center">Stock</th><th style="text-align:center">Mín.</th><th style="text-align:center">Unidad</th>
         <th style="text-align:right">P. Costo</th><th style="text-align:right">P. Venta</th>
         <th style="text-align:right">Valor Total</th><th>Proveedor</th>
+        <th style="background:#4c1d95">Lote</th>
+        <th style="background:#4c1d95;text-align:center">Elaboración</th>
+        <th style="background:#4c1d95;text-align:center">Vencimiento</th>
+        <th style="background:#4c1d95;text-align:center">Ingreso dep.</th>
+        <th style="background:#4c1d95;text-align:center">Días dep.</th>
       </tr></thead>
       <tbody>${rows}
         <tr class="total-row">
@@ -23322,8 +23354,7 @@ function _crmNuevoActivo() {
   document.getElementById('crm-f-tipo').value = tipo;
   document.getElementById('crm-f-nombre-label').textContent = lbls[tipo];
   document.getElementById('crm-f-nombre').placeholder = placeholders[tipo];
-  ['nombre','cuit','contacto','tel','email','notas'].forEach(f => { const el=document.getElementById('crm-f-'+f); if(el) el.value=''; });
-  const cp=document.getElementById('crm-f-condpago'); if(cp) cp.value='';
+  ['nombre','cuit','contacto','apellido','tel','tel2','email','horarios','dir','dirAlt','notas'].forEach(f => { const el=document.getElementById('crm-f-'+f); if(el) el.value=''; });
   new bootstrap.Modal(document.getElementById('modal-crm-empresa')).show();
 }
 
@@ -23343,47 +23374,40 @@ function renderEmpresas() {
 function renderCRMClientes() {
   const buscar = (document.getElementById('crm-buscar')?.value||'').toLowerCase();
   const statsEl = document.getElementById('crm-stats');
-  const gClis = GESTION_DATA?.clientes || [];
   const manualClis = ST.clientesCRM || [];
+  const gClis = GESTION_DATA?.clientes || [];
+
+  // Stats
   if (statsEl) {
-    const total = new Set([...gClis.map(c=>c[0].toLowerCase()), ...manualClis.map(c=>c.nombre.toLowerCase())]).size;
-    let facTotal=0, comTotal=0; gClis.forEach(c=>{facTotal+=c[2]||0; comTotal+=c[4]||0;});
+    const totalManual = manualClis.length;
+    const totalGestion = gClis.length;
+    const conContacto = manualClis.filter(c=>c.email||c.tel||c.tel2).length;
+    const conNotas = manualClis.filter(c=>c.notas).length;
     statsEl.innerHTML = [
-      { icon:'bi-people-fill', color:'#0ea5e9', bg:'#f0f9ff', label:'Clientes', val:total },
-      { icon:'bi-currency-exchange', color:'#4f46e5', bg:'#eef2ff', label:'Facturación total', val:fmt(facTotal) },
-      { icon:'bi-percent', color:'#16a34a', bg:'#f0fdf4', label:'Comisión total', val:fmt(comTotal) },
-      { icon:'bi-journal-text', color:'#7c3aed', bg:'#f5f3ff', label:'Con notas', val:manualClis.filter(c=>c.notas).length },
+      { icon:'bi-people-fill',   color:'#0ea5e9', bg:'#f0f9ff', label:'Clientes CRM',   val:totalManual },
+      { icon:'bi-cloud-check',   color:'#4f46e5', bg:'#eef2ff', label:'En Gestión',      val:totalGestion },
+      { icon:'bi-person-check',  color:'#16a34a', bg:'#f0fdf4', label:'Con contacto',    val:conContacto },
+      { icon:'bi-journal-text',  color:'#7c3aed', bg:'#f5f3ff', label:'Con notas',       val:conNotas },
     ].map(s=>`<div class="col-6 col-xl-3"><div class="gest-stat" style="border-left-color:${s.color}">
       <div class="gest-stat-icon" style="background:${s.bg};color:${s.color}"><i class="bi ${s.icon}"></i></div>
       <div><div class="gest-stat-lbl">${s.label}</div><div class="gest-stat-val">${s.val}</div></div>
     </div></div>`).join('');
   }
-  const tbody = document.getElementById('crm-clientes-tbody');
-  if (tbody) {
-    const filtered = gClis.filter(c => !buscar || c[0].toLowerCase().includes(buscar));
-    if (!filtered.length) {
-      tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-4" style="font-size:.82rem">${GESTION_DATA ? (buscar ? 'Sin resultados' : 'Sin datos de clientes en Gestión') : '<i class="bi bi-cloud-slash me-1"></i>Sincronizá Gestión para ver clientes'}</td></tr>`;
-    } else {
-      tbody.innerHTML = filtered.map(c => {
-        const extra = manualClis.find(x=>x.nombre.toLowerCase()===c[0].toLowerCase());
-        return `<tr>
-          <td class="ps-2"><div style="font-weight:600;font-size:.8rem">${c[0]}</div>${extra?.notas?`<div style="font-size:.67rem;color:#94a3b8;font-style:italic">${extra.notas.slice(0,60)}</div>`:''}</td>
-          <td class="text-center"><small>${c[1]||0}</small></td>
-          <td class="text-end"><small style="color:#4f46e5;font-weight:600">${fmt(c[2]||0)}</small></td>
-          <td class="text-end"><small>${fmt(c[3]||0)}</small></td>
-          <td class="text-end pe-2"><small class="text-success fw-bold">${fmt(c[4]||0)}</small></td>
-        </tr>`;
-      }).join('');
-    }
-  }
-  const manualWrap = document.getElementById('crm-clientes-cards');
-  if (manualWrap) {
-    const gNames = new Set(gClis.map(c=>c[0].toLowerCase()));
-    const extras = manualClis.filter(c => !gNames.has(c.nombre.toLowerCase()) && (!buscar || c.nombre.toLowerCase().includes(buscar)));
-    manualWrap.innerHTML = extras.length
-      ? `<div class="col-12 mt-2"><small class="text-muted"><i class="bi bi-person-plus me-1"></i>Clientes manuales</small></div>` + extras.map(e=>_crmCard(e,'cliente')).join('')
-      : '';
-  }
+
+  // Merge: clientes manuales + clientes de Gestión que no estén ya como manual
+  const manualNames = new Set(manualClis.map(c=>c.nombre.toLowerCase()));
+  const gSoloNombres = gClis.filter(c=>!manualNames.has(c[0].toLowerCase())).map(c=>({
+    id:'_g_'+c[0], nombre:c[0], _fromGestion:true,
+    cuit:'', contacto:'', apellido:'', tel:'', tel2:'', email:'', horarios:'', dir:'', dirAlt:'', notas:''
+  }));
+  const merged = [...manualClis, ...gSoloNombres];
+  const filtered = merged.filter(c => !buscar || c.nombre.toLowerCase().includes(buscar));
+
+  const cardsEl = document.getElementById('crm-clientes-cards');
+  if (!cardsEl) return;
+  cardsEl.innerHTML = filtered.length
+    ? filtered.map(e => _crmCard(e, 'cliente')).join('')
+    : `<div class="col-12"><div class="text-center text-muted py-5" style="font-size:.85rem"><i class="bi bi-people d-block fs-3 mb-2"></i>${buscar?'Sin resultados':'No hay clientes aún. Usá "Nuevo cliente" para agregar.'}</div></div>`;
 }
 
 function renderCRMProveedores() {
@@ -23414,12 +23438,12 @@ function renderCRMEmpresas() {
   const list = (ST.empresasCRM||[]).filter(e => !buscar || e.nombre.toLowerCase().includes(buscar));
   const statsEl = document.getElementById('crm-stats');
   if (statsEl) {
-    let facTotal=0; if (GESTION_DATA?.empresas) GESTION_DATA.empresas.forEach(e=>{facTotal+=e[2]||0;});
+    const arr = ST.empresasCRM||[];
     statsEl.innerHTML = [
-      { icon:'bi-building', color:'#0ea5e9', bg:'#f0f9ff', label:'Empresas', val:(ST.empresasCRM||[]).length },
-      { icon:'bi-person-check', color:'#16a34a', bg:'#f0fdf4', label:'Con contacto', val:(ST.empresasCRM||[]).filter(e=>e.email||e.tel).length },
-      { icon:'bi-journal-text', color:'#7c3aed', bg:'#f5f3ff', label:'Con notas', val:(ST.empresasCRM||[]).filter(e=>e.notas).length },
-      { icon:'bi-currency-exchange', color:'#d97706', bg:'#fffbeb', label:'Facturación hist.', val:fmt(facTotal) },
+      { icon:'bi-building',      color:'#0ea5e9', bg:'#f0f9ff', label:'Empresas',      val:arr.length },
+      { icon:'bi-person-check',  color:'#16a34a', bg:'#f0fdf4', label:'Con contacto',  val:arr.filter(e=>e.email||e.tel||e.tel2).length },
+      { icon:'bi-geo-alt',       color:'#f59e0b', bg:'#fffbeb', label:'Con dirección', val:arr.filter(e=>e.dir).length },
+      { icon:'bi-journal-text',  color:'#7c3aed', bg:'#f5f3ff', label:'Con notas',     val:arr.filter(e=>e.notas).length },
     ].map(s=>`<div class="col-6 col-xl-3"><div class="gest-stat" style="border-left-color:${s.color}">
       <div class="gest-stat-icon" style="background:${s.bg};color:${s.color}"><i class="bi ${s.icon}"></i></div>
       <div><div class="gest-stat-lbl">${s.label}</div><div class="gest-stat-val">${s.val}</div></div>
@@ -23427,47 +23451,52 @@ function renderCRMEmpresas() {
   }
   const cardsEl = document.getElementById('crm-cards');
   if (!cardsEl) return;
-  if (!list.length) {
-    cardsEl.innerHTML = `<div class="col-12"><div class="text-center text-muted py-5" style="font-size:.85rem"><i class="bi bi-building d-block fs-3 mb-2"></i>${buscar?'Sin resultados':'No hay empresas. Sincronizá Gestión o agregá manualmente.'}</div></div>`;
-    return;
-  }
-  const condLabels = { contado:'Contado', cheque30:'Cheque 30d', cheque60:'Cheque 60d', cheque90:'Cheque 90d', echeque:'E-Cheque', transferencia:'Transferencia' };
-  cardsEl.innerHTML = list.map(e => {
-    let gFac=0, gCom=0, gOps=0;
-    if (GESTION_DATA?.empresas) { const ge=GESTION_DATA.empresas.find(g=>g[0].toLowerCase()===e.nombre.toLowerCase()); if(ge){gOps=ge[1]||0;gFac=ge[2]||0;gCom=ge[4]||0;} }
-    return `<div class="col-md-6 col-xl-4"><div class="card h-100" style="border-top:3px solid #0ea5e9">
-      <div class="card-body p-3">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
-          <div><div style="font-weight:700;font-size:.9rem;color:#0f172a">${e.nombre}</div>${e.cuit?`<div style="font-size:.65rem;color:#94a3b8">CUIT: ${e.cuit}</div>`:''}</div>
-          <div style="display:flex;gap:4px">
-            ${e.fromGestion?'<span style="font-size:.55rem;background:#dbeafe;color:#1d4ed8;padding:2px 5px;border-radius:4px;font-weight:700">GESTIÓN</span>':''}
-            <button class="btn btn-sm" onclick="crmEditarEmpresa('${e.id}')" style="padding:2px 6px;font-size:.65rem;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:4px" data-muuk-accion="empresas:editar"><i class="bi bi-pencil"></i></button>
-            <button class="btn btn-sm" onclick="crmEliminarEmpresa('${e.id}')" style="padding:2px 6px;font-size:.65rem;background:#fef2f2;border:1px solid #fecaca;border-radius:4px;color:#dc2626" data-muuk-accion="empresas:eliminar"><i class="bi bi-trash"></i></button>
-          </div>
-        </div>
-        ${e.contacto||e.tel||e.email?`<div style="font-size:.72rem;color:#475569;margin-bottom:6px;display:flex;flex-direction:column;gap:2px">${e.contacto?`<span><i class="bi bi-person me-1"></i>${e.contacto}</span>`:''} ${e.tel?`<span><i class="bi bi-telephone me-1"></i>${e.tel}</span>`:''} ${e.email?`<span><i class="bi bi-envelope me-1"></i>${e.email}</span>`:''}</div>`:''}
-        ${e.condpago?`<div style="margin-bottom:6px"><span style="font-size:.62rem;background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0;border-radius:4px;padding:2px 6px;font-weight:600"><i class="bi bi-clock me-1"></i>${condLabels[e.condpago]||e.condpago}</span></div>`:''}
-        ${gFac>0?`<div style="background:#f8fafc;border-radius:6px;padding:6px 8px;margin-bottom:6px;display:flex;gap:12px"><div style="font-size:.65rem;color:#64748b">Ops: <b>${gOps}</b></div><div style="font-size:.65rem;color:#64748b">Facturado: <b style="color:#4f46e5">${fmt(gFac)}</b></div><div style="font-size:.65rem;color:#64748b">Com: <b style="color:#16a34a">${fmt(gCom)}</b></div></div>`:''}
-        ${e.notas?`<div style="font-size:.7rem;color:#64748b;border-top:1px solid #f1f5f9;padding-top:6px;margin-top:4px;font-style:italic">"${e.notas.slice(0,100)}${e.notas.length>100?'…':''}"</div>`:''}
-      </div></div></div>`;
-  }).join('');
+  cardsEl.innerHTML = list.length
+    ? list.map(e => _crmCard(e,'empresa')).join('')
+    : `<div class="col-12"><div class="text-center text-muted py-5" style="font-size:.85rem"><i class="bi bi-building d-block fs-3 mb-2"></i>${buscar?'Sin resultados':'No hay empresas. Usá "Nueva empresa" para agregar.'}</div></div>`;
 }
 
 function _crmCard(e, tipo) {
-  const border = tipo==='proveedor' ? '#f59e0b' : '#0ea5e9';
-  const condLabels = { contado:'Contado', cheque30:'Cheque 30d', cheque60:'Cheque 60d', cheque90:'Cheque 90d', echeque:'E-Cheque', transferencia:'Transferencia' };
+  const colors = { cliente:'#0ea5e9', proveedor:'#f59e0b', empresa:'#8b5cf6' };
+  const border = colors[tipo] || '#0ea5e9';
+  const isGestion = e._fromGestion || e.fromGestion;
+  const editFn   = tipo==='empresa' ? `crmEditarEmpresa('${e.id}')` : `_crmEditarItem('${e.id}','${tipo}')`;
+  const delFn    = tipo==='empresa' ? `crmEliminarEmpresa('${e.id}')` : `_crmEliminarItem('${e.id}','${tipo}')`;
+  const disableEdit = isGestion ? 'opacity:.45;pointer-events:none' : '';
+
+  const contactoNombre = [e.contacto, e.apellido].filter(Boolean).join(' ');
+  const tels = [e.tel, e.tel2].filter(Boolean);
+  const dirs  = [e.dir, e.dirAlt].filter(Boolean);
+
   return `<div class="col-md-6 col-xl-4"><div class="card h-100" style="border-top:3px solid ${border}">
     <div class="card-body p-3">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
-        <div><div style="font-weight:700;font-size:.9rem;color:#0f172a">${e.nombre}</div>${e.cuit?`<div style="font-size:.65rem;color:#94a3b8">CUIT: ${e.cuit}</div>`:''}</div>
-        <div style="display:flex;gap:4px">
-          <button class="btn btn-sm" onclick="_crmEditarItem('${e.id}','${tipo}')" style="padding:2px 6px;font-size:.65rem;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:4px"><i class="bi bi-pencil"></i></button>
-          <button class="btn btn-sm" onclick="_crmEliminarItem('${e.id}','${tipo}')" style="padding:2px 6px;font-size:.65rem;background:#fef2f2;border:1px solid #fecaca;border-radius:4px;color:#dc2626"><i class="bi bi-trash"></i></button>
+      <!-- Cabecera: nombre + acciones -->
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:700;font-size:.88rem;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${e.nombre}</div>
+          ${e.cuit?`<div style="font-size:.63rem;color:#94a3b8;margin-top:1px">CUIT: ${e.cuit}</div>`:''}
+        </div>
+        <div style="display:flex;gap:4px;flex-shrink:0;margin-left:6px">
+          ${isGestion?'<span style="font-size:.52rem;background:#dbeafe;color:#1d4ed8;padding:2px 5px;border-radius:4px;font-weight:700;align-self:center">GESTIÓN</span>':''}
+          <button class="btn btn-sm" onclick="${editFn}" style="padding:2px 6px;font-size:.65rem;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:4px;${disableEdit}"><i class="bi bi-pencil"></i></button>
+          <button class="btn btn-sm" onclick="${delFn}" style="padding:2px 6px;font-size:.65rem;background:#fef2f2;border:1px solid #fecaca;border-radius:4px;color:#dc2626;${disableEdit}"><i class="bi bi-trash"></i></button>
         </div>
       </div>
-      ${e.contacto||e.tel||e.email?`<div style="font-size:.72rem;color:#475569;margin-bottom:6px;display:flex;flex-direction:column;gap:2px">${e.contacto?`<span><i class="bi bi-person me-1"></i>${e.contacto}</span>`:''} ${e.tel?`<span><i class="bi bi-telephone me-1"></i>${e.tel}</span>`:''} ${e.email?`<span><i class="bi bi-envelope me-1"></i>${e.email}</span>`:''}</div>`:''}
-      ${e.condpago?`<div style="margin-bottom:6px"><span style="font-size:.62rem;background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0;border-radius:4px;padding:2px 6px;font-weight:600"><i class="bi bi-clock me-1"></i>${condLabels[e.condpago]||e.condpago}</span></div>`:''}
-      ${e.notas?`<div style="font-size:.7rem;color:#64748b;border-top:1px solid #f1f5f9;padding-top:6px;margin-top:4px;font-style:italic">"${e.notas.slice(0,100)}${e.notas.length>100?'…':''}"</div>`:''}
+      <!-- Contacto -->
+      ${(contactoNombre||tels.length||e.email)?`
+      <div style="font-size:.72rem;color:#475569;margin-bottom:5px;display:flex;flex-direction:column;gap:2px">
+        ${contactoNombre?`<span><i class="bi bi-person me-1" style="color:${border}"></i>${contactoNombre}</span>`:''}
+        ${tels.map(t=>`<span><i class="bi bi-telephone me-1" style="color:${border}"></i>${t}</span>`).join('')}
+        ${e.email?`<span><i class="bi bi-envelope me-1" style="color:${border}"></i>${e.email}</span>`:''}
+        ${e.horarios?`<span><i class="bi bi-clock me-1" style="color:#94a3b8"></i>${e.horarios}</span>`:''}
+      </div>`:''}
+      <!-- Direcciones -->
+      ${dirs.length?`
+      <div style="font-size:.7rem;color:#64748b;margin-bottom:5px;display:flex;flex-direction:column;gap:2px">
+        ${dirs.map((d,i)=>`<span><i class="bi bi-geo-alt${i>0?'-fill':''} me-1" style="color:#94a3b8"></i>${d}</span>`).join('')}
+      </div>`:''}
+      <!-- Notas -->
+      ${e.notas?`<div style="font-size:.7rem;color:#64748b;border-top:1px solid #f1f5f9;padding-top:5px;margin-top:4px;font-style:italic">"${e.notas.slice(0,100)}${e.notas.length>100?'…':''}"</div>`:''}
     </div></div></div>`;
 }
 
@@ -23479,9 +23508,8 @@ function _crmEditarItem(id, tipo) {
   const lbls   = { cliente:'Nombre del cliente *', proveedor:'Nombre del proveedor *', empresa:'Nombre de la empresa *' };
   document.getElementById('crm-modal-title').textContent = titles[tipo]||'Editar';
   document.getElementById('crm-f-tipo').value = tipo;
-  document.getElementById('crm-f-nombre-label').textContent = lbls[tipo]||'Nombre *';
-  ['nombre','cuit','contacto','tel','email','notas'].forEach(f => { const el=document.getElementById('crm-f-'+f); if(el) el.value=e[f]||''; });
-  const cp=document.getElementById('crm-f-condpago'); if(cp) cp.value=e.condpago||'';
+  document.getElementById('crm-f-nombre-label').textContent = lbls[tipo]||'Razón Social *';
+  ['nombre','cuit','contacto','apellido','tel','tel2','email','horarios','dir','dirAlt','notas'].forEach(f => { const el=document.getElementById('crm-f-'+f); if(el) el.value=e[f]||''; });
   new bootstrap.Modal(document.getElementById('modal-crm-empresa')).show();
 }
 
@@ -23505,12 +23533,16 @@ function crmGuardarEmpresa() {
   if (!Array.isArray(ST[arrKey])) ST[arrKey] = [];
   const data = {
     nombre,
-    cuit:     document.getElementById('crm-f-cuit')?.value||'',
-    contacto: document.getElementById('crm-f-contacto')?.value||'',
-    tel:      document.getElementById('crm-f-tel')?.value||'',
-    email:    document.getElementById('crm-f-email')?.value||'',
-    condpago: document.getElementById('crm-f-condpago')?.value||'',
-    notas:    document.getElementById('crm-f-notas')?.value||'',
+    cuit:     document.getElementById('crm-f-cuit')?.value.trim()||'',
+    contacto: document.getElementById('crm-f-contacto')?.value.trim()||'',
+    apellido: document.getElementById('crm-f-apellido')?.value.trim()||'',
+    tel:      document.getElementById('crm-f-tel')?.value.trim()||'',
+    tel2:     document.getElementById('crm-f-tel2')?.value.trim()||'',
+    email:    document.getElementById('crm-f-email')?.value.trim()||'',
+    horarios: document.getElementById('crm-f-horarios')?.value.trim()||'',
+    dir:      document.getElementById('crm-f-dir')?.value.trim()||'',
+    dirAlt:   document.getElementById('crm-f-dirAlt')?.value.trim()||'',
+    notas:    document.getElementById('crm-f-notas')?.value.trim()||'',
   };
   if (_crmEditId) {
     const idx = ST[arrKey].findIndex(x=>x.id===_crmEditId);
@@ -23526,6 +23558,88 @@ function crmGuardarEmpresa() {
 }
 
 function crmEliminarEmpresa(id) { _crmEliminarItem(id, 'empresa'); }
+
+function printCRM() {
+  const tab = _crmActiveTab || 'clientes';
+  const tabLabels = { clientes:'Clientes', proveedores:'Proveedores', empresas:'Empresas' };
+  const tabLabel = tabLabels[tab] || tab;
+  const colors   = { clientes:'#0ea5e9', proveedores:'#f59e0b', empresas:'#8b5cf6' };
+  const color    = colors[tab];
+
+  let list = [];
+  if (tab === 'clientes') {
+    const manualClis = ST.clientesCRM || [];
+    const gClis = GESTION_DATA?.clientes || [];
+    const manualNames = new Set(manualClis.map(c=>c.nombre.toLowerCase()));
+    const gSolo = gClis.filter(c=>!manualNames.has(c[0].toLowerCase())).map(c=>({nombre:c[0], _fromGestion:true}));
+    list = [...manualClis, ...gSolo];
+  } else if (tab === 'proveedores') {
+    list = ST.proveedoresCRM || [];
+  } else {
+    list = ST.empresasCRM || [];
+  }
+
+  if (!list.length) { toast('No hay registros para imprimir en este segmento', 'info'); return; }
+
+  const hoyStr = new Date().toLocaleDateString('es-AR');
+
+  const filas = list.map((e, i) => {
+    const contactoNombre = [e.contacto, e.apellido].filter(Boolean).join(' ');
+    const tels = [e.tel, e.tel2].filter(Boolean).join(' / ');
+    const dirs = [e.dir, e.dirAlt].filter(Boolean).join(' — ');
+    const gBadge = (e._fromGestion||e.fromGestion) ? '<span style="font-size:7px;background:#dbeafe;color:#1d4ed8;padding:1px 4px;border-radius:3px;font-weight:700;vertical-align:middle">GESTIÓN</span>' : '';
+    return `<tr style="${i%2===1?'background:#f8fafc':''}">
+      <td style="font-weight:600">${e.nombre} ${gBadge}</td>
+      <td>${e.cuit||'—'}</td>
+      <td>${contactoNombre||'—'}</td>
+      <td>${tels||'—'}</td>
+      <td>${e.email||'—'}</td>
+      <td>${e.horarios||'—'}</td>
+      <td>${dirs||'—'}</td>
+      <td style="font-size:8px;color:#64748b;max-width:140px">${e.notas?e.notas.slice(0,80)+(e.notas.length>80?'…':''):'—'}</td>
+    </tr>`;
+  }).join('');
+
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+  <title>CRM — ${tabLabel}</title>
+  <style>
+    @page { size: A4 landscape; margin: 10mm; }
+    @media print { .no-print { display:none!important; } }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; font-size:9px; color:#1a1a1a; padding:10px; }
+    h1 { font-size:17px; margin-bottom:2px; color:${color}; }
+    .meta { color:#666; font-size:9px; margin-bottom:12px; }
+    table { width:100%; border-collapse:collapse; }
+    th { background:${color}; color:#fff; padding:4px 6px; font-size:8px; text-transform:uppercase; letter-spacing:.03em; text-align:left; }
+    td { padding:3px 6px; border-bottom:1px solid #e2e8f0; vertical-align:top; }
+    .total { font-size:8px; color:#64748b; margin-top:8px; }
+    .no-print { margin-bottom:10px; }
+  </style></head><body>
+  <div class="no-print" style="display:flex;gap:8px;justify-content:flex-end">
+    <button onclick="window.print()" style="background:${color};color:#fff;border:none;border-radius:6px;padding:6px 16px;font-size:11px;cursor:pointer;font-weight:600">Imprimir / Guardar PDF</button>
+    <button onclick="window.close()" style="background:#64748b;color:#fff;border:none;border-radius:6px;padding:6px 16px;font-size:11px;cursor:pointer;font-weight:600">Volver</button>
+  </div>
+  <h1><i style="font-style:normal">CRM</i> — ${tabLabel}</h1>
+  <div class="meta">Generado: ${hoyStr} · ${list.length} registro${list.length!==1?'s':''}</div>
+  <table>
+    <thead><tr>
+      <th>Razón Social</th><th>CUIT</th><th>Contacto</th><th>Teléfono(s)</th>
+      <th>Mail</th><th>Horarios</th><th>Dirección</th><th>Notas</th>
+    </tr></thead>
+    <tbody>${filas}</tbody>
+  </table>
+  <div class="total">Total: ${list.length} registro${list.length!==1?'s':''} · MÜÜK CRM</div>
+  </body></html>`;
+
+  const w = window.open('','_blank');
+  if (w) { w.document.write(html); w.document.close(); setTimeout(()=>w.print(),350); }
+  else {
+    const blob = new Blob([html], {type:'text/html'});
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+    a.download = `CRM_${tabLabel}_${hoyStr.replace(/\//g,'-')}.html`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  }
+}
 
 /* ════════════════════ INGRESAR COBRANZA ════════════════════ */
 function renderIngresarCobranza() {
