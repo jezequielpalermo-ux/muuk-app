@@ -1122,26 +1122,40 @@
 
     <!-- ACCIONES RÁPIDAS -->
     <div class="mb-4">
-      <div style="font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#94a3b8;margin-bottom:8px">Acciones rápidas</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <button onclick="irA('cajaBancos')" style="display:flex;align-items:center;gap:7px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:8px 14px;font-size:.78rem;font-weight:600;color:#0f172a;cursor:pointer;transition:all .15s;box-shadow:0 1px 3px rgba(0,0,0,.06)" onmouseover="this.style.borderColor='#3b82f6';this.style.color='#1d4ed8'" onmouseout="this.style.borderColor='#e2e8f0';this.style.color='#0f172a'">
-          <i class="bi bi-plus-circle-fill" style="color:#3b82f6;font-size:.95rem"></i>Nuevo movimiento
-        </button>
-        <button onclick="abrirModalFactura('cobrar',null)" style="display:flex;align-items:center;gap:7px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:8px 14px;font-size:.78rem;font-weight:600;color:#0f172a;cursor:pointer;transition:all .15s;box-shadow:0 1px 3px rgba(0,0,0,.06)" onmouseover="this.style.borderColor='#16a34a';this.style.color='#166534'" onmouseout="this.style.borderColor='#e2e8f0';this.style.color='#0f172a'">
-          <i class="bi bi-file-earmark-arrow-down-fill" style="color:#16a34a;font-size:.95rem"></i>Nueva factura a cobrar
-        </button>
-        <button onclick="abrirModalFactura('pagar',null)" style="display:flex;align-items:center;gap:7px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:8px 14px;font-size:.78rem;font-weight:600;color:#0f172a;cursor:pointer;transition:all .15s;box-shadow:0 1px 3px rgba(0,0,0,.06)" onmouseover="this.style.borderColor='#dc2626';this.style.color='#991b1b'" onmouseout="this.style.borderColor='#e2e8f0';this.style.color='#0f172a'">
-          <i class="bi bi-file-earmark-arrow-up-fill" style="color:#dc2626;font-size:.95rem"></i>Nueva factura a pagar
-        </button>
-        <button onclick="abrirModalCheque('fisico')" style="display:flex;align-items:center;gap:7px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:8px 14px;font-size:.78rem;font-weight:600;color:#0f172a;cursor:pointer;transition:all .15s;box-shadow:0 1px 3px rgba(0,0,0,.06)" onmouseover="this.style.borderColor='#7c3aed';this.style.color='#5b21b6'" onmouseout="this.style.borderColor='#e2e8f0';this.style.color='#0f172a'">
-          <i class="bi bi-file-earmark-check-fill" style="color:#7c3aed;font-size:.95rem"></i>Agregar cheque
-        </button>
-        <button onclick="irA('panelVencimientos')" style="display:flex;align-items:center;gap:7px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:8px 14px;font-size:.78rem;font-weight:600;color:#0f172a;cursor:pointer;transition:all .15s;box-shadow:0 1px 3px rgba(0,0,0,.06)" onmouseover="this.style.borderColor='#f59e0b';this.style.color='#92400e'" onmouseout="this.style.borderColor='#e2e8f0';this.style.color='#0f172a'">
-          <i class="bi bi-calendar-event-fill" style="color:#f59e0b;font-size:.95rem"></i>Ver vencimientos
-        </button>
-        <button onclick="_assistToggle()" style="display:flex;align-items:center;gap:7px;background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:8px 14px;font-size:.78rem;font-weight:600;color:#0f172a;cursor:pointer;transition:all .15s;box-shadow:0 1px 3px rgba(0,0,0,.06)" onmouseover="this.style.borderColor='#E31E24';this.style.color='#991b1b'" onmouseout="this.style.borderColor='#e2e8f0';this.style.color='#0f172a'">
-          <i class="bi bi-robot" style="color:#E31E24;font-size:.95rem"></i>Consultar asistente
-        </button>
+      <div style="font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#94a3b8;margin-bottom:10px">Acciones rápidas</div>
+      <div style="display:flex;gap:0;flex-wrap:wrap;align-items:stretch">
+        <!-- Grupo CREAR -->
+        <div style="flex:1;min-width:280px">
+          <div style="font-size:.58rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#3b82f6;margin-bottom:6px;display:flex;align-items:center;gap:5px"><i class="bi bi-plus-circle-fill" style="font-size:.7rem"></i> Crear</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <button onclick="irA('cajaBancos')" style="display:flex;align-items:center;gap:6px;background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:9px;padding:7px 12px;font-size:.76rem;font-weight:600;color:#1d4ed8;cursor:pointer;transition:all .15s" onmouseover="this.style.background='#dbeafe'" onmouseout="this.style.background='#eff6ff'">
+              <i class="bi bi-plus-circle-fill" style="font-size:.85rem"></i>Nuevo movimiento
+            </button>
+            <button onclick="abrirModalFactura('cobrar',null)" style="display:flex;align-items:center;gap:6px;background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:9px;padding:7px 12px;font-size:.76rem;font-weight:600;color:#166534;cursor:pointer;transition:all .15s" onmouseover="this.style.background='#dcfce7'" onmouseout="this.style.background='#f0fdf4'">
+              <i class="bi bi-file-earmark-arrow-down-fill" style="font-size:.85rem"></i>Factura a cobrar
+            </button>
+            <button onclick="abrirModalFactura('pagar',null)" style="display:flex;align-items:center;gap:6px;background:#fef2f2;border:1.5px solid #fecaca;border-radius:9px;padding:7px 12px;font-size:.76rem;font-weight:600;color:#991b1b;cursor:pointer;transition:all .15s" onmouseover="this.style.background='#fee2e2'" onmouseout="this.style.background='#fef2f2'">
+              <i class="bi bi-file-earmark-arrow-up-fill" style="font-size:.85rem"></i>Factura a pagar
+            </button>
+            <button onclick="abrirModalCheque('fisico')" style="display:flex;align-items:center;gap:6px;background:#f5f3ff;border:1.5px solid #ddd6fe;border-radius:9px;padding:7px 12px;font-size:.76rem;font-weight:600;color:#5b21b6;cursor:pointer;transition:all .15s" onmouseover="this.style.background='#ede9fe'" onmouseout="this.style.background='#f5f3ff'">
+              <i class="bi bi-file-earmark-check-fill" style="font-size:.85rem"></i>Agregar cheque
+            </button>
+          </div>
+        </div>
+        <!-- Divisor -->
+        <div style="width:1px;background:#e2e8f0;margin:0 16px;align-self:stretch;flex-shrink:0"></div>
+        <!-- Grupo NAVEGAR -->
+        <div style="flex:0 0 auto">
+          <div style="font-size:.58rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#64748b;margin-bottom:6px;display:flex;align-items:center;gap:5px"><i class="bi bi-arrow-right-circle-fill" style="font-size:.7rem"></i> Ir a</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <button onclick="irA('panelVencimientos')" style="display:flex;align-items:center;gap:6px;background:#fff;border:1.5px solid #e2e8f0;border-radius:9px;padding:7px 12px;font-size:.76rem;font-weight:600;color:#475569;cursor:pointer;transition:all .15s" onmouseover="this.style.borderColor='#f59e0b';this.style.color='#92400e'" onmouseout="this.style.borderColor='#e2e8f0';this.style.color='#475569'">
+              <i class="bi bi-calendar-event-fill" style="color:#f59e0b;font-size:.85rem"></i>Vencimientos
+            </button>
+            <button onclick="_assistToggle()" style="display:flex;align-items:center;gap:6px;background:#fff;border:1.5px solid #e2e8f0;border-radius:9px;padding:7px 12px;font-size:.76rem;font-weight:600;color:#475569;cursor:pointer;transition:all .15s" onmouseover="this.style.borderColor='#E31E24';this.style.color='#991b1b'" onmouseout="this.style.borderColor='#e2e8f0';this.style.color='#475569'">
+              <i class="bi bi-robot" style="color:#E31E24;font-size:.85rem"></i>Asistente
+            </button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -1246,11 +1260,11 @@
           </div>
         </div>
         <div class="col-6 col-xl">
-          <div class="stat-card" style="background:linear-gradient(135deg,#1d4ed8,#3b82f6);cursor:pointer" onclick="irA('chequesFisicos')">
-            <div class="bg-icon"><i class="bi bi-file-earmark-check"></i></div>
-            <div class="lbl">Cheques en Cartera</div>
-            <div class="val" id="stat-cartera">$0</div>
-            <div class="sub" id="stat-cartera-n">0 cheques activos</div>
+          <div class="stat-card" id="stat-pos-neta-card" style="background:linear-gradient(135deg,#0f766e,#14b8a6);cursor:default">
+            <div class="bg-icon"><i class="bi bi-arrow-left-right"></i></div>
+            <div class="lbl">Posición Neta Comercial</div>
+            <div class="val" id="stat-posicion-neta">$0</div>
+            <div class="sub" id="stat-posicion-neta-n">cobrar − pagar</div>
           </div>
         </div>
         <div class="col-6 col-xl">
@@ -1311,7 +1325,10 @@
       </div>
     </div>
     <div class="card p-3">
-      <h6 class="fw-bold mb-3"><i class="bi bi-calendar-event text-warning me-2"></i>Próximos Vencimientos — 15 días</h6>
+      <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+        <h6 class="fw-bold mb-0"><i class="bi bi-calendar-event text-warning me-2"></i>Próximos Vencimientos — 15 días</h6>
+        <div id="dash-venc-resumen" style="font-size:.72rem;color:#64748b"></div>
+      </div>
       <div id="dash-venc"></div>
     </div>
     <!-- PROYECCION FLUJO DE CAJA (Feature 1) -->
@@ -8981,8 +8998,10 @@ function _trendBadge(current, prev) {
 function renderDashboard() {
   const cartera = [...ST.chequesFisicos.filter(c=>c.estado==='en_cartera'||c.estado==='pendiente'),...ST.eCheques.filter(c=>c.estado==='pendiente')];
   const totCartera = cartera.reduce((s,c)=>s+ +c.monto,0);
-  document.getElementById('stat-cartera').textContent = fmt(totCartera);
-  document.getElementById('stat-cartera-n').textContent = `${cartera.length} cheque${cartera.length!==1?'s':''} activo${cartera.length!==1?'s':''}`;
+  const _elCartera = document.getElementById('stat-cartera');
+  if(_elCartera) _elCartera.textContent = fmt(totCartera);
+  const _elCarteraN = document.getElementById('stat-cartera-n');
+  if(_elCarteraN) _elCarteraN.textContent = `${cartera.length} cheque${cartera.length!==1?'s':''} activo${cartera.length!==1?'s':''}`;
 
   const todosChq=[...ST.chequesFisicos.filter(c=>c.estado==='en_cartera'||c.estado==='pendiente'),...ST.eCheques.filter(c=>c.estado==='pendiente'),...ST.chequesPagar.filter(c=>c.estado==='pendiente')];
   const v7=todosChq.filter(c=>{const d=dHasta(c.fechaVenc);return d>=0&&d<=7;});
@@ -9028,6 +9047,22 @@ function renderDashboard() {
   _setEl('stat-fac-pagar', fmt(facPagMonto));
   const elFacPagN = document.getElementById('stat-fac-pagar-n');
   if(elFacPagN) elFacPagN.innerHTML = `${facPagPend.length} pendiente${facPagPend.length!==1?'s':''}${_trendBadge(facPagMonto, facPagAntMonto)}`;
+
+  // ── POSICIÓN NETA COMERCIAL (cobrar − pagar) ──
+  (function(){
+    const posNeta = (facCobMonto + totCartera) - (facPagMonto + totPagar);
+    const esPositiva = posNeta >= 0;
+    const elVal  = document.getElementById('stat-posicion-neta');
+    const elSub  = document.getElementById('stat-posicion-neta-n');
+    const elCard = document.getElementById('stat-pos-neta-card');
+    if (elVal)  elVal.textContent = fmt(Math.abs(posNeta));
+    if (elCard) elCard.style.background = esPositiva
+      ? 'linear-gradient(135deg,#0f766e,#14b8a6)'
+      : 'linear-gradient(135deg,#7f1d1d,#dc2626)';
+    if (elSub)  elSub.innerHTML = esPositiva
+      ? `<span style="color:#a7f3d0">▲ A favor — cobrás más de lo que pagás</span>`
+      : `<span style="color:#fca5a5">▼ Obligaciones superan cobranzas por ${fmt(Math.abs(posNeta))}</span>`;
+  })();
 
   // Stock
   const stkProds = ST.stockProductos || [];
@@ -9156,6 +9191,16 @@ function renderDashboard() {
   });
 
   const p15=p15raw.sort((a,b)=>a.fecha.localeCompare(b.fecha));
+  // Subtotales para el pie de tabla
+  const _isEgreso=cat=>cat==='cheque-pagar'||cat==='fac-pagar'||cat==='arca';
+  const p15TotalCobrar = p15.filter(i=>!_isEgreso(i.categoria)).reduce((s,i)=>s+i.monto,0);
+  const p15TotalPagar  = p15.filter(i=> _isEgreso(i.categoria)).reduce((s,i)=>s+i.monto,0);
+  const p15Balance = p15TotalCobrar - p15TotalPagar;
+  // Resumen en header
+  const elVencRes = document.getElementById('dash-venc-resumen');
+  if (elVencRes && p15.length) {
+    elVencRes.innerHTML = `<span style="color:#16a34a;font-weight:700">↓ ${fmt(p15TotalCobrar)}</span> <span style="color:#94a3b8">·</span> <span style="color:#dc2626;font-weight:700">↑ ${fmt(p15TotalPagar)}</span> <span style="color:#94a3b8">·</span> Balance <strong style="color:${p15Balance>=0?'#0f766e':'#dc2626'}">${p15Balance>=0?'+':''}${fmt(p15Balance)}</strong>`;
+  } else if (elVencRes) { elVencRes.innerHTML = ''; }
   const wv=document.getElementById('dash-venc');
   if(!p15.length){
     wv.innerHTML='<div class="empty-state"><i class="bi bi-check2-circle text-success"></i>Sin vencimientos en los próximos 15 días</div>';
@@ -9206,11 +9251,21 @@ function renderDashboard() {
         </tr>`;
       }).join('')}</tbody>
     </table></div>
-    <div style="margin-top:8px;font-size:.7rem;color:#94a3b8;display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px">
-      <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#dc2626;margin-right:3px"></span>≤2d urgente</span>
-      <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#f97316;margin-right:3px"></span>≤5d próximo</span>
-      <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#eab308;margin-right:3px"></span>≤10d en vista</span>
-      <span style="margin-left:auto"><button onclick="irA('panelVencimientos')" style="background:none;border:none;color:#3b82f6;font-size:.72rem;cursor:pointer;padding:0;font-weight:600">Ver panel completo →</button></span>
+    <div style="margin-top:10px;background:#f8fafc;border-radius:8px;padding:8px 14px;display:flex;flex-wrap:wrap;gap:6px 24px;align-items:center">
+      <div style="display:flex;align-items:center;gap:6px">
+        <span style="font-size:.68rem;color:#64748b;font-weight:600">Próx. 15 días:</span>
+        <span style="font-size:.75rem;font-weight:700;color:#16a34a">↓ Cobrar ${fmt(p15TotalCobrar)}</span>
+        <span style="font-size:.72rem;color:#cbd5e1">·</span>
+        <span style="font-size:.75rem;font-weight:700;color:#dc2626">↑ Pagar ${fmt(p15TotalPagar)}</span>
+        <span style="font-size:.72rem;color:#cbd5e1">·</span>
+        <span style="font-size:.75rem;font-weight:800;color:${p15Balance>=0?'#0f766e':'#dc2626'}">Balance ${p15Balance>=0?'+':''}${fmt(p15Balance)}</span>
+      </div>
+      <div style="margin-left:auto;display:flex;flex-wrap:wrap;gap:10px;align-items:center">
+        <span style="font-size:.67rem;color:#94a3b8"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#dc2626;margin-right:2px"></span>≤2d urgente</span>
+        <span style="font-size:.67rem;color:#94a3b8"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#f97316;margin-right:2px"></span>≤5d próximo</span>
+        <span style="font-size:.67rem;color:#94a3b8"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#eab308;margin-right:2px"></span>≤10d en vista</span>
+        <button onclick="irA('panelVencimientos')" style="background:none;border:none;color:#3b82f6;font-size:.72rem;cursor:pointer;padding:0;font-weight:600">Ver panel completo →</button>
+      </div>
     </div>`;
   }
   renderDashCharts(sB,sE,totCartera);
@@ -9244,16 +9299,19 @@ function renderActividadReciente() {
   // Recolectar eventos de todas las secciones con fecha y tipo
   const eventos = [];
 
+  const _trunc = (s, n=55) => s && s.length > n ? s.slice(0,n)+'…' : (s||'');
+
   // Movimientos de caja
   [...ST.cajaBancos, ...ST.cajaEfectivo].forEach(m => {
     if (!m.fecha) return;
     const esBanco = ST.cajaBancos.includes(m);
+    const rawSub = (m.concepto||'') + (m.desc?' · '+m.desc:'');
     eventos.push({
       fecha: m.fecha, ts: m.fecha + (m.id||''),
       icon: m.tipo==='ingreso' ? 'bi-arrow-down-circle-fill' : 'bi-arrow-up-circle-fill',
       iconColor: m.tipo==='ingreso' ? '#16a34a' : '#dc2626',
       titulo: (m.tipo==='ingreso'?'Ingreso':'Egreso') + (esBanco?' — Banco':' — Efectivo'),
-      subtitulo: (m.concepto||'') + (m.desc?' · '+m.desc:''),
+      subtitulo: _trunc(rawSub),
       monto: m.monto, isEgreso: m.tipo==='egreso', tipo:'caja'
     });
   });
@@ -9266,7 +9324,7 @@ function renderActividadReciente() {
       fecha: fechaRef, ts: fechaRef + (f.id||''),
       icon: 'bi-file-earmark-check-fill', iconColor: '#2563eb',
       titulo: f.estado==='cobrada' ? 'Factura cobrada' : 'Factura a cobrar',
-      subtitulo: (f.razonSocial||f.cliente||'') + (f.nroFactura?' #'+f.nroFactura:''),
+      subtitulo: _trunc((f.razonSocial||f.cliente||'') + (f.nroFactura?' #'+f.nroFactura:'')),
       monto: f.total, isEgreso: false, tipo:'factura'
     });
   });
@@ -9279,7 +9337,7 @@ function renderActividadReciente() {
       fecha: fechaRef, ts: fechaRef + (f.id||''),
       icon: 'bi-file-earmark-x-fill', iconColor: '#dc2626',
       titulo: f.estado==='pagada' ? 'Factura pagada' : 'Factura a pagar',
-      subtitulo: (f.razonSocial||f.proveedor||'') + (f.nroFactura?' #'+f.nroFactura:''),
+      subtitulo: _trunc((f.razonSocial||f.proveedor||'') + (f.nroFactura?' #'+f.nroFactura:'')),
       monto: f.total, isEgreso: true, tipo:'factura'
     });
   });
@@ -9292,7 +9350,7 @@ function renderActividadReciente() {
       fecha: fechaRef, ts: fechaRef + (c.id||''),
       icon: 'bi-file-earmark-check', iconColor: '#7c3aed',
       titulo: 'Cheque en cartera',
-      subtitulo: (c.banco||'') + (c.numero?' #'+c.numero:'') + (c.nombre?' · '+c.nombre:''),
+      subtitulo: _trunc((c.banco||'') + (c.numero?' #'+c.numero:'') + (c.nombre?' · '+c.nombre:'')),
       monto: c.monto, isEgreso: false, tipo:'cheque'
     });
   });
@@ -25241,10 +25299,12 @@ function _renderProyeccionFlujo() {
         <div style="background:#e2e8f0;border-radius:4px;height:8px;margin-top:6px"><div style="background:${barColor(proy60)};height:8px;border-radius:4px;width:${pct(proy60)}%"></div></div>
       </div>
     </div>
-    <div style="font-size:.72rem;color:#64748b;background:#f8fafc;border-radius:7px;padding:8px 12px">
-      <i class="bi bi-info-circle me-1"></i>
-      Prom. mensual: <span class="text-success fw-bold">${fmt(promIng)} ingresos</span> / <span class="text-danger fw-bold">${fmt(promEgr)} egresos</span>
-      &mdash; Flujo neto: <span style="color:${colorFlujo};font-weight:700">${flujoNeto>=0?'+':''}${fmt(flujoNeto)}/mes</span>
+    <div style="font-size:.75rem;color:#475569;background:#f8fafc;border-radius:8px;padding:10px 14px;line-height:1.55">
+      ${flujoNeto >= 0
+        ? `<i class="bi bi-check-circle-fill me-1" style="color:#16a34a"></i> Con el flujo actual, tu posición líquida <strong style="color:#0f766e">mejoraría ${fmt(Math.abs(flujoNeto))} por mes</strong>. En 30 días tendrías <strong>${fmt(proy30)}</strong>.`
+        : `<i class="bi bi-exclamation-triangle-fill me-1" style="color:#dc2626"></i> Con el flujo actual, tu posición líquida <strong style="color:#dc2626">caería ${fmt(Math.abs(flujoNeto))} por mes</strong>. En 30 días quedaría <strong>${fmt(proy30)}</strong> — revisá cobranzas pendientes o diferí pagos.`
+      }
+      <span style="font-size:.67rem;color:#94a3b8;margin-left:6px">Promedio de los últimos ${mesesConDatos} mes${mesesConDatos!==1?'es':''}.</span>
       ${mesesConDatos < 2 ? ' <span class="badge bg-warning text-dark ms-1" style="font-size:.6rem">Datos insuficientes</span>' : ''}
     </div>
   </div>`;
