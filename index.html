@@ -11364,12 +11364,30 @@ function renderSaldosBancos(){
     </div>
   </div>`;
 
-  wrap.innerHTML = summaryHtml + (entries.length
-    ?entries.map(([b,s])=>`<div class="col-sm-6 col-md-4 col-xl-3">
-        <div class="card p-3"><small class="text-muted">${b}</small>
-        <div class="mt-1"><span class="${s>=0?'saldo-pos':'saldo-neg'}">${fmt(s)}</span></div>
+  // Agrupar cards inferiores con la misma lógica que el resumen:
+  // FIMA (todas las entradas con "fima"), CC (cta. corriente / cuenta corriente), Otros (por nombre individual)
+  const otrosMap = {};
+  for(const [b,s] of entries){
+    const blo = b.toLowerCase();
+    if(blo.includes('fima')) { /* ya sumado en totFima */ }
+    else if(blo.includes('cta. corriente')||blo.includes('cuenta corriente')) { /* ya en totCC */ }
+    else { otrosMap[b] = (otrosMap[b]||0) + s; }
+  }
+  const hasFima = entries.some(([b])=>b.toLowerCase().includes('fima'));
+  const hasCC   = entries.some(([b])=>{const l=b.toLowerCase();return l.includes('cta. corriente')||l.includes('cuenta corriente');});
+  const detailCards = [];
+  if(hasFima) detailCards.push({label:'FIMA — Banco Galicia', saldo:totFima});
+  if(hasCC)   detailCards.push({label:'Cta. Corriente — Banco Galicia', saldo:totCC});
+  for(const [b,s] of Object.entries(otrosMap)) detailCards.push({label:b, saldo:s});
+
+  const detailHtml = detailCards.length
+    ? detailCards.map(({label,saldo})=>`<div class="col-sm-6 col-md-4 col-xl-3">
+        <div class="card p-3"><small class="text-muted">${label}</small>
+        <div class="mt-1"><span class="${saldo>=0?'saldo-pos':'saldo-neg'}">${fmt(saldo)}</span></div>
         </div></div>`).join('')
-    :`<div class="col-12"><p class="text-muted">Sin movimientos bancarios.</p></div>`);
+    : `<div class="col-12"><p class="text-muted">Sin movimientos bancarios.</p></div>`;
+
+  wrap.innerHTML = summaryHtml + detailHtml;
 }
 
 /* ─── Traspaso entre cuentas ─── */
