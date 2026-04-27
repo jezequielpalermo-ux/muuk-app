@@ -11434,16 +11434,35 @@ function ejecutarTraspaso() {
 /* ─── Ajuste de cuenta ─── */
 function _getSaldoBanco(banco) {
   if (!ST.cajaBancos) return 0;
-  return ST.cajaBancos.filter(m => m.banco === banco)
+  // Comparación case-insensitive para unificar variantes como "FIMA" / "Fima"
+  const blo = (banco || '').toLowerCase().trim();
+  return ST.cajaBancos
+    .filter(m => (m.banco || '').toLowerCase().trim() === blo)
     .reduce((s, m) => s + (m.tipo === 'ingreso' ? 1 : -1) * +m.monto, 0);
+}
+
+function _getBancosUnicos() {
+  // Devuelve lista de nombres canónicos de cuentas (agrupados por case-insensitive)
+  const seen = new Map();
+  (ST.cajaBancos || []).forEach(m => {
+    const b = (m.banco || 'Sin nombre').trim();
+    const key = b.toLowerCase();
+    if (!seen.has(key)) seen.set(key, b); // guarda la primera variante como canónica
+  });
+  return [...seen.values()];
 }
 
 function abrirModalAjuste() {
   document.getElementById('aj-fecha').value = hoy();
-  document.getElementById('aj-banco').value = 'Banco Galicia - Cta. Corriente';
   document.getElementById('aj-saldoReal').value = '';
   document.getElementById('aj-desc').value = '';
   document.getElementById('aj-diferencia-wrap').style.display = 'none';
+  // Poblar dropdown dinámicamente desde los datos reales (case-insensitive agrupado)
+  const sel = document.getElementById('aj-banco');
+  const bancos = _getBancosUnicos();
+  sel.innerHTML = bancos.length
+    ? bancos.map(b => `<option value="${b}">${b}</option>`).join('')
+    : `<option value="Banco Galicia - Cta. Corriente">Banco Galicia - Cta. Corriente</option>`;
   _calcAjuste();
   new bootstrap.Modal(document.getElementById('modalAjuste')).show();
 }
