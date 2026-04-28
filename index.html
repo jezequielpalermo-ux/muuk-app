@@ -21966,12 +21966,17 @@ function ectaPdfCliente(idx) {
     facts.forEach(f => {
       const isNC  = /\bNC\b/i.test(f.factura);
       const rowBg = rowIdx++ % 2 === 0 ? '#fff' : '#f8fafc';
+      const dias  = _ectaDiasPendiente(f.fecha);
+      const antBg  = dias === null ? 'transparent' : dias <= 30 ? '#dcfce7' : dias <= 60 ? '#fef9c3' : dias <= 90 ? '#ffedd5' : '#fee2e2';
+      const antCol = dias === null ? '#94a3b8' : dias <= 30 ? '#15803d' : dias <= 60 ? '#854d0e' : dias <= 90 ? '#c2410c' : '#b91c1c';
+      const antTxt = dias === null ? '—' : `<span style="background:${antBg};color:${antCol};padding:2px 7px;border-radius:10px;font-size:9px;font-weight:700;white-space:nowrap">${dias}d</span>`;
       pendRows += `<tr style="background:${rowBg}">
         <td style="font-weight:600">${f.empresa || '-'}</td>
         <td>${f.fecha || '-'}</td>
         <td>${f.factura}${isNC ? ' <span style="background:#ede9fe;color:#6d28d9;font-size:8px;padding:1px 4px;border-radius:3px;font-weight:700">NC</span>' : ''}</td>
         <td style="text-align:right;font-weight:600;color:${isNC ? '#6d28d9' : '#dc2626'}">${f.importe}</td>
         <td style="color:#64748b">${f.fechaPago || '-'}</td>
+        <td style="text-align:center">${antTxt}</td>
       </tr>`;
     });
 
@@ -21984,7 +21989,7 @@ function ectaPdfCliente(idx) {
           SUBTOTAL ${emp.toUpperCase()}${empNC ? ' &nbsp;<span style="background:#ede9fe;color:#6d28d9;font-size:8px;padding:1px 4px;border-radius:3px;font-weight:700">NC descontada</span>' : ''}
         </td>
         <td style="text-align:right;font-weight:800;color:${stColor};padding:5px 8px">${_ectaFmt(subtotalEmp)}</td>
-        <td></td>
+        <td></td><td></td>
       </tr>`;
     }
   });
@@ -21993,7 +21998,7 @@ function ectaPdfCliente(idx) {
   pendRows += `<tr class="total-row">
     <td colspan="3"><strong>TOTAL A ABONAR — ${c.nombre.toUpperCase()}</strong></td>
     <td style="text-align:right"><strong>${_ectaFmt(c.totalPendiente)}</strong></td>
-    <td></td>
+    <td></td><td></td>
   </tr>`;
 
   const notaNC = tieneNC
@@ -22062,7 +22067,7 @@ function ectaPdfCliente(idx) {
 <div class="notice">Por favor regularizar el pago de las siguientes facturas${multiEmp ? ', según corresponda a cada empresa' : ''}. Para consultas comunicarse con su vendedor asignado.</div>
 
 <table>
-  <thead><tr><th>Empresa</th><th>Fecha</th><th>N° Factura</th><th style="text-align:right">Importe</th><th>Vto. de Pago</th></tr></thead>
+  <thead><tr><th>Empresa</th><th>Fecha</th><th>N° Factura</th><th style="text-align:right">Importe</th><th>Vto. de Pago</th><th style="text-align:center">Antigüedad</th></tr></thead>
   <tbody>${pendRows}</tbody>
 </table>
 
@@ -22126,7 +22131,7 @@ function ectaPdfGeneral() {
       // Separador de empresa (solo si hay más de una)
       if (multiEmpresa) {
         rows += `<tr style="background:${pal.headerBg}">
-          <td colspan="5" style="padding:5px 10px 4px;font-size:10px;font-weight:800;color:${pal.accent};text-transform:uppercase;letter-spacing:.04em;border-top:${ei>0?'2px solid '+pal.border+'40':'none'}">
+          <td colspan="6" style="padding:5px 10px 4px;font-size:10px;font-weight:800;color:${pal.accent};text-transform:uppercase;letter-spacing:.04em;border-top:${ei>0?'2px solid '+pal.border+'40':'none'}">
             ▸ ${emp}
           </td>
         </tr>`;
@@ -22137,12 +22142,17 @@ function ectaPdfGeneral() {
         const isNC  = /\bNC\b/i.test(f.factura);
         const rowBg = rowIdx++ % 2 === 0 ? '#fff' : pal.bg;
         const montoColor = isNC ? '#6d28d9' : '#b91c1c';
+        const dias    = _ectaDiasPendiente(f.fecha);
+        const antBg   = dias === null ? 'transparent' : dias <= 30 ? '#dcfce7' : dias <= 60 ? '#fef9c3' : dias <= 90 ? '#ffedd5' : '#fee2e2';
+        const antCol  = dias === null ? '#94a3b8' : dias <= 30 ? '#15803d' : dias <= 60 ? '#854d0e' : dias <= 90 ? '#c2410c' : '#b91c1c';
+        const antTxt  = dias === null ? '—' : `<span style="background:${antBg};color:${antCol};padding:2px 6px;border-radius:4px;font-size:9px;font-weight:700">${dias}d</span>`;
         rows += `<tr style="background:${rowBg}">
           <td style="font-weight:600;padding:5px 10px;font-size:11px">${f.empresa || '-'}</td>
           <td style="padding:5px 10px;font-size:11px">${f.fecha || '-'}</td>
           <td style="padding:5px 10px;font-size:11px">${f.factura}${isNC ? ' <span style="background:#ede9fe;color:#6d28d9;font-size:8px;padding:1px 5px;border-radius:3px;font-weight:700">NC</span>' : ''}</td>
           <td style="text-align:right;font-weight:700;color:${montoColor};padding:5px 10px;font-size:11px">${f.importe}</td>
           <td style="padding:5px 10px;font-size:11px;color:#64748b">${f.fechaPago || '-'}</td>
+          <td style="text-align:center;padding:5px 10px">${antTxt}</td>
         </tr>`;
       });
 
@@ -22155,6 +22165,7 @@ function ectaPdfGeneral() {
             SUBTOTAL ${emp.toUpperCase()}${empTieneNC ? ' &nbsp;<span style="background:#ede9fe;color:#6d28d9;font-size:8px;padding:1px 5px;border-radius:3px;font-weight:700">NC descontada</span>' : ''}
           </td>
           <td style="text-align:right;font-size:12px;font-weight:800;color:${stColor};padding:5px 10px">${_ectaFmt(subtotalEmp)}</td>
+          <td></td>
           <td></td>
         </tr>`;
       }
@@ -22171,6 +22182,7 @@ function ectaPdfGeneral() {
         TOTAL ${c.nombre} — ${empresasList.length > 1 ? empresasList.length + ' empresas' : empresasList[0] || ''}
       </td>
       <td style="text-align:right;color:#7f1d1d;font-size:14px;padding:7px 10px">${_ectaFmt(totalNeto)}</td>
+      <td></td>
       <td></td>
     </tr>`;
 
@@ -22190,6 +22202,7 @@ function ectaPdfGeneral() {
               <th style="color:${pal.accent};padding:5px 10px;font-size:10px">Factura / NC</th>
               <th style="text-align:right;color:${pal.accent};padding:5px 10px;font-size:10px">Monto</th>
               <th style="color:${pal.accent};padding:5px 10px;font-size:10px">Vto. Pago</th>
+              <th style="text-align:center;color:${pal.accent};padding:5px 10px;font-size:10px">Antigüedad</th>
             </tr>
           </thead>
           <tbody>
