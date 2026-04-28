@@ -6935,8 +6935,8 @@ function _syncSet(state) {
 function save() {
   ST._syncTs = Date.now();
   _syncSet('saving');
-  // Excluir datos live de Google Sheets del localStorage (siempre se cargan frescos)
-  const {comisionesResumen, comisionesTotal, comisionesTimestamp, ...persistData} = ST;
+  // Excluir datos voluminosos/live del localStorage (se guardan por separado o se cargan frescos)
+  const {comisionesResumen, comisionesTotal, comisionesTimestamp, ectaCache, ectaCacheAt, ...persistData} = ST;
   // Strip base64 file data from listas de precios to avoid localStorage quota overflow
   if (persistData.listasPrecios) {
     persistData.listasPrecios = persistData.listasPrecios.map(l => {
@@ -21425,11 +21425,41 @@ let _ectaSort   = 'deuda-desc';
 let _ectaAllExpanded = true;
 let _ectaLoadTime = {};
 
+// ── Persistencia del caché: localStorage + ST (nube vía Supabase) ─────────
+function _ectaPersistCache() {
+  try {
+    localStorage.setItem('ectaCache2026', JSON.stringify(_ectaCache));
+  } catch(e) { console.warn('[ECTA] localStorage write failed:', e); }
+  // Guardar en ST para que pushRemoto lo suba a Supabase
+  if (typeof ST !== 'undefined') {
+    ST.ectaCache    = _ectaCache;
+    ST.ectaCacheAt  = new Date().toISOString().slice(0,16);
+    if (typeof save === 'function') save();
+  }
+}
+
+function _ectaRestoreCache() {
+  // 1) Intentar desde localStorage
+  try {
+    const raw = localStorage.getItem('ectaCache2026');
+    if (raw) { const parsed = JSON.parse(raw); if (Object.keys(parsed).length) { _ectaCache = parsed; return true; } }
+  } catch(e) {}
+  // 2) Fallback: ST (cargado desde Supabase)
+  if (typeof ST !== 'undefined' && ST.ectaCache && Object.keys(ST.ectaCache).length) {
+    _ectaCache = ST.ectaCache;
+    return true;
+  }
+  return false;
+}
+
 function renderEstadosCuenta() {
-  // Mostrar cache inmediatamente si existe, pero siempre recargar datos frescos
+  // Restaurar caché desde localStorage/nube si no hay datos en memoria
+  if (!_ectaCache[_ectaCurrentVendedor]) _ectaRestoreCache();
+  // Mostrar datos en caché inmediatamente
   if (_ectaCache[_ectaCurrentVendedor]) {
     _ectaRenderData(_ectaCurrentVendedor);
   }
+  // Siempre recargar datos frescos desde Google Sheets
   _ectaLoadVendedor(_ectaCurrentVendedor);
 }
 
@@ -21447,6 +21477,7 @@ function ectaTab(vendedor, btn) {
   _ectaUpdateFilterBtns();
   const toggleBtn = document.getElementById('ecta-toggle-all');
   if (toggleBtn) toggleBtn.innerHTML = '<i class="bi bi-arrows-collapse me-1"></i>Colapsar todo';
+  if (!_ectaCache[vendedor]) _ectaRestoreCache();
   if (_ectaCache[vendedor]) _ectaRenderData(vendedor);
   _ectaLoadVendedor(vendedor);
 }
@@ -21467,6 +21498,7 @@ async function _ectaLoadVendedor(vendedor) {
     const csv = await resp.text();
     _ectaCache[vendedor] = _ectaParseCsv(csv);
     _ectaLoadTime[vendedor] = new Date();
+    _ectaPersistCache();   // ← guardar en localStorage + Supabase
     _ectaRenderData(vendedor);
   } catch(e) {
     console.error('[ECTA] Error:', e);
@@ -21584,12 +21616,22 @@ function _ectaFmt(n) {
 // ── Antigüedad helpers ──────────────────────────────────────────────────────
 function _ectaParseDate(s) {
   if (!s) return null;
+  const _yr2 = y => +y < 70 ? 2000 + +y : 1900 + +y;
+  // DD/MM/YYYY
   const m1 = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
   if (m1) return new Date(+m1[3], +m1[2]-1, +m1[1]);
+  // YYYY-MM-DD
   const m2 = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (m2) return new Date(+m2[1], +m2[2]-1, +m2[3]);
+  // DD-MM-YYYY
   const m3 = s.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
   if (m3) return new Date(+m3[3], +m3[2]-1, +m3[1]);
+  // DD-MM-YY  ← formato Gestión (ej: 30-03-26)
+  const m4 = s.match(/^(\d{1,2})-(\d{1,2})-(\d{2})$/);
+  if (m4) return new Date(_yr2(m4[3]), +m4[2]-1, +m4[1]);
+  // DD/MM/YY
+  const m5 = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2})$/);
+  if (m5) return new Date(_yr2(m5[3]), +m5[2]-1, +m5[1]);
   return null;
 }
 function _ectaDiasPendiente(fechaStr) {
