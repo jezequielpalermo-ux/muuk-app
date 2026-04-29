@@ -399,14 +399,14 @@
     /* ─── ASISTENTE MÜÜK ─── */
     #muuk-assist-btn {
       position: fixed; bottom: 22px; right: 22px; z-index: 900;
-      width: 54px; height: 54px; border-radius: 50%; border: none;
-      background: linear-gradient(135deg, #E31E24, #c41920);
-      color: #fff; font-size: 1.4rem; cursor: pointer;
-      box-shadow: 0 4px 18px rgba(227,30,36,.4);
+      width: 56px; height: 56px; border-radius: 50%; border: none;
+      background: linear-gradient(135deg, #6d28d9, #4f46e5);
+      color: #fff; font-size: 1.3rem; cursor: pointer;
+      box-shadow: 0 4px 18px rgba(79,70,229,.5);
       display: flex; align-items: center; justify-content: center;
       transition: transform .2s, box-shadow .2s;
     }
-    #muuk-assist-btn:hover { transform: scale(1.08); box-shadow: 0 6px 24px rgba(227,30,36,.55); }
+    #muuk-assist-btn:hover { transform: scale(1.08); box-shadow: 0 6px 24px rgba(79,70,229,.7); }
     #muuk-assist-panel {
       display: none; position: fixed; bottom: 86px; right: 22px; z-index: 901;
       width: min(420px, calc(100vw - 36px)); height: min(520px, 70vh);
@@ -3149,34 +3149,50 @@ CREATE POLICY "acceso total" ON muuk_daily_backups FOR ALL USING (true) WITH CHE
     </div>
 
     <!-- ASISTENTE IA -->
-    <div class="card mb-4">
-      <div class="card-header bg-white fw-bold"><i class="bi bi-robot me-2 text-danger"></i>Asistente MÜÜK con IA</div>
+    <div class="card mb-4" style="border-left:4px solid #6d28d9">
+      <div class="card-header bg-white fw-bold d-flex align-items-center gap-2">
+        <div style="width:26px;height:26px;border-radius:7px;background:linear-gradient(135deg,#6d28d9,#4f46e5);display:flex;align-items:center;justify-content:center">
+          <i class="bi bi-stars" style="color:#fff;font-size:.78rem"></i>
+        </div>
+        <span>Conector IA — Consultas sobre la base de datos</span>
+      </div>
       <div class="card-body">
-        <p class="text-muted small mb-3">Conectá una IA para que el asistente entienda preguntas en lenguaje natural y responda de forma inteligente con los datos financieros en tiempo real.</p>
+        <p class="text-muted small mb-3">Conectá Claude (Anthropic) u OpenAI para consultar en lenguaje natural sobre todos los datos de la empresa: clientes, deudas, cobranzas, facturas, stock, CRM, comisiones y más.</p>
         <div class="row g-3 mb-3">
           <div class="col-md-4">
-            <label class="form-label small fw-bold">Proveedor de IA</label>
+            <label class="form-label small fw-bold">Modelo de IA</label>
             <select id="cfg-ai-provider" class="form-select form-select-sm" onchange="_aiProviderChanged()">
-              <option value="openai">OpenAI (GPT-4o mini)</option>
-              <option value="anthropic">Anthropic (Claude)</option>
+              <option value="anthropic">⚡ Claude Haiku (Anthropic) — Recomendado</option>
+              <option value="openai">OpenAI GPT-4o-mini</option>
               <option value="none">Sin IA (búsqueda local)</option>
             </select>
           </div>
           <div class="col-md-8" id="cfg-ai-key-wrap">
-            <label class="form-label small fw-bold">API Key</label>
+            <label class="form-label small fw-bold" id="cfg-ai-key-label">API Key de Anthropic</label>
             <div class="input-group input-group-sm">
-              <input type="password" id="cfg-ai-key" class="form-control form-control-sm" placeholder="sk-... o sk-ant-...">
-              <button class="btn btn-outline-secondary" type="button" onclick="this.previousElementSibling.type=this.previousElementSibling.type==='password'?'text':'password'"><i class="bi bi-eye"></i></button>
-              <button class="btn btn-primary" type="button" onclick="_aiSaveConfig()"><i class="bi bi-check-lg me-1"></i>Guardar</button>
+              <input type="password" id="cfg-ai-key" class="form-control form-control-sm" placeholder="sk-ant-api03-...">
+              <button class="btn btn-outline-secondary" type="button" onclick="this.previousElementSibling.type=this.previousElementSibling.type==='password'?'text':'password'" title="Mostrar/ocultar"><i class="bi bi-eye"></i></button>
+              <button class="btn btn-sm fw-bold" type="button" onclick="_aiSaveConfig()" style="background:#6d28d9;color:#fff;border:none"><i class="bi bi-check-lg me-1"></i>Guardar</button>
+            </div>
+            <div class="text-muted mt-1" style="font-size:.7rem" id="cfg-ai-key-hint">
+              Obtenés tu key en <a href="https://console.anthropic.com/settings/keys" target="_blank" style="color:#6d28d9">console.anthropic.com</a>
             </div>
           </div>
         </div>
-        <div id="cfg-ai-status" class="alert alert-info mb-0" style="font-size:.78rem">
+        <div id="cfg-ai-status" class="alert alert-info mb-2" style="font-size:.78rem">
           <i class="bi bi-info-circle me-1"></i>Configurá tu API key para activar el asistente con IA. Sin key, funciona con búsqueda local básica.
         </div>
-        <div class="mt-2 text-muted" style="font-size:.75rem">
-          <i class="bi bi-shield-check me-1"></i>La key se guarda solo en este navegador (localStorage). Nunca se envía a terceros excepto al proveedor de IA seleccionado.
-          <br><i class="bi bi-cash-coin me-1"></i><b>Costo estimado:</b> ~$0.01 USD por consulta con GPT-4o-mini / Claude Haiku. Muy económico.
+        <div class="d-flex gap-2 flex-wrap">
+          <button class="btn btn-sm btn-outline-secondary" onclick="_assistToggle()" style="font-size:.75rem">
+            <i class="bi bi-chat-dots me-1"></i>Abrir asistente
+          </button>
+          <button class="btn btn-sm btn-outline-secondary" onclick="_aiTestConnection()" style="font-size:.75rem" id="cfg-ai-test-btn">
+            <i class="bi bi-wifi me-1"></i>Probar conexión
+          </button>
+        </div>
+        <div class="mt-2 text-muted" style="font-size:.74rem">
+          <i class="bi bi-shield-check me-1"></i>La key se guarda <b>solo en este navegador</b> (localStorage). Nunca se envía a terceros excepto al proveedor seleccionado.
+          &nbsp;|&nbsp; <i class="bi bi-cash-coin me-1"></i><b>Costo:</b> ~$0.01 USD por consulta con Claude Haiku / GPT-4o-mini.
         </div>
       </div>
     </div>
@@ -22466,9 +22482,57 @@ let _AI_CONFIG = JSON.parse(localStorage.getItem('muukAIConfig') || 'null') || {
 let _AI_HISTORY = []; // conversation memory for context
 
 function _aiProviderChanged() {
-  const sel = document.getElementById('cfg-ai-provider');
-  const wrap = document.getElementById('cfg-ai-key-wrap');
+  const sel   = document.getElementById('cfg-ai-provider');
+  const wrap  = document.getElementById('cfg-ai-key-wrap');
+  const label = document.getElementById('cfg-ai-key-label');
+  const hint  = document.getElementById('cfg-ai-key-hint');
+  const inp   = document.getElementById('cfg-ai-key');
   wrap.style.display = sel.value === 'none' ? 'none' : '';
+  if (sel.value === 'anthropic') {
+    if (label) label.textContent = 'API Key de Anthropic';
+    if (inp)   inp.placeholder   = 'sk-ant-api03-…';
+    if (hint)  hint.innerHTML    = 'Obtenés tu key en <a href="https://console.anthropic.com/settings/keys" target="_blank" style="color:#6d28d9">console.anthropic.com</a>';
+  } else if (sel.value === 'openai') {
+    if (label) label.textContent = 'API Key de OpenAI';
+    if (inp)   inp.placeholder   = 'sk-…';
+    if (hint)  hint.innerHTML    = 'Obtenés tu key en <a href="https://platform.openai.com/api-keys" target="_blank" style="color:#6d28d9">platform.openai.com</a>';
+  }
+}
+
+async function _aiTestConnection() {
+  const btn = document.getElementById('cfg-ai-test-btn');
+  const st  = document.getElementById('cfg-ai-status');
+  if (!_AI_CONFIG.key || _AI_CONFIG.provider === 'none') {
+    toast('Guardá primero una API key para probar la conexión', 'warning'); return;
+  }
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Probando…'; }
+  try {
+    let ok = false;
+    if (_AI_CONFIG.provider === 'anthropic') {
+      const r = await fetch('https://api.anthropic.com/v1/messages', {
+        method:'POST',
+        headers:{'Content-Type':'application/json','x-api-key':_AI_CONFIG.key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+        body: JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:10,system:'Respondé solo "OK"',messages:[{role:'user',content:'test'}]})
+      });
+      ok = r.ok;
+      if (!r.ok) { const e=await r.json().catch(()=>({})); throw new Error(e.error?.message||`HTTP ${r.status}`); }
+    } else {
+      const r = await fetch('https://api.openai.com/v1/chat/completions', {
+        method:'POST',
+        headers:{'Content-Type':'application/json','Authorization':'Bearer '+_AI_CONFIG.key},
+        body: JSON.stringify({model:'gpt-4o-mini',messages:[{role:'user',content:'test'}],max_tokens:5})
+      });
+      ok = r.ok;
+      if (!r.ok) { const e=await r.json().catch(()=>({})); throw new Error(e.error?.message||`HTTP ${r.status}`); }
+    }
+    if (st) { st.className='alert alert-success mb-2'; st.style.fontSize='.78rem'; st.innerHTML='<i class="bi bi-check-circle-fill me-1"></i><b>Conexión exitosa!</b> La IA está lista para responder consultas sobre tu base de datos.'; }
+    toast('✓ Conexión con la IA verificada', 'success');
+  } catch(e) {
+    if (st) { st.className='alert alert-danger mb-2'; st.style.fontSize='.78rem'; st.innerHTML=`<i class="bi bi-x-circle-fill me-1"></i><b>Error de conexión:</b> ${e.message}`; }
+    toast('Error: ' + e.message, 'danger');
+  } finally {
+    if (btn) { btn.disabled=false; btn.innerHTML='<i class="bi bi-wifi me-1"></i>Probar conexión'; }
+  }
 }
 
 function _aiSaveConfig() {
@@ -22488,6 +22552,7 @@ function _aiSaveConfig() {
     st.innerHTML = '<i class="bi bi-exclamation-triangle me-1"></i>Falta la API key. Ingresala para activar la IA.';
   }
   toast('Configuración de IA guardada', 'ok');
+  _assistUpdateBadge();
 }
 
 // Restore config on load
@@ -22495,15 +22560,17 @@ function _aiRestoreConfig() {
   const cfg = _AI_CONFIG;
   const sel = document.getElementById('cfg-ai-provider');
   const key = document.getElementById('cfg-ai-key');
-  if (sel) sel.value = cfg.provider || 'openai';
+  if (sel) sel.value = cfg.provider || 'anthropic';
   if (key) key.value = cfg.key || '';
   _aiProviderChanged();
-  // Update status
+  // Update status banner
   const st = document.getElementById('cfg-ai-status');
   if (st && cfg.key && cfg.provider !== 'none') {
     st.className = 'alert alert-success mb-0'; st.style.fontSize = '.78rem';
-    st.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i><b>IA activa</b> — ' + (cfg.provider === 'openai' ? 'OpenAI GPT-4o-mini' : 'Anthropic Claude');
+    st.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i><b>IA activa</b> — ' + (cfg.provider === 'openai' ? 'OpenAI GPT-4o-mini' : 'Anthropic Claude Haiku');
   }
+  // Update floating panel badge
+  setTimeout(_assistUpdateBadge, 100);
 }
 
 // ── Panel toggle & UI ──
@@ -22511,11 +22578,41 @@ function _assistToggle() {
   const p = document.getElementById('muuk-assist-panel');
   p.classList.toggle('open');
   if (p.classList.contains('open')) {
+    _assistUpdateBadge();
     setTimeout(() => document.getElementById('assist-input').focus(), 150);
   }
 }
 
-function _assistChip(q) { document.getElementById('assist-input').value = q; _assistSend(); }
+function _assistUpdateBadge() {
+  const dot   = document.getElementById('assist-btn-dot');
+  const badge = document.getElementById('assist-model-badge');
+  const sub   = document.getElementById('assist-welcome-sub');
+  const hasAI = _AI_CONFIG.provider !== 'none' && _AI_CONFIG.key;
+  const label = hasAI
+    ? (_AI_CONFIG.provider === 'openai' ? '⚡ GPT-4o-mini activo' : '⚡ Claude Haiku activo')
+    : 'Sin IA — modo búsqueda local';
+  if (dot)   { dot.style.display = hasAI ? 'block' : 'none'; }
+  if (badge) { badge.textContent = label; badge.style.color = hasAI ? '#4ade80' : '#94a3b8'; }
+  if (sub && hasAI) {
+    const modelName = _AI_CONFIG.provider === 'openai' ? 'GPT-4o-mini (OpenAI)' : 'Claude Haiku (Anthropic)';
+    sub.innerHTML = `<i class="bi bi-check-circle-fill me-1" style="color:#22c55e"></i>IA activa: <b style="color:#22c55e">${modelName}</b>. Tengo acceso a todos los datos de tu empresa.`;
+  }
+}
+
+function _assistClearHistory() {
+  _AI_HISTORY = [];
+  const box = document.getElementById('assist-msgs');
+  box.innerHTML = '';
+  _assistAddMsg('Conversación reiniciada. ¿En qué te ayudo?', 'bot');
+}
+
+function _assistChip(q) {
+  const inp = document.getElementById('assist-input');
+  inp.value = q;
+  // If chip ends with space (like "datos del CRM de "), just focus
+  if (q.endsWith(' ')) { inp.focus(); inp.setSelectionRange(q.length, q.length); }
+  else _assistSend();
+}
 
 function _assistSend() {
   const inp = document.getElementById('assist-input');
@@ -22557,32 +22654,43 @@ function _assistHideTyping() {
   if (el) el.remove();
 }
 
-// ── Build Financial Context Snapshot ──
+// ── Build Financial Context Snapshot (versión extendida) ──
 function _buildFinancialContext() {
   const sB = calcSaldo(ST.cajaBancos || []);
   const sE = calcSaldo(ST.cajaEfectivo || []);
-  // Bank breakdown
+
+  // ─ Bancos ─
   const bnk = {};
   (ST.cajaBancos || []).forEach(m => {
     const b = m.banco || 'Sin asignar';
     bnk[b] = (bnk[b] || 0) + (m.tipo === 'ingreso' ? 1 : -1) * +m.monto;
   });
-  // Cheques
+
+  // ─ Cheques ─
   const chqFis = (ST.chequesFisicos || []).filter(c => c.estado === 'en_cartera' || c.estado === 'pendiente');
-  const chqE = (ST.eCheques || []).filter(c => c.estado === 'pendiente');
-  const chqPag = (ST.chequesPagar || []).filter(c => c.estado === 'pendiente');
-  // Facturas
+  const chqE   = (ST.eCheques       || []).filter(c => c.estado === 'pendiente');
+  const chqPag = (ST.chequesPagar   || []).filter(c => c.estado === 'pendiente');
+  const chqProx = [...chqFis,...chqE,...chqPag].filter(c=>c.fechaVenc&&dHasta(c.fechaVenc)>=0&&dHasta(c.fechaVenc)<=15)
+    .sort((a,b)=>a.fechaVenc.localeCompare(b.fechaVenc));
+
+  // ─ Facturas ─
   const facCob = (ST.facturasACobrar || []).filter(f => f.estado === 'pendiente');
-  const facPag = (ST.facturasPagar || []).filter(f => f.estado === 'pendiente');
-  // ARCA
-  const arca30 = (ST.arcaVencimientos || []).filter(v => !v.pagado && v.fecha && dHasta(v.fecha) >= 0 && dHasta(v.fecha) <= 30);
-  // Stock
-  const prods = ST.stockProductos || [];
+  const facPag = (ST.facturasPagar   || []).filter(f => f.estado === 'pendiente');
+
+  // ─ ARCA ─
+  const arcaTodos = (ST.arcaVencimientos || []).filter(v => !v.pagado && v.fecha);
+  const arca30  = arcaTodos.filter(v => dHasta(v.fecha) >= 0 && dHasta(v.fecha) <= 30);
+  const arca90  = arcaTodos.filter(v => dHasta(v.fecha) >= 0 && dHasta(v.fecha) <= 90);
+
+  // ─ Stock ─
+  const prods   = ST.stockProductos || [];
   const bajoMin = prods.filter(p => p.stockMinimo && +p.stockActual <= +p.stockMinimo);
-  // Comisiones
+
+  // ─ Comisiones ─
   const comPend = (ST.comisionesResumen || []).filter(e => e.saldo > 0);
-  // Socios
-  const socios = ST.socios || [];
+
+  // ─ Socios ─
+  const socios  = ST.socios || [];
   const retiros = {};
   socios.forEach(s => { retiros[s.id] = 0; });
   [...(ST.cajaBancos || []), ...(ST.cajaEfectivo || [])].forEach(m => {
@@ -22592,79 +22700,170 @@ function _buildFinancialContext() {
       if (sc) retiros[sc.id] += +m.monto || 0;
     }
   });
-  // Gestión
+
+  // ─ Cobranzas manuales ingresadas ─
+  const cobIng = [...(ST.cobranzasIngresadas || [])].reverse().slice(0, 50);
+  const cobIngTotal = cobIng.reduce((s,c) => s + (+c.importeFac||0), 0);
+  const cobIngByCliente = {};
+  cobIng.forEach(c => {
+    const k = c.cliente || '(sin cliente)';
+    if (!cobIngByCliente[k]) cobIngByCliente[k] = { total: 0, n: 0 };
+    cobIngByCliente[k].total += +c.importeFac||0;
+    cobIngByCliente[k].n++;
+  });
+  const cobIngDetalle = cobIng.slice(0,20).map(c =>
+    `  ${c.fecha||'–'} | ${c.cliente||'–'} | ${c.empresa||'–'} | ${c.documento||''} ${c.nroFC||''} | $${(+c.importeFac||0).toLocaleString('es-AR')} | ${c.tipoPago||'–'} | ${c.mes||'–'}`
+  ).join('\n');
+  const cobIngResumenCli = Object.entries(cobIngByCliente)
+    .sort((a,b)=>b[1].total-a[1].total).slice(0,15)
+    .map(([n,v])=>`  ${n}: $${v.total.toLocaleString('es-AR')} (${v.n} cobro${v.n!==1?'s':''})`).join('\n');
+
+  // ─ CRM: clientes ─
+  const gClis = (GESTION_DATA?.clientes || []).map(c => ({ nombre: c[0], cuit: c[1]||'', _src:'gestión' }));
+  const mClis = (ST.clientesCRM || []).map(c => ({
+    nombre: c.nombre, cuit: c.cuit||'', contacto: [c.contacto,c.apellido].filter(Boolean).join(' '),
+    tel: [c.tel,c.tel2].filter(Boolean).join(' / '), email: c.email||'', notas: c.notas||'', _src:'crm'
+  }));
+  const cliMap = {};
+  [...gClis, ...mClis].forEach(c => { cliMap[c.nombre.toLowerCase()] = c; });
+  const cliAll = Object.values(cliMap);
+
+  // ─ CRM: empresas ─
+  const gEmps = (GESTION_DATA?.empresas || []).map(e => ({ nombre: e[0], _src:'gestión' }));
+  const mEmps = (ST.empresasCRM || []).map(e => ({
+    nombre: e.nombre, cuit: e.cuit||'', tel: e.tel||'', email: e.email||'', _src:'crm'
+  }));
+  const empMap = {};
+  [...gEmps, ...mEmps].forEach(e => { empMap[e.nombre.toLowerCase()] = e; });
+  const empAll = Object.values(empMap);
+
+  // ─ CRM: proveedores ─
+  const provAll = (ST.proveedoresCRM || []);
+
+  // ─ Estados de cuenta (deudas detalladas) ─
+  let ectaBloque = '';
+  const vendedores = Object.keys(_ectaCache).filter(k => (_ectaCache[k]||[]).length > 0);
+  if (vendedores.length) {
+    vendedores.forEach(v => {
+      const cConDeuda = (_ectaCache[v]||[]).filter(c => c.pendientes && c.pendientes.length > 0);
+      if (!cConDeuda.length) return;
+      ectaBloque += `\nVendedor: ${v}\n`;
+      cConDeuda.sort((a,b) => (b.totalPendiente||0)-(a.totalPendiente||0)).forEach(c => {
+        const dias30  = c.pendientes.filter(f => { const d=_ectaDiasPendiente(f.fecha); return d!==null&&d>30; }).length;
+        const dias60  = c.pendientes.filter(f => { const d=_ectaDiasPendiente(f.fecha); return d!==null&&d>60; }).length;
+        ectaBloque += `  ${c.nombre||c.cliente}: TOTAL $${(c.totalPendiente||0).toLocaleString('es-AR')} | ${c.pendientes.length} facturas | >30d: ${dias30} | >60d: ${dias60}\n`;
+        c.pendientes.slice(0,8).forEach(f => {
+          const dias = _ectaDiasPendiente(f.fecha);
+          ectaBloque += `    • ${f.empresa||'–'} | ${f.factura||'–'} | ${f.importe||'–'} | fecha: ${f.fecha||'–'} | vto: ${f.fechaPago||'–'} | ${dias!==null?dias+'d antigüedad':'–'}\n`;
+        });
+        if (c.pendientes.length > 8) ectaBloque += `    ...y ${c.pendientes.length-8} factura(s) más\n`;
+      });
+    });
+  }
+
+  // ─ Gestión comercial ─
   let gestInfo = 'Sin datos de gestión cargados.';
+  let gestRows = '';
   if (GESTION_DATA && GESTION_DATA.rows && GESTION_DATA.rows.length) {
     const gd = GESTION_DATA;
-    const totalFact = gd.rows.reduce((s,r) => s + (+r.monto || 0), 0);
-    const clientes = gd.clientes ? gd.clientes.length : new Set(gd.rows.map(r => r.cliente)).size;
-    gestInfo = `Facturación total: $${totalFact.toLocaleString('es-AR')}, ${gd.rows.length} operaciones, ${clientes} clientes.`;
+    const totalFact = gd.rows.reduce((s,r) => s + (+r.monto||0), 0);
+    const nClis = gd.clientes ? gd.clientes.length : new Set(gd.rows.map(r=>r.cliente||r[0])).size;
+    gestInfo = `Facturación total: $${totalFact.toLocaleString('es-AR')} | ${gd.rows.length} operaciones | ${nClis} clientes`;
     if (gd.byMes && gd.byMes.length) {
-      const ult = gd.byMes.slice(-3);
-      gestInfo += ' Últimos meses: ' + ult.map(m => `${m.label||m.mes}: $${(m.total||m.monto||0).toLocaleString('es-AR')} (${m.ops||m.cantidad||0} ops)`).join(', ') + '.';
+      const ult = gd.byMes.slice(-4);
+      gestInfo += '\nÚltimos meses: ' + ult.map(m=>`${m.label||m.mes}: $${(m.total||m.monto||0).toLocaleString('es-AR')} (${m.ops||m.cantidad||0} ops)`).join(', ');
     }
-    // Top 5 clientes
     if (gd.clientes && gd.clientes.length) {
-      const top5 = gd.clientes.slice(0, 5);
-      gestInfo += ' Top clientes: ' + top5.map(c => `${c.nombre||c.cliente}: $${(c.total||c.monto||0).toLocaleString('es-AR')}`).join(', ') + '.';
+      gestInfo += '\nTop clientes (facturación): ' + gd.clientes.slice(0,10)
+        .map(c=>`${c.nombre||c.cliente}: $${(c.total||c.monto||0).toLocaleString('es-AR')}`).join(', ');
     }
+    // Últimas 30 operaciones
+    gestRows = gd.rows.slice(-30).map(r =>
+      `  ${r.fecha||r[2]||'–'} | ${r.cliente||r[0]||'–'} | ${r.empresa||r[1]||'–'} | ${r.factura||r[3]||'–'} | $${(+r.monto||(+r[4])||0).toLocaleString('es-AR')} | ${r.vendedor||r[5]||'–'}`
+    ).join('\n');
   }
-  // Listas
+
+  // ─ Listas precios ─
   const listas = ST.listasPrecios || [];
-  // Estados de cuenta (deudores)
-  let deudores = [];
-  const vendedores = ['Jonathan', 'Gaston', 'Alejandro'];
-  vendedores.forEach(v => {
-    (_ectaCache[v] || []).forEach(c => {
-      const saldo = +c.saldo || +c.deuda || 0;
-      if (saldo > 0) deudores.push({ cliente: c.cliente || c.nombre, saldo, vendedor: v });
-    });
-  });
-  facCob.forEach(f => {
-    const c = f.cliente || f.razonSocial || 'Sin nombre';
-    if (!deudores.find(d => d.cliente === c)) {
-      deudores.push({ cliente: c, saldo: +f.monto || 0, vendedor: '–' });
-    }
-  });
-  deudores.sort((a,b) => b.saldo - a.saldo);
+  const listasDetalle = listas.map(l => {
+    const items10 = (l.items||[]).slice(0,10).map(i=>`${i.nombre||i.descripcion}: $${(+i.precio||0).toLocaleString('es-AR')} ${l.moneda||'ARS'}`).join(', ');
+    return `  ${l.nombre} (${l.moneda||'ARS'}, ${(l.items||[]).length} items): ${items10}${(l.items||[]).length>10?'...':''}`;
+  }).join('\n');
 
-  return `FECHA: ${hoy()}
+  // ─ Movimientos recientes ─
+  const movRecientes = [...(ST.cajaBancos||[]),...(ST.cajaEfectivo||[])]
+    .sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''))
+    .slice(0,20)
+    .map(m=>`  ${m.fecha||'–'} | ${m.tipo==='ingreso'?'+':'-'} $${(+m.monto||0).toLocaleString('es-AR')} | ${m.banco||'Efectivo'} | ${m.concepto||m.desc||'–'}`)
+    .join('\n');
 
-SALDOS DISPONIBLES:
-- Bancos: $${sB.toLocaleString('es-AR')} | Efectivo: $${sE.toLocaleString('es-AR')} | Total: $${(sB+sE).toLocaleString('es-AR')}
-- Detalle bancos: ${Object.entries(bnk).map(([b,s]) => `${b}: $${s.toLocaleString('es-AR')}`).join(', ') || 'Sin movimientos'}
+  return `=== SNAPSHOT DE BASE DE DATOS MÜÜK — ${hoy()} ===
 
-CHEQUES:
-- A cobrar: ${chqFis.length + chqE.length} cheques por $${[...chqFis,...chqE].reduce((s,c)=>s+ +c.monto,0).toLocaleString('es-AR')} (${chqFis.length} físicos, ${chqE.length} e-cheqs)
-- A pagar: ${chqPag.length} cheques por $${chqPag.reduce((s,c)=>s+ +c.monto,0).toLocaleString('es-AR')}
-${[...chqFis,...chqE,...chqPag].filter(c=>c.fechaVenc&&dHasta(c.fechaVenc)>=0&&dHasta(c.fechaVenc)<=15).length ? '- Próximos 15 días: ' + [...chqFis,...chqE,...chqPag].filter(c=>c.fechaVenc&&dHasta(c.fechaVenc)>=0&&dHasta(c.fechaVenc)<=15).sort((a,b)=>a.fechaVenc.localeCompare(b.fechaVenc)).map(c=>`${fmtF(c.fechaVenc)} $${(+c.monto).toLocaleString('es-AR')} (${chqPag.includes(c)?'pagar':'cobrar'})`).join(', ') : ''}
+━━ SALDOS DISPONIBLES ━━
+Bancos: $${sB.toLocaleString('es-AR')} | Efectivo: $${sE.toLocaleString('es-AR')} | TOTAL LÍQUIDO: $${(sB+sE).toLocaleString('es-AR')}
+Detalle por banco:
+${Object.entries(bnk).sort((a,b)=>b[1]-a[1]).map(([b,s])=>`  ${b}: $${s.toLocaleString('es-AR')}`).join('\n')||'  (Sin movimientos bancarios)'}
 
-FACTURAS PENDIENTES:
-- A cobrar: ${facCob.length} facturas por $${facCob.reduce((s,f)=>s+(+f.monto||0),0).toLocaleString('es-AR')} (${facCob.filter(f=>f.fechaVenc&&dHasta(f.fechaVenc)<0).length} vencidas)
-- A pagar: ${facPag.length} facturas por $${facPag.reduce((s,f)=>s+(+f.monto||0),0).toLocaleString('es-AR')} (${facPag.filter(f=>f.fechaVenc&&dHasta(f.fechaVenc)<0).length} vencidas)
-${facCob.length ? '- Top facturas a cobrar: ' + facCob.sort((a,b)=>(+b.monto||0)-(+a.monto||0)).slice(0,5).map(f=>`${f.cliente||f.razonSocial||'–'}: $${(+f.monto||0).toLocaleString('es-AR')} vence ${fmtF(f.fechaVenc)||'–'}`).join('; ') : ''}
-${facPag.length ? '- Top facturas a pagar: ' + facPag.sort((a,b)=>(+b.monto||0)-(+a.monto||0)).slice(0,5).map(f=>`${f.proveedor||f.razonSocial||'–'}: $${(+f.monto||0).toLocaleString('es-AR')} vence ${fmtF(f.fechaVenc)||'–'}`).join('; ') : ''}
+━━ MOVIMIENTOS RECIENTES (últimos 20) ━━
+${movRecientes||'  (Sin movimientos)'}
 
-VENCIMIENTOS ARCA (30 días): ${arca30.length} obligaciones por $${arca30.reduce((s,v)=>s+(+v.monto||0),0).toLocaleString('es-AR')}
-${arca30.length ? arca30.sort((a,b)=>a.fecha.localeCompare(b.fecha)).slice(0,8).map(v=>`  ${fmtF(v.fecha)} — ${v.concepto||v.desc||'–'}: $${(+v.monto||0).toLocaleString('es-AR')}`).join('\n') : ''}
+━━ CHEQUES ━━
+A cobrar: ${chqFis.length+chqE.length} cheques por $${[...chqFis,...chqE].reduce((s,c)=>s+(+c.monto),0).toLocaleString('es-AR')} (${chqFis.length} físicos, ${chqE.length} e-cheqs)
+A pagar: ${chqPag.length} cheques por $${chqPag.reduce((s,c)=>s+(+c.monto),0).toLocaleString('es-AR')}
+${chqProx.length?'Próximos 15 días: '+chqProx.map(c=>`${fmtF(c.fechaVenc)} $${(+c.monto).toLocaleString('es-AR')} (${chqPag.includes(c)?'PAGAR':'cobrar'})`).join(', '):'Sin cheques venciendo en 15 días.'}
 
-STOCK: ${prods.length} productos. Valor estimado: $${prods.reduce((s,p)=>s+(+p.stockActual||0)*(+p.precioUnitario||+p.costo||0),0).toLocaleString('es-AR')}
-${bajoMin.length ? '- ALERTA bajo mínimo: ' + bajoMin.map(p=>`${p.nombre} (${p.stockActual}/${p.stockMinimo})`).join(', ') : '- Todos los productos sobre mínimo.'}
+━━ FACTURAS PENDIENTES ━━
+A cobrar: ${facCob.length} facturas por $${facCob.reduce((s,f)=>s+(+f.monto||0),0).toLocaleString('es-AR')} (${facCob.filter(f=>f.fechaVenc&&dHasta(f.fechaVenc)<0).length} vencidas)
+${facCob.sort((a,b)=>(+b.monto||0)-(+a.monto||0)).slice(0,8).map(f=>`  ${f.cliente||f.razonSocial||'–'}: $${(+f.monto||0).toLocaleString('es-AR')} vence ${fmtF(f.fechaVenc)||'–'}`).join('\n')}
+A pagar: ${facPag.length} facturas por $${facPag.reduce((s,f)=>s+(+f.monto||0),0).toLocaleString('es-AR')} (${facPag.filter(f=>f.fechaVenc&&dHasta(f.fechaVenc)<0).length} vencidas)
+${facPag.sort((a,b)=>(+b.monto||0)-(+a.monto||0)).slice(0,8).map(f=>`  ${f.proveedor||f.razonSocial||'–'}: $${(+f.monto||0).toLocaleString('es-AR')} vence ${fmtF(f.fechaVenc)||'–'}`).join('\n')}
 
-COMISIONES: Total: $${(ST.comisionesTotal||0).toLocaleString('es-AR')} | Pendientes: $${comPend.reduce((s,e)=>s+e.saldo,0).toLocaleString('es-AR')} en ${comPend.length} empresas
-${comPend.length ? '- Detalle: ' + comPend.sort((a,b)=>b.saldo-a.saldo).slice(0,8).map(e=>`${e.empresa||e.nombre}: $${e.saldo.toLocaleString('es-AR')}`).join(', ') : ''}
+━━ COBRANZAS INGRESADAS MANUALMENTE (últimas 50) ━━
+Total registrado: $${cobIngTotal.toLocaleString('es-AR')} en ${cobIng.length} cobro(s)
+Por cliente:
+${cobIngResumenCli||'  (Sin cobranzas ingresadas)'}
+Detalle (formato: fecha|cliente|empresa|documento|importe|tipo pago|mes):
+${cobIngDetalle||'  (Sin registros)'}
 
-SOCIOS: ${socios.map(s=>`${s.nombre}: retiros $${(retiros[s.id]||0).toLocaleString('es-AR')}`).join(' | ')}
+━━ ESTADOS DE CUENTA — DEUDAS PENDIENTES POR CLIENTE ━━
+${ectaBloque||'  (Sin datos de estados de cuenta cargados)'}
 
-DEUDORES (estados de cuenta): ${deudores.length} clientes con deuda
-${deudores.slice(0,10).map(d=>`  ${d.cliente}: $${d.saldo.toLocaleString('es-AR')} (${d.vendedor})`).join('\n')}
+━━ VENCIMIENTOS ARCA / IMPOSITIVOS ━━
+Próximos 30 días: ${arca30.length} obligaciones por $${arca30.reduce((s,v)=>s+(+v.monto||0),0).toLocaleString('es-AR')}
+Próximos 90 días: ${arca90.length} obligaciones por $${arca90.reduce((s,v)=>s+(+v.monto||0),0).toLocaleString('es-AR')}
+${arca30.sort((a,b)=>a.fecha.localeCompare(b.fecha)).slice(0,12).map(v=>`  ${fmtF(v.fecha)} | ${v.concepto||v.desc||'–'}: $${(+v.monto||0).toLocaleString('es-AR')}`).join('\n')}
 
-GESTIÓN COMERCIAL: ${gestInfo}
+━━ STOCK ━━
+${prods.length} productos | Valor estimado: $${prods.reduce((s,p)=>s+(+p.stockActual||0)*(+p.precioUnitario||+p.costo||0),0).toLocaleString('es-AR')}
+${bajoMin.length?'⚠ BAJO MÍNIMO: '+bajoMin.map(p=>`${p.nombre} (actual:${p.stockActual}/mín:${p.stockMinimo})`).join(', '):'Todos los productos sobre mínimo.'}
+${prods.slice(0,20).map(p=>`  ${p.nombre}: stock ${p.stockActual||0} | precio $${(+p.precioUnitario||+p.precio||0).toLocaleString('es-AR')} | costo $${(+p.costo||0).toLocaleString('es-AR')}`).join('\n')}
 
-LISTAS DE PRECIOS: ${listas.length} listas cargadas${listas.length ? ': ' + listas.map(l=>`${l.nombre} (${l.moneda||'ARS'}, ${(l.items||[]).length} items)`).join(', ') : ''}
+━━ COMISIONES ━━
+Total: $${(ST.comisionesTotal||0).toLocaleString('es-AR')} | Pendientes: $${comPend.reduce((s,e)=>s+e.saldo,0).toLocaleString('es-AR')} en ${comPend.length} empresa(s)
+${comPend.sort((a,b)=>b.saldo-a.saldo).map(e=>`  ${e.empresa||e.nombre}: $${e.saldo.toLocaleString('es-AR')}`).join('\n')||'  Sin comisiones pendientes.'}
 
-ACCIONES DISPONIBLES (podés sugerirle al usuario):
-- Ver sección: irA('nombreSeccion') — secciones: dashboard, cajaBancos, cajaEfectivo, chequesFisicos, eCheques, chequesPagar, facturasACobrar, facturasPagar, estadosCuenta, stock, listasPrecios, comisiones, tesoreria, panelVencimientos, gestion, reportes, cuentaSocios, calendarioARCA
+━━ SOCIOS ━━
+${socios.map(s=>`  ${s.nombre}: retiros $${(retiros[s.id]||0).toLocaleString('es-AR')}`).join('\n')||'  (Sin socios configurados)'}
+
+━━ CRM — CLIENTES (${cliAll.length} total) ━━
+${cliAll.map(c=>`  ${c.nombre}${c.cuit?' | CUIT: '+c.cuit:''}${c.contacto?' | Contacto: '+c.contacto:''}${c.tel?' | Tel: '+c.tel:''}${c.email?' | Email: '+c.email:''} [${c._src}]`).join('\n')||'  (Sin clientes en CRM)'}
+
+━━ CRM — EMPRESAS (${empAll.length} total) ━━
+${empAll.map(e=>`  ${e.nombre}${e.cuit?' | CUIT: '+e.cuit:''}${e.tel?' | Tel: '+e.tel:''}${e.email?' | Email: '+e.email:''} [${e._src}]`).join('\n')||'  (Sin empresas en CRM)'}
+
+━━ CRM — PROVEEDORES (${provAll.length} total) ━━
+${provAll.map(p=>`  ${p.nombre}${p.cuit?' | CUIT: '+p.cuit:''}${p.tel?' | Tel: '+p.tel:''}${p.email?' | Email: '+p.email:''}`).join('\n')||'  (Sin proveedores en CRM)'}
+
+━━ GESTIÓN COMERCIAL ━━
+${gestInfo}
+Últimas 30 operaciones (fecha|cliente|empresa|factura|monto|vendedor):
+${gestRows||'  (Sin operaciones)'}
+
+━━ LISTAS DE PRECIOS ━━
+${listasDetalle||'  (Sin listas de precios)'}
+
+━━ ACCIONES DISPONIBLES ━━
+- Navegar a sección: irA('X') donde X puede ser: dashboard, cajaBancos, cajaEfectivo, chequesFisicos, eCheques, chequesPagar, facturasACobrar, facturasPagar, estadosCuenta, stock, listasPrecios, comisiones, tesoreria, panelVencimientos, gestion, reportes, cuentaSocios, calendarioARCA, ingresarCobranza, crm, historialCobranzas
 - Generar PDF: generarReportePDF() (general), printReporteComercial() (comercial)`;
 }
 
@@ -22672,27 +22871,34 @@ ACCIONES DISPONIBLES (podés sugerirle al usuario):
 async function _assistAIQuery(text) {
   _assistShowTyping();
   _AI_HISTORY.push({ role: 'user', content: text });
-  // Keep last 10 messages for context
-  if (_AI_HISTORY.length > 20) _AI_HISTORY = _AI_HISTORY.slice(-20);
+  if (_AI_HISTORY.length > 24) _AI_HISTORY = _AI_HISTORY.slice(-24);
 
   const context = _buildFinancialContext();
-  const systemPrompt = `Sos el asistente financiero de MÜÜK, una app de gestión financiera para una empresa argentina. Respondés en español argentino, de forma concisa y profesional.
+  const modelLabel = _AI_CONFIG.provider === 'openai' ? 'GPT-4o-mini' : 'Claude Haiku';
+  const systemPrompt = `Sos el asistente financiero de MÜÜK (${modelLabel}), integrado en una app de gestión financiera para una empresa argentina distribuidora. Tenés acceso completo a la base de datos de la empresa en tiempo real.
 
-DATOS FINANCIEROS EN TIEMPO REAL:
+DATOS COMPLETOS DE LA EMPRESA (snapshot actualizado al ${hoy()}):
 ${context}
 
-INSTRUCCIONES:
-- Respondé siempre en español argentino
-- Sé directo y conciso, no más de 3-4 oraciones excepto si piden detalle
-- Usá formato HTML simple para las respuestas (negrita con <b>, tablas con <table>)
-- Para números usá formato argentino: $1.234.567
-- Si el usuario pregunta algo que requiere navegar a una sección, incluí un botón HTML: <button onclick="irA('seccion');_assistToggle()" style="background:#3b82f6;color:#fff;border:none;border-radius:6px;padding:4px 12px;font-size:.75rem;cursor:pointer">Texto →</button>
-- Si puede servir generar un PDF: <button onclick="generarReportePDF()" style="background:#dc2626;color:#fff;border:none;border-radius:6px;padding:4px 12px;font-size:.75rem;cursor:pointer">Generar PDF</button>
-- Podés usar KPI cards: <div class="kpi-row"><div class="kpi" style="border-left:3px solid #COLOR"><small>Label</small><b>Valor</b></div></div>
-- Cuando hables de importes, siempre usá los datos reales que te di arriba
-- Si te piden algo que no está en los datos, decí que no tenés esa información
-- Podés hacer análisis, comparaciones, alertas y recomendaciones basadas en los datos
-- Si preguntan por un cliente específico, buscá en los deudores y facturas`;
+CAPACIDADES:
+- Consultás y analizás saldos bancarios, cheques, facturas, cobranzas, vencimientos impositivos, stock, comisiones, estados de cuenta de clientes, CRM completo y gestión comercial
+- Podés buscar clientes, empresas o proveedores específicos por nombre parcial
+- Podés calcular deudas, proyecciones, antigüedades y alertas
+- Podés comparar períodos, identificar los mayores deudores, los mejores clientes, productos críticos, etc.
+
+INSTRUCCIONES DE RESPUESTA:
+- Siempre en español argentino, directo y preciso
+- Usá HTML para formatear: <b>negrita</b>, <table><thead><tr><th>Col</th></tr></thead><tbody>...</tbody></table>
+- Números en formato argentino: $1.234.567 (punto para miles, coma para decimales)
+- Para KPIs usá: <div class="kpi-row"><div class="kpi" style="border-left:3px solid #HEXCOLOR"><small>Etiqueta</small><b>Valor</b></div></div>
+- Botón de navegación: <button onclick="irA('seccion');_assistToggle()" style="background:#3b82f6;color:#fff;border:none;border-radius:6px;padding:4px 12px;font-size:.75rem;cursor:pointer;margin-top:4px">Ir a Sección →</button>
+- Botón PDF: <button onclick="generarReportePDF()" style="background:#dc2626;color:#fff;border:none;border-radius:6px;padding:4px 12px;font-size:.75rem;cursor:pointer;margin-top:4px">📄 Generar PDF</button>
+- Para alertas urgentes usá: <div style="background:#fef2f2;border-left:3px solid #ef4444;padding:8px 12px;border-radius:0 6px 6px 0;margin:4px 0;font-size:.8rem">⚠ mensaje</div>
+- Para info positiva: <div style="background:#f0fdf4;border-left:3px solid #22c55e;padding:8px 12px;border-radius:0 6px 6px 0;margin:4px 0;font-size:.8rem">✓ mensaje</div>
+- Si preguntan por un cliente, empresa o proveedor específico, buscá por coincidencia parcial de nombre en todos los datos
+- Si calculás antigüedad, usá la fecha de hoy (${hoy()}) como referencia
+- Si el dato no existe en el snapshot, decilo claramente — no inventes números
+- Sé conciso por default (3-4 líneas), pero si piden detalle dá la tabla completa`;
 
   try {
     let response;
@@ -22704,12 +22910,22 @@ INSTRUCCIONES:
     _AI_HISTORY.push({ role: 'assistant', content: response });
     _assistHideTyping();
     _assistAddMsg(response, 'bot');
+    // Update last-query time in header
+    const ts = document.getElementById('assist-last-query');
+    if (ts) ts.textContent = new Date().toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});
   } catch(e) {
     console.error('[AI]', e);
     _assistHideTyping();
-    // Fallback to local
+    let errMsg = e.message || String(e);
+    if (errMsg.includes('401')) errMsg = 'API key inválida o sin permisos.';
+    else if (errMsg.includes('429')) errMsg = 'Límite de requests alcanzado. Esperá un momento.';
+    else if (errMsg.includes('Failed to fetch')) errMsg = 'Sin conexión a internet.';
     const localResp = _assistLocalQuery(text);
-    _assistAddMsg(localResp + '<div style="margin-top:6px;font-size:.7rem;color:#94a3b8"><i class="bi bi-exclamation-circle me-1"></i>IA no disponible, mostrando datos locales. Error: ' + (e.message || e) + '</div>', 'bot');
+    _assistAddMsg(localResp +
+      `<div style="margin-top:8px;padding:6px 10px;background:#fef2f2;border-radius:6px;font-size:.7rem;color:#dc2626">
+        <i class="bi bi-exclamation-triangle me-1"></i><b>IA no disponible:</b> ${errMsg}
+        <button onclick="irA('config');_assistToggle()" style="background:none;border:none;color:#3b82f6;font-size:.7rem;cursor:pointer;text-decoration:underline;padding:0;margin-left:6px">Verificar config →</button>
+      </div>`, 'bot');
   }
 }
 
@@ -26227,34 +26443,52 @@ function _toggleCalVenc(btn) {
   </div>
 </div>
 <!-- ═══ MÜÜK ASISTENTE ═══ -->
-<button id="muuk-assist-btn" onclick="_assistToggle()" title="Asistente MÜÜK (Ctrl+J)">
-  <i class="bi bi-chat-dots-fill"></i>
+<button id="muuk-assist-btn" onclick="_assistToggle()" title="Asistente IA MÜÜK (Ctrl+J)">
+  <i class="bi bi-stars"></i>
+  <span id="assist-btn-dot" style="position:absolute;top:7px;right:7px;width:9px;height:9px;border-radius:50%;background:#22c55e;border:2px solid #c41920;display:none"></span>
 </button>
 <div id="muuk-assist-panel">
   <div class="assist-hdr">
-    <div style="display:flex;align-items:center;gap:8px">
-      <span style="font-weight:900;font-size:1rem;letter-spacing:.5px">MÜÜK</span>
-      <span style="font-size:.72rem;opacity:.8">Asistente</span>
+    <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0">
+      <div style="width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,#6d28d9,#4f46e5);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <i class="bi bi-stars" style="color:#fff;font-size:.85rem"></i>
+      </div>
+      <div style="min-width:0">
+        <div style="font-weight:800;font-size:.88rem;color:#fff;line-height:1.1">MÜÜK Asistente</div>
+        <div id="assist-model-badge" style="font-size:.62rem;color:#94a3b8;line-height:1">Sin IA configurada</div>
+      </div>
     </div>
-    <button onclick="_assistToggle()" style="background:none;border:none;color:#fff;font-size:1.1rem;cursor:pointer"><i class="bi bi-x-lg"></i></button>
+    <div style="display:flex;align-items:center;gap:6px">
+      <span id="assist-last-query" style="font-size:.6rem;color:#64748b"></span>
+      <button onclick="_assistClearHistory()" title="Limpiar conversación" style="background:rgba(255,255,255,.08);border:none;color:#94a3b8;font-size:.8rem;cursor:pointer;padding:3px 7px;border-radius:5px" title="Nueva conversación"><i class="bi bi-arrow-counterclockwise"></i></button>
+      <button onclick="_assistToggle()" style="background:none;border:none;color:#94a3b8;font-size:1rem;cursor:pointer;padding:3px 6px"><i class="bi bi-x-lg"></i></button>
+    </div>
   </div>
   <div class="assist-chips" id="assist-chips">
-    <button onclick="_assistChip('saldos')">Saldos</button>
-    <button onclick="_assistChip('vencimientos')">Vencimientos</button>
-    <button onclick="_assistChip('stock')">Stock</button>
-    <button onclick="_assistChip('deudas')">Deudas</button>
-    <button onclick="_assistChip('facturas cobrar')">Facturas a Cobrar</button>
-    <button onclick="_assistChip('facturas pagar')">Facturas a Pagar</button>
-    <button onclick="_assistChip('comisiones')">Comisiones</button>
-    <button onclick="_assistChip('socios')">Cta. Socios</button>
-    <button onclick="_assistChip('listas precios')">Precios</button>
+    <button onclick="_assistChip('saldos y liquidez')">💰 Saldos</button>
+    <button onclick="_assistChip('mayores deudores y deudas pendientes detallado')">📋 Deudores</button>
+    <button onclick="_assistChip('cobranzas ingresadas este mes')">💵 Cobranzas</button>
+    <button onclick="_assistChip('vencimientos próximos 30 días')">📅 Vencimientos</button>
+    <button onclick="_assistChip('facturas a cobrar vencidas o por vencer')">🧾 Facturas</button>
+    <button onclick="_assistChip('cheques próximos a vencer')">📋 Cheques</button>
+    <button onclick="_assistChip('stock bajo mínimo y valor total')">📦 Stock</button>
+    <button onclick="_assistChip('comisiones pendientes por empresa')">📊 Comisiones</button>
+    <button onclick="_assistChip('dame el contacto y datos del CRM de ')">📇 CRM</button>
+    <button onclick="_assistChip('resumen ejecutivo financiero completo')">🏢 Resumen</button>
   </div>
   <div class="assist-msgs" id="assist-msgs">
-    <div class="assist-msg bot">Hola! Soy el asistente de <b>MÜÜK</b>. Preguntame lo que necesites sobre la empresa: saldos, deudas, vencimientos, stock, facturas, comisiones... lo que quieras.<br><small style="color:#64748b;margin-top:4px;display:block">Tip: Configurá una API key de IA en Configuración para respuestas inteligentes en lenguaje natural.</small></div>
+    <div class="assist-msg bot" id="assist-welcome-msg">
+      Hola! Soy el asistente de <b>MÜÜK</b> con acceso completo a tu base de datos: saldos, deudores, cobranzas, CRM, facturas, stock, comisiones y más.<br>
+      <small style="color:#64748b;margin-top:5px;display:block" id="assist-welcome-sub">
+        <i class="bi bi-info-circle me-1"></i>Configurá una API key en
+        <button onclick="irA('config');_assistToggle()" style="background:none;border:none;color:#3b82f6;font-size:.75rem;cursor:pointer;text-decoration:underline;padding:0">Configuración</button>
+        para activar la IA.
+      </small>
+    </div>
   </div>
   <div class="assist-input-bar">
-    <input type="text" id="assist-input" placeholder="Preguntá algo..." onkeydown="if(event.key==='Enter')_assistSend()">
-    <button onclick="_assistSend()"><i class="bi bi-send-fill"></i></button>
+    <input type="text" id="assist-input" placeholder="Preguntá sobre clientes, deudas, saldos..." onkeydown="if(event.key==='Enter')_assistSend()">
+    <button onclick="_assistSend()" id="assist-send-btn"><i class="bi bi-send-fill"></i></button>
   </div>
 </div>
 
