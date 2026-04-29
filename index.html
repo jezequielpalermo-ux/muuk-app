@@ -7112,6 +7112,20 @@ function load() {
   ST.comisionesTotal = 0;
   delete ST.comisionesTimestamp;
 
+  // Migración: ectaCache pudo haber quedado en flujoCajaV3 por versiones anteriores (bug en pullRemoto)
+  // Lo extraemos a ectaCache2026 y limpiamos de flujoCajaV3 para evitar QuotaExceededError
+  if (ST.ectaCache && typeof ST.ectaCache === 'object' && Object.keys(ST.ectaCache).length) {
+    try {
+      if (!localStorage.getItem('ectaCache2026')) {
+        localStorage.setItem('ectaCache2026', JSON.stringify(ST.ectaCache));
+      }
+    } catch(e) { console.warn('[LOAD] ectaCache2026 migration failed:', e); }
+    delete ST.ectaCache;
+    delete ST.ectaCacheAt;
+    // Re-guardar flujoCajaV3 limpio para evitar problemas en próximas cargas
+    try { localStorage.setItem('flujoCajaV3', JSON.stringify(ST)); } catch(e) {}
+  }
+
   // Siempre asegurar que los conceptos y socios default estén presentes
   if (!ST.socios || !ST.socios.length) ST.socios = SOCIOS_DEFAULT.map(s=>({...s}));
   if (!ST.conceptos || !ST.conceptos.length) {
@@ -7365,7 +7379,14 @@ async function pullRemoto(silent) {
       if (!Array.isArray(ST.kilometraje)) ST.kilometraje = [];
       if (!Array.isArray(ST.kmTarifas) || !ST.kmTarifas.length) ST.kmTarifas = [{ id:'kmt_base', desde:'2025-04-01', valor:1200, motivo:'Tarifa inicial acordada' }];
       if (typeof ST.metaCobranza === 'undefined') ST.metaCobranza = 0;
-      localStorage.setItem('flujoCajaV3', JSON.stringify(ST));
+      // Restaurar ectaCache en memoria si vino de la nube (se guarda por separado)
+      if (ST.ectaCache && Object.keys(ST.ectaCache).length) {
+        _ectaCache = ST.ectaCache;
+        try { localStorage.setItem('ectaCache2026', JSON.stringify(_ectaCache)); } catch(e) { console.warn('[PULL] ectaCache2026 write failed:', e); }
+      }
+      // Guardar en flujoCajaV3 SIN ectaCache ni comisiones (igual que save())
+      const {comisionesResumen: _pcr, comisionesTotal: _pct, comisionesTimestamp: _pcts, ectaCache: _pec, ectaCacheAt: _peca, ...pullPersistData} = ST;
+      try { localStorage.setItem('flujoCajaV3', JSON.stringify(pullPersistData)); } catch(e) { console.error('[PULL] localStorage write failed:', e); }
       reRenderActivo();
       if (!silent) {
         const quien = remote.updated_by ? ' — ' + remote.updated_by : '';
@@ -7416,7 +7437,14 @@ async function forceRestoreFromSupabase() {
     if (!Array.isArray(ST.kmTarifas) || !ST.kmTarifas.length) {
       ST.kmTarifas = [{ id:'kmt_base', desde:'2025-04-01', valor:1200, motivo:'Tarifa inicial acordada' }];
     }
-    localStorage.setItem('flujoCajaV3', JSON.stringify(ST));
+    // Restaurar ectaCache en memoria si vino de la nube (se guarda por separado)
+    if (ST.ectaCache && Object.keys(ST.ectaCache).length) {
+      _ectaCache = ST.ectaCache;
+      try { localStorage.setItem('ectaCache2026', JSON.stringify(_ectaCache)); } catch(e) { console.warn('[RESTORE] ectaCache2026 write failed:', e); }
+    }
+    // Guardar en flujoCajaV3 SIN ectaCache ni comisiones (igual que save())
+    const {comisionesResumen: _rcr, comisionesTotal: _rct, comisionesTimestamp: _rcts, ectaCache: _rec, ectaCacheAt: _reca, ...restorePersistData} = ST;
+    try { localStorage.setItem('flujoCajaV3', JSON.stringify(restorePersistData)); } catch(e) { console.error('[RESTORE] localStorage write failed:', e); }
     reRenderActivo();
     renderDashboard();
     const kmCount = ST.kilometraje.length;
@@ -21659,16 +21687,22 @@ let _ectaAllExpanded = true;
 let _ectaLoadTime = {};
 
 // ── Persistencia del caché: localStorage + ST (nube vía Supabase) ─────────
+let _ectaPersistTimer = null;
 function _ectaPersistCache() {
+  // Siempre actualizar localStorage de inmediato (rápido, sin red)
   try {
     localStorage.setItem('ectaCache2026', JSON.stringify(_ectaCache));
   } catch(e) { console.warn('[ECTA] localStorage write failed:', e); }
-  // Guardar en ST para que pushRemoto lo suba a Supabase
-  if (typeof ST !== 'undefined') {
-    ST.ectaCache    = _ectaCache;
-    ST.ectaCacheAt  = new Date().toISOString().slice(0,16);
-    if (typeof save === 'function') save();
-  }
+  // Debounce el save() para evitar múltiples pushRemoto() si varios vendedores cargan juntos
+  if (_ectaPersistTimer) clearTimeout(_ectaPersistTimer);
+  _ectaPersistTimer = setTimeout(() => {
+    _ectaPersistTimer = null;
+    if (typeof ST !== 'undefined') {
+      ST.ectaCache   = _ectaCache;
+      ST.ectaCacheAt = new Date().toISOString().slice(0,16);
+      if (typeof save === 'function') save();
+    }
+  }, 800);
 }
 
 function _ectaRestoreCache() {
