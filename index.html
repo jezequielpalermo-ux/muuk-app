@@ -558,18 +558,18 @@
     body.dark-mode #page-contabilidad [style*="color:#b91c1c"] { color: #f87171 !important; }
 
     /* ── CROSS-SELL (inside Gestión): dark mode overrides ── */
-    body.dark-mode #gest-crosssell-section [style*="color:#0f172a"],
-    body.dark-mode #gest-crosssell-section [style*="color:#1e293b"] { color: var(--text) !important; }
-    body.dark-mode #gest-crosssell-section [style*="color:#64748b"],
-    body.dark-mode #gest-crosssell-section [style*="color:#334155"] { color: var(--text-muted) !important; }
-    body.dark-mode #gest-crosssell-section [style*="background:#fff"] { background: var(--bg-card) !important; }
-    body.dark-mode #gest-crosssell-section [style*="background:#f8fafc"] { background: var(--bg-card) !important; }
-    body.dark-mode #gest-crosssell-section [style*="border:1px solid #e2e8f0"] { border-color: var(--border) !important; }
-    body.dark-mode #gest-crosssell-section [style*="border-top:1px solid #f1f5f9"] { border-color: var(--border) !important; }
-    body.dark-mode #gest-crosssell-section table { color: var(--text) !important; }
-    body.dark-mode #gest-crosssell-section th { background: var(--bg-card) !important; color: var(--text-muted) !important; }
-    body.dark-mode #gest-crosssell-section td[style*="position:sticky"] { background: var(--bg-card) !important; }
-    body.dark-mode #gest-crosssell-section [style*="color:#065f46"] { color: #4ade80 !important; }
+    body.dark-mode #gest-tab-crosssell [style*="color:#0f172a"],
+    body.dark-mode #gest-tab-crosssell [style*="color:#1e293b"] { color: var(--text) !important; }
+    body.dark-mode #gest-tab-crosssell [style*="color:#64748b"],
+    body.dark-mode #gest-tab-crosssell [style*="color:#334155"] { color: var(--text-muted) !important; }
+    body.dark-mode #gest-tab-crosssell [style*="background:#fff"] { background: var(--bg-card) !important; }
+    body.dark-mode #gest-tab-crosssell [style*="background:#f8fafc"] { background: var(--bg-card) !important; }
+    body.dark-mode #gest-tab-crosssell [style*="border:1px solid #e2e8f0"] { border-color: var(--border) !important; }
+    body.dark-mode #gest-tab-crosssell [style*="border-top:1px solid #f1f5f9"] { border-color: var(--border) !important; }
+    body.dark-mode #gest-tab-crosssell table { color: var(--text) !important; }
+    body.dark-mode #gest-tab-crosssell th { background: var(--bg-card) !important; color: var(--text-muted) !important; }
+    body.dark-mode #gest-tab-crosssell td[style*="position:sticky"] { background: var(--bg-card) !important; }
+    body.dark-mode #gest-tab-crosssell [style*="color:#065f46"] { color: #4ade80 !important; }
 
     /* ── STOCK: dark mode overrides ── */
     body.dark-mode #page-stock .stat-card { border-color: var(--border) !important; }
@@ -766,16 +766,22 @@
     body.dark-mode .gest-table tbody tr:hover { background: rgba(99,102,241,.12); }
     body.dark-mode .gest-table thead.table-dark { --bs-table-bg: #1e293b !important; --bs-table-color: #e2e8f0 !important; }
     body.dark-mode .gest-table thead.table-dark th { color: #e2e8f0 !important; background: #1e293b !important; border-bottom-color: #6366f1 !important; }
+    /* ── Detalle KPI strip ── */
+    #gest-detalle-kpi-strip > div > div {
+      transition: transform .15s;
+    }
+    #gest-detalle-kpi-strip > div > div:hover { transform: translateY(-1px); }
+
     /* Responsive Gestión */
     @media (max-width: 1100px) {
       .gest-stat-val { font-size: 1.1rem; }
     }
     @media (max-width: 768px) {
-      #page-gestion .page-hdr { flex-direction: row !important; align-items: center !important; }
-      #page-gestion .page-hdr h4 { font-size: .88rem !important; }
       .gest-stat { padding: 10px 12px; }
       .gest-stat-val { font-size: 1rem; }
-      #gestion-tabs .nav-link { font-size: .66rem; padding: 4px 8px; }
+      #gestion-tabs .nav-link { font-size: .62rem; padding: 4px 7px; }
+      #gest-detalle-kpi-strip > div { gap: 6px !important; }
+      #gest-detalle-kpi-strip > div > div { min-width: calc(50% - 3px) !important; }
     }
     /* ── Estratégico: section headers ── */
     #page-estrategicos .card h6 {
@@ -3697,34 +3703,46 @@ CREATE POLICY "acceso total" ON muuk_daily_backups FOR ALL USING (true) WITH CHE
   <!-- ══════════════════ GESTIÓN ══════════════════ -->
   <div id="page-gestion" class="page">
 
-    <!-- Header compacto + tabs en la misma línea -->
-    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-bottom:4px">
-      <h4 style="font-weight:700;margin:0;font-size:.88rem;color:#0f172a;white-space:nowrap">
-        <i class="bi bi-graph-up-arrow me-1" style="color:#16a34a"></i>Gestión
+    <!-- ── Fila 1: Título + Acciones ── -->
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
+      <h4 style="font-weight:800;margin:0;font-size:.92rem;color:#0f172a;white-space:nowrap">
+        <i class="bi bi-graph-up-arrow me-2" style="color:#16a34a"></i>Gestión Comercial
       </h4>
-      <ul class="nav gap-1 flex-nowrap" id="gestion-tabs" style="flex:1;justify-content:center">
+      <div class="d-flex align-items-center gap-2 flex-wrap">
+        <!-- Toggle IVA — pill button -->
+        <button id="btn-gest-iva" onclick="toggleGestionIVA()"
+          style="font-size:.72rem;border-radius:20px;padding:4px 13px;background:#f1f5f9;color:#475569;border:1.5px solid #cbd5e1;font-weight:600;cursor:pointer;transition:all .18s;white-space:nowrap"
+          title="Alternar entre ver con IVA y sin IVA">
+          <i class="bi bi-receipt me-1"></i>c/IVA
+        </button>
+        <!-- Nueva Cobranza rápida -->
+        <button class="btn btn-sm btn-outline-secondary" onclick="irA('ingresarCobranza')"
+          style="font-size:.72rem;border-radius:6px;padding:4px 10px;white-space:nowrap">
+          <i class="bi bi-plus-lg me-1"></i>Cobranza
+        </button>
+        <!-- PDF Comercial -->
+        <button class="btn btn-sm" onclick="printReporteComercial()"
+          style="background:#4f46e5;color:#fff;font-size:.72rem;border-radius:6px;padding:4px 10px;white-space:nowrap;border:none">
+          <i class="bi bi-file-earmark-pdf me-1"></i>PDF
+        </button>
+        <!-- Actualizar desde Sheets -->
+        <button class="btn btn-sm" id="btn-gest-sync" onclick="gestionSincronizar()"
+          style="background:#16a34a;color:#fff;font-size:.72rem;border-radius:6px;padding:4px 10px;white-space:nowrap;border:none;min-width:90px">
+          <i class="bi bi-arrow-clockwise me-1"></i>Actualizar
+        </button>
+      </div>
+    </div>
+
+    <!-- ── Fila 2: Tabs + Status bar ── -->
+    <div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
+      <ul class="nav gap-1 flex-nowrap" id="gestion-tabs">
         <li class="nav-item"><button class="nav-link active" onclick="gestionTab('mensual',this)"><i class="bi bi-calendar3 me-1"></i>Mensual</button></li>
         <li class="nav-item"><button class="nav-link" onclick="gestionTab('empresa',this)"><i class="bi bi-building me-1"></i>Empresas</button></li>
         <li class="nav-item"><button class="nav-link" onclick="gestionTab('cliente',this)"><i class="bi bi-people me-1"></i>Clientes</button></li>
         <li class="nav-item"><button class="nav-link" onclick="gestionTab('detalle',this)"><i class="bi bi-table me-1"></i>Detalle</button></li>
+        <li class="nav-item"><button class="nav-link" onclick="gestionTab('crosssell',this)"><i class="bi bi-diagram-3 me-1"></i>Cruce</button></li>
       </ul>
-      <button class="btn btn-sm" onclick="printReporteComercial()"
-        style="background:#4f46e5;color:#fff;font-size:.68rem;border-radius:6px;padding:3px 8px;white-space:nowrap">
-        <i class="bi bi-file-earmark-pdf me-1"></i>PDF Comercial
-      </button>
-      <button class="btn btn-sm" id="btn-gest-sync" onclick="gestionSincronizar()"
-        style="background:#16a34a;color:#fff;font-size:.68rem;border-radius:6px;padding:3px 8px;white-space:nowrap">
-        <i class="bi bi-arrow-clockwise me-1"></i>Sync
-      </button>
-    </div>
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;flex-wrap:wrap">
-      <div id="gest-status" style="font-size:.65rem;color:#64748b;min-height:14px;flex:1"></div>
-      <div style="display:flex;align-items:center;gap:4px">
-        <label style="font-size:.65rem;color:#64748b;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px" title="Mostrar facturación con o sin IVA">
-          <input type="checkbox" id="gest-toggle-iva" onchange="toggleGestionIVA()" style="accent-color:#4f46e5">
-          <span id="gest-iva-label">Mostrar sin IVA</span>
-        </label>
-      </div>
+      <div id="gest-status" style="font-size:.7rem;color:#64748b;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></div>
     </div>
 
     <!-- ╔══ TAB: MENSUAL ══╗ -->
@@ -3773,7 +3791,7 @@ CREATE POLICY "acceso total" ON muuk_daily_backups FOR ALL USING (true) WITH CHE
             <i class="bi bi-sort-down me-1"></i>Reciente
           </button>
         </div>
-        <div style="height:150px;position:relative">
+        <div style="height:clamp(180px,22vh,260px);position:relative">
           <canvas id="gest-chart-facturado"></canvas>
         </div>
       </div>
@@ -3870,24 +3888,49 @@ CREATE POLICY "acceso total" ON muuk_daily_backups FOR ALL USING (true) WITH CHE
 
     <!-- ╔══ TAB: DETALLE ══╗ -->
     <div id="gest-tab-detalle" class="gest-tab" style="display:none">
+      <!-- Mini-KPI strip (se actualiza con cada filtrado) -->
+      <div id="gest-detalle-kpi-strip" class="mb-2" style="display:none">
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <div style="background:#eef2ff;border-left:3px solid #4f46e5;border-radius:7px;padding:7px 13px;min-width:110px">
+            <div style="font-size:.58rem;color:#64748b;text-transform:uppercase;font-weight:700;letter-spacing:.06em">Operaciones</div>
+            <div id="gdk-ops" style="font-size:1.1rem;font-weight:800;color:#4f46e5;line-height:1.1">—</div>
+          </div>
+          <div style="background:#f0fdf4;border-left:3px solid #16a34a;border-radius:7px;padding:7px 13px;min-width:140px">
+            <div style="font-size:.58rem;color:#64748b;text-transform:uppercase;font-weight:700;letter-spacing:.06em">Comisión Total</div>
+            <div id="gdk-com" style="font-size:1.1rem;font-weight:800;color:#16a34a;line-height:1.1">—</div>
+          </div>
+          <div style="background:#f8fafc;border-left:3px solid #0891b2;border-radius:7px;padding:7px 13px;min-width:140px">
+            <div style="font-size:.58rem;color:#64748b;text-transform:uppercase;font-weight:700;letter-spacing:.06em">Facturado</div>
+            <div id="gdk-fac" style="font-size:1.1rem;font-weight:800;color:#0891b2;line-height:1.1">—</div>
+          </div>
+          <div style="background:#fffbeb;border-left:3px solid #d97706;border-radius:7px;padding:7px 13px;min-width:120px">
+            <div style="font-size:.58rem;color:#64748b;text-transform:uppercase;font-weight:700;letter-spacing:.06em">Sin IVA</div>
+            <div id="gdk-siv" style="font-size:1.1rem;font-weight:800;color:#d97706;line-height:1.1">—</div>
+          </div>
+          <div style="background:#f5f3ff;border-left:3px solid #7c3aed;border-radius:7px;padding:7px 13px;min-width:110px">
+            <div style="font-size:.58rem;color:#64748b;text-transform:uppercase;font-weight:700;letter-spacing:.06em">Rentab. %</div>
+            <div id="gdk-pct" style="font-size:1.1rem;font-weight:800;color:#7c3aed;line-height:1.1">—</div>
+          </div>
+        </div>
+      </div>
       <!-- Filtros -->
       <div class="card p-2 mb-2" style="background:#f8fafc;border:1px solid #e2e8f0">
         <div class="row g-2 align-items-center">
           <div class="col-auto">
-            <select class="form-select form-select-sm" id="gest-fil-mes" onchange="gestionFiltrarDetalle()" style="min-width:140px">
+            <select class="form-select form-select-sm" id="gest-fil-mes" onchange="_gestDetallePage=0;gestionFiltrarDetalle()" style="min-width:140px">
               <option value="">Todos los meses</option>
             </select>
           </div>
           <div class="col-auto">
-            <select class="form-select form-select-sm" id="gest-fil-empresa" onchange="gestionFiltrarDetalle()" style="min-width:180px">
+            <select class="form-select form-select-sm" id="gest-fil-empresa" onchange="_gestDetallePage=0;gestionFiltrarDetalle()" style="min-width:180px">
               <option value="">Todas las empresas</option>
             </select>
           </div>
           <div class="col">
             <div class="position-relative">
               <i class="bi bi-search position-absolute" style="left:10px;top:50%;transform:translateY(-50%);color:#94a3b8;font-size:.8rem"></i>
-              <input type="text" class="form-control form-control-sm ps-4" id="gest-fil-cliente" 
-                placeholder="Buscar cliente..." oninput="gestionFiltrarDetalle()">
+              <input type="text" class="form-control form-control-sm ps-4" id="gest-fil-cliente"
+                placeholder="Buscar cliente..." oninput="_gestDetallePage=0;gestionFiltrarDetalle()">
             </div>
           </div>
           <div class="col-auto">
@@ -3929,17 +3972,19 @@ CREATE POLICY "acceso total" ON muuk_daily_backups FOR ALL USING (true) WITH CHE
       </div>
     </div>
 
-    <!-- ── Facturación por Cliente × Empresa ── -->
-    <div class="mt-3" id="gest-crosssell-section">
-      <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
-        <span style="font-size:.78rem;font-weight:700;color:#0f172a"><i class="bi bi-table me-1" style="color:#0891b2"></i>Facturación por Cliente × Empresa</span>
-        <small class="text-muted" style="font-size:.62rem">Facturado sin IVA y comisión por cliente y empresa</small>
-        <div class="ms-auto d-flex align-items-center gap-2">
-          <select id="crosssell-mes-filter" class="form-select form-select-sm" style="font-size:.68rem;width:auto;min-width:130px;border-radius:6px" onchange="_renderCrossSell(GESTION_DATA)">
+    <!-- ╔══ TAB: CRUCE Cliente × Empresa ══╗ -->
+    <div id="gest-tab-crosssell" class="gest-tab" style="display:none">
+      <div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
+        <div>
+          <div style="font-size:.85rem;font-weight:800;color:#0f172a"><i class="bi bi-diagram-3 me-1" style="color:#0891b2"></i>Facturación por Cliente × Empresa</div>
+          <div style="font-size:.68rem;color:#64748b;margin-top:1px">Facturado sin IVA y comisión por cliente y empresa. Comparativa vs año anterior cuando hay datos.</div>
+        </div>
+        <div class="ms-auto d-flex align-items-center gap-2 flex-wrap">
+          <select id="crosssell-mes-filter" class="form-select form-select-sm" style="font-size:.72rem;width:auto;min-width:140px;border-radius:7px" onchange="_renderCrossSell(GESTION_DATA)">
             <option value="">Todos los meses 2026</option>
           </select>
-          <button class="btn btn-sm btn-outline-primary" style="font-size:.68rem;border-radius:6px;padding:3px 10px;white-space:nowrap" onclick="printCrossSellPDF()">
-            <i class="bi bi-file-earmark-pdf me-1"></i>Imprimir PDF
+          <button class="btn btn-sm" style="font-size:.72rem;border-radius:7px;padding:4px 12px;white-space:nowrap;background:#4f46e5;color:#fff;border:none" onclick="printCrossSellPDF()">
+            <i class="bi bi-file-earmark-pdf me-1"></i>PDF Cruce
           </button>
         </div>
       </div>
@@ -15935,8 +15980,24 @@ async function _fetchGestionCSV() {
 async function gestionSincronizar() {
   const btn = document.getElementById('btn-gest-sync');
   const st  = document.getElementById('gest-status');
-  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="bi bi-hourglass-split me-1 sync-spin"></i>Actualizando...'; }
-  if (st)  st.innerHTML = '<i class="bi bi-hourglass-split me-1 text-warning sync-spin"></i>Conectando con Google Sheets...';
+  const _btnReset = (ok) => {
+    if (!btn) return;
+    btn.disabled = false;
+    if (ok === true) {
+      btn.style.background = '#059669';
+      btn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Actualizado';
+      setTimeout(() => { btn.style.background = '#16a34a'; btn.innerHTML = '<i class="bi bi-arrow-clockwise me-1"></i>Actualizar'; }, 3000);
+    } else if (ok === false) {
+      btn.style.background = '#dc2626';
+      btn.innerHTML = '<i class="bi bi-x-lg me-1"></i>Error';
+      setTimeout(() => { btn.style.background = '#16a34a'; btn.innerHTML = '<i class="bi bi-arrow-clockwise me-1"></i>Actualizar'; }, 4000);
+    } else {
+      btn.style.background = '#16a34a';
+      btn.innerHTML = '<i class="bi bi-arrow-clockwise me-1"></i>Actualizar';
+    }
+  };
+  if (btn) { btn.disabled = true; btn.style.background = '#2563eb'; btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" style="width:.75rem;height:.75rem;border-width:.12em"></span>Cargando...'; }
+  if (st)  st.innerHTML = '<i class="bi bi-cloud-download me-1 text-info"></i>Conectando con Google Sheets...';
 
   let rawRows = null, source = '';
   // Fuente 1: JSONP
@@ -15945,12 +16006,11 @@ async function gestionSincronizar() {
     // Fuente 2: CSV via proxy
     try { rawRows = await _fetchGestionCSV(); source = 'Google Sheets (CSV)'; }
     catch(e2) {
-      if (st) st.innerHTML = '<i class="bi bi-exclamation-triangle-fill text-warning me-1"></i>' +
-        'No se pudo conectar con Google Sheets. ' +
-        '<small class="text-muted">Asegurate de que la planilla sea <b>pública (cualquier persona con el enlace puede ver)</b>. ' +
-        'Usando caché local.</small>';
+      if (st) st.innerHTML = '<i class="bi bi-exclamation-triangle-fill text-danger me-1"></i>' +
+        'Sin conexión con Google Sheets. ' +
+        '<small class="text-muted">Verificá que la planilla sea <b>pública</b>. Usando caché local.</small>';
       toast('⚠️ No se pudo sincronizar. Verificá permisos de la planilla.', 'warning');
-      if (btn) { btn.disabled = false; btn.innerHTML = '<i class="bi bi-arrow-clockwise me-1"></i>Actualizar desde Google Sheets'; }
+      _btnReset(false);
       if (_loadGestionData()) renderGestion();
       return;
     }
@@ -15960,16 +16020,15 @@ async function gestionSincronizar() {
   if (GESTION_DATA.rows.length === 0) {
     if (st) st.innerHTML = '<i class="bi bi-exclamation-triangle-fill text-warning me-1"></i>Se conectó pero no se encontraron datos 2026. Verificá la pestaña correcta.';
     toast('⚠️ Conectado pero sin datos 2026', 'warning');
-    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="bi bi-arrow-clockwise me-1"></i>Actualizar desde Google Sheets'; }
+    _btnReset(false);
     return;
   }
   try { localStorage.setItem('gestionData2026', JSON.stringify(GESTION_DATA)); } catch(e) {}
-  if (st) st.innerHTML = '<i class="bi bi-check-circle-fill text-success me-1"></i>Actualizado · ' +
-    GESTION_DATA.updatedAt + ' · ' + GESTION_DATA.rows.length + ' registros · vía ' + source;
+  const _hoursAgo = GESTION_DATA.updatedAt ? Math.floor((Date.now() - new Date(GESTION_DATA.updatedAt)) / 3600000) : null;
+  if (st) st.innerHTML = `<i class="bi bi-check-circle-fill text-success me-1"></i>Actualizado · ${GESTION_DATA.updatedAt} · <b>${GESTION_DATA.rows.length}</b> registros · ${source}`;
   toast('✅ Gestión actualizada: ' + GESTION_DATA.rows.length + ' registros', 'success');
-  if (btn) { btn.disabled = false; btn.innerHTML = '<i class="bi bi-arrow-clockwise me-1"></i>Actualizar desde Google Sheets'; }
+  _btnReset(true);
   renderGestion();
-  // Refrescar Meta Cobranza en el dashboard con el dato nuevo de Gestión
   try { _renderMetaCobranza(); } catch(e) {}
 }
 
@@ -16103,8 +16162,17 @@ function gestionTab(tab, btn) {
   const el = document.getElementById('gest-tab-' + tab);
   if (el) el.style.display = '';
   if (btn) btn.classList.add('active');
-  // Render charts when switching
-  if (tab === 'empresa') _renderEmpresaChart();
+  // Re-render charts after tab becomes visible (fixes dimensiones-0 bug)
+  if (tab === 'empresa') {
+    requestAnimationFrame(() => _renderEmpresaChart());
+  }
+  if (tab === 'mensual' && _gestCharts.facturado) {
+    requestAnimationFrame(() => _gestCharts.facturado.resize());
+  }
+  // Activar CrossSell si no está renderizado
+  if (tab === 'crosssell' && GESTION_DATA) {
+    requestAnimationFrame(() => _renderCrossSell(_getGestionDataMerged ? _getGestionDataMerged() : GESTION_DATA));
+  }
 }
 
 function gestionFiltrarClientes() {
@@ -16164,7 +16232,56 @@ function _toggleGestMensualOrder() {
   if (btn) btn.innerHTML = _gestMensualDesc
     ? '<i class="bi bi-sort-down me-1"></i>Reciente'
     : '<i class="bi bi-sort-up me-1"></i>Antiguo';
-  renderGestion();
+  // Solo re-render la tabla mensual, sin destruir charts
+  if (!GESTION_DATA) return;
+  const d = _getGestionDataMerged ? _getGestionDataMerged() : GESTION_DATA;
+  if (!d || !d.byMes) return;
+  const MESES_ES_TBL = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const COLORS = ['#4f46e5','#16a34a','#dc2626','#d97706','#7c3aed','#0891b2','#be185d','#0f766e','#9333ea','#c2410c','#4f46e5','#65a30d'];
+  const _mesActualIdx = new Date().getMonth();
+  const _añoActual = new Date().getFullYear();
+  const byMesOrdered = _gestMensualDesc ? [...d.byMes].reverse() : d.byMes;
+  let totOps=0, totFac2=0, totSiv2=0, totCom2=0;
+  d.byMes.forEach(m => { totOps+=m[1]; totFac2+=m[2]; totSiv2+=m[3]; totCom2+=m[4]; });
+  const tbMes = document.getElementById('gest-tbody-mensual');
+  if (!tbMes) return;
+  tbMes.innerHTML = byMesOrdered.map((m, i) => {
+    const [mes, cnt, fac, siv, com] = m;
+    const bg = COLORS[i % COLORS.length];
+    const facShow = GESTION_SHOW_SIN_IVA ? siv : fac;
+    const pctCom = siv > 0 ? (com / siv * 100).toFixed(1) + '%' : '–';
+    const mesNomIdx = MESES_ES_TBL.findIndex(mn => mes.toLowerCase().startsWith(mn.toLowerCase()));
+    const esMesActual = mesNomIdx === _mesActualIdx && mes.includes(String(_añoActual));
+    const rowStyle = esMesActual ? 'background:linear-gradient(90deg,rgba(16,185,129,.12),rgba(16,185,129,.04));border-left:3px solid #10b981;' : '';
+    const mesLabel = mes.replace(' 2026','').replace(' 2025','');
+    const mesDisplay = esMesActual ? `<b style="color:#059669">${mesLabel}</b> <span style="font-size:.6rem;background:#d1fae5;color:#065f46;border-radius:4px;padding:1px 5px;font-weight:700">HOY</span>` : mesLabel;
+    const origIdx = d.byMes.findIndex(x => x[0] === mes);
+    let trendCell = '<td class="text-end pe-2"><small style="color:#94a3b8">–</small></td>';
+    if (origIdx > 0) {
+      const prevSiv = d.byMes[origIdx-1][3];
+      if (prevSiv > 0) {
+        const delta = ((siv - prevSiv) / prevSiv * 100).toFixed(1);
+        const up = siv >= prevSiv;
+        trendCell = `<td class="text-end pe-2"><small style="color:${up?'#16a34a':'#dc2626'};font-weight:700">${up?'▲':'▼'} ${Math.abs(delta)}%</small></td>`;
+      }
+    }
+    return `<tr style="${rowStyle}">
+      <td class="ps-3"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${bg};margin-right:6px"></span>${mesDisplay}</td>
+      <td class="text-end">${cnt}</td>
+      <td class="text-end">${fmt(facShow)}</td>
+      <td class="text-end" style="opacity:${GESTION_SHOW_SIN_IVA?'.5':'1'}">${fmt(GESTION_SHOW_SIN_IVA?fac:siv)}</td>
+      <td class="text-end pe-3 text-success fw-bold">${fmt(com)}</td>
+      <td class="text-end pe-2"><small style="color:#d97706;font-weight:600">${pctCom}</small></td>
+      ${trendCell}
+    </tr>`;
+  }).join('') + `<tr class="table-dark fw-bold">
+    <td class="ps-3">TOTAL</td><td class="text-end">${totOps}</td>
+    <td class="text-end">${fmt(GESTION_SHOW_SIN_IVA?totSiv2:totFac2)}</td>
+    <td class="text-end" style="opacity:${GESTION_SHOW_SIN_IVA?'.5':'1'}">${fmt(GESTION_SHOW_SIN_IVA?totFac2:totSiv2)}</td>
+    <td class="text-end pe-3 text-success">${fmt(totCom2)}</td>
+    <td class="text-end pe-2"><small style="color:#d97706;font-weight:700">${totSiv2>0?(totCom2/totSiv2*100).toFixed(1)+'%':'–'}</small></td>
+    <td class="text-end pe-2"></td>
+  </tr>`;
 }
 function _toggleHCSortOrder(sel) {
   _hcSortDesc = sel.value === 'desc';
@@ -16191,8 +16308,17 @@ function _gestDetallePaginar(dir) {
 }
 
 function toggleGestionIVA() {
-  GESTION_SHOW_SIN_IVA = document.getElementById('gest-toggle-iva').checked;
-  document.getElementById('gest-iva-label').textContent = GESTION_SHOW_SIN_IVA ? 'Mostrando sin IVA' : 'Mostrar sin IVA';
+  GESTION_SHOW_SIN_IVA = !GESTION_SHOW_SIN_IVA;
+  const btn = document.getElementById('btn-gest-iva');
+  if (btn) {
+    btn.innerHTML = GESTION_SHOW_SIN_IVA
+      ? '<i class="bi bi-receipt-cutoff me-1"></i>s/IVA'
+      : '<i class="bi bi-receipt me-1"></i>c/IVA';
+    btn.style.background   = GESTION_SHOW_SIN_IVA ? '#eef2ff' : '#f1f5f9';
+    btn.style.color        = GESTION_SHOW_SIN_IVA ? '#4f46e5' : '#475569';
+    btn.style.borderColor  = GESTION_SHOW_SIN_IVA ? '#818cf8' : '#cbd5e1';
+    btn.style.fontWeight   = GESTION_SHOW_SIN_IVA ? '700' : '600';
+  }
   renderGestion();
 }
 
@@ -16901,15 +17027,24 @@ function _renderClienteTabla(clientes) {
 }
 
 function _renderDetalleTabla(rows, totalRows, page, pages) {
-  const tb = document.getElementById('gest-tbody-detalle');
-  const tot = document.getElementById('gest-detalle-total');
+  const tb   = document.getElementById('gest-tbody-detalle');
+  const tot  = document.getElementById('gest-detalle-total');
+  const kpis = document.getElementById('gest-detalle-kpi-strip');
   if (!tb) return;
+
+  // Calcular totales sobre TODOS los registros filtrados (no solo la página)
+  // gestionFiltrarDetalle pasa solo la página, así que calculamos sumas de la página actual
+  let sumFac = 0, sumSiv = 0, sumCom = 0;
+
   if (!rows.length) {
-    tb.innerHTML = `<tr><td colspan="8" class="text-center py-4 text-muted"><i class="bi bi-inbox fs-3 d-block mb-1"></i>Sin registros para los filtros aplicados</td></tr>`;
-    if (tot) tot.innerHTML = '';
+    tb.innerHTML = `<tr><td colspan="8" class="text-center py-5 text-muted">
+      <i class="bi bi-funnel fs-3 d-block mb-2"></i>Sin registros para los filtros aplicados
+    </td></tr>`;
+    if (tot)  tot.innerHTML = '';
+    if (kpis) kpis.style.display = 'none';
     return;
   }
-  let sumFac = 0, sumSiv = 0, sumCom = 0;
+
   tb.innerHTML = rows.map(r => {
     sumFac += r[4]; sumSiv += r[5]; sumCom += r[7];
     const pctRaw = r[6];
@@ -16918,27 +17053,51 @@ function _renderDetalleTabla(rows, totalRows, page, pages) {
       const pctNum = typeof pctRaw === 'number' ? pctRaw : parseFloat(String(pctRaw).replace(',','.'));
       if (!isNaN(pctNum)) pct = (pctNum < 1 ? (pctNum * 100).toFixed(1) : pctNum.toFixed(1)) + '%';
     }
+    const pctColor = parseFloat(pct) >= 5 ? '#16a34a' : parseFloat(pct) >= 2 ? '#d97706' : '#94a3b8';
     return `<tr>
-      <td class="ps-2"><small class="badge bg-secondary">${r[0].replace(' 2026','')}</small></td>
-      <td><small>${r[1]}</small></td>
-      <td><small>${r[2]}</small></td>
-      <td><small>${r[3]}</small></td>
-      <td class="text-end"><small>${fmt(r[4])}</small></td>
-      <td class="text-end"><small>${fmt(r[5])}</small></td>
-      <td class="text-center"><small>${pct}</small></td>
-      <td class="text-end pe-2 text-success fw-bold"><small>${fmt(r[7])}</small></td>
+      <td class="ps-2"><span class="badge" style="background:#e0e7ff;color:#4338ca;font-size:.62rem;font-weight:700">${r[0].replace(' 2026','')}</span></td>
+      <td><small style="color:#64748b">${r[1]}</small></td>
+      <td style="font-weight:600">${r[2]}</td>
+      <td><small style="color:#475569">${r[3]}</small></td>
+      <td class="text-end">${fmt(r[4])}</td>
+      <td class="text-end" style="color:#64748b">${fmt(r[5])}</td>
+      <td class="text-center"><small style="color:${pctColor};font-weight:700">${pct}</small></td>
+      <td class="text-end pe-2 fw-bold" style="color:#16a34a">${fmt(r[7])}</td>
     </tr>`;
   }).join('');
-  const totLabel = totalRows != null
-    ? `${totalRows} registros (mostrando ${rows.length})`
-    : `${rows.length} registros`;
+
+  // ── Actualizar mini-KPI strip ──
+  if (kpis) {
+    kpis.style.display = '';
+    const rentPct = sumSiv > 0 ? (sumCom / sumSiv * 100).toFixed(1) + '%' : '—';
+    const n = document.getElementById('gdk-ops');
+    const c = document.getElementById('gdk-com');
+    const f = document.getElementById('gdk-fac');
+    const s = document.getElementById('gdk-siv');
+    const p = document.getElementById('gdk-pct');
+    if (n) n.textContent = (totalRows ?? rows.length);
+    if (c) c.textContent = fmt(sumCom);
+    if (f) f.textContent = fmt(sumFac);
+    if (s) s.textContent = fmt(sumSiv);
+    if (p) p.textContent = rentPct;
+  }
+
+  // ── Pie de tabla: paginación ──
   if (tot) {
+    const shown   = rows.length;
+    const total   = totalRows ?? shown;
+    const showing = total !== shown ? `${total} total · página ${(page??0)+1}/${pages??1}` : `${total} registros`;
     const paginaInfo = (pages != null && pages > 1)
-      ? `&nbsp;&nbsp;<button onclick="_gestDetallePaginar(-1)" class="btn btn-sm btn-outline-secondary" style="padding:0 6px;font-size:.7rem" ${page<=0?'disabled':''}>‹</button>
-         <span style="font-size:.72rem;margin:0 4px">Pág ${page+1}/${pages}</span>
-         <button onclick="_gestDetallePaginar(1)" class="btn btn-sm btn-outline-secondary" style="padding:0 6px;font-size:.7rem" ${page>=pages-1?'disabled':''}>›</button>`
+      ? `<button onclick="_gestDetallePaginar(-1)" class="btn btn-sm btn-outline-secondary ms-2" style="padding:0 7px;font-size:.72rem" ${page<=0?'disabled':''}>‹ Ant.</button>
+         <span style="font-size:.72rem;margin:0 5px;color:#64748b">${(page??0)+1} / ${pages}</span>
+         <button onclick="_gestDetallePaginar(1)" class="btn btn-sm btn-outline-secondary" style="padding:0 7px;font-size:.72rem" ${page>=pages-1?'disabled':''}>Sig. ›</button>`
       : '';
-    tot.innerHTML = `${totLabel} &nbsp;|&nbsp; Facturado: <span class="text-primary">${fmt(sumFac)}</span> &nbsp;|&nbsp; Sin IVA: ${fmt(sumSiv)} &nbsp;|&nbsp; Comisión: <span class="text-success">${fmt(sumCom)}</span>${paginaInfo}`;
+    tot.innerHTML = `<span style="color:#64748b">${showing}</span>
+      &nbsp;|&nbsp; Facturado: <b style="color:#0891b2">${fmt(sumFac)}</b>
+      &nbsp;|&nbsp; Sin IVA: <b>${fmt(sumSiv)}</b>
+      &nbsp;|&nbsp; Comisión: <b style="color:#16a34a">${fmt(sumCom)}</b>
+      &nbsp;|&nbsp; Rentab.: <b style="color:#7c3aed">${sumSiv>0?(sumCom/sumSiv*100).toFixed(1)+'%':'—'}</b>
+      ${paginaInfo}`;
   }
 }
 
