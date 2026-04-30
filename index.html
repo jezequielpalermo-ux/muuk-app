@@ -3553,6 +3553,12 @@ CREATE POLICY "acceso total" ON muuk_daily_backups FOR ALL USING (true) WITH CHE
           <i class="bi bi-file-earmark-pdf me-1"></i>Subir PDF
         </button>
         <input type="file" id="pdf-cobrar" accept=".pdf" style="display:none" onchange="handlePDFUpload(event,'cobrar')">
+        <button class="btn btn-outline-success btn-sm" onclick="_abrirZIPImport('cobrar')" title="Importar múltiples PDFs desde un ZIP de AFIP">
+          <i class="bi bi-file-earmark-zip me-1"></i>ZIP AFIP
+        </button>
+        <button class="btn btn-outline-warning btn-sm" onclick="_abrirInformeRetenciones()" title="Informe mensual de retenciones/percepciones">
+          <i class="bi bi-percent me-1"></i>Retenciones
+        </button>
         <button class="btn btn-primary btn-sm" onclick="abrirModalFactura('cobrar',null)" data-muuk-accion="facturasACobrar:nueva">
           <i class="bi bi-plus-lg me-1"></i>Nueva Factura
         </button>
@@ -3632,6 +3638,9 @@ CREATE POLICY "acceso total" ON muuk_daily_backups FOR ALL USING (true) WITH CHE
           <i class="bi bi-file-earmark-pdf me-1"></i>Subir PDF
         </button>
         <input type="file" id="pdf-pagar" accept=".pdf" style="display:none" onchange="handlePDFUpload(event,'pagar')">
+        <button class="btn btn-outline-success btn-sm" onclick="_abrirZIPImport('pagar')" title="Importar múltiples PDFs desde un ZIP de AFIP">
+          <i class="bi bi-file-earmark-zip me-1"></i>ZIP AFIP
+        </button>
         <button class="btn btn-primary btn-sm" onclick="abrirModalFactura('pagar',null)" data-muuk-accion="facturasPagar:nueva">
           <i class="bi bi-plus-lg me-1"></i>Nueva Factura
         </button>
@@ -5598,9 +5607,14 @@ CREATE POLICY "acceso total" ON muuk_daily_backups FOR ALL USING (true) WITH CHE
             <div id="mf-pdf-estado" class="mt-1"></div>
             <small class="text-muted" id="mf-pdf-nombre"></small>
           </div>
-          <button class="btn btn-outline-danger btn-sm" onclick="document.getElementById('mf-pdf-input').click()">
-            <i class="bi bi-upload me-1"></i>Subir PDF
-          </button>
+          <div class="d-flex flex-column gap-1">
+            <button class="btn btn-outline-danger btn-sm" onclick="document.getElementById('mf-pdf-input').click()">
+              <i class="bi bi-upload me-1"></i>Subir PDF
+            </button>
+            <button class="btn btn-outline-purple btn-sm" id="mf-btn-ia" onclick="_aiLeerFacturaPDFBtn()" style="display:none;background:#f5f3ff;border-color:#7c3aed;color:#7c3aed;font-size:.75rem">
+              <i class="bi bi-stars me-1"></i>Leer con IA
+            </button>
+          </div>
           <input type="file" id="mf-pdf-input" accept=".pdf" style="display:none" onchange="handlePDFUploadModal(event)">
         </div>
 
@@ -5663,8 +5677,46 @@ CREATE POLICY "acceso total" ON muuk_daily_backups FOR ALL USING (true) WITH CHE
           </div>
           <div class="col-sm-4">
             <label class="form-label small fw-bold">Total <span class="text-danger">*</span></label>
-            <input type="number" class="form-control form-control-sm" id="mf-total" placeholder="0.00">
+            <input type="number" class="form-control form-control-sm" id="mf-total" placeholder="0.00" oninput="_recalcNetoCobrar()">
           </div>
+
+          <!-- ── Retenciones / Percepciones ─────────────────────────────── -->
+          <div class="col-12" id="mf-ret-section">
+            <div class="border rounded p-2" style="background:#fefce8;border-color:#fde68a!important">
+              <div class="d-flex align-items-center justify-content-between mb-1">
+                <span class="fw-bold small" style="color:#92400e"><i class="bi bi-percent me-1"></i>Retenciones / Percepciones</span>
+                <span class="text-muted" style="font-size:.72rem">Aplicadas sobre esta factura</span>
+              </div>
+              <!-- Botones rápidos -->
+              <div class="d-flex flex-wrap gap-1 mb-2">
+                <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2" style="font-size:.72rem" onclick="_mfAddRet('Ret. IVA','3')">Ret. IVA 3%</button>
+                <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2" style="font-size:.72rem" onclick="_mfAddRet('IIBB CABA','3')">IIBB CABA 3%</button>
+                <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2" style="font-size:.72rem" onclick="_mfAddRet('IIBB PBA','3')">IIBB PBA 3%</button>
+                <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2" style="font-size:.72rem" onclick="_mfAddRet('Ret. Ganancias','6')">Ganancias 6%</button>
+                <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2" style="font-size:.72rem" onclick="_mfAddRet('IIBB Córdoba','3')">IIBB Cba 3%</button>
+                <button type="button" class="btn btn-outline-warning btn-sm py-0 px-2" style="font-size:.72rem" onclick="_mfShowRetCustom()"><i class="bi bi-plus-circle me-1"></i>Otra</button>
+              </div>
+              <!-- Fila personalizada (oculta por defecto) -->
+              <div id="mf-ret-custom-row" class="input-group input-group-sm mb-2" style="display:none">
+                <input type="text"   class="form-control" id="mf-ret-custom-concepto" placeholder="Concepto (ej. IIBB Santa Fe)">
+                <span class="input-group-text">%</span>
+                <input type="number" class="form-control" id="mf-ret-custom-pct" placeholder="%" style="max-width:70px" min="0" step="0.01">
+                <span class="input-group-text">$</span>
+                <input type="number" class="form-control" id="mf-ret-custom-imp" placeholder="o monto fijo" style="max-width:90px" min="0" step="0.01">
+                <button type="button" class="btn btn-warning btn-sm px-2" onclick="_mfAddRetCustom()"><i class="bi bi-plus-lg"></i></button>
+                <button type="button" class="btn btn-outline-secondary btn-sm px-2" onclick="document.getElementById('mf-ret-custom-row').style.display='none'"><i class="bi bi-x"></i></button>
+              </div>
+              <!-- Lista dinámica -->
+              <div id="mf-ret-list"></div>
+              <!-- Neto a cobrar/pagar -->
+              <div class="d-flex justify-content-between align-items-center mt-2 pt-2" style="border-top:1px solid #fde68a;display:none" id="mf-neto-cobrar-row">
+                <span class="fw-bold small" style="color:#166534">Neto a cobrar/pagar</span>
+                <span class="fw-bold" style="color:#166534;font-size:1rem" id="mf-neto-cobrar-display">—</span>
+              </div>
+            </div>
+          </div>
+          <!-- ──────────────────────────────────────────────────────────── -->
+
           <div class="col-sm-4">
             <label class="form-label small fw-bold">Estado</label>
             <select class="form-select form-select-sm" id="mf-estado" onchange="_togglePagoSection()">
@@ -5786,6 +5838,48 @@ CREATE POLICY "acceso total" ON muuk_daily_backups FOR ALL USING (true) WITH CHE
               </div>
             </div>
           </div>
+          <!-- ── Cuotas ──────────────────────────────────────────────── -->
+          <div class="col-12" id="mf-cuotas-section">
+            <div class="border rounded p-2" style="background:#f0f9ff;border-color:#bae6fd!important">
+              <div class="form-check mb-1">
+                <input class="form-check-input" type="checkbox" id="mf-cuotas-cb" onchange="_toggleCuotasPanel()">
+                <label class="form-check-label fw-bold small" for="mf-cuotas-cb" style="color:#0369a1">
+                  <i class="bi bi-calendar2-range me-1"></i>Dividir en cuotas
+                </label>
+              </div>
+              <div id="mf-cuotas-panel" style="display:none">
+                <div class="row g-2 mt-1">
+                  <div class="col-sm-3">
+                    <label class="form-label small fw-bold mb-0">N° de cuotas</label>
+                    <input type="number" class="form-control form-control-sm" id="mf-cuotas-n" value="3" min="2" max="60" oninput="_previewCuotas()">
+                  </div>
+                  <div class="col-sm-3">
+                    <label class="form-label small fw-bold mb-0">Periodicidad</label>
+                    <select class="form-select form-select-sm" id="mf-cuotas-per" onchange="_previewCuotas()">
+                      <option value="30">Mensual (30d)</option>
+                      <option value="15">Quincenal (15d)</option>
+                      <option value="7">Semanal (7d)</option>
+                      <option value="60">Bimestral (60d)</option>
+                      <option value="90">Trimestral (90d)</option>
+                    </select>
+                  </div>
+                  <div class="col-sm-4">
+                    <label class="form-label small fw-bold mb-0">1er vencimiento</label>
+                    <input type="date" class="form-control form-control-sm" id="mf-cuotas-v1" oninput="_previewCuotas()">
+                  </div>
+                  <div class="col-sm-2 d-flex align-items-end">
+                    <span class="badge bg-info text-dark" style="font-size:.7rem" id="mf-cuotas-impcuota">—/cuota</span>
+                  </div>
+                </div>
+                <div id="mf-cuotas-preview" class="mt-2" style="max-height:140px;overflow-y:auto;font-size:.76rem"></div>
+                <div class="alert alert-info py-1 px-2 mb-0 mt-2" style="font-size:.74rem">
+                  <i class="bi bi-info-circle me-1"></i>Se crearán <b id="mf-cuotas-n-lbl">N</b> facturas individuales con el mismo proveedor/cliente, cada una por su parte proporcional.
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- ─────────────────────────────────────────────────────── -->
+
           <div class="col-12">
             <label class="form-label small fw-bold">Observaciones</label>
             <input type="text" class="form-control form-control-sm" id="mf-desc" placeholder="Notas adicionales...">
@@ -5803,6 +5897,40 @@ CREATE POLICY "acceso total" ON muuk_daily_backups FOR ALL USING (true) WITH CHE
       <div class="modal-footer">
         <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
         <button class="btn btn-primary" onclick="guardarFactura()"><i class="bi bi-save me-1"></i>Guardar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ ZIP Import hidden input + panel ══════════ -->
+<input type="file" id="mf-zip-input" accept=".zip" style="display:none" onchange="_procesarZIPAfip(event)">
+<div id="zip-preview-wrap" class="container-fluid" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:1060;background:#fff;border-top:3px solid #22c55e;box-shadow:0 -4px 24px #0003;padding:12px 20px;max-height:55vh;overflow-y:auto">
+  <div class="d-flex justify-content-between align-items-center mb-2">
+    <span class="fw-bold"><i class="bi bi-file-earmark-zip me-2 text-success"></i>Importar Facturas desde ZIP AFIP</span>
+    <button class="btn btn-sm btn-outline-secondary" onclick="document.getElementById('zip-preview-wrap').style.display='none'"><i class="bi bi-x-lg"></i></button>
+  </div>
+  <div id="zip-status" class="mb-2"></div>
+  <div id="zip-preview-list"></div>
+</div>
+
+<!-- ══════════ MODAL: Informe de Retenciones ══════════ -->
+<div class="modal fade" id="modal-ret-informe" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header" style="background:#fefce8;border-bottom:2px solid #fde68a">
+        <h5 class="modal-title" style="color:#92400e"><i class="bi bi-percent me-2"></i>Informe de Retenciones / Percepciones</h5>
+        <button class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="d-flex align-items-center gap-3 mb-3">
+          <label class="fw-bold small mb-0">Mes:</label>
+          <input type="month" class="form-control form-control-sm" id="ret-inf-mes" style="width:auto" oninput="_renderInformeRetenciones()">
+          <span class="text-muted small">Muestra todas las facturas (a cobrar + a pagar) del mes seleccionado</span>
+        </div>
+        <div id="ret-informe-wrap"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
       </div>
     </div>
   </div>
@@ -7065,6 +7193,22 @@ function save() {
       return l;
     });
   }
+  // Strip large remito file attachments (> 500 KB) — se acceden solo al verlos
+  if (persistData.stockRemitos) {
+    persistData.stockRemitos = persistData.stockRemitos.map(r => {
+      if (r.archivo?.dataB64 && r.archivo.dataB64.length > 500000) {
+        return { ...r, archivo: { ...r.archivo, dataB64: '', _stripped: true } };
+      }
+      return r;
+    });
+  }
+  // Strip large invoice PDF thumbnails (> 150 KB) — se regeneran al subir el PDF
+  const _stripPreviews = arr => (arr||[]).map(f => {
+    if (f.pdfPreview && f.pdfPreview.length > 150000) return { ...f, pdfPreview: '' };
+    return f;
+  });
+  persistData.facturasACobrar = _stripPreviews(persistData.facturasACobrar);
+  persistData.facturasPagar   = _stripPreviews(persistData.facturasPagar);
   try {
     persistData._extraUsers   = JSON.parse(localStorage.getItem('muuk_extra_users')||'{}');
     persistData._extraAccess  = JSON.parse(localStorage.getItem('muuk_extra_access')||'{}');
@@ -13274,6 +13418,274 @@ async function extraerTextoPDF(file) {
   });
 }
 
+// ── Cuotas ────────────────────────────────────────────────────────────────
+function _toggleCuotasPanel() {
+  const cb = document.getElementById('mf-cuotas-cb');
+  const panel = document.getElementById('mf-cuotas-panel');
+  if (!panel) return;
+  panel.style.display = cb.checked ? '' : 'none';
+  if (cb.checked) {
+    // Set default 1st vencimiento = 30 days from today
+    const v1 = document.getElementById('mf-cuotas-v1');
+    if (v1 && !v1.value) {
+      const d = new Date(); d.setDate(d.getDate()+30);
+      v1.value = d.toISOString().split('T')[0];
+    }
+    _previewCuotas();
+  }
+}
+
+function _previewCuotas() {
+  const n     = parseInt(document.getElementById('mf-cuotas-n')?.value) || 3;
+  const per   = parseInt(document.getElementById('mf-cuotas-per')?.value) || 30;
+  const v1str = document.getElementById('mf-cuotas-v1')?.value;
+  const total = parseFloat(document.getElementById('mf-total').value) || 0;
+  const lblN  = document.getElementById('mf-cuotas-n-lbl');
+  const impEl = document.getElementById('mf-cuotas-impcuota');
+  const prev  = document.getElementById('mf-cuotas-preview');
+
+  if (lblN) lblN.textContent = n;
+  if (!v1str || !total) { if (prev) prev.innerHTML = ''; return; }
+
+  const impCuota = total / n;
+  if (impEl) impEl.textContent = '$' + impCuota.toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2}) + '/cuota';
+
+  if (!prev) return;
+  let html = '<table style="width:100%;border-collapse:collapse">';
+  let d = new Date(v1str + 'T00:00:00');
+  for (let i=1; i<=n; i++) {
+    const dStr = d.toISOString().split('T')[0];
+    const dFmt = d.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric'});
+    html += `<tr style="border-bottom:1px solid #e0f2fe"><td style="padding:2px 4px;color:#0369a1;font-weight:700">Cuota ${i}/${n}</td>
+      <td style="padding:2px 4px;color:#475569">${dFmt}</td>
+      <td style="padding:2px 4px;text-align:right;font-weight:700;color:#1e293b">$${impCuota.toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2})}</td></tr>`;
+    d.setDate(d.getDate() + per);
+  }
+  html += '</table>';
+  prev.innerHTML = html;
+}
+
+// ── ZIP Import de AFIP ──────────────────────────────────────────────────────
+let _jsZipLoaded = false;
+function _cargarJSZip(cb) {
+  if (_jsZipLoaded) { cb(null); return; }
+  const s = document.createElement('script');
+  s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+  s.onload = () => { _jsZipLoaded = true; cb(null); };
+  s.onerror = () => cb(new Error('No se pudo cargar JSZip'));
+  document.head.appendChild(s);
+}
+
+function _abrirZIPImport(cat) {
+  const inp = document.getElementById('mf-zip-input');
+  if (inp) { inp.dataset.cat = cat; inp.click(); }
+}
+
+async function _procesarZIPAfip(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  event.target.value = '';
+  const cat = event.target.dataset.cat || 'cobrar';
+
+  _cargarJSZip(async (err) => {
+    if (err) { toast('No se pudo cargar el procesador de ZIP', 'danger'); return; }
+    const statusEl = document.getElementById('zip-status');
+    const wrap = document.getElementById('zip-preview-wrap');
+    if (wrap) wrap.style.display = '';
+    if (statusEl) statusEl.innerHTML = `<span class="text-muted"><i class="bi bi-hourglass-split me-1"></i>Leyendo ZIP...</span>`;
+
+    try {
+      const zip = await JSZip.loadAsync(await file.arrayBuffer());
+      const pdfFiles = Object.values(zip.files).filter(f => !f.dir && f.name.toLowerCase().endsWith('.pdf'));
+      if (!pdfFiles.length) { toast('No se encontraron PDFs en el ZIP', 'warning'); return; }
+
+      if (statusEl) statusEl.innerHTML = `<span class="text-info"><i class="bi bi-file-earmark-zip me-1"></i>${pdfFiles.length} PDFs encontrados. Procesando...</span>`;
+
+      const borradores = [];
+      for (let i=0; i<pdfFiles.length; i++) {
+        const pf = pdfFiles[i];
+        if (statusEl) statusEl.innerHTML = `<i class="bi bi-hourglass me-1"></i>Procesando ${i+1}/${pdfFiles.length}: ${pf.name}...`;
+        try {
+          const arrBuf = await pf.async('arraybuffer');
+          const blob = new Blob([arrBuf], {type:'application/pdf'});
+          const fakefile = new File([blob], pf.name, {type:'application/pdf'});
+          const texto = await extraerTextoPDF(fakefile);
+          const d = parsearFacturaAFIP(texto);
+          borradores.push({
+            _nombre: pf.name,
+            _ok: !!(d.numero || d.total),
+            fecha:      d.fecha || hoy(),
+            tipo:       d.tipo || 'B',
+            numero:     d.numero || '',
+            cliente:    d.razonSocial || '',
+            cuit:       d.cuit || '',
+            neto:       d.neto || 0,
+            iva:        d.iva || 21,
+            ivaImporte: d.ivaImporte || 0,
+            total:      d.total || 0,
+            pdfNombre:  pf.name,
+            estado:     'pendiente',
+            retenciones: [],
+            netoCobrar:  d.total || 0,
+            lineas:     d.lineas || [],
+            impuestos:  d.impuestos || []
+          });
+        } catch(e2) {
+          borradores.push({ _nombre: pf.name, _ok: false, _error: e2.message, total: 0 });
+        }
+      }
+
+      // Mostrar tabla de borradores para confirmar
+      _mostrarZIPBorradores(borradores, cat);
+    } catch(e) {
+      toast('Error procesando ZIP: ' + e.message, 'danger');
+      if (statusEl) statusEl.innerHTML = `<span class="text-danger"><i class="bi bi-x-circle me-1"></i>Error: ${e.message}</span>`;
+    }
+  });
+}
+
+let _zipBorradores = [];
+function _mostrarZIPBorradores(lista, cat) {
+  _zipBorradores = lista;
+  const statusEl = document.getElementById('zip-status');
+  const prevEl   = document.getElementById('zip-preview-list');
+  if (!statusEl || !prevEl) return;
+  const ok = lista.filter(b=>b._ok).length;
+  statusEl.innerHTML = `<span class="text-success"><i class="bi bi-check-circle me-1"></i>${ok} facturas listas para importar. Revisá y confirmá.</span>`;
+  let rows = lista.map((b,i) => {
+    const rowClass = b._ok ? '' : 'table-warning';
+    const icon     = b._ok ? '<i class="bi bi-check-circle text-success"></i>' : '<i class="bi bi-exclamation-triangle text-warning"></i>';
+    return `<tr class="${rowClass}">
+      <td>${icon}</td>
+      <td><input type="checkbox" class="form-check-input" id="zb-cb-${i}" ${b._ok?'checked':''}></td>
+      <td style="font-size:.74rem;max-width:150px;overflow:hidden;text-overflow:ellipsis">${b._nombre}</td>
+      <td><input type="text" class="form-control form-control-sm" id="zb-num-${i}" value="${b.numero||''}" placeholder="N° Fact" style="width:110px"></td>
+      <td><input type="text" class="form-control form-control-sm" id="zb-cli-${i}" value="${b.cliente||''}" placeholder="Cliente/Prov." style="min-width:130px"></td>
+      <td><input type="number" class="form-control form-control-sm" id="zb-tot-${i}" value="${b.total||''}" placeholder="Total" style="width:90px"></td>
+      <td><input type="date" class="form-control form-control-sm" id="zb-fec-${i}" value="${b.fecha||hoy()}" style="width:120px"></td>
+    </tr>`;
+  }).join('');
+  prevEl.innerHTML = `<div class="table-responsive"><table class="table table-sm table-bordered mb-0" style="font-size:.8rem">
+    <thead class="table-light"><tr><th></th><th>✓</th><th>Archivo</th><th>N° Factura</th><th>Cliente/Proveedor</th><th>Total</th><th>Fecha</th></tr></thead>
+    <tbody>${rows}</tbody></table></div>
+    <div class="d-flex gap-2 mt-2 justify-content-end">
+      <button class="btn btn-sm btn-outline-secondary" onclick="document.getElementById('zip-preview-wrap').style.display='none'">Cancelar</button>
+      <button class="btn btn-sm btn-success" onclick="_confirmarZIPImport('${cat}')"><i class="bi bi-cloud-upload me-1"></i>Importar seleccionadas</button>
+    </div>`;
+}
+
+function _confirmarZIPImport(cat) {
+  const arr = cat === 'cobrar' ? (ST.facturasACobrar||[]) : (ST.facturasPagar||[]);
+  let count = 0;
+  _zipBorradores.forEach((b, i) => {
+    const cb = document.getElementById(`zb-cb-${i}`);
+    if (!cb?.checked) return;
+    const obj = {
+      id:         Date.now().toString(36) + Math.random().toString(36).slice(2,6) + i,
+      fecha:      document.getElementById(`zb-fec-${i}`)?.value || b.fecha || hoy(),
+      tipo:       b.tipo || 'B',
+      numero:     document.getElementById(`zb-num-${i}`)?.value || b.numero || '',
+      cliente:    document.getElementById(`zb-cli-${i}`)?.value || b.cliente || '',
+      cuit:       b.cuit || '',
+      neto:       b.neto || 0,
+      iva:        b.iva || 21,
+      ivaImporte: b.ivaImporte || 0,
+      total:      parseFloat(document.getElementById(`zb-tot-${i}`)?.value) || b.total || 0,
+      estado:     'pendiente',
+      pdfNombre:  b.pdfNombre,
+      retenciones: [],
+      netoCobrar:  parseFloat(document.getElementById(`zb-tot-${i}`)?.value) || b.total || 0,
+      lineas:     b.lineas || [],
+      impuestos:  b.impuestos || []
+    };
+    arr.push(obj);
+    count++;
+  });
+  save();
+  document.getElementById('zip-preview-wrap').style.display = 'none';
+  if (cat === 'cobrar') renderFacturasACobrar(); else renderFacturasPagar();
+  toast(`✓ ${count} factura${count!==1?'s':''} importada${count!==1?'s':''} desde ZIP`, 'success');
+}
+
+// ── Informe mensual de retenciones ─────────────────────────────────────────
+function _abrirInformeRetenciones() {
+  const m = document.getElementById('modal-ret-informe');
+  if (!m) return;
+  // Pre-fill month
+  const mesEl = document.getElementById('ret-inf-mes');
+  if (mesEl && !mesEl.value) mesEl.value = new Date().toISOString().slice(0,7);
+  _renderInformeRetenciones();
+  new bootstrap.Modal(m).show();
+}
+
+function _renderInformeRetenciones() {
+  const wrap = document.getElementById('ret-informe-wrap');
+  if (!wrap) return;
+
+  const mesEl = document.getElementById('ret-inf-mes');
+  const selMes = mesEl?.value || new Date().toISOString().slice(0,7);
+
+  // Recolectar todas las retenciones de facturas del mes seleccionado
+  const todas = [...(ST.facturasACobrar||[]), ...(ST.facturasPagar||[])];
+  const delMes = todas.filter(f => (f.fecha||'').startsWith(selMes) && f.retenciones?.length > 0);
+
+  if (!delMes.length) {
+    wrap.innerHTML = `<div class="text-center text-muted py-4"><i class="bi bi-receipt" style="font-size:2rem"></i><br>Sin retenciones en ${selMes}</div>`;
+    return;
+  }
+
+  // Agrupar por concepto
+  const grupos = {};
+  delMes.forEach(f => {
+    (f.retenciones||[]).forEach(r => {
+      const k = r.concepto || 'Otros';
+      if (!grupos[k]) grupos[k] = { concepto: k, pct: r.pct, total: 0, facturas: [] };
+      grupos[k].total += r.importe || 0;
+      grupos[k].facturas.push({ num: f.numero||'—', cliente: f.cliente||'—', imp: r.importe||0, tipo: f.cat==='cobrar'?'cobrar':'pagar' });
+    });
+  });
+
+  const totalRet = Object.values(grupos).reduce((s,g) => s+g.total, 0);
+
+  let html = `<div class="table-responsive"><table class="table table-sm mb-2" style="font-size:.84rem">
+    <thead class="table-light"><tr><th>Concepto</th><th class="text-end">%</th><th class="text-end">Total</th><th class="text-end">Facturas</th></tr></thead>
+    <tbody>
+    ${Object.values(grupos).sort((a,b)=>b.total-a.total).map(g=>`
+      <tr><td><b>${g.concepto}</b></td><td class="text-end text-muted">${g.pct?g.pct+'%':'—'}</td>
+      <td class="text-end fw-bold text-danger">-$${g.total.toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
+      <td class="text-end text-muted">${g.facturas.length}</td></tr>
+    `).join('')}
+    </tbody>
+    <tfoot><tr class="table-danger"><td colspan="2"><b>TOTAL RETENIDO</b></td>
+    <td class="text-end fw-bold">-$${totalRet.toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2})}</td><td class="text-end">${delMes.length} fact.</td></tr></tfoot>
+  </table></div>`;
+
+  // Detalle expandible
+  html += `<div class="accordion" id="ret-acc">
+    ${Object.values(grupos).map((g,gi) => `
+    <div class="accordion-item" style="font-size:.8rem">
+      <h2 class="accordion-header"><button class="accordion-button collapsed py-2" type="button" data-bs-toggle="collapse" data-bs-target="#ret-acc-${gi}" style="font-size:.8rem">
+        ${g.concepto} — $${g.total.toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2})} (${g.facturas.length} fact.)
+      </button></h2>
+      <div id="ret-acc-${gi}" class="accordion-collapse collapse" data-bs-parent="#ret-acc">
+        <div class="accordion-body py-2 px-3">
+          <table class="table table-sm mb-0" style="font-size:.78rem">
+            <thead class="table-light"><tr><th>N° Fact.</th><th>Cliente/Prov.</th><th class="text-end">Importe retenido</th></tr></thead>
+            <tbody>
+              ${g.facturas.map(f=>`<tr><td>${f.num}</td><td>${f.cliente}</td><td class="text-end text-danger">-$${f.imp.toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2})}</td></tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>`).join('')}
+  </div>
+  <div class="mt-3 d-flex justify-content-end">
+    <button class="btn btn-sm btn-outline-secondary" onclick="window.print()"><i class="bi bi-printer me-1"></i>Imprimir / PDF</button>
+  </div>`;
+
+  wrap.innerHTML = html;
+}
+
 function parsearImporteAFIP(s) {
   if (!s) return 0;
   s = String(s).replace(/\$/g,'').replace(/\s/g,'').trim();
@@ -13316,6 +13728,114 @@ let _factLineas = [];
 let _factImpuestos = [];
 let _factPdfPreview = ''; // data URL de la preview del PDF
 
+// ── Retenciones / Percepciones del modal de facturas ──────────────────────
+let _mfRetenciones = []; // [{ id, concepto, pct, importe }]
+
+function _mfAddRet(concepto, pct) {
+  const neto  = parseFloat(document.getElementById('mf-total').value) || 0;
+  const pctN  = parseFloat(pct) || 0;
+  const imp   = parseFloat((neto * pctN / 100).toFixed(2));
+  // Evitar duplicados del mismo concepto
+  if (_mfRetenciones.find(r => r.concepto === concepto && r.pct === pctN)) {
+    toast(`Ya se agregó ${concepto} ${pctN}%`, 'warning'); return;
+  }
+  _mfRetenciones.push({ id: Date.now().toString(36), concepto, pct: pctN, importe: imp });
+  _renderRetList();
+}
+
+function _mfShowRetCustom() {
+  const row = document.getElementById('mf-ret-custom-row');
+  if (row) { row.style.display = ''; document.getElementById('mf-ret-custom-concepto').focus(); }
+}
+
+function _mfAddRetCustom() {
+  const concepto = (document.getElementById('mf-ret-custom-concepto').value || '').trim();
+  const pctN     = parseFloat(document.getElementById('mf-ret-custom-pct').value) || 0;
+  const impFijo  = parseFloat(document.getElementById('mf-ret-custom-imp').value) || 0;
+  if (!concepto) { toast('Ingresá el concepto de la retención','warning'); return; }
+  if (!pctN && !impFijo) { toast('Ingresá un porcentaje o importe','warning'); return; }
+  const neto = parseFloat(document.getElementById('mf-total').value) || 0;
+  const imp  = impFijo || parseFloat((neto * pctN / 100).toFixed(2));
+  _mfRetenciones.push({ id: Date.now().toString(36), concepto, pct: pctN, importe: imp });
+  // Limpiar fila
+  ['mf-ret-custom-concepto','mf-ret-custom-pct','mf-ret-custom-imp'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  document.getElementById('mf-ret-custom-row').style.display = 'none';
+  _renderRetList();
+}
+
+function _mfRemoveRet(retId) {
+  _mfRetenciones = _mfRetenciones.filter(r => r.id !== retId);
+  _renderRetList();
+}
+
+function _renderRetList() {
+  const listEl = document.getElementById('mf-ret-list');
+  if (!listEl) return;
+  const total = _mfRetenciones.reduce((s, r) => s + r.importe, 0);
+
+  if (!_mfRetenciones.length) {
+    listEl.innerHTML = '<span class="text-muted" style="font-size:.74rem">Sin retenciones/percepciones cargadas</span>';
+  } else {
+    listEl.innerHTML = _mfRetenciones.map(r =>
+      `<div class="d-flex justify-content-between align-items-center py-1 px-1" style="border-bottom:1px dashed #fde68a;font-size:.79rem">
+        <span>${r.concepto}${r.pct ? ' <span class="text-muted">('+r.pct+'%)</span>' : ''}</span>
+        <div class="d-flex align-items-center gap-2">
+          <span class="fw-bold text-danger">-$${r.importe.toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2})}</span>
+          <button type="button" class="btn btn-sm btn-link text-danger p-0 lh-1" onclick="_mfRemoveRet('${r.id}')" title="Quitar"><i class="bi bi-x-circle"></i></button>
+        </div>
+      </div>`
+    ).join('');
+  }
+
+  // Actualizar neto a cobrar
+  const factTotal = parseFloat(document.getElementById('mf-total').value) || 0;
+  const netoCobrar = factTotal - total;
+  const row = document.getElementById('mf-neto-cobrar-row');
+  const disp = document.getElementById('mf-neto-cobrar-display');
+  if (row && disp) {
+    row.style.display = _mfRetenciones.length ? '' : 'none';
+    disp.textContent = '$' + netoCobrar.toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2});
+    disp.style.color = netoCobrar >= 0 ? '#166534' : '#dc2626';
+  }
+}
+
+function _recalcNetoCobrar() {
+  // Recalcular importes de retenciones % cuando cambia el total
+  const newTotal = parseFloat(document.getElementById('mf-total').value) || 0;
+  _mfRetenciones = _mfRetenciones.map(r => ({
+    ...r,
+    importe: r.pct ? parseFloat((newTotal * r.pct / 100).toFixed(2)) : r.importe
+  }));
+  _renderRetList();
+}
+
+// ── Conciliación bancaria: sugerir si hay movimiento similar ──────────────
+function _sugerirConciliacion(monto, fecha, esCobro) {
+  try {
+    const MARGIN_PCT = 0.05; // ±5%
+    const MARGIN_DIAS = 3;   // ±3 días
+    const tipo = esCobro ? 'ingreso' : 'egreso';
+    const fechaDt = new Date(fecha + 'T00:00:00');
+    const matches = (ST.cajaBancos||[]).filter(m => {
+      if (m.tipo !== tipo) return false;
+      const diff = Math.abs(+m.monto - monto);
+      if (diff > monto * MARGIN_PCT + 100) return false; // margen $100 fijo también
+      const mDt = new Date((m.fecha||'') + 'T00:00:00');
+      const daysDiff = Math.abs((fechaDt - mDt) / 86400000);
+      return daysDiff <= MARGIN_DIAS;
+    });
+    // Excluir el que acabamos de crear (el último de cajaBancos)
+    const prevMatches = matches.slice(0, -1);
+    if (prevMatches.length > 0) {
+      const m = prevMatches[0];
+      const toastMsg = `⚠ Posible duplicado: ya existe un ${tipo} de ${fmt(+m.monto)} del ${m.fecha}. ¿Es el mismo movimiento? Revisá Caja Bancos.`;
+      toast(toastMsg, 'warning');
+    }
+  } catch(e) { /* silently ignore */ }
+}
+
 function _generarPDFPreview(file) {
   _factPdfPreview = '';
   const previewWrap = document.getElementById('mf-preview-wrap');
@@ -13340,6 +13860,7 @@ function _generarPDFPreview(file) {
         await page.render({ canvasContext: ctx, viewport }).promise;
         const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
         _factPdfPreview = dataUrl;
+        _mfPdfDataUrl   = dataUrl; // Guardar para AI Vision fallback
         previewImg.src = dataUrl;
         previewWrap.style.display = '';
       } catch(e) { /* silently fail preview */ }
@@ -13607,11 +14128,170 @@ function _procesarPDFenModal(file) {
       }
       document.getElementById('mf-pdf-estado').innerHTML =
         `<span class="text-success"><i class="bi bi-check-circle me-1"></i>${detectados} campos detectados — verificá y corregí si es necesario</span>${impTabla}`;
+      // Si se detectaron pocos campos, mostrar opción de IA
+      if (detectados < 3) _mostrarBtnIA();
+      else { const b = document.getElementById('mf-btn-ia'); if(b) b.style.display='none'; }
     } catch(e) {
       document.getElementById('mf-pdf-estado').innerHTML =
-        '<span class="text-warning"><i class="bi bi-exclamation-triangle me-1"></i>No se pudo leer el PDF automáticamente. Completá los datos a mano.</span>';
+        '<span class="text-warning"><i class="bi bi-exclamation-triangle me-1"></i>No se pudo leer el PDF automáticamente. '
+        + (_AI_CONFIG?.key && _AI_CONFIG?.provider !== 'none'
+            ? 'Hacé clic en <b>Leer con IA</b> para intentar con visión artificial.</span>'
+            : 'Completá los datos a mano o configurá IA en Configuración.</span>');
+      _mostrarBtnIA();
     }
   });
+}
+
+// ── AI Vision fallback ────────────────────────────
+let _mfPdfDataUrl = ''; // Guardamos el data URL de la primera página del PDF
+
+function _mostrarBtnIA() {
+  const btn = document.getElementById('mf-btn-ia');
+  if (!btn) return;
+  const hasAI = _AI_CONFIG && _AI_CONFIG.key && _AI_CONFIG.provider !== 'none';
+  btn.style.display = hasAI ? '' : 'none';
+  if (hasAI) {
+    const lbl = _AI_CONFIG.provider === 'anthropic' ? 'Claude Vision' : 'GPT-4o Vision';
+    btn.innerHTML = `<i class="bi bi-stars me-1"></i>Leer con ${lbl}`;
+  }
+}
+
+async function _aiLeerFacturaPDFBtn() {
+  if (!_mfPdfDataUrl) {
+    toast('Primero subí un PDF', 'warning'); return;
+  }
+  if (!_AI_CONFIG?.key || _AI_CONFIG?.provider === 'none') {
+    toast('Configurá tu API key de IA en Configuración → Asistente IA', 'warning'); return;
+  }
+  const btn = document.getElementById('mf-btn-ia');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Analizando...'; }
+  document.getElementById('mf-pdf-estado').innerHTML =
+    '<span class="text-muted"><i class="bi bi-stars me-1"></i>Enviando imagen a IA para análisis...</span>';
+  try {
+    await _aiLeerFacturaPDF(_mfPdfDataUrl);
+  } catch(e) {
+    document.getElementById('mf-pdf-estado').innerHTML =
+      `<span class="text-danger"><i class="bi bi-x-circle me-1"></i>Error IA: ${e.message}</span>`;
+  } finally {
+    if (btn) { btn.disabled = false; _mostrarBtnIA(); }
+  }
+}
+
+async function _aiLeerFacturaPDF(dataUrl) {
+  // dataUrl: 'data:image/jpeg;base64,...'
+  const base64 = dataUrl.split(',')[1];
+  const mediaType = dataUrl.startsWith('data:image/png') ? 'image/png' : 'image/jpeg';
+  const prompt = `Sos un sistema de lectura de facturas AFIP argentinas. Analizá esta imagen de factura y extraé los siguientes campos en formato JSON estricto (sin explicaciones, solo el JSON):
+{
+  "tipo": "A|B|C|M|NC|ND",
+  "numero": "0001-00000123",
+  "fecha": "YYYY-MM-DD",
+  "cuit": "solo dígitos, sin guiones",
+  "razonSocial": "nombre/razón social del emisor",
+  "receptor": "nombre/razón social del receptor",
+  "neto": numero,
+  "iva": 0|10.5|21|27,
+  "ivaImporte": numero,
+  "total": numero,
+  "lineas": [{"desc":"...","cant":1,"precioUnit":0,"importe":0}],
+  "impuestos": [{"concepto":"IVA 21%","importe":0}]
+}
+Si un campo no aparece en la factura, omitirlo o poner null. Los importes son en pesos argentinos. Devolvé SOLO el JSON, sin texto adicional.`;
+
+  let respText = '';
+  if (_AI_CONFIG.provider === 'anthropic') {
+    const r = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': _AI_CONFIG.key,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-opus-4-5',
+        max_tokens: 1024,
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'image', source: { type: 'base64', media_type: mediaType, data: base64 } },
+            { type: 'text', text: prompt }
+          ]
+        }]
+      })
+    });
+    if (!r.ok) {
+      const err = await r.json().catch(()=>({}));
+      throw new Error(err?.error?.message || `HTTP ${r.status}`);
+    }
+    const j = await r.json();
+    respText = j?.content?.[0]?.text || '';
+  } else {
+    // OpenAI GPT-4o
+    const r = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _AI_CONFIG.key },
+      body: JSON.stringify({
+        model: 'gpt-4o',
+        max_tokens: 1024,
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'image_url', image_url: { url: dataUrl, detail: 'high' } },
+            { type: 'text', text: prompt }
+          ]
+        }]
+      })
+    });
+    if (!r.ok) {
+      const err = await r.json().catch(()=>({}));
+      throw new Error(err?.error?.message || `HTTP ${r.status}`);
+    }
+    const j = await r.json();
+    respText = j?.choices?.[0]?.message?.content || '';
+  }
+
+  // Parse JSON from response
+  const jsonMatch = respText.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) throw new Error('La IA no devolvió un JSON válido');
+  const d = JSON.parse(jsonMatch[0]);
+
+  // Rellenar campos del modal
+  const _fi = n => n?.toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2});
+  if (d.tipo)        document.getElementById('mf-tipo').value        = d.tipo;
+  if (d.numero)      document.getElementById('mf-numero').value      = d.numero;
+  if (d.fecha)       document.getElementById('mf-fecha').value       = d.fecha;
+  if (d.cuit)        document.getElementById('mf-cuit').value        = d.cuit;
+  if (d.razonSocial) document.getElementById('mf-cliente').value     = d.razonSocial;
+  if (d.receptor)    document.getElementById('mf-receptor').value    = d.receptor;
+  if (d.neto)        document.getElementById('mf-neto').value        = (+d.neto).toFixed(2);
+  if (d.iva)         document.getElementById('mf-iva').value         = d.iva;
+  if (d.ivaImporte)  document.getElementById('mf-ivaImporte').value  = (+d.ivaImporte).toFixed(2);
+  if (d.total)       document.getElementById('mf-total').value       = (+d.total).toFixed(2);
+
+  // Actualizar caches
+  if (Array.isArray(d.lineas))    _factLineas    = d.lineas;
+  if (Array.isArray(d.impuestos)) _factImpuestos = d.impuestos;
+  _recalcNetoCobrar();
+
+  const campos = Object.entries(d).filter(([k,v]) => v !== null && v !== undefined && v !== '' && !['lineas','impuestos'].includes(k)).length;
+  const modelLabel = _AI_CONFIG.provider === 'anthropic' ? 'Claude Vision' : 'GPT-4o Vision';
+
+  let impTabla = '';
+  if (_factImpuestos && _factImpuestos.length > 0) {
+    const filas = _factImpuestos.map(imp =>
+      `<tr><td style="padding:2px 8px;font-size:.72rem">${imp.concepto}</td><td style="padding:2px 8px;text-align:right;font-size:.72rem;font-weight:600;color:#dc2626">$${(+imp.importe).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2})}</td></tr>`
+    ).join('');
+    const totalImp = _factImpuestos.reduce((s,x)=>s+(+x.importe||0),0);
+    impTabla = `<div class="mt-2" style="background:#fff8f1;border:1px solid #fed7aa;border-radius:6px;overflow:hidden">
+      <div style="padding:3px 8px;background:#fff3e0;font-size:.66rem;font-weight:700;color:#9a3412;text-transform:uppercase;letter-spacing:.05em"><i class="bi bi-receipt me-1"></i>Impuestos detectados por IA</div>
+      <table style="width:100%;border-collapse:collapse">${filas}
+        <tr style="border-top:1px solid #fed7aa"><td style="padding:3px 8px;font-size:.72rem;font-weight:700">Total impuestos</td><td style="padding:3px 8px;text-align:right;font-size:.72rem;font-weight:800;color:#9a3412">$${totalImp.toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2})}</td></tr>
+      </table>
+    </div>`;
+  }
+  document.getElementById('mf-pdf-estado').innerHTML =
+    `<span class="text-success"><i class="bi bi-stars me-1"></i><b>${modelLabel}</b>: ${campos} campos extraídos — verificá los datos</span>${impTabla}`;
 }
 
 // ── Modal open ────────────────────────────────────
@@ -13619,8 +14299,10 @@ function abrirModalFactura(cat, id) {
   const arr = cat === 'cobrar' ? (ST.facturasACobrar||[]) : (ST.facturasPagar||[]);
   const f   = id ? arr.find(x=>x.id===id) : null;
 
-  // Reset cache de líneas/impuestos al abrir modal
-  if (!id) { _factLineas = []; _factImpuestos = []; }
+  // Reset cache de líneas/impuestos, retenciones y PDF data al abrir modal
+  _factLineas = []; _factImpuestos = []; _mfPdfDataUrl = '';
+  _mfRetenciones = (f?.retenciones && Array.isArray(f.retenciones)) ? JSON.parse(JSON.stringify(f.retenciones)) : [];
+  const _iaBtnReset = document.getElementById('mf-btn-ia'); if (_iaBtnReset) _iaBtnReset.style.display = 'none';
   document.getElementById('mf-id').value          = id || '';
   document.getElementById('mf-cat').value         = cat;
   // Labels dinámicos según cobrar/pagar
@@ -13699,6 +14381,13 @@ function abrirModalFactura(cat, id) {
   const ecEl = document.getElementById('mf-echCustodia'); if (ecEl) ecEl.value = _defBanco;
   _togglePagoSection();
   _toggleMedioPagoFields();
+  _renderRetList(); // Mostrar retenciones guardadas (o lista vacía)
+
+  // Reset cuotas panel
+  const _cuotasCb = document.getElementById('mf-cuotas-cb');
+  if (_cuotasCb) { _cuotasCb.checked = false; _toggleCuotasPanel(); }
+  const _cuotasV1 = document.getElementById('mf-cuotas-v1');
+  if (_cuotasV1) _cuotasV1.value = '';
 
   new bootstrap.Modal(document.getElementById('modalFactura')).show();
 }
@@ -13750,6 +14439,7 @@ function calcularIVAModal() {
   const ivaImp = neto * pct / 100;
   document.getElementById('mf-ivaImporte').value = ivaImp ? ivaImp.toFixed(2) : '';
   document.getElementById('mf-total').value = (neto + ivaImp) ? (neto + ivaImp).toFixed(2) : '';
+  _recalcNetoCobrar(); // Actualizar retenciones cuando cambia el total
 }
 
 function _onTipoFacturaChange() {
@@ -13797,10 +14487,12 @@ function guardarFactura() {
     receptor:   document.getElementById('mf-receptor')?.value.trim() || '',
     pdfNombre:  document.getElementById('mf-pdf-nombre').textContent || '',
     pdfPreview: _factPdfPreview || (id ? (arr.find(f=>f.id===id)?.pdfPreview || '') : ''),
-    lineas:     _factLineas.length > 0 ? _factLineas : (id ? (arr.find(f=>f.id===id)?.lineas || []) : []),
-    impuestos:  _factImpuestos.length > 0 ? _factImpuestos : (id ? (arr.find(f=>f.id===id)?.impuestos || []) : [])
+    lineas:       _factLineas.length > 0 ? _factLineas : (id ? (arr.find(f=>f.id===id)?.lineas || []) : []),
+    impuestos:    _factImpuestos.length > 0 ? _factImpuestos : (id ? (arr.find(f=>f.id===id)?.impuestos || []) : []),
+    retenciones:  _mfRetenciones.length > 0 ? [..._mfRetenciones] : [],
+    netoCobrar:   total - _mfRetenciones.reduce((s,r) => s + r.importe, 0)
   };
-  _factLineas = []; _factImpuestos = []; _factPdfPreview = '';
+  _factLineas = []; _factImpuestos = []; _factPdfPreview = ''; _mfRetenciones = [];
 
   // Detectar si cambió a cobrada/pagada ANTES de sobreescribir
   const esNuevoCobro = (obj.estado === 'cobrada' || obj.estado === 'pagada');
@@ -13844,6 +14536,8 @@ function guardarFactura() {
       obj.medioPago = 'transferencia';
       obj.medioPagoDetalle = banco + (ref ? ' ('+ref+')' : '');
       toast(`✓ ${esCobro?'Ingreso':'Egreso'} por transferencia registrado en ${banco}: ${fmt(pagoMonto)}`, 'success');
+      // ── Conciliación: detectar movimientos duplicados o similares en cajaBancos ──
+      setTimeout(() => _sugerirConciliacion(pagoMonto, obj.fechaPago||hoy(), esCobro), 400);
     } else if (medio === 'efectivo') {
       const concepto = `${accionLabel} en efectivo`;
       if (!ST.conceptos.includes(concepto)) ST.conceptos.push(concepto);
@@ -13925,6 +14619,44 @@ function guardarFactura() {
     // Update the saved obj in array
     const idx2 = arr.findIndex(f=>f.id===obj.id);
     if (idx2 >= 0) arr[idx2] = obj;
+  }
+
+  // ── Manejo de cuotas: si está activo, eliminar la factura base y crear N ──
+  const _cuotasCbSave = document.getElementById('mf-cuotas-cb');
+  if (_cuotasCbSave?.checked && !id) {
+    const nCuotas  = parseInt(document.getElementById('mf-cuotas-n')?.value) || 2;
+    const perDias  = parseInt(document.getElementById('mf-cuotas-per')?.value) || 30;
+    const v1Str    = document.getElementById('mf-cuotas-v1')?.value;
+    if (nCuotas >= 2 && v1Str) {
+      // Eliminar la factura base que ya se insertó
+      const idxBase = arr.findIndex(f => f.id === obj.id);
+      if (idxBase >= 0) arr.splice(idxBase, 1);
+      // Crear N cuotas
+      const impCuota = +(obj.total / nCuotas).toFixed(2);
+      const ivaCuota = +(obj.ivaImporte / nCuotas).toFixed(2);
+      const netoCuota = +(obj.neto / nCuotas).toFixed(2);
+      let d = new Date(v1Str + 'T00:00:00');
+      for (let i=1; i<=nCuotas; i++) {
+        const dateStr = d.toISOString().split('T')[0];
+        const cuotaObj = {
+          ...obj,
+          id:        Date.now().toString(36) + Math.random().toString(36).slice(2,6) + i,
+          fecha:     obj.fecha,
+          fechaVenc: dateStr,
+          numero:    obj.numero ? `${obj.numero} (${i}/${nCuotas})` : `Cuota ${i}/${nCuotas}`,
+          total:     i < nCuotas ? impCuota : +(obj.total - impCuota*(nCuotas-1)).toFixed(2),
+          neto:      i < nCuotas ? netoCuota : +(obj.neto - netoCuota*(nCuotas-1)).toFixed(2),
+          ivaImporte:i < nCuotas ? ivaCuota : +(obj.ivaImporte - ivaCuota*(nCuotas-1)).toFixed(2),
+          retenciones: [],
+          netoCobrar:  i < nCuotas ? impCuota : +(obj.total - impCuota*(nCuotas-1)).toFixed(2),
+          desc:      `${obj.desc ? obj.desc+' — ' : ''}Cuota ${i}/${nCuotas}`
+        };
+        cuotaObj.netoCobrar = cuotaObj.total;
+        arr.push(cuotaObj);
+        d.setDate(d.getDate() + perDias);
+      }
+      toast(`✓ ${nCuotas} cuotas creadas — primera vence ${v1Str}`, 'success');
+    }
   }
 
   save();
@@ -14066,7 +14798,7 @@ function _tablaFacturas(list, cat) {
       pagada:`<span class="bdg bg-success text-white">Pagada</span>`,
       vencida:`<span class="bdg bg-danger text-white">Vencida</span>`
     };
-    const tieneDetalle = (f.lineas&&f.lineas.length>0) || (f.impuestos&&f.impuestos.length>0);
+    const tieneDetalle = (f.lineas&&f.lineas.length>0) || (f.impuestos&&f.impuestos.length>0) || (f.retenciones&&f.retenciones.length>0);
     const detId = `fdet-${f.id}`;
 
     // Badge NC/ND
@@ -14126,6 +14858,24 @@ function _tablaFacturas(list, cat) {
           ${f.impuestos.map(i=>`<tr><td>${i.concepto}</td><td class="text-end"><strong>${fmt(i.importe)}</strong></td></tr>`).join('')}
           <tr style="border-top:2px solid #7c3aed;font-weight:700;background:#f5f3ff">
             <td>TOTAL</td><td class="text-end">${fmt(f.total)}</td>
+          </tr>
+          </tbody>
+        </table>`;
+      }
+
+      // Retenciones / Percepciones
+      if (f.retenciones && f.retenciones.length > 0) {
+        const sumRet = f.retenciones.reduce((s,r)=>s+(+r.importe||0),0);
+        detHtml += `<div style="font-size:.78rem;font-weight:700;color:#92400e;margin-bottom:6px"><i class="bi bi-percent me-1"></i>Retenciones / Percepciones</div>
+        <table class="table table-sm mb-2" style="font-size:.8rem;max-width:380px;background:#fefce8">
+          <thead style="background:#fde68a"><tr><th>Concepto</th><th class="text-center">%</th><th class="text-end">Importe</th></tr></thead>
+          <tbody>
+          ${f.retenciones.map(r=>`<tr><td>${r.concepto}</td><td class="text-center text-muted">${r.pct?r.pct+'%':'—'}</td><td class="text-end text-danger fw-bold">-${fmt(r.importe)}</td></tr>`).join('')}
+          <tr style="border-top:2px solid #fcd34d;font-weight:700;background:#fffbeb">
+            <td colspan="2">Total retenciones</td><td class="text-end text-danger">-${fmt(sumRet)}</td>
+          </tr>
+          <tr style="font-weight:700;background:#dcfce7">
+            <td colspan="2">Neto a cobrar/pagar</td><td class="text-end" style="color:#166534">${fmt((+f.total||0)-sumRet)}</td>
           </tr>
           </tbody>
         </table>`;
@@ -18679,7 +19429,11 @@ function renderFlujoProyectado() {
 
     chqCobrar.filter(c=>(c.fechaVenc||c.fechaVto)===ds).forEach(c=>{ingDia+=+c.monto;ingDetalle.push({fecha:dl,desc:'Cheque: '+(c.librador||'S/N'),monto:+c.monto});});
     chqPagar.filter(c=>(c.fechaVenc||c.fechaVto)===ds).forEach(c=>{egDia+=+c.monto;egDetalle.push({fecha:dl,desc:'Cheque a pagar: '+(c.beneficiario||c.librador||'S/N'),monto:+c.monto});});
-    facCobrar.filter(f=>f.fechaVenc===ds).forEach(f=>{ingDia+=+f.total;ingDetalle.push({fecha:dl,desc:'Fac. cobrar: '+f.cliente,monto:+f.total});});
+    facCobrar.filter(f=>f.fechaVenc===ds).forEach(f=>{
+      // Usar netoCobrar (total − retenciones) si está disponible
+      const montoCobrar = (f.netoCobrar != null && f.netoCobrar < +f.total) ? +f.netoCobrar : +f.total;
+      ingDia+=montoCobrar;ingDetalle.push({fecha:dl,desc:'Fac. cobrar: '+f.cliente+(f.netoCobrar<+f.total?' (neto ret.)':''),monto:montoCobrar});
+    });
     facPagar.filter(f=>f.fechaVenc===ds).forEach(f=>{egDia+=+f.total;egDetalle.push({fecha:dl,desc:'Fac. pagar: '+(f.cliente||f.desc),monto:+f.total});});
     kmPend.filter(r=>r.fecha===ds).forEach(r=>{egDia+=r.monto;egDetalle.push({fecha:dl,desc:'KM cobrador',monto:r.monto});});
 
@@ -22139,6 +22893,29 @@ function _ectaRenderData(vendedor) {
         <td class="text-end" style="color:#14532d;font-size:.92rem;padding:7px 8px"><strong>${_ectaFmt(c.totalCobrado)}</strong></td>
       </tr>`;
       html += '</tbody></table></div></div>';
+    }
+
+    // ── Cruce con facturas del sistema ──────────────────────────────────────
+    const sistFacts = (ST.facturasACobrar||[]).filter(f => {
+      const cn = c.nombre.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+      const fn = (f.cliente||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+      return fn.includes(cn.slice(0,6)) || cn.includes(fn.slice(0,6));
+    });
+    if (sistFacts.length > 0) {
+      const sistPend = sistFacts.filter(f=>f.estado==='pendiente');
+      const sistTotal = sistPend.reduce((s,f)=>s+(+f.total||0),0);
+      const ectaTotal = c.totalPendiente;
+      const diff = sistTotal - ectaTotal;
+      const hasDiff = Math.abs(diff) > 50; // diferencia > $50
+      html += `<div style="padding:8px 16px 12px;background:#f0f9ff;border-top:1px solid #bae6fd">
+        <div style="font-size:.76rem;font-weight:700;color:#0369a1;margin-bottom:6px"><i class="bi bi-arrow-left-right me-1"></i>Cruce con sistema MÜÜK</div>
+        <div class="d-flex flex-wrap gap-3 align-items-center">
+          <div><span style="font-size:.72rem;color:#64748b">Pendiente en sistema:</span> <b style="color:#0369a1">${_ectaFmt(sistTotal)}</b> (${sistPend.length} fact.)</div>
+          <div><span style="font-size:.72rem;color:#64748b">Pendiente en ECtA:</span> <b style="color:#b91c1c">${_ectaFmt(ectaTotal)}</b></div>
+          ${hasDiff ? `<span class="badge" style="background:${diff>0?'#fef9c3':'#fef2f2'};color:${diff>0?'#854d0e':'#991b1b'};font-size:.72rem;font-weight:700;border:1px solid ${diff>0?'#fde68a':'#fecaca'}"><i class="bi bi-exclamation-triangle me-1"></i>Dif. ${_ectaFmt(Math.abs(diff))}${diff>0?' en sistema':' en ECtA'}</span>` : `<span class="badge bg-success text-white" style="font-size:.72rem"><i class="bi bi-check-circle me-1"></i>Conciliado</span>`}
+          ${sistPend.length>0 ? `<button class="btn btn-sm btn-outline-info" style="font-size:.7rem;padding:2px 7px;border-radius:6px" onclick="irA('facturasACobrar')">Ver en sistema</button>` : ''}
+        </div>
+      </div>`;
     }
 
     html += '</div></div>';
