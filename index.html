@@ -3154,6 +3154,22 @@ CREATE POLICY "acceso total" ON muuk_daily_backups FOR ALL USING (true) WITH CHE
       </div>
     </div>
 
+    <!-- DIAGNÓSTICO DE ALMACENAMIENTO -->
+    <div class="card mb-4" style="border-left:4px solid #f59e0b">
+      <div class="card-header bg-white fw-bold d-flex align-items-center gap-2">
+        <i class="bi bi-hdd-fill me-1" style="color:#f59e0b"></i>Almacenamiento local
+      </div>
+      <div class="card-body">
+        <p class="text-muted small mb-3">Controlá el uso del almacenamiento local del navegador. Si aparece el error <em>"almacenamiento lleno"</em>, usá el botón de limpieza para liberar espacio.</p>
+        <div id="storage-diag-wrap" class="mb-3" style="font-size:.83rem"></div>
+        <div class="d-flex gap-2 flex-wrap">
+          <button class="btn btn-sm btn-outline-secondary" onclick="_diagStorage()"><i class="bi bi-bar-chart-fill me-1"></i>Ver uso actual</button>
+          <button class="btn btn-sm btn-warning" onclick="_limpiarHistorialCheques()"><i class="bi bi-scissors me-1"></i>Limpiar historial</button>
+        </div>
+        <div class="mt-2 text-muted" style="font-size:.73rem"><i class="bi bi-info-circle me-1"></i>Libera espacio eliminando del dispositivo: cheques pagados (>6 meses), facturas cobradas/pagadas (>18 meses) y movimientos bancarios antiguos. El historial completo sigue en Supabase.</div>
+      </div>
+    </div>
+
     <!-- ASISTENTE IA -->
     <div class="card mb-4" style="border-left:4px solid #6d28d9">
       <div class="card-header bg-white fw-bold d-flex align-items-center gap-2">
@@ -7209,6 +7225,49 @@ function save() {
   });
   persistData.facturasACobrar = _stripPreviews(persistData.facturasACobrar);
   persistData.facturasPagar   = _stripPreviews(persistData.facturasPagar);
+  // Pruning: strip chequesPagar pagado entries older than 6 months to prevent localStorage quota overflow
+  if (persistData.chequesPagar) {
+    const _cutoff6m = new Date(); _cutoff6m.setMonth(_cutoff6m.getMonth() - 6);
+    const _cutoffStr6m = _cutoff6m.toISOString().split('T')[0];
+    persistData.chequesPagar = persistData.chequesPagar.filter(c =>
+      c.estado !== 'pagado' || (c.fechaVenc && c.fechaVenc >= _cutoffStr6m)
+    );
+  }
+  // Pruning: strip cajaBancos entries older than 18 months (keep full history is in Supabase)
+  // Also strip cajaEfectivo entries older than 18 months except "Saldo Inicial" type
+  {
+    const _cutoff18m = new Date(); _cutoff18m.setMonth(_cutoff18m.getMonth() - 18);
+    const _cutoffStr18m = _cutoff18m.toISOString().split('T')[0];
+    if (persistData.cajaBancos) {
+      persistData.cajaBancos = persistData.cajaBancos.filter(m => !m.fecha || m.fecha >= _cutoffStr18m);
+    }
+    if (persistData.cajaEfectivo) {
+      persistData.cajaEfectivo = persistData.cajaEfectivo.filter(m =>
+        !m.fecha || m.fecha >= _cutoffStr18m ||
+        (m.concepto||'').toLowerCase().includes('saldo inicial')
+      );
+    }
+    // Strip old cobradas/pagadas facturas (> 18 months) — they accumulate and bloat storage
+    if (persistData.facturasACobrar) {
+      persistData.facturasACobrar = persistData.facturasACobrar.filter(f =>
+        f.estado !== 'cobrada' || !f.fechaVenc || f.fechaVenc >= _cutoffStr18m
+      );
+    }
+    if (persistData.facturasPagar) {
+      persistData.facturasPagar = persistData.facturasPagar.filter(f =>
+        f.estado !== 'pagada' || !f.fechaVenc || f.fechaVenc >= _cutoffStr18m
+      );
+    }
+    // Deduplicate eCheques by (banco+numero+monto+fechaVenc) — prevents duplicate accumulation
+    if (persistData.eCheques && persistData.eCheques.length > 10) {
+      const _seen = new Set();
+      persistData.eCheques = persistData.eCheques.filter(e => {
+        const key = `${e.banco}|${e.numero}|${e.monto}|${e.fechaVenc}`;
+        if (_seen.has(key) && e.estado !== 'depositado' && e.estado !== 'acreditado') return false;
+        _seen.add(key); return true;
+      });
+    }
+  }
   try {
     persistData._extraUsers   = JSON.parse(localStorage.getItem('muuk_extra_users')||'{}');
     persistData._extraAccess  = JSON.parse(localStorage.getItem('muuk_extra_access')||'{}');
@@ -7672,6 +7731,84 @@ function exportarExcel() {
 }
 
 /* ══ BACKUP / RESTAURAR ══ */
+function _diagStorage() {
+  const wrap = document.getElementById('storage-diag-wrap');
+  if (!wrap) return;
+  try {
+    const data = localStorage.getItem('flujoCajaV3') || '';
+    const usedKB = Math.round(data.length / 1024);
+    const maxKB = 5120;
+    const pct = Math.min(100, Math.round(usedKB / maxKB * 100));
+    const color = pct > 85 ? '#dc2626' : pct > 65 ? '#f59e0b' : '#16a34a';
+    const cutoff6m  = new Date(); cutoff6m.setMonth(cutoff6m.getMonth() - 6);
+    const cutoff18m = new Date(); cutoff18m.setMonth(cutoff18m.getMonth() - 18);
+    const c6  = cutoff6m.toISOString().split('T')[0];
+    const c18 = cutoff18m.toISOString().split('T')[0];
+    const chPagados  = (ST.chequesPagar||[]).filter(c => c.estado==='pagado').length;
+    const chOld      = (ST.chequesPagar||[]).filter(c => c.estado==='pagado' && c.fechaVenc && c.fechaVenc < c6).length;
+    const chPend     = (ST.chequesPagar||[]).filter(c => c.estado!=='pagado').length;
+    const cajaBN     = (ST.cajaBancos||[]).length;
+    const cajaEN     = (ST.cajaEfectivo||[]).length;
+    const facCobN    = (ST.facturasACobrar||[]).filter(f=>f.estado==='cobrada'&&f.fechaVenc&&f.fechaVenc<c18).length;
+    const facPagN    = (ST.facturasPagar||[]).filter(f=>f.estado==='pagada'&&f.fechaVenc&&f.fechaVenc<c18).length;
+    const eCheqN     = (ST.eCheques||[]).length;
+    const totalPrune = chOld + facCobN + facPagN;
+    wrap.innerHTML = `
+      <div class="mb-2">
+        <div class="d-flex justify-content-between mb-1" style="font-size:.78rem">
+          <span>Uso: <b>${usedKB.toLocaleString()} KB</b> de ~5,120 KB</span>
+          <span style="color:${color};font-weight:700">${pct}%</span>
+        </div>
+        <div style="height:10px;border-radius:5px;background:#e2e8f0;overflow:hidden">
+          <div style="width:${pct}%;height:100%;border-radius:5px;background:${color};transition:width .4s"></div>
+        </div>
+      </div>
+      <div class="row g-2 mt-1" style="font-size:.75rem">
+        <div class="col-6 col-md-3"><div style="background:#f8fafc;border-radius:6px;padding:6px 10px">
+          <div style="color:#64748b">Cheques pagados</div>
+          <b>${chPagados}</b><span style="color:#dc2626;font-size:.7rem"> (${chOld} purgables)</span>
+        </div></div>
+        <div class="col-6 col-md-3"><div style="background:#f8fafc;border-radius:6px;padding:6px 10px">
+          <div style="color:#64748b">Mov. banco / efectivo</div>
+          <b>${cajaBN + cajaEN}</b>
+        </div></div>
+        <div class="col-6 col-md-3"><div style="background:#f8fafc;border-radius:6px;padding:6px 10px">
+          <div style="color:#64748b">Facturas antiguas</div>
+          <b>${facCobN + facPagN}</b><span style="color:#dc2626;font-size:.7rem"> purgables</span>
+        </div></div>
+        <div class="col-6 col-md-3"><div style="background:#f8fafc;border-radius:6px;padding:6px 10px">
+          <div style="color:#64748b">E-Cheques</div>
+          <b>${eCheqN}</b>
+        </div></div>
+      </div>
+      ${totalPrune > 0 ? `<div class="alert alert-warning mt-2 mb-0 py-2" style="font-size:.78rem"><i class="bi bi-exclamation-triangle me-1"></i><b>${totalPrune} registros históricos</b> pueden liberarse. Usá "Limpiar historial" para reducir el uso.</div>` : '<div class="alert alert-success mt-2 mb-0 py-1" style="font-size:.77rem"><i class="bi bi-check2-circle me-1"></i>Almacenamiento saludable — sin datos históricos para limpiar.</div>'}
+    `;
+  } catch(e) {
+    if (wrap) wrap.innerHTML = `<div class="text-danger small">Error al diagnosticar: ${e.message}</div>`;
+  }
+}
+
+function _limpiarHistorialCheques() {
+  _confirmar(
+    '¿Limpiar datos históricos del almacenamiento local?\n\n• Cheques pagados hace más de 6 meses\n• Facturas cobradas/pagadas hace más de 18 meses\n• Movimientos bancarios/efectivo con más de 18 meses\n\nLos datos siguen disponibles en Supabase (nube).',
+    () => {
+      const c6  = new Date(); c6.setMonth(c6.getMonth() - 6);  const c6s  = c6.toISOString().split('T')[0];
+      const c18 = new Date(); c18.setMonth(c18.getMonth() - 18); const c18s = c18.toISOString().split('T')[0];
+      let total = 0;
+      const _prune = (arr, keep) => { const n = arr.length; const r = arr.filter(keep); total += n - r.length; return r; };
+      ST.chequesPagar = _prune(ST.chequesPagar||[], c => c.estado!=='pagado'||(c.fechaVenc&&c.fechaVenc>=c6s));
+      ST.cajaBancos   = _prune(ST.cajaBancos||[], m => !m.fecha||m.fecha>=c18s);
+      ST.cajaEfectivo = _prune(ST.cajaEfectivo||[], m => !m.fecha||m.fecha>=c18s||(m.concepto||'').toLowerCase().includes('saldo inicial'));
+      ST.facturasACobrar = _prune(ST.facturasACobrar||[], f => f.estado!=='cobrada'||!f.fechaVenc||f.fechaVenc>=c18s);
+      ST.facturasPagar   = _prune(ST.facturasPagar||[], f => f.estado!=='pagada'||!f.fechaVenc||f.fechaVenc>=c18s);
+      save();
+      toast(`✅ ${total} registros históricos liberados del almacenamiento local`, 'success');
+      _diagStorage();
+    },
+    { title:'Limpiar historial', btnLabel:'Limpiar ahora', btnIcon:'scissors', danger:false }
+  );
+}
+
 function exportarBackupJSON() {
   const json = JSON.stringify(ST, null, 2);
   const blob = new Blob([json], { type: 'application/json' });
@@ -8505,7 +8642,8 @@ const MUUK_ACCESS_BASE = {
                       'listasPrecios','empresas','documentos','cuentasBancarias','historialCobranzas','ingresarCobranza'],
   'AgustinGalie':    ['bienvenida','comisiones','bcra','calendarioARCA','contabilidad',
                       'facturasACobrar','facturasPagar','estadosCuenta','stock',
-                      'listasPrecios','empresas','documentos','cuentasBancarias','historialCobranzas','ingresarCobranza'],
+                      'listasPrecios','empresas','documentos','cuentasBancarias','historialCobranzas','ingresarCobranza',
+                      'cronograma'],
 };
 const MUUK_ADMINS = ['JonathanPalermo'];
 
@@ -9264,10 +9402,13 @@ function irA(p) {
     return;
   }
   closeSidebarMobile();
+  // Detectar si ya estamos en esta página (evitar scroll innecesario)
+  const _prevPage = document.querySelector('.page.active')?.id?.replace('page-','');
   document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
   document.getElementById('page-'+p).classList.add('active');
   updateBreadcrumb(p);
-  window.scrollTo({top:0, behavior:'smooth'});
+  // Solo scrollear al tope al CAMBIAR de página, no al refrescar la misma
+  if (_prevPage !== p) window.scrollTo({top:0, behavior:'smooth'});
   // Restaurar filtros ANTES de renderizar (persistencia entre recargas)
   _restoreFilters(p === 'comisiones' ? 'comisiones' : p);
 
@@ -9286,7 +9427,7 @@ function irA(p) {
   if (p==='historial')         renderHistorial();
   if (p==='facturasACobrar')   renderFacturasACobrar();
   if (p==='facturasPagar')     renderFacturasPagar();
-  if (p==='config')            { renderListaConceptos(); _updateSbStatusCard(); _renderConfigEmailjs(); _renderBackupsList(); }
+  if (p==='config')            { renderListaConceptos(); _updateSbStatusCard(); _renderConfigEmailjs(); _renderBackupsList(); _diagStorage(); }
   if (p==='gestion')           renderGestion();
   if (p==='estrategicos')      renderEstrategicos();
   if (p==='estadosCuenta')     renderEstadosCuenta();
@@ -9978,13 +10119,98 @@ function comParseCSV(text) {
 
 // Argentine peso parser
 function comParseMonto(s) {
-  if (!s || typeof s !== 'string') return 0;
+  if (s == null) return 0;
+  if (typeof s === 'number') return s;
+  if (typeof s !== 'string') return 0;
   s = s.trim();
-  // Remove $ and spaces
-  s = s.replace(/\$/g, '').trim();
-  // Convert Argentine format: 1.234.567,89 -> 1234567.89
-  s = s.replace(/\./g, '').replace(',', '.');
-  return parseFloat(s) || 0;
+  if (!s) return 0;
+  // Handle accounting negative format: (1.234,56) → -1234.56
+  const isNeg = s.startsWith('(') && s.endsWith(')');
+  if (isNeg) s = s.slice(1, -1).trim();
+  // Remove $ sign and whitespace
+  s = s.replace(/\$/g, '').replace(/\s/g, '');
+  if (!s || s === '-') return 0;
+  // Detect format: if has comma AND period, Argentine format (. = thousands, , = decimal)
+  // If only period without comma: might be US/raw float → keep as-is to avoid mangling
+  const hasComa   = s.includes(',');
+  const hasPeriodo = s.includes('.');
+  if (hasComa) {
+    // Argentine: 1.234.567,89 → 1234567.89
+    s = s.replace(/\./g, '').replace(',', '.');
+  } else if (hasPeriodo) {
+    // Could be "1.234" (thousands, no decimal) OR "1234.56" (raw float)
+    // If there's exactly one period and ≥ 3 digits after it → treat as raw float (US format)
+    const dotIdx = s.lastIndexOf('.');
+    if (s.split('.').length - 1 > 1) {
+      // Multiple periods → thousand separators: 1.234.567 → 1234567
+      s = s.replace(/\./g, '');
+    } else if (s.length - dotIdx - 1 === 3 && !s.startsWith('0.')) {
+      // Exactly 3 decimals → Argentine thousands: 1.234 → 1234
+      s = s.replace(/\./g, '');
+    }
+    // else: single period, < 3 or 0 decimals → treat as raw float, leave as-is
+  }
+  const val = parseFloat(s) || 0;
+  return isNeg ? -Math.abs(val) : val;
+}
+
+// Shared sheet-data parser — used by cargarComisionDetalle, comImprimirSaldoEmpresa, comPdfSaldos
+// Accepts raw rows (array of arrays) from comFetchSheet, returns parsed object.
+function _comParseSheetData(rows) {
+  if (!rows || rows.length < 2) return null;
+  const headers = rows[0].map(h => (h||'').trim().toLowerCase());
+  // Fix merged header: "Comisiones: Empresa Fecha Fact..." → just "fecha..."
+  if (headers[0] && headers[0].includes('comisiones:')) {
+    const m = headers[0].match(/\b(fecha\b.*)/i);
+    headers[0] = m ? m[1].trim() : '';
+  }
+  const _fc = (kw) => headers.findIndex(h => h.length < 40 && kw.some(k => h.includes(k)));
+  const iFecha    = _fc(['fecha']);
+  const iCliente  = _fc(['cliente']);
+  const iFca      = headers.findIndex(h =>
+    h === 'fca' || h === 'n° fca' || h === 'nro. fca' || h === 'nro fca' || h === 'n fca' ||
+    (h.includes('fca') && h.length <= 14) || h === 'factura' || h === 'n° fact' || h === 'nro. fact'
+  );
+  const iImporte  = headers.findIndex(h => h.length < 40 && h.includes('importe') && !h.includes('sin') && !h.includes('s/i'));
+  const iSinIVA   = _fc(['sin iva','sin imp','s/imp','s/iva']);
+  const iComision = _fc(['comisi']);
+  const iEstado   = _fc(['estado','facturado']);
+  // ── iPagos: amplio — acepta pagos, retiro/s, cobro/s, abono/s, cancelacion ──
+  const iPagos    = headers.findIndex(h =>
+    h.length < 40 &&
+    (h.includes('pagos') || h.includes('retiro') || h.includes('cobro') || h.includes('abono') || h.includes('cancelac'))
+  );
+  const iSaldo    = _fc(['saldo']);
+  const iObs      = _fc(['obs','observ']);
+  const iPagoTipo = headers.findIndex((h, idx) =>
+    idx !== iPagos && h.length < 20 && (h === 'pago' || h === 'tipo pago' || h === 'forma pago' || h === 'medio pago')
+  );
+  const isFull    = iComision >= 0 || iSinIVA >= 0;
+  const hasSaldo  = iSaldo >= 0;
+  const details   = [];
+  for (let i = 1; i < rows.length; i++) {
+    const r       = rows[i];
+    const cliente = iCliente  >= 0 ? (r[iCliente] ||'').trim() : '';
+    const fca     = iFca      >= 0 ? (r[iFca]     ||'').trim() : '';
+    const importe = iImporte  >= 0 ? comParseMonto(r[iImporte]) : 0;
+    const comision= iComision >= 0 ? comParseMonto(r[iComision]): 0;
+    const pagos   = iPagos    >= 0 ? comParseMonto(r[iPagos])   : 0;
+    const saldo   = iSaldo    >= 0 ? comParseMonto(r[iSaldo])   : 0;
+    const obs     = iObs      >= 0 ? (r[iObs]     ||'').trim() : '';
+    // Only skip rows that have literally nothing in any recognized column
+    if (!cliente && !fca && !importe && !comision && !pagos && !saldo && !obs) continue;
+    details.push({
+      fecha:        iFecha    >= 0 ? (r[iFecha]   ||'').trim() : '–',
+      cliente, fca, importe,
+      importeSinIVA: iSinIVA  >= 0 ? comParseMonto(r[iSinIVA]) : 0,
+      comision, pagos, saldo,
+      estado:       iEstado   >= 0 ? (r[iEstado]  ||'').trim().toLowerCase() : '',
+      pagoTipo:     iPagoTipo >= 0 ? (r[iPagoTipo]||'').trim() : '',
+      obs,
+      type: isFull ? 'full' : 'simple'
+    });
+  }
+  return { headers, details, iFecha, iCliente, iFca, iImporte, iSinIVA, iComision, iEstado, iPagos, iSaldo, iObs, iPagoTipo, isFull, hasSaldo };
 }
 
 // Date parser (handles DD-MM-YY, DD/MM/YYYY, DD-MM)
@@ -10254,60 +10480,42 @@ async function comPdfSaldos() {
     { bg:'#fef2f2', border:'#ef4444', accent:'#991b1b', hdr:'#fee2e2' }
   ];
 
-  // Fetch detail for each pending company
+  // Fetch detail for each pending company — uses shared _comParseSheetData
   const empresaDetails = [];
   for (const emp of pendientes) {
     const sheetTab = COM_SHEETS[emp.empresa] || COM_SHEETS['CC - ' + emp.empresa] || emp.empresa;
     try {
       const rows = await comFetchSheet(sheetTab);
       if (rows.length < 2) { empresaDetails.push({ empresa: emp.empresa, saldo: emp.saldo, rows: [] }); continue; }
+      const parsed = _comParseSheetData(rows);
+      if (!parsed) { empresaDetails.push({ empresa: emp.empresa, saldo: emp.saldo, rows: [] }); continue; }
+      const { details, hasSaldo } = parsed;
 
-      const headers = rows[0].map(h => (h||'').trim().toLowerCase());
-      if (headers[0] && headers[0].includes('comisiones:')) {
-        const m = headers[0].match(/\b(fecha\b.*)/i);
-        headers[0] = m ? m[1] : '';
-      }
-
-      const _fc = (kw) => headers.findIndex(h => h.length < 40 && kw.some(k => h.includes(k)));
-      const iFecha = _fc(['fecha']);
-      const iCliente = _fc(['cliente']);
-      const iFca = headers.findIndex(h => h === 'fca' || h === 'n° fca' || h === 'nro. fca' || h === 'nro fca' || h === 'n fca' || (h.includes('fca') && h.length <= 12));
-      const iImporte = headers.findIndex(h => h.length < 40 && h.includes('importe') && !h.includes('sin') && !h.includes('s/i'));
-      const iSinIVA = _fc(['sin iva','sin imp','s/imp','s/iva']);
-      const iComision = _fc(['comisi']);
-      const iEstado = _fc(['estado','facturado']);
-      const iPagos = headers.findIndex(h => h.length < 40 && (h.includes('pagos') || h.includes('retiro') || h.includes('cobros') || h.includes('abonos')));
-      const iSaldo = _fc(['saldo']);
-      const hasSaldo = iSaldo >= 0;
-
-      const detail = [];
-      for (let i = 1; i < rows.length; i++) {
-        const r = rows[i];
-        const cliente = iCliente >= 0 ? (r[iCliente]||'').trim() : '';
-        const fca = iFca >= 0 ? (r[iFca]||'').trim() : '';
-        const importe = iImporte >= 0 ? comParseMonto(r[iImporte]) : 0;
-        const sinIVA = iSinIVA >= 0 ? comParseMonto(r[iSinIVA]) : 0;
-        const comision = iComision >= 0 ? comParseMonto(r[iComision]) : 0;
-        const pagos = iPagos >= 0 ? comParseMonto(r[iPagos]) : 0;
-        const saldo = iSaldo >= 0 ? comParseMonto(r[iSaldo]) : 0;
-        const fecha = iFecha >= 0 ? (r[iFecha]||'').trim() : '';
-
-        if (!cliente && !fca && !importe && !comision && !pagos && !saldo) continue;
-        detail.push({ fecha, cliente, fca, importe, sinIVA, comision, pagos, saldo });
-      }
-
-      // ── Tomar solo filas DESPUÉS del último saldo ≈ 0 (período actual) ──
-      // Solo si la columna saldo fue encontrada; de lo contrario usar todo el historial.
+      // Smart period cutoff (same logic as _comBuildPDFSaldoEmpresa)
       let lastZeroIdx = -1;
       if (hasSaldo) {
-        for (let i = detail.length - 1; i >= 0; i--) {
-          if (Math.abs(detail[i].saldo) < 0.01 && (detail[i].fca || detail[i].importe || detail[i].comision || detail[i].cliente || detail[i].pagos)) {
+        for (let i = details.length - 1; i >= 0; i--) {
+          if (Math.abs(details[i].saldo) < 0.01 && (details[i].fca || details[i].importe || details[i].comision || details[i].cliente || details[i].pagos)) {
             lastZeroIdx = i; break;
           }
         }
       }
-      const filtrado = (lastZeroIdx >= 0 ? detail.slice(lastZeroIdx + 1) : detail)
-        .filter(r => r.fca || r.importe || r.comision || r.cliente || r.pagos);
+      let filtrado = (lastZeroIdx >= 0 ? details.slice(lastZeroIdx + 1) : details)
+        .filter(r => r.fca || r.importe || r.comision || r.cliente || r.pagos || r.saldo);
+
+      if (lastZeroIdx < 0 || filtrado.length > 80) {
+        const cutoff12m = new Date(); cutoff12m.setMonth(cutoff12m.getMonth() - 12);
+        const cutoffISO = cutoff12m.toISOString().split('T')[0];
+        const all = details.filter(r => r.fca || r.importe || r.comision || r.cliente || r.pagos || r.saldo);
+        const fi = all.findIndex(r => {
+          if (!r.fecha || r.fecha === '–') return false;
+          const parts = r.fecha.replace(/\//g,'-').split('-');
+          if (parts.length < 3) return false;
+          const [d, m, y] = parts;
+          return `${y.length===2?'20'+y:y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}` >= cutoffISO;
+        });
+        filtrado = fi > 0 ? all.slice(fi) : all;
+      }
 
       empresaDetails.push({ empresa: emp.empresa, saldo: emp.saldo, rows: filtrado });
     } catch(e) {
@@ -10455,195 +10663,148 @@ async function comPdfSaldos() {
 
 // Load and show detail for a specific empresa
 async function cargarComisionDetalle(sheetTab, empresaName) {
+  const loading = document.getElementById('com-loading');
   try {
-    if (!sheetTab) {
-      toast('Error: No se encontró la hoja', 'danger');
-      return;
-    }
-    const sheetName = sheetTab;
-    
-    const loading = document.getElementById('com-loading');
+    if (!sheetTab) { toast('Error: No se encontró la hoja', 'danger'); return; }
     if (loading) loading.style.display = 'block';
-    
-    // Fetch detail sheet (returns array of arrays via JSONP)
-    const rows = await comFetchSheet(sheetName);
-    
-    if (rows.length < 2) {
-      toast('Error: Hoja de detalle vacía', 'danger');
-      if (loading) loading.style.display = 'none';
-      return;
-    }
-    
-    const headers = rows[0].map(h => (h||'').trim().toLowerCase());
 
-    // Google Sheets merges title row with first header (e.g. "Comisiones: Nutri/Rigrapi Fecha Fact")
-    // Clean it: extract only the actual header keyword after the title prefix
-    if (headers[0] && headers[0].includes('comisiones:')) {
-      const m = headers[0].match(/\b(fecha\b.*)/i);
-      headers[0] = m ? m[1] : '';
-    }
+    const rows = await comFetchSheet(sheetTab);
+    if (rows.length < 2) { toast('Error: Hoja de detalle vacía', 'danger'); if (loading) loading.style.display = 'none'; return; }
 
-    // Detect columns by header name (flexible for different sheet layouts)
-    // Only match short headers (< 40 chars) to avoid matching merged title cells
-    const _findCol = (keywords) => headers.findIndex(h => h.length < 40 && keywords.some(k => h.includes(k)));
-    const iFecha   = _findCol(['fecha']);
-    const iCliente = _findCol(['cliente']);
-    const iFca     = headers.findIndex(h => h === 'fca' || h === 'n° fca' || h === 'nro. fca' || h === 'nro fca' || h === 'n fca' || (h.includes('fca') && h.length <= 12));
-    const iImporte = headers.findIndex(h => h.length < 40 && h.includes('importe') && !h.includes('sin') && !h.includes('s/i'));
-    const iSinIVA  = _findCol(['sin iva', 'sin imp', 's/imp', 's/iva']);
-    const iComision= _findCol(['comisi']);
-    const iPagos   = headers.findIndex(h => h.length < 40 && (h.includes('pagos') || h.includes('retiro')));
-    const iSaldo   = _findCol(['saldo']);
-    const iObs     = _findCol(['obs', 'observ']);
-    const iEstado  = _findCol(['estado', 'facturado']);
-    // "Pago" column (payment type: E-cheq, Fisico, etc.) — distinct from "Pagos/Retiros" (amounts)
-    const iPagoTipo = headers.findIndex((h,idx) => idx !== iPagos && (h === 'pago' || h === 'tipo pago' || h === 'forma pago'));
+    const parsed = _comParseSheetData(rows);
+    if (!parsed) { toast('No se pudieron parsear los datos', 'danger'); if (loading) loading.style.display = 'none'; return; }
 
-    const isFull   = iComision >= 0 || iSinIVA >= 0;
-    const hasSaldo = iSaldo >= 0;
+    const { details, iSinIVA, iComision, iEstado, iPagos, iObs, iPagoTipo, isFull, hasSaldo } = parsed;
 
-    // Parse detail rows
-    const details = [];
-    for (let i = 1; i < rows.length; i++) {
-      const row = rows[i];
-      // Skip completely empty rows — need at least a client, FCA, or non-zero amount
-      const clienteVal = iCliente >= 0 ? (row[iCliente]||'').trim() : '';
-      const fcaVal = iFca >= 0 ? (row[iFca]||'').trim() : '';
-      const importeVal = iImporte >= 0 ? comParseMonto(row[iImporte]) : 0;
-      const comVal = iComision >= 0 ? comParseMonto(row[iComision]) : 0;
-      const pagosVal = iPagos >= 0 ? comParseMonto(row[iPagos]) : 0;
-      if (!clienteVal && !fcaVal && !importeVal && !comVal && !pagosVal) continue;
-
-      const fechaRaw = iFecha >= 0 ? (row[iFecha]||'').trim() : '';
-
-      if (isFull) {
-        details.push({
-          fecha: fechaRaw || '–',
-          cliente: iCliente >= 0 ? (row[iCliente]||'') : '',
-          fca: iFca >= 0 ? (row[iFca]||'') : '',
-          importe: iImporte >= 0 ? comParseMonto(row[iImporte]) : 0,
-          importeSinIVA: iSinIVA >= 0 ? comParseMonto(row[iSinIVA]) : 0,
-          comision: iComision >= 0 ? comParseMonto(row[iComision]) : 0,
-          estado: iEstado >= 0 ? (row[iEstado]||'') : '',
-          pagos: iPagos >= 0 ? comParseMonto(row[iPagos]) : 0,
-          saldo: iSaldo >= 0 ? comParseMonto(row[iSaldo]) : 0,
-          pagoTipo: iPagoTipo >= 0 ? (row[iPagoTipo]||'') : '',
-          obs: iObs >= 0 ? (row[iObs]||'') : '',
-          type: 'full'
-        });
-      } else {
-        details.push({
-          fecha: fechaRaw || '–',
-          fca: iFca >= 0 ? (row[iFca]||'') : (row[1]||''),
-          importe: iImporte >= 0 ? comParseMonto(row[iImporte]) : comParseMonto(row[2]),
-          pagos: iPagos >= 0 ? comParseMonto(row[iPagos]) : comParseMonto(row[3]),
-          saldo: iSaldo >= 0 ? comParseMonto(row[iSaldo]) : comParseMonto(row[4]),
-          obs: iObs >= 0 ? (row[iObs]||'') : (row[5]||''),
-          type: 'simple'
-        });
-      }
-    }
-    
     // Render detail view
-    const wrapper = document.getElementById('com-detalle-wrapper');
+    const wrapper   = document.getElementById('com-detalle-wrapper');
     const empresaEl = document.getElementById('com-detalle-empresa');
-    const saldoEl = document.getElementById('com-detalle-saldo');
-    const tableEl = document.getElementById('com-detalle-tabla');
-    const grid = document.getElementById('com-resumen-grid');
+    const saldoEl   = document.getElementById('com-detalle-saldo');
+    const tableEl   = document.getElementById('com-detalle-tabla');
+    const grid      = document.getElementById('com-resumen-grid');
 
     if (empresaEl) empresaEl.textContent = empresaName;
-
-    // Get saldo from resumen
     const resumenItem = ST.comisionesResumen.find(r => r.empresa === empresaName);
     if (saldoEl) saldoEl.textContent = resumenItem ? `Saldo: ${fmt(resumenItem.saldo)}` : 'Saldo: —';
 
-    // Save detail data for direct printing (comImprimirSaldoDesdeDetalle)
+    // Save for printing
     _comLastDetail = { empresaName, saldo: resumenItem?.saldo || 0, details, isFull, hasSaldo };
-    
-    // Calculate summary totals
-    const totImporte = details.reduce((s,d) => s + (d.importe||0), 0);
+
+    // Totals
+    const totImporte  = details.reduce((s,d) => s + (d.importe||0), 0);
     const totComision = details.reduce((s,d) => s + (d.comision||0), 0);
-    const totPagos = details.reduce((s,d) => s + (d.pagos||0), 0);
-    const lastSaldo = details.length ? details[details.length-1].saldo : 0;
+    const totPagos    = details.reduce((s,d) => s + (d.pagos||0), 0);
+    const lastSaldo   = details.length ? details[details.length-1].saldo : 0;
+    const saldoPend   = resumenItem?.saldo ?? lastSaldo;
 
     // Summary cards
-    let summaryHTML = `<div class="row g-2 mb-3" style="padding:12px 14px 0">
+    let summaryHTML = `<div class="row g-2 mb-0" style="padding:12px 14px 6px">
       <div class="col-6 col-md-3"><div class="card p-2 text-center" style="border-radius:8px;background:#fffbeb">
-        <div style="font-size:.62rem;color:#92400e;text-transform:uppercase;font-weight:600">Comisiones</div>
-        <div style="font-size:1rem;font-weight:800;color:#d97706">${fmt(isFull ? totComision : totImporte)}</div>
+        <div style="font-size:.6rem;color:#92400e;text-transform:uppercase;font-weight:600">${isFull ? 'Comisiones' : 'Total Facturado'}</div>
+        <div style="font-size:.95rem;font-weight:800;color:#d97706">${fmt(isFull ? totComision : totImporte)}</div>
       </div></div>
       <div class="col-6 col-md-3"><div class="card p-2 text-center" style="border-radius:8px;background:#f0fdf4">
-        <div style="font-size:.62rem;color:#166534;text-transform:uppercase;font-weight:600">Pagos/Retiros</div>
-        <div style="font-size:1rem;font-weight:800;color:#16a34a">${fmt(totPagos)}</div>
+        <div style="font-size:.6rem;color:#166534;text-transform:uppercase;font-weight:600">Pagos/Retiros</div>
+        <div style="font-size:.95rem;font-weight:800;color:#16a34a">${fmt(totPagos)}</div>
       </div></div>
-      <div class="col-6 col-md-3"><div class="card p-2 text-center" style="border-radius:8px;background:${lastSaldo > 0 ? '#fef2f2' : '#f0fdf4'}">
-        <div style="font-size:.62rem;color:#64748b;text-transform:uppercase;font-weight:600">Saldo Actual</div>
-        <div style="font-size:1rem;font-weight:800;color:${lastSaldo > 0 ? '#dc2626' : '#16a34a'}">${fmt(lastSaldo)}</div>
+      <div class="col-6 col-md-3"><div class="card p-2 text-center" style="border-radius:8px;background:${saldoPend > 0 ? '#fef2f2' : '#f0fdf4'}">
+        <div style="font-size:.6rem;color:#64748b;text-transform:uppercase;font-weight:600">Saldo Pendiente</div>
+        <div style="font-size:.95rem;font-weight:800;color:${saldoPend > 0 ? '#dc2626' : '#16a34a'}">${fmt(saldoPend)}</div>
       </div></div>
       <div class="col-6 col-md-3"><div class="card p-2 text-center" style="border-radius:8px">
-        <div style="font-size:.62rem;color:#64748b;text-transform:uppercase;font-weight:600">Movimientos</div>
-        <div style="font-size:1rem;font-weight:800;color:#1e293b">${details.length}</div>
+        <div style="font-size:.6rem;color:#64748b;text-transform:uppercase;font-weight:600">Movimientos</div>
+        <div style="font-size:.95rem;font-weight:800;color:#1e293b">${details.length}</div>
       </div></div>
     </div>`;
 
-    // Build table HTML
-    let tableHTML = summaryHTML + '<div class="table-responsive" style="max-height:500px;overflow-y:auto"><table class="table table-sm table-hover mb-0" style="font-size:.78rem"><thead class="sticky-top" style="z-index:1"><tr style="background:#f1f5f9">';
+    // Table — no height cap, show everything
+    const _fv = n => n ? fmt(n) : '–';
+    let tableHTML = summaryHTML + `
+    <div class="table-responsive" style="max-height:70vh;overflow-y:auto">
+    <table class="table table-sm table-hover mb-0" style="font-size:.78rem">
+    <thead class="sticky-top" style="z-index:2">
+    <tr style="background:#f1f5f9">`;
 
     if (isFull) {
-      // Build header dynamically based on detected columns
-      tableHTML += '<th class="ps-3">Fecha</th><th>Cliente</th><th>FCA</th><th class="text-end">Importe</th>';
+      tableHTML += '<th class="ps-3" style="white-space:nowrap">Fecha</th><th>Cliente</th><th>FCA</th><th class="text-end">Importe</th>';
       if (iSinIVA >= 0) tableHTML += '<th class="text-end">Sin IVA</th>';
       tableHTML += '<th class="text-end">Comisión</th>';
       if (iEstado >= 0) tableHTML += '<th>Estado</th>';
-      if (iPagos >= 0) tableHTML += '<th class="text-end">Pagos/Retiros</th>';
+      if (iPagos >= 0) tableHTML += '<th class="text-end">Pagos/Ret.</th>';
       tableHTML += '<th class="text-end">Saldo</th>';
-      if (iPagoTipo >= 0) tableHTML += '<th>Pago</th>';
+      if (iPagoTipo >= 0) tableHTML += '<th>Forma Pago</th>';
       if (iObs >= 0) tableHTML += '<th>Obs</th>';
       tableHTML += '</tr></thead><tbody>';
-      tableHTML += details.map(d => {
+      tableHTML += details.map((d, ri) => {
         const saldoColor = d.saldo > 0 ? '#dc2626' : d.saldo < 0 ? '#16a34a' : '#64748b';
-        let tr = `<tr>
-          <td class="ps-3">${d.fecha}</td>
-          <td style="font-weight:600">${d.cliente || '–'}</td>
-          <td>${d.fca || '–'}</td>
-          <td class="text-end">${d.importe ? fmt(d.importe) : '–'}</td>`;
-        if (iSinIVA >= 0) tr += `<td class="text-end" style="color:#64748b">${d.importeSinIVA ? fmt(d.importeSinIVA) : '–'}</td>`;
-        tr += `<td class="text-end" style="color:#d97706;font-weight:600">${d.comision ? fmt(d.comision) : '–'}</td>`;
-        if (iEstado >= 0) tr += `<td><span style="font-size:.65rem">${d.estado || '–'}</span></td>`;
-        if (iPagos >= 0) tr += `<td class="text-end" style="color:${d.pagos > 0 ? '#16a34a' : '#64748b'};font-weight:${d.pagos > 0 ? '600' : '400'}">${d.pagos ? fmt(d.pagos) : '–'}</td>`;
-        tr += `<td class="text-end" style="color:${saldoColor};font-weight:700">${fmt(d.saldo)}</td>`;
-        if (iPagoTipo >= 0) tr += `<td style="font-size:.72rem">${d.pagoTipo || '–'}</td>`;
-        if (iObs >= 0) tr += `<td style="font-size:.68rem;color:#94a3b8;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${(d.obs||'').replace(/"/g,'&quot;')}">${d.obs || '–'}</td>`;
-        tr += '</tr>';
-        return tr;
+        const esPago = d.pagos > 0 && !d.fca && !d.importe && !d.comision;
+        const isNC = (d.fca||'').toLowerCase().includes('nc');
+        let tr = esPago
+          ? `<tr style="background:#f0fdf4"><td class="ps-3" style="color:#166534">${d.fecha}</td>`
+          : `<tr ${ri%2===0?'':'style="background:rgba(0,0,0,.015)"'}><td class="ps-3">${d.fecha}</td>`;
+        if (esPago) {
+          const cs = 1 + (iSinIVA>=0?1:0) + (iEstado>=0?1:0) + (iPagoTipo>=0?1:0) + (iObs>=0?1:0);
+          tr += `<td colspan="${cs}" style="color:#166534;font-style:italic"><span style="background:#16a34a;color:#fff;font-size:.67rem;padding:1px 6px;border-radius:3px;font-weight:700">PAGO</span> ${d.cliente||'Pago recibido'}</td>`;
+          tr += `<td></td>`; // importe
+          tr += `<td class="text-end" style="color:#16a34a;font-weight:700">– ${fmt(d.pagos)}</td>`;
+          tr += `<td class="text-end" style="color:${saldoColor};font-weight:700">${fmt(d.saldo)}</td>`;
+        } else {
+          tr += `<td style="font-weight:600">${d.cliente||'–'}</td>`;
+          tr += `<td>${d.fca||'–'}${isNC?'<span style="background:#dbeafe;color:#1e40af;font-size:.65rem;padding:1px 4px;border-radius:3px;font-weight:700;margin-left:3px">NC</span>':''}</td>`;
+          tr += `<td class="text-end">${_fv(d.importe)}</td>`;
+          if (iSinIVA >= 0) tr += `<td class="text-end" style="color:#64748b">${_fv(d.importeSinIVA)}</td>`;
+          tr += `<td class="text-end" style="color:#d97706;font-weight:600">${_fv(d.comision)}</td>`;
+          if (iEstado >= 0) tr += `<td><span style="font-size:.65rem">${d.estado||'–'}</span></td>`;
+          if (iPagos >= 0) tr += `<td class="text-end" style="color:${d.pagos>0?'#16a34a':'#94a3b8'}">${_fv(d.pagos)}</td>`;
+          tr += `<td class="text-end" style="color:${saldoColor};font-weight:700">${fmt(d.saldo)}</td>`;
+          if (iPagoTipo >= 0) tr += `<td style="font-size:.7rem">${d.pagoTipo||'–'}</td>`;
+          if (iObs >= 0) tr += `<td style="font-size:.67rem;color:#94a3b8;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${(d.obs||'').replace(/"/g,'&quot;')}">${d.obs||'–'}</td>`;
+        }
+        return tr + '</tr>';
       }).join('');
+      // Totals footer
+      tableHTML += `<tr style="background:#fef9c3;font-weight:700;border-top:2px solid #f59e0b">
+        <td class="ps-3" colspan="3" style="color:#92400e">TOTALES</td>
+        <td class="text-end">${fmt(totImporte)}</td>
+        ${iSinIVA>=0?`<td></td>`:''}
+        <td class="text-end" style="color:#d97706">${fmt(totComision)}</td>
+        ${iEstado>=0?`<td></td>`:''}
+        ${iPagos>=0?`<td class="text-end" style="color:#16a34a">${fmt(totPagos)}</td>`:''}
+        <td class="text-end" style="color:#dc2626;font-size:.88rem">${fmt(saldoPend)}</td>
+        ${iPagoTipo>=0?`<td></td>`:''}
+        ${iObs>=0?`<td></td>`:''}
+      </tr>`;
     } else {
-      tableHTML += '<th class="ps-3">Fecha</th><th>FCA</th><th class="text-end">Comisión</th><th class="text-end">Pagos</th><th class="text-end">Saldo</th><th>Obs</th></tr></thead><tbody>';
-      tableHTML += details.map(d => {
+      tableHTML += '<th class="ps-3" style="white-space:nowrap">Fecha</th><th>FCA</th><th class="text-end">Comisión</th><th class="text-end">Pagos</th><th class="text-end">Saldo</th><th>Obs</th></tr></thead><tbody>';
+      tableHTML += details.map((d, ri) => {
         const saldoColor = d.saldo > 0 ? '#dc2626' : d.saldo < 0 ? '#16a34a' : '#64748b';
-        return `<tr>
+        return `<tr ${ri%2?'style="background:rgba(0,0,0,.015)"':''}>
           <td class="ps-3">${d.fecha}</td>
-          <td>${d.fca || '–'}</td>
-          <td class="text-end" style="color:#d97706;font-weight:600">${d.importe ? fmt(d.importe) : '–'}</td>
-          <td class="text-end" style="color:${d.pagos > 0 ? '#16a34a' : '#64748b'};font-weight:${d.pagos > 0 ? '600' : '400'}">${d.pagos ? fmt(d.pagos) : '–'}</td>
+          <td>${d.fca||'–'}</td>
+          <td class="text-end" style="color:#d97706;font-weight:600">${_fv(d.importe)}</td>
+          <td class="text-end" style="color:${d.pagos>0?'#16a34a':'#94a3b8'}">${_fv(d.pagos)}</td>
           <td class="text-end" style="color:${saldoColor};font-weight:700">${fmt(d.saldo)}</td>
-          <td style="font-size:.68rem;color:#94a3b8">${d.obs || '–'}</td>
+          <td style="font-size:.67rem;color:#94a3b8">${d.obs||'–'}</td>
         </tr>`;
       }).join('');
+      // Totals footer
+      tableHTML += `<tr style="background:#fef9c3;font-weight:700;border-top:2px solid #f59e0b">
+        <td class="ps-3" colspan="2" style="color:#92400e">TOTALES</td>
+        <td class="text-end" style="color:#d97706">${fmt(totImporte)}</td>
+        <td class="text-end" style="color:#16a34a">${fmt(totPagos)}</td>
+        <td class="text-end" style="color:#dc2626">${fmt(saldoPend)}</td>
+        <td></td>
+      </tr>`;
     }
-
     tableHTML += '</tbody></table></div>';
 
     if (tableEl) tableEl.innerHTML = tableHTML;
-    
     if (grid) grid.style.display = 'none';
     if (wrapper) wrapper.style.display = 'block';
-    
     if (loading) loading.style.display = 'none';
   } catch (err) {
     console.error('cargarComisionDetalle error:', err);
     toast('Error al cargar detalle: ' + err.message, 'danger');
-    const loading = document.getElementById('com-loading');
     if (loading) loading.style.display = 'none';
   }
 }
@@ -10667,48 +10828,9 @@ async function comImprimirSaldoEmpresa(sheetTab, empresaName, saldo) {
   try {
     const rows = await comFetchSheet(sheetTab);
     if (rows.length < 2) { toast('Sin datos disponibles', 'warning'); return; }
-
-    const headers = rows[0].map(h => (h||'').trim().toLowerCase());
-    if (headers[0] && headers[0].includes('comisiones:')) {
-      const m = headers[0].match(/\b(fecha\b.*)/i);
-      headers[0] = m ? m[1] : '';
-    }
-    const _fc = (kw) => headers.findIndex(h => h.length < 40 && kw.some(k => h.includes(k)));
-    const iFecha    = _fc(['fecha']);
-    const iCliente  = _fc(['cliente']);
-    const iFca      = headers.findIndex(h => h === 'fca' || h === 'n° fca' || h === 'nro. fca' || h === 'nro fca' || h === 'n fca' || (h.includes('fca') && h.length <= 12));
-    const iImporte  = headers.findIndex(h => h.length < 40 && h.includes('importe') && !h.includes('sin') && !h.includes('s/i'));
-    const iSinIVA   = _fc(['sin iva','sin imp','s/imp','s/iva']);
-    const iComision = _fc(['comisi']);
-    const iEstado   = _fc(['estado','facturado']);
-    const iPagos    = headers.findIndex(h => h.length < 40 && (h.includes('pagos') || h.includes('retiro') || h.includes('cobros') || h.includes('abonos')));
-    const iSaldo    = _fc(['saldo']);
-    const iObs      = _fc(['obs','observ']);
-    const isFull    = iComision >= 0 || iSinIVA >= 0;
-    const hasSaldo  = iSaldo >= 0; // flag para evitar falsos negativos cuando la columna no se encontró
-
-    const details = [];
-    for (let i = 1; i < rows.length; i++) {
-      const r = rows[i];
-      const cliente  = iCliente  >= 0 ? (r[iCliente]||'').trim()  : '';
-      const fca      = iFca      >= 0 ? (r[iFca]||'').trim()      : '';
-      const importe  = iImporte  >= 0 ? comParseMonto(r[iImporte]) : 0;
-      const comision = iComision >= 0 ? comParseMonto(r[iComision]): 0;
-      const pagos    = iPagos    >= 0 ? comParseMonto(r[iPagos])   : 0;
-      const saldoRow = iSaldo    >= 0 ? comParseMonto(r[iSaldo])  : 0;
-      if (!cliente && !fca && !importe && !comision && !pagos && !saldoRow) continue;
-      details.push({
-        fecha:        iFecha   >= 0 ? (r[iFecha]||'').trim()   : '–',
-        cliente,  fca,  importe,
-        importeSinIVA: iSinIVA >= 0 ? comParseMonto(r[iSinIVA]) : 0,
-        comision,  pagos,
-        saldo:        saldoRow,
-        estado:       iEstado  >= 0 ? (r[iEstado]||'').trim().toLowerCase() : '',
-        obs:          iObs     >= 0 ? (r[iObs]||'').trim()     : '',
-        type:         isFull ? 'full' : 'simple'
-      });
-    }
-    _comBuildPDFSaldoEmpresa(empresaName, saldo, details, isFull, hasSaldo);
+    const parsed = _comParseSheetData(rows);
+    if (!parsed) { toast('Sin datos disponibles', 'warning'); return; }
+    _comBuildPDFSaldoEmpresa(empresaName, saldo, parsed.details, parsed.isFull, parsed.hasSaldo);
   } catch(e) {
     toast('Error al generar PDF: ' + e.message, 'danger');
   }
@@ -10716,8 +10838,10 @@ async function comImprimirSaldoEmpresa(sheetTab, empresaName, saldo) {
 
 // Generador compartido del PDF de saldo pendiente por empresa
 function _comBuildPDFSaldoEmpresa(empresaName, saldoResumen, details, isFull, hasSaldo = true) {
-  // ── Encontrar el último punto donde el saldo fue 0 (último corte/saldo) ──
-  // Solo buscar si la columna saldo fue encontrada en el sheet; si no, usar todos los detalles.
+  // ── Smart period cutoff ──
+  // 1. Look for last row where saldo ≈ 0 (full settlement)
+  // 2. Fallback: if no zero OR too few rows after it, use last 12 months
+  // 3. If still nothing, show ALL
   let lastZeroIdx = -1;
   if (hasSaldo) {
     for (let i = details.length - 1; i >= 0; i--) {
@@ -10728,16 +10852,44 @@ function _comBuildPDFSaldoEmpresa(empresaName, saldoResumen, details, isFull, ha
     }
   }
 
-  // ── Solo las filas DESPUÉS del último saldo 0 (el período actual adeudado) ──
-  const pendientes = (lastZeroIdx >= 0 ? details.slice(lastZeroIdx + 1) : details)
-    .filter(r => r.fca || r.importe || r.comision || r.cliente || r.pagos);
+  let cutoffNote = '';
+  let saldoAnterior = 0;
+  let pendientes = (lastZeroIdx >= 0 ? details.slice(lastZeroIdx + 1) : details)
+    .filter(r => r.fca || r.importe || r.comision || r.cliente || r.pagos || r.saldo);
+
+  // If no zero found OR pending period is unreasonably long (>80 rows), use 12-month window
+  if (lastZeroIdx < 0 || pendientes.length > 80) {
+    const cutoff12m = new Date(); cutoff12m.setMonth(cutoff12m.getMonth() - 12);
+    const cutoffISO = cutoff12m.toISOString().split('T')[0];
+    // Try to parse dates and filter
+    const allFiltered = details.filter(r => r.fca || r.importe || r.comision || r.cliente || r.pagos || r.saldo);
+    // Find the first row within 12-month window
+    const firstInWindow = allFiltered.findIndex(r => {
+      if (!r.fecha || r.fecha === '–') return false;
+      const parts = r.fecha.replace(/\//g,'-').split('-');
+      if (parts.length < 3) return false;
+      const [d, m, y] = parts;
+      const iso = `${y.length===2?'20'+y:y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`;
+      return iso >= cutoffISO;
+    });
+    if (firstInWindow > 0) {
+      // Find saldo carryover from the row just before window
+      const prevRow = allFiltered[firstInWindow - 1];
+      saldoAnterior = prevRow?.saldo || 0;
+      pendientes = allFiltered.slice(firstInWindow);
+      cutoffNote = `Período: últimos 12 meses · Saldo anterior al período: $${saldoAnterior.toLocaleString('es-AR',{minimumFractionDigits:2})}`;
+    } else {
+      pendientes = allFiltered;
+      cutoffNote = 'Período: historial completo';
+    }
+  }
 
   if (!pendientes.length) {
-    toast('No hay facturas con saldo pendiente para ' + empresaName, 'info');
+    toast('No hay movimientos pendientes para ' + empresaName, 'info');
     return;
   }
 
-  // ── Último pago recibido (buscado en TODO el historial) ──
+  // ── Último pago (todo el historial) ──
   let ultimoPago = null;
   for (let i = details.length - 1; i >= 0; i--) {
     if (details[i].pagos > 0) { ultimoPago = details[i]; break; }
@@ -10746,138 +10898,150 @@ function _comBuildPDFSaldoEmpresa(empresaName, saldoResumen, details, isFull, ha
   const hoyStr = new Date().toLocaleDateString('es-AR', { year:'numeric', month:'long', day:'numeric' });
   const _f = n => Number(n||0).toLocaleString('es-AR', { minimumFractionDigits:2, maximumFractionDigits:2 });
   const hasCliente  = pendientes.some(r => r.cliente);
-  const hasComision = pendientes.some(r => r.comision > 0);
+  const hasComision = isFull && pendientes.some(r => r.comision > 0);
 
   const totImporte  = pendientes.reduce((s,r) => s + (r.importe||0), 0);
   const totComision = pendientes.reduce((s,r) => s + (r.comision||0), 0);
   const totPagos    = pendientes.reduce((s,r) => s + (r.pagos||0), 0);
 
-  // Saldo = último valor de la columna saldo (balance corrido, no suma)
-  const saldoMostrar = pendientes.length > 0
-    ? (pendientes[pendientes.length - 1].saldo || saldoResumen)
-    : saldoResumen;
+  // Saldo final = last saldo value in pendientes, fallback to resumen
+  const lastRow = pendientes[pendientes.length - 1];
+  const saldoMostrar = (lastRow?.saldo > 0 ? lastRow.saldo : null) ?? saldoResumen ?? 0;
 
   const nFacturas = pendientes.filter(r => r.fca || r.importe || r.comision).length;
-  const nPagos    = pendientes.filter(r => r.pagos > 0 && !r.fca && !r.importe).length;
+  const nPagos    = pendientes.filter(r => r.pagos > 0 && !r.fca && !r.importe && !r.comision).length;
 
   const ultimoPagoHTML = ultimoPago
-    ? `<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px 18px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center">
-        <span style="font-size:11px;color:#166534;font-weight:600">
-          <i class="bi bi-check-circle-fill"></i>&nbsp;Último pago recibido: ${ultimoPago.fecha}
-        </span>
-        <span style="font-size:14px;font-weight:800;color:#16a34a">$${_f(ultimoPago.pagos)}</span>
+    ? `<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:9px 16px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:10.5px;color:#166534;font-weight:600">✔ Último pago recibido: ${ultimoPago.fecha}</span>
+        <span style="font-size:13px;font-weight:800;color:#16a34a">$${_f(ultimoPago.pagos)}</span>
        </div>`
     : '';
 
+  const saldoAnteriorHTML = saldoAnterior > 0
+    ? `<tr style="background:#fffbeb">
+        <td colspan="${hasCliente?3:2}" style="font-style:italic;color:#92400e;font-size:10px">Saldo anterior al período</td>
+        ${hasComision?'<td></td>':''}
+        <td></td>
+        <td class="r" style="color:#d97706;font-weight:700">$${_f(saldoAnterior)}</td>
+       </tr>`
+    : '';
+
   const colSpanNombre = hasCliente ? 2 : 1;
-  const colSpanTotal  = colSpanNombre + 1;
 
   const html = `<!DOCTYPE html><html lang="es"><head><meta charset="utf-8">
 <title>Saldo Pendiente — ${empresaName}</title>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 <style>
-  @page { size:A4; margin:12mm 15mm; }
-  @media print { .no-print{display:none!important;} }
+  @page { size:A4; margin:10mm 14mm; }
+  @media print { .no-print{display:none!important;} tr { break-inside:avoid; } }
   * { box-sizing:border-box; margin:0; padding:0; }
-  body { font-family:'Segoe UI',system-ui,sans-serif; color:#1e293b; font-size:12px; line-height:1.45; }
-  .doc-header { background:linear-gradient(135deg,#7f1d1d,#dc2626); color:#fff; padding:18px 24px; border-radius:12px; margin-bottom:14px; display:flex; justify-content:space-between; align-items:center; }
-  .saldo-box { background:#fef2f2; border:2px solid #dc2626; border-radius:10px; padding:14px 20px; margin-bottom:14px; display:flex; justify-content:space-between; align-items:center; }
+  body { font-family:'Segoe UI',system-ui,sans-serif; color:#1e293b; font-size:11.5px; line-height:1.4; }
+  .doc-header { background:linear-gradient(135deg,#7f1d1d,#dc2626); color:#fff; padding:16px 22px; border-radius:10px; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center; }
+  .saldo-box { background:#fef2f2; border:2px solid #fca5a5; border-radius:10px; padding:12px 18px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; }
   .saldo-box .empresa { font-size:15px; font-weight:800; color:#7f1d1d; }
-  .saldo-box .monto   { font-size:22px; font-weight:800; color:#dc2626; }
-  .saldo-box .sub     { font-size:10px; color:#64748b; margin-top:2px; }
-  table { width:100%; border-collapse:collapse; font-size:11px; }
-  th { background:#f8fafc; font-size:9px; text-transform:uppercase; letter-spacing:.06em; color:#64748b; font-weight:700; padding:6px 10px; text-align:left; border-bottom:2px solid #e2e8f0; }
+  .saldo-box .monto   { font-size:22px; font-weight:900; color:#dc2626; }
+  .saldo-box .sub     { font-size:9.5px; color:#64748b; margin-top:2px; }
+  .period-note { font-size:9.5px; color:#64748b; margin-bottom:10px; padding:6px 12px; background:#f8fafc; border-radius:6px; border-left:3px solid #e2e8f0; }
+  table { width:100%; border-collapse:collapse; font-size:10.5px; }
+  th { background:#f8fafc; font-size:8.5px; text-transform:uppercase; letter-spacing:.06em; color:#64748b; font-weight:700; padding:5px 9px; text-align:left; border-bottom:2px solid #e2e8f0; white-space:nowrap; }
   th.r { text-align:right; }
-  td { padding:5px 10px; border-bottom:1px solid #f1f5f9; vertical-align:middle; }
+  td { padding:4.5px 9px; border-bottom:1px solid #f1f5f9; vertical-align:middle; }
   td.r { text-align:right; font-variant-numeric:tabular-nums; }
   tr.fila-fac:nth-child(even) { background:rgba(0,0,0,.018); }
-  tr.fila-pago { background:#f0fdf4 !important; }
-  tr.fila-pago td { border-bottom:1px solid #dcfce7; color:#166534; }
-  .total-row td { font-weight:700; border-top:2px solid #dc2626; background:#fff5f5; padding:8px 10px; }
-  .nc-badge { background:#dbeafe;color:#1e40af;font-size:8px;padding:1px 5px;border-radius:3px;font-weight:700;margin-left:3px; }
-  .pago-badge { background:#16a34a;color:#fff;font-size:8px;padding:2px 7px;border-radius:3px;font-weight:700;letter-spacing:.04em; }
-  .footer { text-align:center; margin-top:16px; font-size:9px; color:#94a3b8; padding-top:8px; border-top:1px solid #f1f5f9; }
-  .print-btn { position:fixed; top:16px; right:16px; background:#dc2626; color:#fff; border:none; padding:10px 20px; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; box-shadow:0 4px 12px rgba(0,0,0,.2); }
-  .back-btn { position:fixed; top:16px; right:210px; background:#475569; color:#fff; border:none; padding:10px 18px; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; box-shadow:0 4px 12px rgba(0,0,0,.2); }
-  .back-btn:hover { background:#334155; }
+  tr.fila-pago td { background:#f0fdf4; border-bottom:1px solid #dcfce7; color:#166534; }
+  .total-row td { font-weight:700; border-top:2px solid #dc2626; background:#fff5f5; padding:7px 9px; }
+  .nc-badge { background:#dbeafe;color:#1e40af;font-size:7.5px;padding:1px 4px;border-radius:3px;font-weight:700;margin-left:2px; }
+  .pago-badge { background:#16a34a;color:#fff;font-size:7.5px;padding:1.5px 6px;border-radius:3px;font-weight:700;letter-spacing:.04em; }
+  .grand-saldo { background:linear-gradient(135deg,#7f1d1d,#dc2626); color:#fff; padding:12px 18px; border-radius:8px; margin-top:14px; display:flex; justify-content:space-between; align-items:center; }
+  .footer { text-align:center; margin-top:12px; font-size:8.5px; color:#94a3b8; padding-top:7px; border-top:1px solid #f1f5f9; }
+  .print-btn { position:fixed; top:14px; right:14px; background:#dc2626; color:#fff; border:none; padding:9px 18px; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer; box-shadow:0 4px 12px rgba(0,0,0,.2); }
+  .back-btn  { position:fixed; top:14px; right:200px; background:#475569; color:#fff; border:none; padding:9px 16px; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer; }
 </style></head><body>
-<button class="print-btn no-print" onclick="window.print()"><i class="bi bi-printer me-1"></i>Imprimir / Guardar PDF</button>
+<button class="print-btn no-print" onclick="window.print()">🖨 Imprimir / PDF</button>
 <button class="back-btn no-print" onclick="window.close()">← Volver</button>
 
 <div class="doc-header">
   <div>
-    <div style="font-size:16px;font-weight:800;letter-spacing:-.5px">Comisiones — Saldo Pendiente</div>
-    <div style="font-size:10px;opacity:.75">${nFacturas} factura${nFacturas !== 1 ? 's' : ''}${nPagos > 0 ? ' · '+nPagos+' pago'+( nPagos !== 1 ? 's' : '') : ''}</div>
+    <div style="font-size:7.5px;opacity:.7;text-transform:uppercase;letter-spacing:.1em;margin-bottom:2px">MÜÜK SRL — Comisiones</div>
+    <div style="font-size:15px;font-weight:800;letter-spacing:-.5px">Estado de Cuenta — Saldo Pendiente</div>
   </div>
   <div style="text-align:right">
-    <div style="font-size:11px;opacity:.85">${hoyStr}</div>
+    <div style="font-size:12px;font-weight:700">${empresaName}</div>
+    <div style="font-size:9.5px;opacity:.8">${hoyStr}</div>
   </div>
 </div>
 
 <div class="saldo-box">
   <div>
     <div class="empresa">${empresaName}</div>
-    <div class="sub">${nFacturas} factura${nFacturas !== 1 ? 's' : ''} pendiente${nFacturas !== 1 ? 's' : ''}${nPagos > 0 ? ' · '+nPagos+' pago'+( nPagos !== 1 ? 's' : '')+' parcial'+( nPagos !== 1 ? 'es' : '') : ''}</div>
+    <div class="sub">${nFacturas} factura${nFacturas!==1?'s':''} pendiente${nFacturas!==1?'s':''}${nPagos>0?' · '+nPagos+' pago'+(nPagos!==1?'s':'')+' incluido'+(nPagos!==1?'s':''):''}</div>
   </div>
   <div style="text-align:right">
     <div class="monto">$${_f(saldoMostrar)}</div>
-    <div class="sub">Saldo a cobrar (última línea)</div>
+    <div class="sub">Total a cobrar</div>
   </div>
 </div>
 
+${cutoffNote ? `<div class="period-note">📅 ${cutoffNote}</div>` : ''}
 ${ultimoPagoHTML}
 
 <table>
   <thead><tr>
     <th>Fecha</th>
-    ${hasCliente ? '<th>Cliente</th>' : ''}
-    <th>Factura (FCA)</th>
+    ${hasCliente?'<th>Cliente</th>':''}
+    <th>FCA / Detalle</th>
     <th class="r">Importe</th>
-    ${hasComision ? '<th class="r">Comisión</th>' : ''}
-    <th class="r">Pago</th>
+    ${hasComision?'<th class="r">Comisión</th>':''}
+    <th class="r">Pagos / Retiros</th>
     <th class="r">Saldo</th>
   </tr></thead>
   <tbody>
-    ${pendientes.map((r,i) => {
-      const esPago = r.pagos > 0 && !r.fca && !r.importe && !r.comision;
-      const isNC   = (r.fca||'').toLowerCase().includes('nc');
-      if (esPago) {
-        const colspan = 2 + (hasCliente ? 1 : 0) + (hasComision ? 1 : 0); /* [cliente]+fca+importe+[comision] */
-        return `<tr class="fila-pago">
-          <td>${r.fecha || '–'}</td>
-          <td colspan="${colspan}" style="font-style:italic">
-            <span class="pago-badge">PAGO</span>&nbsp;${r.cliente || 'Pago recibido'}
-          </td>
-          <td class="r" style="font-weight:700;color:#16a34a">– $${_f(r.pagos)}</td>
-          <td class="r" style="font-weight:700">$${_f(r.saldo)}</td>
-        </tr>`;
-      }
-      return `<tr class="fila-fac">
-        <td>${r.fecha || '–'}</td>
-        ${hasCliente ? `<td style="font-weight:600">${r.cliente || '–'}</td>` : ''}
-        <td>${r.fca || '–'}${isNC ? '<span class="nc-badge">NC</span>' : ''}</td>
-        <td class="r">${r.importe ? '$'+_f(r.importe) : '–'}</td>
-        ${hasComision ? `<td class="r" style="color:#d97706;font-weight:600">${r.comision ? '$'+_f(r.comision) : '–'}</td>` : ''}
-        <td class="r" style="color:#94a3b8">–</td>
-        <td class="r" style="color:#dc2626;font-weight:700">$${_f(r.saldo)}</td>
+  ${saldoAnteriorHTML}
+  ${pendientes.map((r, i) => {
+    const esPago = r.pagos > 0 && !r.fca && !r.importe && !r.comision;
+    const isNC   = (r.fca||'').toLowerCase().includes('nc');
+    if (esPago) {
+      const cs = 1 + (hasCliente?1:0) + (hasComision?1:0);
+      return `<tr class="fila-pago">
+        <td>${r.fecha||'–'}</td>
+        <td colspan="${cs}" style="font-style:italic"><span class="pago-badge">PAGO</span> ${r.cliente||'Pago recibido'}</td>
+        <td></td>
+        <td class="r" style="font-weight:700;color:#16a34a">– $${_f(r.pagos)}</td>
+        <td class="r" style="font-weight:700;color:#dc2626">$${_f(r.saldo)}</td>
       </tr>`;
-    }).join('')}
-    <tr class="total-row">
-      <td colspan="${colSpanTotal}" style="color:#7f1d1d">TOTAL — ${empresaName}</td>
-      <td class="r">$${_f(totImporte)}</td>
-      ${hasComision ? `<td class="r" style="color:#d97706">$${_f(totComision)}</td>` : ''}
-      <td class="r" style="color:#16a34a">${totPagos > 0 ? '– $'+_f(totPagos) : '–'}</td>
-      <td class="r" style="color:#dc2626;font-size:13px;font-weight:800">$${_f(saldoMostrar)}</td>
-    </tr>
+    }
+    return `<tr class="fila-fac">
+      <td style="white-space:nowrap">${r.fecha||'–'}</td>
+      ${hasCliente?`<td style="font-weight:600">${r.cliente||'–'}</td>`:''}
+      <td>${r.fca||'–'}${isNC?'<span class="nc-badge">NC</span>':''}</td>
+      <td class="r">${r.importe?'$'+_f(r.importe):'–'}</td>
+      ${hasComision?`<td class="r" style="color:#d97706;font-weight:600">${r.comision?'$'+_f(r.comision):'–'}</td>`:''}
+      <td class="r" style="color:#94a3b8">–</td>
+      <td class="r" style="color:#dc2626;font-weight:700">$${_f(r.saldo)}</td>
+    </tr>`;
+  }).join('')}
+  <tr class="total-row">
+    <td colspan="${colSpanNombre+1}" style="color:#7f1d1d;font-size:11px">SUBTOTALES — ${empresaName}</td>
+    <td class="r">$${_f(totImporte)}</td>
+    ${hasComision?`<td class="r" style="color:#d97706">$${_f(totComision)}</td>`:''}
+    <td class="r" style="color:#16a34a">${totPagos>0?'– $'+_f(totPagos):'–'}</td>
+    <td class="r" style="color:#dc2626">$${_f(saldoMostrar)}</td>
+  </tr>
   </tbody>
 </table>
 
-<div class="footer">
-  MÜÜK SRL · Generado el ${hoyStr} · Período desde último saldo $0 · ${empresaName}
+<div class="grand-saldo">
+  <div>
+    <div style="font-size:9px;opacity:.75;text-transform:uppercase;letter-spacing:.08em">TOTAL A COBRAR</div>
+    <div style="font-size:10.5px;opacity:.85">${empresaName} — ${hoyStr}</div>
+  </div>
+  <div style="font-size:24px;font-weight:900">$${_f(saldoMostrar)}</div>
 </div>
+
+<div class="footer">MÜÜK SRL · Comisiones pendientes · Generado el ${hoyStr}</div>
 </body></html>`;
 
-  const w = window.open('', '_blank', 'width=900,height=1100');
+  const w = window.open('', '_blank', 'width=920,height=1100');
   w.document.write(html);
   w.document.close();
   toast('PDF de ' + empresaName + ' generado', 'success');
@@ -11298,6 +11462,11 @@ function renderCheques(cat){
              <i class="bi bi-bank2 me-1"></i>Depositar
            </button>`
         : '';
+      const pagarBtn = isPagar && c.estado==='pendiente'
+        ? `<button class="btn btn-sm btn-success btn-a me-1" onclick="pagarChequeRapido('${c.id}')" title="Marcar como pagado y debitar del banco">
+             <i class="bi bi-check2-circle me-1"></i>Pagar
+           </button>`
+        : '';
       return`<tr ${trClass?`class="${trClass}"`:''}>
         <td class="ps-3"><small>${fmtF(c.fecha)}</small></td>
         <td>${fmtF(c.fechaVenc)} ${vencTag}</td>
@@ -11318,6 +11487,7 @@ function renderCheques(cat){
         <td>${bdgEstado(c.estado)}</td>
         <td class="text-nowrap">
           ${depositarBtn}
+          ${pagarBtn}
           <button class="btn btn-outline-primary btn-a me-1" onclick="editarCheque('${cat}','${c.id}')"><i class="bi bi-pencil"></i></button>
           <button class="btn btn-outline-danger btn-a" onclick="eliminarCheque('${cat}','${c.id}')"><i class="bi bi-trash"></i></button>
         </td>
@@ -11446,11 +11616,38 @@ function guardarCheque(){
     factura:document.getElementById('ch-factura').value,
     instrumento: (document.querySelector('input[name="ch-instrumento"]:checked')?.value) || ''
   };
+  const prevObj = ST[cat].find(x => x.id === obj.id);
   const idx=ST[cat].findIndex(x=>x.id===obj.id);
   if(idx>=0)ST[cat][idx]=obj;else ST[cat].push(obj);
+
+  // ── Cheques a Pagar: al marcar como "pagado" crear débito en Caja Bancos ──
+  if (cat === 'chequesPagar' && obj.estado === 'pagado' && prevObj?.estado !== 'pagado') {
+    const banco = obj.banco || 'Banco Galicia - Cta. Corriente';
+    const instrLabel = obj.instrumento === 'transferencia' ? 'Transferencia' : obj.instrumento === 'echeque' ? 'E-Cheque' : 'Cheque';
+    const ref = obj.numero ? ` Nro. ${obj.numero}` : '';
+    const proveedor = obj.cliente ? ` — ${obj.cliente}` : '';
+    const facRef = obj.factura ? ` | Fac: ${obj.factura}` : '';
+    const concepto = 'Pago de Cheque';
+    if (!ST.conceptos.includes(concepto)) ST.conceptos.push(concepto);
+    if (!ST.cajaBancos) ST.cajaBancos = [];
+    ST.cajaBancos.push({
+      id: uid(),
+      fecha: obj.fechaVenc || hoy(),
+      socioId: obj.socioId || '',
+      banco,
+      tipo: 'egreso',
+      concepto,
+      monto: obj.monto,
+      desc: `${instrLabel}${ref}${proveedor}${facRef}`
+    });
+    toast(`✓ ${instrLabel}${ref} pagado — débito de ${fmt(obj.monto)} registrado en ${banco}`, 'success');
+    try { renderMovimientos('cajaBancos'); } catch(e) {}
+    try { renderSaldosBancos(); } catch(e) {}
+  }
+
   save();renderCheques(cat);renderDashboard();
   bootstrap.Modal.getInstance(document.getElementById('modalCheque')).hide();
-  toast('Cheque guardado');
+  if (!(cat === 'chequesPagar' && obj.estado === 'pagado' && prevObj?.estado !== 'pagado')) toast('Cheque guardado');
 }
 
 function depositarECheque(id){
@@ -11475,6 +11672,37 @@ function depositarECheque(id){
   save();renderCheques('eCheques');renderMovimientos('cajaBancos');renderDashboard();
   toast(`✓ E-Cheque Nro. ${c.numero} depositado en ${banco}`);
 }
+function pagarChequeRapido(id) {
+  const c = (ST.chequesPagar||[]).find(x => x.id === id);
+  if (!c) return;
+  const banco = c.banco || 'Banco Galicia - Cta. Corriente';
+  const instrLabel = c.instrumento === 'transferencia' ? 'Transferencia' : c.instrumento === 'echeque' ? 'E-Cheque' : 'Cheque';
+  const ref = c.numero ? ` Nro. ${c.numero}` : '';
+  _confirmar(
+    `¿Marcar ${instrLabel}${ref} como PAGADO?\n\nSe debitará ${fmt(c.monto)} de "${banco}" en Caja Bancos.`,
+    () => {
+      c.estado = 'pagado';
+      const concepto = 'Pago de Cheque';
+      if (!ST.conceptos.includes(concepto)) ST.conceptos.push(concepto);
+      if (!ST.cajaBancos) ST.cajaBancos = [];
+      const proveedor = c.cliente ? ` — ${c.cliente}` : '';
+      const facRef    = c.factura ? ` | Fac: ${c.factura}` : '';
+      ST.cajaBancos.push({
+        id: uid(), fecha: hoy(), socioId: c.socioId||'', banco,
+        tipo: 'egreso', concepto, monto: c.monto,
+        desc: `${instrLabel}${ref}${proveedor}${facRef}`
+      });
+      save();
+      renderCheques('chequesPagar');
+      try { renderMovimientos('cajaBancos'); } catch(e) {}
+      try { renderSaldosBancos(); } catch(e) {}
+      renderDashboard();
+      toast(`✓ ${instrLabel}${ref} pagado — ${fmt(c.monto)} debitado de ${banco}`, 'success');
+    },
+    { title: 'Pagar cheque', btnLabel: 'Confirmar pago', btnIcon: 'check2-circle', danger: false }
+  );
+}
+
 function eliminarCheque(cat,id){
   _confirmar('¿Eliminar este cheque? Esta acción no se puede deshacer.', ()=>{
     ST[cat]=ST[cat].filter(x=>x.id!==id);
@@ -22710,6 +22938,14 @@ function _ectaRenderData(vendedor) {
   const summary   = document.getElementById('ecta-summary');
   const container = document.getElementById('ecta-clientes');
 
+  // Guardar posición de scroll y estado de colapso antes de re-renderizar
+  const _scrollY = window.scrollY;
+  const _collapseMap = {};
+  container.querySelectorAll('.ecta-client-card[data-origidx]').forEach(card => {
+    const body = card.querySelector('.ecta-body');
+    _collapseMap[card.dataset.origidx] = body ? !body.classList.contains('d-none') : false;
+  });
+
   // ── Summary cards ──────────────────────────────────────────────────────────
   const totalClientes   = clientes.length;
   const totalCobrado    = clientes.reduce((s,c) => s + c.totalCobrado, 0);
@@ -22923,6 +23159,20 @@ function _ectaRenderData(vendedor) {
 
   container.innerHTML = html || '<div class="text-muted text-center py-4" style="font-size:.95rem">No se encontraron datos para este vendedor.</div>';
 
+  // Restaurar estado de colapso de cada tarjeta
+  container.querySelectorAll('.ecta-client-card[data-origidx]').forEach(card => {
+    const oi = card.dataset.origidx;
+    if (oi in _collapseMap) {
+      const body = card.querySelector('.ecta-body');
+      if (body) {
+        if (_collapseMap[oi]) body.classList.remove('d-none');
+        else body.classList.add('d-none');
+      }
+    }
+  });
+  // Restaurar posición de scroll de la ventana
+  if (_scrollY > 0) requestAnimationFrame(() => window.scrollTo({ top: _scrollY, behavior: 'instant' }));
+
   // Apply active filter + search after render
   ectaFilter();
 }
@@ -23026,23 +23276,33 @@ function ectaPdfCliente(idx) {
 
     // Subtotal por empresa (siempre si hay NC, o con múltiples empresas)
     if (multiEmp || empNC) {
-      const stColor = subtotalEmp < 0 ? '#6d28d9' : (subtotalEmp === 0 ? '#64748b' : '#dc2626');
-      const stBg    = subtotalEmp < 0 ? '#f5f3ff' : (subtotalEmp === 0 ? '#f1f5f9' : '#fef2f2');
-      pendRows += `<tr style="background:${stBg};border-top:1.5px solid #e2e8f0">
-        <td colspan="3" style="font-weight:700;font-size:9px;color:${stColor};padding:5px 8px">
-          SUBTOTAL ${emp.toUpperCase()}${empNC ? ' &nbsp;<span style="background:#ede9fe;color:#6d28d9;font-size:8px;padding:1px 4px;border-radius:3px;font-weight:700">NC descontada</span>' : ''}
+      const stColor  = subtotalEmp < 0 ? '#5b21b6' : '#991b1b';
+      const stBg     = subtotalEmp < 0 ? '#ede9fe' : '#fef2f2';
+      const stBorder = subtotalEmp < 0 ? '#a78bfa' : '#fca5a5';
+      pendRows += `<tr style="background:${stBg};border-top:2px solid ${stBorder}">
+        <td colspan="3" style="font-weight:700;font-size:9px;color:${stColor};padding:6px 8px;text-transform:uppercase;letter-spacing:.03em">
+          ↳ Subtotal ${emp}${empNC ? '&nbsp;<span style="background:#ede9fe;color:#6d28d9;font-size:7px;padding:1px 4px;border-radius:3px;font-weight:700">NC descontada</span>' : ''}
         </td>
-        <td style="text-align:right;font-weight:800;color:${stColor};padding:5px 8px">${_ectaFmt(subtotalEmp)}</td>
+        <td style="text-align:right;font-size:13px;font-weight:900;color:${stColor};padding:6px 10px;white-space:nowrap">${_ectaFmt(subtotalEmp)}</td>
         <td></td><td></td>
       </tr>`;
     }
   });
 
   // Fila total final
-  pendRows += `<tr class="total-row">
-    <td colspan="3"><strong>TOTAL A ABONAR — ${c.nombre.toUpperCase()}</strong></td>
-    <td style="text-align:right"><strong>${_ectaFmt(c.totalPendiente)}</strong></td>
-    <td></td><td></td>
+  pendRows += `<tr>
+    <td colspan="6" style="padding:0;border-top:3px solid #b91c1c">
+      <table style="width:100%;border-collapse:collapse;background:linear-gradient(135deg,#b91c1c,#dc2626);color:#fff">
+        <tr>
+          <td style="padding:10px 14px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;opacity:.9">
+            ▶ TOTAL A ABONAR — ${c.nombre.toUpperCase()}
+          </td>
+          <td style="padding:10px 18px;text-align:right;font-size:20px;font-weight:900;white-space:nowrap;letter-spacing:-.02em">
+            ${_ectaFmt(c.totalPendiente)}
+          </td>
+        </tr>
+      </table>
+    </td>
   </tr>`;
 
   const notaNC = tieneNC
@@ -23202,13 +23462,14 @@ function ectaPdfGeneral() {
 
       // Subtotal por empresa (siempre que haya NC, o cuando hay múltiples empresas)
       if (multiEmpresa || empTieneNC) {
-        const stBg    = subtotalEmp < 0 ? '#ede9fe' : (subtotalEmp === 0 ? '#f1f5f9' : '#fef2f2');
-        const stColor = subtotalEmp < 0 ? '#6d28d9' : (subtotalEmp === 0 ? '#64748b' : '#991b1b');
-        rows += `<tr style="background:${stBg};border-top:1.5px solid ${pal.border}50">
-          <td colspan="3" style="padding:5px 10px;font-size:10px;font-weight:700;color:${stColor}">
-            SUBTOTAL ${emp.toUpperCase()}${empTieneNC ? ' &nbsp;<span style="background:#ede9fe;color:#6d28d9;font-size:8px;padding:1px 5px;border-radius:3px;font-weight:700">NC descontada</span>' : ''}
+        const stBg    = subtotalEmp < 0 ? '#ede9fe' : '#fef2f2';
+        const stColor = subtotalEmp < 0 ? '#5b21b6' : '#991b1b';
+        const stBorder= subtotalEmp < 0 ? '#a78bfa' : '#fca5a5';
+        rows += `<tr style="background:${stBg};border-top:2px solid ${stBorder}">
+          <td colspan="3" style="padding:6px 10px;font-size:9.5px;font-weight:700;color:${stColor};text-transform:uppercase;letter-spacing:.04em">
+            ↳ Subtotal ${emp}${empTieneNC ? '&nbsp;<span style="background:#ede9fe;color:#6d28d9;font-size:8px;padding:1px 5px;border-radius:3px;font-weight:700">NC descontada</span>' : ''}
           </td>
-          <td style="text-align:right;font-size:12px;font-weight:800;color:${stColor};padding:5px 10px">${_ectaFmt(subtotalEmp)}</td>
+          <td style="text-align:right;font-size:13px;font-weight:900;color:${stColor};padding:6px 14px;white-space:nowrap">${_ectaFmt(subtotalEmp)}</td>
           <td></td>
           <td></td>
         </tr>`;
@@ -23221,13 +23482,24 @@ function ectaPdfGeneral() {
       ? `<div style="font-size:9px;color:#64748b;padding:4px 10px 6px;font-style:italic">* Total neto incluye ${empresasList.length} empresas. Las NC están descontadas del subtotal de cada empresa.</div>`
       : (tieneNC ? `<div style="font-size:9px;color:#64748b;padding:4px 10px 6px;font-style:italic">* Las Notas de Crédito (NC) están descontadas del total.</div>` : '');
 
-    rows += `<tr style="background:#fecaca;font-weight:800;border-top:2px solid #f87171">
-      <td colspan="3" style="padding:7px 10px;font-size:11px;color:#7f1d1d;text-transform:uppercase">
-        TOTAL ${c.nombre} — ${empresasList.length > 1 ? empresasList.length + ' empresas' : empresasList[0] || ''}
+    // TOTAL row: fondo rojo sólido, letra blanca, monto grande — muy visible para el cliente
+    rows += `<tr>
+      <td colspan="6" style="padding:0;border-top:3px solid #b91c1c">
+        <table style="width:100%;border-collapse:collapse;background:linear-gradient(135deg,#b91c1c,#dc2626);color:#fff">
+          <tr>
+            <td style="padding:10px 14px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;opacity:.9;white-space:nowrap">
+              <span style="opacity:.75;font-size:9px">▶</span> TOTAL A ABONAR
+            </td>
+            <td style="padding:10px 14px;font-size:10px;opacity:.85">
+              ${c.nombre}${empresasList.length > 1 ? ' · ' + empresasList.length + ' empresas' : ''}
+              ${tieneNC ? ' · <span style="background:rgba(255,255,255,.2);border-radius:3px;padding:1px 5px;font-size:8px">NC descontadas</span>' : ''}
+            </td>
+            <td style="padding:10px 18px;text-align:right;font-size:20px;font-weight:900;white-space:nowrap;letter-spacing:-.02em">
+              ${_ectaFmt(totalNeto)}
+            </td>
+          </tr>
+        </table>
       </td>
-      <td style="text-align:right;color:#7f1d1d;font-size:14px;padding:7px 10px">${_ectaFmt(totalNeto)}</td>
-      <td></td>
-      <td></td>
     </tr>`;
 
     clientesHTML += `
