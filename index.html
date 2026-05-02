@@ -25521,83 +25521,107 @@ function calcOpReset() {
 
 // ── Imprimir cotización producto único ─────────────────
 function calcImprimirSingle() {
-  const pvSiva = document.getElementById('calc-res-precio-siva')?.textContent || '–';
-  if (!pvSiva || pvSiva === '–') { toast('Calculá el precio primero', 'warning'); return; }
-  const item    = document.getElementById('calc-item')?.value.trim() || '(Sin nombre)';
-  const marca   = document.getElementById('calc-marca')?.value.trim() || '–';
-  const cliente = document.getElementById('calc-cliente-dest')?.value.trim() || '–';
-  const pvCiva  = document.getElementById('calc-res-precio-civa')?.textContent || '–';
-  const ganancia= document.getElementById('calc-res-ganancia')?.textContent || '–';
-  const margen  = document.getElementById('calc-res-margen')?.textContent || '–';
-  const costoTot= document.getElementById('calc-res-costo-total')?.textContent || '–';
-  const costo   = document.getElementById('calc-costo')?.value || '–';
-  const qty     = document.getElementById('calc-qty')?.value || '1';
-  const hoyStr  = new Date().toLocaleDateString('es-AR',{day:'numeric',month:'long',year:'numeric'});
+  const _n = id => parseFloat(document.getElementById(id)?.value) || 0;
+  const costoNeto = _n('calc-costo');
+  if (costoNeto <= 0) { toast('Calculá el precio primero', 'warning'); return; }
 
-  // Waterfall data from calc-waterfall
-  const wfEl  = document.getElementById('calc-waterfall');
-  const wfHtml = wfEl ? wfEl.innerHTML : '';
+  const item      = document.getElementById('calc-item')?.value.trim() || '(Sin nombre)';
+  const marca     = document.getElementById('calc-marca')?.value.trim() || '';
+  const cliente   = document.getElementById('calc-cliente-dest')?.value.trim() || '–';
+  const qty       = Math.max(_n('calc-qty') || 1, 1);
+  const ivaVenta  = _n('calc-iva-venta')  / 100;
+  const flete     = _n('calc-flete');
+  const seguroPct = _n('calc-seguro')     / 100;
+  const deposito  = _n('calc-deposito');
+  const iibbPct   = _n('calc-iibb')       / 100;
+  const chequePct = _n('calc-imp-cheque') / 100;
+  const percPct   = _n('calc-percepcion') / 100;
+  const retPct    = _n('calc-retencion')  / 100;
+  const sellosPct = _n('calc-sellos')     / 100;
+  const comPct    = _n('calc-comision')   / 100;
+  const overPct   = _n('calc-overhead')   / 100;
+  const margenObj = _n('calc-margen')     / 100;
+  const plazo     = _n('calc-plazo');
+  const tasaMens  = _n('calc-tasa')       / 100;
 
-  // Simulador table
-  const simEl  = document.getElementById('calc-sim-tbody');
+  const fleteUnit   = flete / qty;
+  const seguroUnit  = costoNeto * seguroPct;
+  const depUnit     = deposito  / qty;
+  const costoLogU   = fleteUnit + seguroUnit + depUnit;
+  const costoDirU   = costoNeto + costoLogU;
+  const costFinPct  = plazo > 0 && tasaMens > 0 ? (tasaMens / 30) * plazo : 0;
+  const cargasPct   = iibbPct + chequePct + percPct + retPct + sellosPct + comPct + overPct + costFinPct;
+  const denom       = 1 - cargasPct - margenObj;
+  const pvSiva      = denom > 0.01 ? costoDirU / denom : costoDirU;
+  const pvCiva      = pvSiva * (1 + ivaVenta);
+  const ganancia    = pvSiva * margenObj;
+  const pctLogCosto = costoNeto > 0 ? (costoLogU / costoNeto * 100) : 0;
+  const hoyStr      = new Date().toLocaleDateString('es-AR', {day:'numeric',month:'long',year:'numeric'});
+  const _fv = v => '$' + Math.round(v).toLocaleString('es-AR');
+  const _fp = (v,d) => v.toFixed(d||1) + '%';
+
+  // ─ Tabla logística
+  var logRows = '';
+  if (flete > 0)     logRows += '<tr><td style="padding:5px 8px">Flete total ' + _fv(flete) + ' ÷ ' + qty + ' u.</td><td style="padding:5px 8px;text-align:right;font-weight:700;color:#0891b2">' + _fv(fleteUnit) + '</td><td style="padding:5px 8px;text-align:right;color:#64748b">' + _fp(fleteUnit/costoNeto*100) + '</td></tr>';
+  if (seguroPct > 0) logRows += '<tr><td style="padding:5px 8px">Seguro (' + _fp(seguroPct*100,2) + ' s/costo)</td><td style="padding:5px 8px;text-align:right;font-weight:700;color:#0891b2">' + _fv(seguroUnit) + '</td><td style="padding:5px 8px;text-align:right;color:#64748b">' + _fp(seguroUnit/costoNeto*100) + '</td></tr>';
+  if (deposito > 0)  logRows += '<tr><td style="padding:5px 8px">Depósito/Manipulación ' + _fv(deposito) + ' ÷ ' + qty + ' u.</td><td style="padding:5px 8px;text-align:right;font-weight:700;color:#0891b2">' + _fv(depUnit) + '</td><td style="padding:5px 8px;text-align:right;color:#64748b">' + _fp(depUnit/costoNeto*100) + '</td></tr>';
+
+  // ─ Tabla cargas impositivas
+  var chgRows = '';
+  if (iibbPct)   chgRows += '<tr><td style="padding:5px 8px">IIBB</td><td style="padding:5px 8px;text-align:right;color:#64748b">' + _fp(iibbPct*100) + '</td><td style="padding:5px 8px;text-align:right;color:#dc2626;font-weight:700">' + _fv(pvSiva*iibbPct) + '</td></tr>';
+  if (chequePct) chgRows += '<tr><td style="padding:5px 8px">Imp. Cheque</td><td style="padding:5px 8px;text-align:right;color:#64748b">' + _fp(chequePct*100) + '</td><td style="padding:5px 8px;text-align:right;color:#dc2626;font-weight:700">' + _fv(pvSiva*chequePct) + '</td></tr>';
+  if (percPct)   chgRows += '<tr><td style="padding:5px 8px">Percepción</td><td style="padding:5px 8px;text-align:right;color:#64748b">' + _fp(percPct*100) + '</td><td style="padding:5px 8px;text-align:right;color:#dc2626;font-weight:700">' + _fv(pvSiva*percPct) + '</td></tr>';
+  if (retPct)    chgRows += '<tr><td style="padding:5px 8px">Retención</td><td style="padding:5px 8px;text-align:right;color:#64748b">' + _fp(retPct*100) + '</td><td style="padding:5px 8px;text-align:right;color:#dc2626;font-weight:700">' + _fv(pvSiva*retPct) + '</td></tr>';
+  if (sellosPct) chgRows += '<tr><td style="padding:5px 8px">Sellados</td><td style="padding:5px 8px;text-align:right;color:#64748b">' + _fp(sellosPct*100) + '</td><td style="padding:5px 8px;text-align:right;color:#dc2626;font-weight:700">' + _fv(pvSiva*sellosPct) + '</td></tr>';
+  if (comPct)    chgRows += '<tr><td style="padding:5px 8px">Comisión</td><td style="padding:5px 8px;text-align:right;color:#64748b">' + _fp(comPct*100) + '</td><td style="padding:5px 8px;text-align:right;color:#dc2626;font-weight:700">' + _fv(pvSiva*comPct) + '</td></tr>';
+  if (overPct)   chgRows += '<tr><td style="padding:5px 8px">Overhead</td><td style="padding:5px 8px;text-align:right;color:#64748b">' + _fp(overPct*100) + '</td><td style="padding:5px 8px;text-align:right;color:#dc2626;font-weight:700">' + _fv(pvSiva*overPct) + '</td></tr>';
+  if (costFinPct)chgRows += '<tr><td style="padding:5px 8px">Costo financiero (' + plazo + 'd)</td><td style="padding:5px 8px;text-align:right;color:#64748b">' + _fp(costFinPct*100,2) + '</td><td style="padding:5px 8px;text-align:right;color:#dc2626;font-weight:700">' + _fv(pvSiva*costFinPct) + '</td></tr>';
+
+  const simEl = document.getElementById('calc-sim-tbody');
   const simHtml = simEl ? simEl.innerHTML : '';
 
   const w = window.open('', '_blank');
   if (!w) { toast('Permitir ventanas emergentes', 'warning'); return; }
+  const th = 'background:#0f172a;color:#fff;padding:6px 8px;font-size:9px;text-transform:uppercase;letter-spacing:.04em;';
   w.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>Cotización — ' + item + '</title>'
-  + '<style>'
-  + '@page{size:A4;margin:15mm 18mm}'
-  + '@media print{.no-print{display:none!important}}'
-  + 'body{font-family:"Segoe UI",system-ui,sans-serif;font-size:12px;color:#1e293b;background:#fff;padding:28px 32px}'
-  + '.header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;padding-bottom:12px;border-bottom:2px solid #334155}'
-  + '.logo{font-size:22px;font-weight:900;letter-spacing:-1px;color:#4f46e5}'
-  + '.doc-info{text-align:right;font-size:10px;color:#64748b}'
-  + '.cot-box{background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:8px;padding:14px;margin-bottom:14px}'
-  + '.cot-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#64748b;margin-bottom:2px}'
-  + '.cot-val{font-size:14px;font-weight:800;color:#0f172a}'
-  + '.price-hero{background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;border-radius:10px;padding:16px;text-align:center;margin-bottom:14px}'
-  + '.price-lbl{font-size:9px;text-transform:uppercase;letter-spacing:.07em;opacity:.8;margin-bottom:4px}'
-  + '.price-val{font-size:30px;font-weight:900;letter-spacing:-1px}'
-  + '.price-sub{font-size:11px;margin-top:4px;opacity:.85}'
-  + '.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}'
-  + '.kpi{background:#fff;border:1px solid #e2e8f0;border-radius:7px;padding:10px;text-align:center}'
-  + '.kpi .lbl{font-size:9px;color:#64748b;text-transform:uppercase;font-weight:600;margin-bottom:3px}'
-  + '.kpi .val{font-size:14px;font-weight:800;color:#0f172a}'
-  + 'h3{font-size:11px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.05em;margin:14px 0 7px}'
-  + '.print-btn{position:fixed;top:12px;right:12px;background:#4f46e5;color:#fff;border:none;border-radius:8px;padding:8px 18px;cursor:pointer;font-size:11px;font-weight:600}'
-  + '.footer{margin-top:20px;padding-top:10px;border-top:1px solid #e2e8f0;font-size:9px;color:#94a3b8;text-align:center}'
-  + '</style></head><body>'
-  + '<button class="print-btn no-print" onclick="window.print()"><i>🖨</i> Imprimir / PDF</button>'
-  + '<div class="header">'
-  +   '<div><div class="logo">MÜÜK</div><div style="font-size:10px;color:#64748b;margin-top:2px">Cotización de Precio — Uso Interno</div></div>'
-  +   '<div class="doc-info"><div style="font-size:12px;font-weight:700;color:#0f172a">Cotización</div><div>' + hoyStr + '</div></div>'
+  + '<style>@page{size:A4;margin:14mm 17mm}@media print{.np{display:none!important}}body{font-family:"Segoe UI",system-ui,sans-serif;font-size:12px;color:#1e293b;padding:24px 28px}.hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px;padding-bottom:10px;border-bottom:2px solid #334155}.logo{font-size:22px;font-weight:900;letter-spacing:-1px;color:#4f46e5}.hero{background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;border-radius:10px;padding:14px;text-align:center;margin-bottom:14px}.hero .pv{font-size:28px;font-weight:900}.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px}.kpi{background:#f8fafc;border:1px solid #e2e8f0;border-radius:7px;padding:9px;text-align:center}.kpi .l{font-size:9px;color:#64748b;text-transform:uppercase;font-weight:600;margin-bottom:2px}.kpi .v{font-size:14px;font-weight:800}h3{font-size:10px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.06em;margin:14px 0 6px;padding-bottom:4px;border-bottom:1px solid #e2e8f0}table{width:100%;border-collapse:collapse;font-size:11px}td{border-bottom:1px solid #f1f5f9}.sub{color:#94a3b8;font-size:10px}.btn{position:fixed;top:10px;right:10px;background:#4f46e5;color:#fff;border:none;border-radius:7px;padding:7px 16px;cursor:pointer;font-size:11px;font-weight:600}.ftr{margin-top:18px;padding-top:8px;border-top:1px solid #e2e8f0;font-size:9px;color:#94a3b8;text-align:center}</style>'
+  + '</head><body>'
+  + '<button class="btn np" onclick="window.print()">🖨 Imprimir / PDF</button>'
+  + '<div class="hdr"><div><div class="logo">MÜÜK</div><div class="sub" style="margin-top:2px">Cotización Producto Único — Uso Interno</div></div>'
+  + '<div style="text-align:right"><div style="font-size:13px;font-weight:800;color:#0f172a">' + item + (marca ? ' <span style="font-weight:400;font-size:11px;color:#64748b">— ' + marca + '</span>' : '') + '</div>'
+  + '<div class="sub">' + (cliente !== '–' ? cliente + ' · ' : '') + qty + ' u. · ' + hoyStr + '</div></div></div>'
+  // HERO: precio
+  + '<div class="hero"><div style="font-size:9px;text-transform:uppercase;letter-spacing:.07em;opacity:.8;margin-bottom:4px">Precio de Venta Sugerido (s/IVA)</div>'
+  + '<div class="pv">' + _fv(pvSiva) + '</div>'
+  + '<div style="font-size:11px;margin-top:4px;opacity:.85">Con IVA: ' + _fv(pvCiva) + ' &nbsp;·&nbsp; Costo base: ' + _fv(costoNeto) + ' &nbsp;·&nbsp; Logística: ' + _fv(costoLogU) + '</div></div>'
+  // KPI grid
+  + '<div class="grid3">'
+  + '<div class="kpi"><div class="l">Costo directo/u.</div><div class="v" style="color:#dc2626">' + _fv(costoDirU) + '</div><div class="sub">costo + logística</div></div>'
+  + '<div class="kpi"><div class="l">Ganancia/u.</div><div class="v" style="color:#16a34a">' + _fv(ganancia) + '</div><div class="sub">' + _fp(margenObj*100) + ' margen</div></div>'
+  + '<div class="kpi"><div class="l">Log. % del costo</div><div class="v" style="color:#0891b2">' + _fp(pctLogCosto) + '</div><div class="sub">' + _fv(costoLogU) + '/u.</div></div>'
+  + '<div class="kpi"><div class="l">Inversión lote (' + qty + ' u.)</div><div class="v" style="color:#dc2626">' + _fv(costoDirU * qty) + '</div></div>'
+  + '<div class="kpi"><div class="l">Venta lote s/IVA</div><div class="v" style="color:#4f46e5">' + _fv(pvSiva * qty) + '</div></div>'
+  + '<div class="kpi"><div class="l">Ganancia lote</div><div class="v" style="color:#16a34a">' + _fv(ganancia * qty) + '</div></div>'
   + '</div>'
-  + '<div class="cot-box" style="margin-bottom:14px">'
-  +   '<div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:12px">'
-  +     '<div><div class="cot-label">Producto</div><div class="cot-val">' + item + '</div><div style="font-size:10px;color:#64748b">' + marca + '</div></div>'
-  +     '<div><div class="cot-label">Destino / Cliente</div><div style="font-size:13px;font-weight:700;color:#0f172a">' + cliente + '</div></div>'
-  +     '<div><div class="cot-label">Cantidad</div><div style="font-size:13px;font-weight:700;color:#0f172a">' + qty + ' u.</div></div>'
-  +   '</div>'
-  + '</div>'
-  + '<div class="price-hero">'
-  +   '<div class="price-lbl">Precio de Venta Sugerido (s/IVA)</div>'
-  +   '<div class="price-val">' + pvSiva + '</div>'
-  +   '<div class="price-sub">Con IVA: ' + pvCiva + '</div>'
-  + '</div>'
-  + '<div class="grid2">'
-  +   '<div class="kpi"><div class="lbl">Costo total s/IVA</div><div class="val" style="color:#dc2626">' + costoTot + '</div></div>'
-  +   '<div class="kpi"><div class="lbl">Ganancia por unidad</div><div class="val" style="color:#16a34a">' + ganancia + '</div></div>'
-  +   '<div class="kpi"><div class="lbl">Margen efectivo</div><div class="val" style="color:#4f46e5">' + margen + '</div></div>'
-  +   '<div class="kpi"><div class="lbl">Costo unit. neto</div><div class="val">$' + parseFloat(costo||0).toLocaleString('es-AR') + '</div></div>'
-  + '</div>'
-  + '<h3>Desglose de costos</h3>'
-  + '<div style="background:#f8fafc;border-radius:8px;padding:10px">' + wfHtml + '</div>'
-  + '<h3>Simulador de márgenes</h3>'
-  + '<table style="width:100%;border-collapse:collapse;font-size:11px">'
-  +   '<thead style="background:#0f172a;color:#fff"><tr><th style="padding:6px 8px;text-align:left">Margen</th><th style="padding:6px 8px;text-align:right">Precio s/IVA</th><th style="padding:6px 8px;text-align:right">Precio c/IVA</th><th style="padding:6px 8px;text-align:right">Ganancia</th></tr></thead>'
-  +   '<tbody>' + simHtml + '</tbody>'
-  + '</table>'
-  + '<div class="footer">Generado por MÜÜK · ' + hoyStr + ' · Uso interno — no es un comprobante fiscal</div>'
+  // Tabla logística
+  + '<h3>Desglose Logístico por Unidad</h3>'
+  + (logRows ? '<table><thead><tr><th style="' + th + 'text-align:left">Concepto logístico</th><th style="' + th + 'text-align:right">Monto/u.</th><th style="' + th + 'text-align:right">% del costo base</th></tr></thead>'
+  + '<tbody>' + logRows
+  + '<tr style="background:#eff6ff;border-top:2px solid #0891b2"><td style="padding:6px 8px;font-weight:800">TOTAL LOGÍSTICA</td><td style="padding:6px 8px;text-align:right;font-weight:800;color:#0891b2">' + _fv(costoLogU) + '</td><td style="padding:6px 8px;text-align:right;font-weight:800;color:#0891b2">' + _fp(pctLogCosto) + ' del costo base</td></tr>'
+  + '</tbody></table>'
+  : '<div class="sub" style="padding:6px 0">Sin costos logísticos cargados</div>')
+  // Tabla cargas impositivas
+  + '<h3>Cargas Impositivas y Comerciales (sobre PV s/IVA)</h3>'
+  + (chgRows ? '<table><thead><tr><th style="' + th + 'text-align:left">Concepto</th><th style="' + th + 'text-align:right">% s/PV</th><th style="' + th + 'text-align:right">Monto/u.</th></tr></thead>'
+  + '<tbody>' + chgRows
+  + '<tr style="background:#fef2f2;border-top:2px solid #dc2626"><td style="padding:6px 8px;font-weight:800">TOTAL CARGAS</td><td style="padding:6px 8px;text-align:right;font-weight:800;color:#dc2626">' + _fp(cargasPct*100) + '</td><td style="padding:6px 8px;text-align:right;font-weight:800;color:#dc2626">' + _fv(pvSiva*cargasPct) + '</td></tr>'
+  + '</tbody></table>'
+  : '<div class="sub" style="padding:6px 0">Sin cargas impositivas configuradas</div>')
+  // Simulador márgenes
+  + '<h3>Simulador de Márgenes</h3>'
+  + '<table><thead><tr><th style="' + th + 'text-align:left">Margen</th><th style="' + th + 'text-align:right">Precio s/IVA</th><th style="' + th + 'text-align:right">Precio c/IVA</th><th style="' + th + 'text-align:right">Ganancia/u.</th></tr></thead>'
+  + '<tbody>' + simHtml + '</tbody></table>'
+  + '<div class="ftr">Generado por MÜÜK · ' + hoyStr + ' · Uso interno — no es un comprobante fiscal</div>'
   + '</body></html>');
   w.document.close();
 }
@@ -25610,25 +25634,34 @@ function calcOpImprimir() {
   const s   = _calcOpGetShared();
   const ref = document.getElementById('cop-referencia')?.value.trim() || 'Cotización';
   const cli = document.getElementById('cop-cliente')?.value.trim() || '–';
-  const hoyStr = new Date().toLocaleDateString('es-AR',{day:'numeric',month:'long',year:'numeric'});
+  const hoyStr = new Date().toLocaleDateString('es-AR', {day:'numeric',month:'long',year:'numeric'});
 
-  const CAP_DENOM = 1 - s.iibb - s.cheque - s.comision - s.overhead - s.retencion - s.costFinPct - s.margen;
-  const _fv = v => '$' + Math.round(v).toLocaleString('es-AR');
-  const _f2 = v => '$' + v.toFixed(2);
+  const _fv  = v => '$' + Math.round(v).toLocaleString('es-AR');
+  const _fp  = v => v.toFixed(1) + '%';
+  const _mc  = m => m >= 30 ? '#16a34a' : m >= 20 ? '#d97706' : '#dc2626';
+
   const totalCostoBruto = rows.reduce((a, r) => a + r.costo * r.qty, 0);
-  const denom = CAP_DENOM > 0.01 ? CAP_DENOM : 0.01;
+  const cargasPct = s.iibb + s.cheque + s.comision + s.overhead + s.retencion + s.costFinPct;
+  const denom = Math.max(1 - cargasPct - s.margen, 0.01);
 
   const calcs = rows.map(r => {
     const costoTotal = r.costo * r.qty;
     const frac       = totalCostoBruto > 0 ? costoTotal / totalCostoBruto : 1 / rows.length;
-    const fleteAsig  = s.flete * frac;
-    const depAsig    = s.deposito * frac;
+    const fleteAsig  = s.flete   * frac;          // total flete para este producto (todos los units)
+    const depAsig    = s.deposito * frac;          // total depósito para este producto
     const costoLogU  = (fleteAsig / r.qty) + (r.costo * s.seguro) + (depAsig / r.qty);
-    const costoDir   = r.costo + costoLogU;
-    const pvSiva     = costoDir / denom;
+    const costoDirU  = r.costo + costoLogU;
+    const pvSiva     = costoDirU / denom;
     const pvCiva     = pvSiva * (1 + s.ivaVenta);
     const gan        = pvSiva * s.margen;
-    return { ...r, costoTotal, fleteAsig, costoDir, pvSiva, pvCiva, gan, pvSivaTotal: pvSiva * r.qty, pvCivaTotal: pvCiva * r.qty, ganTotal: gan * r.qty };
+    const pctFlete   = s.flete > 0   ? (fleteAsig / s.flete * 100)   : 0;
+    const pctLogCost = r.costo > 0   ? (costoLogU  / r.costo * 100)  : 0;
+    return {
+      ...r, costoTotal, frac, fleteAsig, depAsig, costoLogU, costoDirU,
+      pvSiva, pvCiva, gan,
+      pvSivaTotal: pvSiva * r.qty, pvCivaTotal: pvCiva * r.qty, ganTotal: gan * r.qty,
+      pctFlete, pctLogCost
+    };
   });
 
   const totInv   = calcs.reduce((a,c) => a + c.costoTotal, 0) + s.flete + s.deposito;
@@ -25636,71 +25669,123 @@ function calcOpImprimir() {
   const totVCiva = calcs.reduce((a,c) => a + c.pvCivaTotal, 0);
   const totGan   = calcs.reduce((a,c) => a + c.ganTotal, 0);
   const mProm    = totVSiva > 0 ? (totGan / totVSiva * 100) : 0;
-  const mColor   = m => m >= 30 ? '#16a34a' : m >= 20 ? '#d97706' : '#dc2626';
 
-  const tRows = calcs.map(c =>
-    '<tr style="border-bottom:1px solid #f1f5f9">'
-    + '<td style="padding:7px 8px;font-weight:600">' + c.nombre + (c.marca ? '<br><small style="font-weight:400;color:#94a3b8">' + c.marca + '</small>' : '') + '</td>'
-    + '<td style="padding:7px 8px;text-align:center">' + c.qty + '</td>'
-    + '<td style="padding:7px 8px;text-align:right">' + _fv(c.costo) + '</td>'
-    + '<td style="padding:7px 8px;text-align:right;color:#dc2626;font-weight:700">' + _fv(c.costoTotal + c.fleteAsig * c.qty / c.qty * c.qty) + '</td>'
-    + '<td style="padding:7px 8px;text-align:right;font-weight:800;color:#4f46e5">' + _fv(c.pvSiva) + '</td>'
-    + '<td style="padding:7px 8px;text-align:right;color:#0891b2">' + _fv(c.pvCiva) + '</td>'
-    + '<td style="padding:7px 8px;text-align:right;font-weight:700;color:#16a34a">' + _fv(c.pvSivaTotal) + '</td>'
-    + '<td style="padding:7px 8px;text-align:center"><span style="background:' + mColor(c.gan/c.pvSiva*100) + '20;color:' + mColor(c.gan/c.pvSiva*100) + ';border-radius:20px;padding:2px 7px;font-size:10px;font-weight:700">' + (c.gan/c.pvSiva*100).toFixed(1) + '%</span></td>'
-    + '</tr>'
-  ).join('');
+  // ─ Tabla 1: Costos y Logística
+  const logRows = calcs.map(c => {
+    const n = c.nombre + (c.marca ? ' <span style="font-weight:400;font-size:10px;color:#94a3b8">— ' + c.marca + '</span>' : '');
+    return '<tr style="border-bottom:1px solid #f1f5f9">'
+      + '<td style="padding:6px 8px;font-weight:600">' + n + '</td>'
+      + '<td style="padding:6px 8px;text-align:center">' + c.qty + '</td>'
+      + '<td style="padding:6px 8px;text-align:right">' + _fv(c.costo) + '</td>'
+      + '<td style="padding:6px 8px;text-align:right;font-weight:700">' + _fv(c.costoTotal) + '</td>'
+      + '<td style="padding:6px 8px;text-align:right;color:#0891b2;font-weight:700">' + _fv(c.fleteAsig) + '</td>'
+      + '<td style="padding:6px 8px;text-align:right"><span style="background:#e0f2fe;color:#0369a1;border-radius:20px;padding:2px 7px;font-size:10px;font-weight:700">' + _fp(c.pctFlete) + '</span></td>'
+      + '<td style="padding:6px 8px;text-align:right;color:#0891b2">' + _fv(c.costoLogU) + '</td>'
+      + '<td style="padding:6px 8px;text-align:right"><span style="background:' + (c.pctLogCost>20?'#fef2f2':c.pctLogCost>10?'#fffbeb':'#f0fdf4') + ';color:' + (c.pctLogCost>20?'#dc2626':c.pctLogCost>10?'#d97706':'#16a34a') + ';border-radius:20px;padding:2px 7px;font-size:10px;font-weight:700">' + _fp(c.pctLogCost) + '</span></td>'
+      + '<td style="padding:6px 8px;text-align:right;font-weight:800;color:#dc2626">' + _fv(c.costoDirU) + '</td>'
+      + '</tr>';
+  }).join('');
+
+  // ─ Tabla 2: Precios de Venta
+  const pvRows = calcs.map(c => {
+    const n = c.nombre + (c.marca ? ' <span style="font-weight:400;font-size:10px;color:#94a3b8">— ' + c.marca + '</span>' : '');
+    const mPct = c.pvSiva > 0 ? c.gan / c.pvSiva * 100 : 0;
+    return '<tr style="border-bottom:1px solid #f1f5f9">'
+      + '<td style="padding:6px 8px;font-weight:600">' + n + '</td>'
+      + '<td style="padding:6px 8px;text-align:center">' + c.qty + '</td>'
+      + '<td style="padding:6px 8px;text-align:right;color:#dc2626">' + _fv(c.costoDirU) + '</td>'
+      + '<td style="padding:6px 8px;text-align:right;font-weight:800;color:#4f46e5">' + _fv(c.pvSiva) + '</td>'
+      + '<td style="padding:6px 8px;text-align:right;color:#0891b2">' + _fv(c.pvCiva) + '</td>'
+      + '<td style="padding:6px 8px;text-align:right;font-weight:700;color:#4f46e5">' + _fv(c.pvSivaTotal) + '</td>'
+      + '<td style="padding:6px 8px;text-align:right;color:#16a34a;font-weight:700">' + _fv(c.ganTotal) + '</td>'
+      + '<td style="padding:6px 8px;text-align:center"><span style="background:' + _mc(mPct) + '18;color:' + _mc(mPct) + ';border-radius:20px;padding:2px 8px;font-size:10px;font-weight:700">' + _fp(mPct) + '</span></td>'
+      + '</tr>';
+  }).join('');
 
   const w = window.open('', '_blank');
   if (!w) { toast('Permitir ventanas emergentes', 'warning'); return; }
+  const th = 'background:#0f172a;color:#fff;padding:6px 7px;font-size:9px;text-transform:uppercase;letter-spacing:.03em;';
+  const thR = th + 'text-align:right;';
+  const thC = th + 'text-align:center;';
   w.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>Cotización — ' + ref + '</title>'
-  + '<style>'
-  + '@page{size:A4 landscape;margin:12mm 15mm}'
-  + '@media print{.no-print{display:none!important}}'
-  + 'body{font-family:"Segoe UI",system-ui,sans-serif;font-size:11px;color:#1e293b;background:#fff;padding:20px 24px}'
-  + '.header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;padding-bottom:10px;border-bottom:2px solid #334155}'
+  + '<style>@page{size:A4 landscape;margin:11mm 14mm}@media print{.np{display:none!important}}body{font-family:"Segoe UI",system-ui,sans-serif;font-size:11px;color:#1e293b;padding:18px 22px}'
+  + '.hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;padding-bottom:9px;border-bottom:2px solid #334155}'
   + '.logo{font-size:20px;font-weight:900;letter-spacing:-1px;color:#4f46e5}'
-  + 'table{width:100%;border-collapse:collapse;font-size:11px}'
-  + 'th{background:#0f172a;color:#fff;padding:7px 8px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.04em}'
-  + 'th.r{text-align:right}'
-  + '.tot td{background:#f1f5f9;font-weight:800;border-top:2px solid #334155;padding:8px}'
-  + '.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:14px}'
-  + '.kpi{background:#f8fafc;border:1px solid #e2e8f0;border-radius:7px;padding:9px;text-align:center}'
-  + '.kpi .lbl{font-size:8px;color:#64748b;text-transform:uppercase;font-weight:600;margin-bottom:3px}'
-  + '.kpi .val{font-size:14px;font-weight:800}'
-  + '.print-btn{position:fixed;top:10px;right:10px;background:#4f46e5;color:#fff;border:none;border-radius:7px;padding:7px 16px;cursor:pointer;font-size:11px;font-weight:600}'
-  + '.footer{margin-top:14px;padding-top:8px;border-top:1px solid #e2e8f0;font-size:9px;color:#94a3b8;text-align:center}'
+  + 'h3{font-size:10px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.06em;margin:14px 0 5px;padding-bottom:3px;border-bottom:1px solid #e2e8f0}'
+  + 'table{width:100%;border-collapse:collapse;font-size:11px;margin-bottom:4px}'
+  + 'td{vertical-align:middle}'
+  + '.tot-row td{background:#f1f5f9;font-weight:800;border-top:2px solid #334155;padding:7px 8px}'
+  + '.kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:14px}'
+  + '.kpi{background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:8px;text-align:center}'
+  + '.kpi .l{font-size:8px;color:#64748b;text-transform:uppercase;font-weight:600;margin-bottom:2px}'
+  + '.kpi .v{font-size:13px;font-weight:800}'
+  + '.sub{color:#94a3b8;font-size:10px}'
+  + '.btn{position:fixed;top:9px;right:9px;background:#4f46e5;color:#fff;border:none;border-radius:7px;padding:6px 14px;cursor:pointer;font-size:11px;font-weight:600}'
+  + '.ftr{margin-top:12px;padding-top:7px;border-top:1px solid #e2e8f0;font-size:9px;color:#94a3b8;text-align:center}'
   + '</style></head><body>'
-  + '<button class="print-btn no-print" onclick="window.print()">🖨 Imprimir / PDF</button>'
-  + '<div class="header">'
-  +   '<div><div class="logo">MÜÜK</div><div style="font-size:10px;color:#64748b">Cotización Multi-Producto — Uso Interno</div></div>'
-  +   '<div style="text-align:right">'
-  +     '<div style="font-size:14px;font-weight:800;color:#0f172a">' + ref + '</div>'
-  +     '<div style="font-size:10px;color:#64748b">' + (cli !== '–' ? cli + ' · ' : '') + hoyStr + '</div>'
-  +   '</div>'
+  + '<button class="btn np" onclick="window.print()">🖨 Imprimir / PDF</button>'
+  + '<div class="hdr">'
+  +   '<div><div class="logo">MÜÜK</div><div class="sub" style="margin-top:1px">Cotización Multi-Producto — Uso Interno</div></div>'
+  +   '<div style="text-align:right"><div style="font-size:15px;font-weight:800;color:#0f172a">' + ref + '</div>'
+  +   '<div class="sub">' + (cli !== '–' && cli ? cli + ' · ' : '') + hoyStr + ' · ' + rows.length + ' productos</div></div>'
   + '</div>'
-  + '<table>'
-  +   '<thead><tr>'
-  +     '<th>Producto</th><th class="r">Cant.</th><th class="r">Costo u.</th><th class="r">C.Total+log</th>'
-  +     '<th class="r">PV s/IVA</th><th class="r">PV c/IVA</th><th class="r">Vta.Total</th><th class="r">Margen</th>'
-  +   '</tr></thead>'
-  +   '<tbody>' + tRows + '</tbody>'
-  +   '<tfoot><tr class="tot">'
-  +     '<td colspan="3">TOTALES OPERACIÓN</td>'
-  +     '<td style="text-align:right;color:#dc2626">' + _fv(totInv) + '</td>'
-  +     '<td></td><td></td>'
-  +     '<td style="text-align:right;color:#4f46e5">' + _fv(totVSiva) + '</td>'
-  +     '<td style="text-align:center"><span style="background:' + mColor(mProm) + '20;color:' + mColor(mProm) + ';border-radius:20px;padding:2px 8px;font-size:10px;font-weight:700">' + mProm.toFixed(1) + '%</span></td>'
-  +   '</tr></tfoot>'
-  + '</table>'
+
+  // ── TABLA 1: COSTOS Y LOGÍSTICA
+  + '<h3>Costos y Distribución Logística</h3>'
+  + '<table><thead><tr>'
+  +   '<th style="' + th + 'text-align:left;min-width:120px">Producto</th>'
+  +   '<th style="' + thC + '">Cant.</th>'
+  +   '<th style="' + thR + '">Costo u. s/IVA</th>'
+  +   '<th style="' + thR + '">Costo total merced.</th>'
+  +   '<th style="' + thR + '">Flete asignado</th>'
+  +   '<th style="' + thC + '">% del flete</th>'
+  +   '<th style="' + thR + '">Logística/u.</th>'
+  +   '<th style="' + thC + '">% log. en costo</th>'
+  +   '<th style="' + thR + '">Costo directo/u.</th>'
+  + '</tr></thead>'
+  + '<tbody>' + logRows + '</tbody>'
+  + '<tfoot><tr class="tot-row">'
+  +   '<td colspan="2">TOTALES</td>'
+  +   '<td></td>'
+  +   '<td style="text-align:right">' + _fv(calcs.reduce((a,c)=>a+c.costoTotal,0)) + '</td>'
+  +   '<td style="text-align:right;color:#0891b2">' + (s.flete > 0 ? _fv(s.flete) : '–') + '</td>'
+  +   '<td style="text-align:center">100%</td>'
+  +   '<td></td><td></td>'
+  +   '<td style="text-align:right;color:#dc2626">' + _fv(totInv) + '</td>'
+  + '</tr></tfoot></table>'
+  + (s.flete > 0 ? '<div class="sub" style="margin-bottom:2px">Flete: ' + (s.fleteNeto > 0 ? _fv(s.fleteNeto) + ' s/IVA + ' + Math.round(s.ivaFlete*100) + '% IVA = ' + _fv(s.flete) + ' total' : _fv(s.flete)) + ' · Distribuido por proporción de valor de mercadería</div>' : '')
+
+  // ── TABLA 2: PRECIOS DE VENTA
+  + '<h3>Precios de Venta y Rentabilidad</h3>'
+  + '<table><thead><tr>'
+  +   '<th style="' + th + 'text-align:left;min-width:120px">Producto</th>'
+  +   '<th style="' + thC + '">Cant.</th>'
+  +   '<th style="' + thR + '">Costo dir./u.</th>'
+  +   '<th style="' + thR + '">PV s/IVA</th>'
+  +   '<th style="' + thR + '">PV c/IVA</th>'
+  +   '<th style="' + thR + '">Vta. total s/IVA</th>'
+  +   '<th style="' + thR + '">Ganancia total</th>'
+  +   '<th style="' + thC + '">Margen</th>'
+  + '</tr></thead>'
+  + '<tbody>' + pvRows + '</tbody>'
+  + '<tfoot><tr class="tot-row">'
+  +   '<td colspan="2">TOTALES OPERACIÓN</td>'
+  +   '<td style="text-align:right;color:#dc2626">' + _fv(totInv) + '</td>'
+  +   '<td></td><td></td>'
+  +   '<td style="text-align:right;color:#4f46e5">' + _fv(totVSiva) + '</td>'
+  +   '<td style="text-align:right;color:#16a34a">' + _fv(totGan) + '</td>'
+  +   '<td style="text-align:center"><span style="background:' + _mc(mProm) + '18;color:' + _mc(mProm) + ';border-radius:20px;padding:2px 9px;font-size:10px;font-weight:700">' + _fp(mProm) + '</span></td>'
+  + '</tr></tfoot></table>'
+
+  // ── KPIs
   + '<div class="kpi-row">'
-  +   '<div class="kpi"><div class="lbl">Inversión total</div><div class="val" style="color:#dc2626">' + _fv(totInv) + '</div></div>'
-  +   '<div class="kpi"><div class="lbl">Venta total s/IVA</div><div class="val" style="color:#4f46e5">' + _fv(totVSiva) + '</div></div>'
-  +   '<div class="kpi"><div class="lbl">Venta total c/IVA</div><div class="val" style="color:#0891b2">' + _fv(totVCiva) + '</div></div>'
-  +   '<div class="kpi"><div class="lbl">Ganancia total</div><div class="val" style="color:#16a34a">' + _fv(totGan) + '</div><div style="font-size:9px;font-weight:700;color:' + mColor(mProm) + '">' + mProm.toFixed(1) + '% margen</div></div>'
+  +   '<div class="kpi"><div class="l">Inversión total</div><div class="v" style="color:#dc2626">' + _fv(totInv) + '</div><div class="sub">merced. + logística</div></div>'
+  +   '<div class="kpi"><div class="l">Venta total s/IVA</div><div class="v" style="color:#4f46e5">' + _fv(totVSiva) + '</div></div>'
+  +   '<div class="kpi"><div class="l">Venta total c/IVA</div><div class="v" style="color:#0891b2">' + _fv(totVCiva) + '</div></div>'
+  +   '<div class="kpi"><div class="l">Ganancia total</div><div class="v" style="color:#16a34a">' + _fv(totGan) + '</div></div>'
+  +   '<div class="kpi"><div class="l">Margen promedio</div><div class="v" style="color:' + _mc(mProm) + '">' + _fp(mProm) + '</div></div>'
   + '</div>'
-  + (s.fleteNeto > 0 ? '<div style="font-size:10px;color:#64748b;margin-top:8px">Flete: ' + _fv(s.fleteNeto) + ' (s/IVA) + ' + Math.round(s.ivaFlete*100) + '% IVA = ' + _fv(s.flete) + ' total · Distribuido por valor de mercadería</div>' : '')
-  + '<div class="footer">Generado por MÜÜK · ' + hoyStr + ' · Uso interno — no es un comprobante fiscal</div>'
+  + '<div class="ftr">Generado por MÜÜK · ' + hoyStr + ' · Uso interno — no es un comprobante fiscal</div>'
   + '</body></html>');
   w.document.close();
 }
