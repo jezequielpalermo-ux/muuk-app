@@ -4147,7 +4147,7 @@ CREATE POLICY "acceso total" ON muuk_daily_backups FOR ALL USING (true) WITH CHE
         <button class="btn btn-outline-secondary btn-sm" onclick="document.getElementById('lp-upload-file').click()" style="font-size:.75rem">
           <i class="bi bi-cloud-arrow-up me-1"></i>Subir Archivo
         </button>
-        <input type="file" id="lp-upload-file" accept=".xlsx,.xls,.pdf,.docx,.doc,.csv,.jpg,.jpeg,.png" style="display:none" onchange="lpUploadArchivo(event)">
+        <input type="file" id="lp-upload-file" accept=".xlsx,.xls,.pdf,.docx,.doc,.csv,.jpg,.jpeg,.png" multiple style="display:none" onchange="lpUploadArchivo(event)">
         <button class="btn btn-primary btn-sm" onclick="abrirModalListaPrecio(null)" style="font-size:.75rem"><i class="bi bi-plus-lg me-1"></i>Nueva Lista</button>
       </div>
     </div>
@@ -4318,24 +4318,28 @@ CREATE POLICY "acceso total" ON muuk_daily_backups FOR ALL USING (true) WITH CHE
             </div>
           </div>
 
-          <!-- Archivo vinculado -->
+          <!-- Archivos vinculados (múltiples) -->
           <div class="card mb-3 border-0" style="background:#eff6ff;border:1px solid #93c5fd!important;border-radius:8px">
             <div class="card-body py-2 px-3">
-              <strong style="font-size:.82rem;color:#1d4ed8"><i class="bi bi-file-earmark-arrow-up me-1"></i>Archivo de Lista de Precios</strong>
-              <div class="mt-2 d-flex gap-2 align-items-center flex-wrap">
-                <button class="btn btn-sm btn-outline-primary" onclick="document.getElementById('lp-modal-file').click()" style="font-size:.72rem;border-radius:6px">
-                  <i class="bi bi-upload me-1"></i>Subir archivo (Excel, PDF, Word, Imagen)
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <strong style="font-size:.82rem;color:#1d4ed8"><i class="bi bi-files me-1"></i>Archivos de Lista de Precios</strong>
+                <button class="btn btn-sm btn-outline-primary" onclick="document.getElementById('lp-modal-file').click()" style="font-size:.7rem;border-radius:6px;padding:2px 8px">
+                  <i class="bi bi-plus-lg me-1"></i>Agregar archivo
                 </button>
-                <input type="file" id="lp-modal-file" accept=".xlsx,.xls,.pdf,.docx,.doc,.csv,.jpg,.jpeg,.png" style="display:none" onchange="lpModalFileSelected(event)">
-                <span class="text-muted" style="font-size:.78rem" id="lp-modal-file-name">Sin archivo</span>
-                <span id="lp-modal-file-badge"></span>
               </div>
-              <div class="mt-1">
-                <label class="form-label small fw-bold mb-0" style="font-size:.72rem">O pegar enlace de Drive:</label>
-                <input type="text" class="form-control form-control-sm" id="lp-driveUrl" placeholder="https://drive.google.com/file/d/...">
+              <input type="file" id="lp-modal-file" accept=".xlsx,.xls,.pdf,.docx,.doc,.csv,.jpg,.jpeg,.png" multiple style="display:none" onchange="lpModalFileSelected(event)">
+              <!-- Lista de archivos -->
+              <div id="lp-archivos-lista" style="min-height:32px;margin-bottom:6px"></div>
+              <!-- Enlace Drive -->
+              <div style="display:flex;gap:6px;align-items:center">
+                <input type="text" class="form-control form-control-sm" id="lp-driveUrl" placeholder="Agregar enlace de Google Drive (opcional)" style="font-size:.76rem">
+                <button class="btn btn-sm btn-outline-success" onclick="_lpAgregarDriveUrl()" style="font-size:.7rem;white-space:nowrap;padding:3px 8px"><i class="bi bi-google me-1"></i>Agregar</button>
               </div>
             </div>
           </div>
+          <!-- Hidden compat field -->
+          <input type="hidden" id="lp-modal-file-name">
+          <span id="lp-modal-file-badge" style="display:none"></span>
 
           <!-- Notas -->
           <div class="row g-2">
@@ -4696,35 +4700,90 @@ CREATE POLICY "acceso total" ON muuk_daily_backups FOR ALL USING (true) WITH CHE
     <div class="modal-dialog modal-lg modal-dialog-scrollable">
       <div class="modal-content">
         <div class="modal-header" style="background:linear-gradient(135deg,#16a34a,#22c55e);color:#fff">
-          <h5 class="modal-title" style="font-size:.92rem;font-weight:700"><i class="bi bi-file-earmark-excel me-2"></i>Importar desde Excel / CSV</h5>
+          <h5 class="modal-title" style="font-size:.92rem;font-weight:700"><i class="bi bi-cloud-upload me-2"></i>Importar contactos al CRM</h5>
           <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
         </div>
         <div class="modal-body">
-          <!-- Paso 1: Segmento + archivo -->
-          <div class="row g-3 mb-3">
-            <div class="col-md-4">
-              <label class="form-label small fw-bold">Importar como</label>
-              <select class="form-select form-select-sm" id="imp-segmento">
-                <option value="clientesCRM">Clientes</option>
-                <option value="proveedoresCRM">Proveedores</option>
-                <option value="empresasCRM">Empresas</option>
-              </select>
+          <!-- Selector de segmento -->
+          <div class="mb-3">
+            <label class="form-label small fw-bold">Importar como</label>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:.82rem;padding:6px 14px;border-radius:8px;border:1.5px solid #e2e8f0;transition:all .15s" id="imp-seg-cli">
+                <input type="radio" name="imp-seg" value="clientesCRM" checked style="accent-color:#22c55e"> Clientes
+              </label>
+              <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:.82rem;padding:6px 14px;border-radius:8px;border:1.5px solid #e2e8f0" id="imp-seg-prov">
+                <input type="radio" name="imp-seg" value="proveedoresCRM" style="accent-color:#22c55e"> Proveedores
+              </label>
+              <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:.82rem;padding:6px 14px;border-radius:8px;border:1.5px solid #e2e8f0" id="imp-seg-emp">
+                <input type="radio" name="imp-seg" value="empresasCRM" style="accent-color:#22c55e"> Empresas
+              </label>
             </div>
-            <div class="col-md-8">
-              <label class="form-label small fw-bold">Archivo Excel (.xlsx, .xls) o CSV</label>
+            <!-- hidden select kept for compat -->
+            <select id="imp-segmento" style="display:none">
+              <option value="clientesCRM">Clientes</option>
+              <option value="proveedoresCRM">Proveedores</option>
+              <option value="empresasCRM">Empresas</option>
+            </select>
+          </div>
+
+          <!-- Tabs: Excel / IA -->
+          <ul class="nav nav-tabs mb-3" style="font-size:.82rem" id="imp-tabs">
+            <li class="nav-item">
+              <a class="nav-link active" href="#" id="imp-tab-excel" onclick="_impSwitchTab('excel');return false">
+                <i class="bi bi-file-earmark-spreadsheet me-1"></i>Excel / CSV
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="#" id="imp-tab-ai" onclick="_impSwitchTab('ai');return false">
+                <i class="bi bi-stars me-1"></i>Agente IA
+              </a>
+            </li>
+          </ul>
+
+          <!-- Pane Excel -->
+          <div id="imp-pane-excel">
+            <div class="mb-2">
               <input type="file" class="form-control form-control-sm" id="imp-file" accept=".xlsx,.xls,.csv" onchange="_impCargarArchivo(this)">
             </div>
+            <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:8px 12px;font-size:.72rem;color:#166534;margin-bottom:10px">
+              <strong><i class="bi bi-info-circle me-1"></i>Columnas reconocidas:</strong>
+              Razon Social · CUIT · Nombre · Apellido · Telefono · Tel 2 · Mail · Horarios · Direccion · Direccion Alt · Notas
+              <span style="float:right">
+                <a href="#" onclick="_impDescargarPlantilla();return false" style="color:#16a34a;font-weight:700;text-decoration:none"><i class="bi bi-download me-1"></i>Plantilla</a>
+              </span>
+            </div>
           </div>
-          <!-- Info columnas esperadas -->
-          <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px 14px;font-size:.72rem;color:#166534;margin-bottom:12px">
-            <strong><i class="bi bi-info-circle me-1"></i>Columnas reconocidas:</strong>
-            Razon Social · CUIT · Nombre · Apellido · Telefono · Telefono 2 · Mail · Horarios · Direccion · Direccion Alt · Notas
-            <span style="float:right">
-              <a href="#" onclick="_impDescargarPlantilla();return false" style="color:#16a34a;font-weight:700;text-decoration:none"><i class="bi bi-download me-1"></i>Descargar plantilla</a>
-            </span>
+
+          <!-- Pane IA -->
+          <div id="imp-pane-ai" style="display:none">
+            <div style="background:linear-gradient(135deg,#faf5ff,#ede9fe);border:1.5px solid #c4b5fd;border-radius:10px;padding:12px 14px;margin-bottom:10px">
+              <div style="font-weight:700;font-size:.82rem;color:#7c3aed;margin-bottom:4px"><i class="bi bi-stars me-1"></i>Importación inteligente con IA</div>
+              <div style="font-size:.76rem;color:#6b21a8;line-height:1.5">
+                Pegá cualquier texto con datos de contactos: correos, tarjetas, planillas, listados, emails — en <strong>cualquier formato</strong>.
+                El agente IA detecta automáticamente los campos y los mapea al CRM.
+              </div>
+            </div>
+            <div style="margin-bottom:8px">
+              <label style="font-size:.76rem;font-weight:700;color:#475569;display:block;margin-bottom:4px">Pegá el texto con los datos de contactos:</label>
+              <textarea id="imp-ai-texto" rows="8" class="form-control form-control-sm" style="font-size:.78rem;font-family:monospace;resize:vertical"
+                placeholder="Ejemplos de lo que podés pegar:
+
+• Emails con datos de contacto
+• Listas como: Empresa S.A. - 30-12345678-9 - Juan García - 11 1234-5678 - juan@empresa.com
+• Tablas copiadas de Excel (sin formato específico)
+• Tarjetas de presentación escaneadas
+• Cualquier texto con nombres, CUIT, teléfonos, emails..."></textarea>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <button class="btn btn-sm" onclick="_impAnalizarIA()" style="background:linear-gradient(135deg,#7c3aed,#6d28d9);color:#fff;border:none;border-radius:8px;font-weight:700;padding:6px 16px">
+                <i class="bi bi-stars me-1"></i>Analizar con IA
+              </button>
+              <div id="imp-ai-status" style="font-size:.76rem;color:#64748b"></div>
+            </div>
           </div>
-          <!-- Preview -->
-          <div id="imp-preview-wrap" style="display:none">
+
+          <!-- Preview (shared) -->
+          <div id="imp-preview-wrap" style="display:none;margin-top:10px">
             <div style="font-size:.78rem;font-weight:700;color:#0f172a;margin-bottom:6px" id="imp-preview-title"></div>
             <div style="overflow-x:auto;max-height:260px;border:1px solid #e2e8f0;border-radius:8px">
               <table class="table table-sm mb-0" style="font-size:.72rem" id="imp-preview-table"></table>
@@ -5465,27 +5524,55 @@ CREATE POLICY "acceso total" ON muuk_daily_backups FOR ALL USING (true) WITH CHE
 
   <!-- ══════════════════ BIENVENIDA ══════════════════ -->
   <div id="page-bienvenida" class="page">
-    <div style="display:flex;align-items:center;justify-content:center;min-height:70vh">
-      <div style="text-align:center;max-width:480px;padding:40px 20px">
-        <div style="margin-bottom:24px">
-          <svg width="72" height="72" viewBox="0 0 100 100" style="display:inline-block">
-            <rect x="2" y="2" width="44" height="44" rx="10" fill="#ef4444"/>
-            <rect x="54" y="2" width="44" height="44" rx="10" fill="#f97316"/>
-            <rect x="2" y="54" width="44" height="44" rx="10" fill="#eab308"/>
-            <rect x="54" y="54" width="44" height="44" rx="10" fill="#ef4444"/>
-          </svg>
+    <!-- Header banner -->
+    <div style="background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 60%,#1e293b 100%);border-radius:14px;padding:28px 32px;margin-bottom:24px;position:relative;overflow:hidden">
+      <div style="position:absolute;inset:0;opacity:.07;background:repeating-linear-gradient(45deg,#fff 0,#fff 1px,transparent 0,transparent 50%);background-size:20px 20px"></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;position:relative">
+        <div>
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
+            <svg width="38" height="38" viewBox="0 0 100 100">
+              <rect x="2" y="2" width="44" height="44" rx="9" fill="#ef4444"/>
+              <rect x="54" y="2" width="44" height="44" rx="9" fill="#f97316"/>
+              <rect x="2" y="54" width="44" height="44" rx="9" fill="#eab308"/>
+              <rect x="54" y="54" width="44" height="44" rx="9" fill="#ef4444"/>
+            </svg>
+            <div>
+              <div style="font-size:.7rem;color:#94a3b8;text-transform:uppercase;letter-spacing:.12em;font-weight:600">Panel de Control</div>
+              <h2 style="color:#fff;font-weight:800;font-size:1.45rem;margin:0;line-height:1.1">Bienvenido al panel de control de Müük S.R.L.</h2>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:4px">
+            <i class="bi bi-person-circle" style="color:#94a3b8;font-size:.9rem"></i>
+            <span id="bienvenida-username" style="color:#cbd5e1;font-size:.85rem;font-weight:600">—</span>
+            <span style="color:#334155;font-size:.8rem">·</span>
+            <span id="bienvenida-fecha" style="color:#94a3b8;font-size:.8rem"></span>
+          </div>
         </div>
-        <h2 style="font-weight:800;color:#0f172a;margin-bottom:8px;font-size:1.7rem">
-          Bienvenido al sistema de<br><span style="color:#1d4ed8">Müük SRL</span>
-        </h2>
-        <p style="color:#64748b;font-size:.95rem;margin-bottom:32px;line-height:1.6">
-          Usá el menú lateral para acceder a los módulos disponibles para tu usuario.
-        </p>
-        <div style="display:inline-flex;align-items:center;gap:8px;background:#f1f5f9;padding:10px 20px;border-radius:10px;font-size:.82rem;color:#475569">
-          <i class="bi bi-person-circle" style="font-size:1rem"></i>
-          <span id="bienvenida-username">—</span>
+        <div style="text-align:right">
+          <div id="bienvenida-hora" style="font-size:2.2rem;font-weight:800;color:#fff;line-height:1;letter-spacing:-.5px;font-variant-numeric:tabular-nums"></div>
+          <div style="font-size:.7rem;color:#64748b;margin-top:3px">hora local</div>
         </div>
       </div>
+    </div>
+
+    <!-- Quick actions grid -->
+    <div style="margin-bottom:20px">
+      <div style="font-size:.72rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px">⚡ Acciones rápidas</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px" id="bienvenida-actions">
+        <!-- se rellena dinámicamente -->
+      </div>
+    </div>
+
+    <!-- Mini stats row -->
+    <div style="margin-bottom:20px">
+      <div style="font-size:.72rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px">📊 Resumen rápido</div>
+      <div id="bienvenida-stats" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px"></div>
+    </div>
+
+    <!-- Alerts / pending -->
+    <div id="bienvenida-alerts-wrap" style="display:none">
+      <div style="font-size:.72rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px">🔔 Pendientes</div>
+      <div id="bienvenida-alerts"></div>
     </div>
   </div>
   <!-- ══════════════════ FIN BIENVENIDA ══════════════════ -->
@@ -7203,10 +7290,21 @@ function save() {
   // Strip base64 file data from listas de precios to avoid localStorage quota overflow
   if (persistData.listasPrecios) {
     persistData.listasPrecios = persistData.listasPrecios.map(l => {
-      if (l.archivo?.dataB64 && l.archivo.dataB64.length > 500000) {
-        return { ...l, archivo: { ...l.archivo, dataB64: '', _stripped: true } };
+      let changed = false;
+      let archivo = l.archivo;
+      if (archivo?.dataB64 && archivo.dataB64.length > 500000) {
+        archivo = { ...archivo, dataB64: '', _stripped: true };
+        changed = true;
       }
-      return l;
+      let archivos = l.archivos;
+      if (Array.isArray(archivos)) {
+        const stripped = archivos.map(a => {
+          if (a?.dataB64 && a.dataB64.length > 500000) { changed = true; return { ...a, dataB64: '', _stripped: true }; }
+          return a;
+        });
+        if (changed) archivos = stripped;
+      }
+      return changed ? { ...l, archivo, archivos } : l;
     });
   }
   // Strip large remito file attachments (> 500 KB) — se acceden solo al verlos
@@ -9055,8 +9153,9 @@ function initApp() {
   });
   initSBGroups();
   setTimeout(_sbScrollCheck, 400);
-  updateBreadcrumb('dashboard');
+  updateBreadcrumb('bienvenida');
   renderTodo();
+  setTimeout(() => irA('bienvenida'), 80);
   _aiRestoreConfig();
   // Restaurar datos empresa en config
   (function(){
@@ -9450,6 +9549,7 @@ function irA(p) {
   if (p==='bienvenida') {
     const el = document.getElementById('bienvenida-username');
     if (el) el.textContent = sessionStorage.getItem('muukAuth') || '';
+    renderBienvenida();
   }
   // Actualizar nav-links activos
   document.querySelectorAll('#sidebar-nav .nav-link').forEach(l => {
@@ -9463,6 +9563,105 @@ function renderTodo() {
   // El resto se renderiza en irA() cuando el usuario navega a cada sección.
   renderDashboard();
   actualizarSelects(); // debe estar listo al inicio para los modales
+}
+
+/* ═══════════════════════════════════════════
+   BIENVENIDA
+═══════════════════════════════════════════ */
+let _bvHoraInterval = null;
+
+function renderBienvenida() {
+  // Clock
+  const fechaEl = document.getElementById('bienvenida-fecha');
+  const horaEl  = document.getElementById('bienvenida-hora');
+  if (fechaEl) fechaEl.textContent = new Date().toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  if (horaEl) {
+    const tick = () => {
+      const n = new Date();
+      horaEl.textContent = n.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    };
+    tick();
+    if (_bvHoraInterval) clearInterval(_bvHoraInterval);
+    _bvHoraInterval = setInterval(tick, 1000);
+  }
+
+  // Quick actions — siempre visibles + filtradas por acceso del usuario
+  const user = sessionStorage.getItem('muukAuth') || '';
+  const acc  = typeof userCanAccess === 'function' ? null : null; // usamos irA que ya guarda acceso
+  const QUICK = [
+    { icon:'bi-speedometer2',  label:'Dashboard',         page:'dashboard',         color:'#4f46e5', bg:'#ede9fe' },
+    { icon:'bi-cash-stack',    label:'Ingresar Cobranza', page:'ingresarCobranza',  color:'#16a34a', bg:'#f0fdf4' },
+    { icon:'bi-bank',          label:'Caja Bancos',        page:'cajaBancos',        color:'#0369a1', bg:'#eff6ff' },
+    { icon:'bi-wallet2',       label:'Caja Efectivo',      page:'cajaEfectivo',      color:'#7c3aed', bg:'#f5f3ff' },
+    { icon:'bi-receipt-cutoff',label:'Facturas a Cobrar',  page:'facturasACobrar',   color:'#15803d', bg:'#f0fdf4' },
+    { icon:'bi-file-earmark-minus',label:'Facturas a Pagar', page:'facturasPagar',   color:'#dc2626', bg:'#fef2f2' },
+    { icon:'bi-truck',         label:'Cronograma',         page:'cronograma',        color:'#4f46e5', bg:'#ede9fe' },
+    { icon:'bi-percent',       label:'Comisiones',         page:'comisiones',        color:'#d97706', bg:'#fffbeb' },
+    { icon:'bi-boxes',         label:'Stock',              page:'stock',             color:'#0891b2', bg:'#ecfeff' },
+    { icon:'bi-tags-fill',     label:'Listas de Precios',  page:'listasPrecios',     color:'#0ea5e9', bg:'#f0f9ff' },
+    { icon:'bi-people-fill',   label:'Gestión / CRM',      page:'gestion',           color:'#7c3aed', bg:'#faf5ff' },
+    { icon:'bi-calendar-check',label:'Vencimientos',        page:'panelVencimientos', color:'#f59e0b', bg:'#fffbeb' },
+  ];
+
+  const actWrap = document.getElementById('bienvenida-actions');
+  if (actWrap) {
+    actWrap.innerHTML = QUICK.map(q => `
+      <button onclick="irA('${q.page}')" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
+        background:#fff;border:1.5px solid #e2e8f0;border-radius:12px;padding:16px 10px;cursor:pointer;
+        transition:all .15s;text-align:center;min-height:90px;box-shadow:0 1px 4px rgba(0,0,0,.05)"
+        onmouseover="this.style.borderColor='${q.color}';this.style.background='${q.bg}';this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 12px rgba(0,0,0,.1)'"
+        onmouseout="this.style.borderColor='#e2e8f0';this.style.background='#fff';this.style.transform='';this.style.boxShadow='0 1px 4px rgba(0,0,0,.05)'">
+        <i class="bi ${q.icon}" style="font-size:1.4rem;color:${q.color}"></i>
+        <span style="font-size:.73rem;font-weight:700;color:#1e293b;line-height:1.2">${q.label}</span>
+      </button>`).join('');
+  }
+
+  // Mini stats
+  const statsWrap = document.getElementById('bienvenida-stats');
+  if (statsWrap) {
+    const saldoBancos   = (ST.cajaBancos||[]).reduce((s,m)=>s+(m.tipo==='credito'?+m.monto:-m.monto),0);
+    const saldoEfectivo = (ST.cajaEfectivo||[]).reduce((s,m)=>s+(m.tipo==='ingreso'?+m.monto:-m.monto),0);
+    const facsCobrar    = (ST.facturasACobrar||[]).filter(f=>f.estado!=='cobrada').reduce((s,f)=>s+ +f.monto,0);
+    const facsPagar     = (ST.facturasPagar||[]).filter(f=>f.estado!=='pagada').reduce((s,f)=>s+ +f.monto,0);
+    const chqPend       = (ST.chequesPagar||[]).filter(c=>c.estado==='pendiente').length;
+    const hoy           = new Date().toISOString().split('T')[0];
+    const venc7d        = new Date(); venc7d.setDate(venc7d.getDate()+7);
+    const venc7dStr     = venc7d.toISOString().split('T')[0];
+    const urgentes      = [...(ST.facturasACobrar||[]),(ST.facturasPagar||[])].filter(f=>f.estado!=='cobrada'&&f.estado!=='pagada'&&f.fechaVenc&&f.fechaVenc<=venc7dStr).length;
+    const MINI = [
+      { icon:'bi-bank',      label:'Saldo Bancos',    val:'$'+fmt(saldoBancos),   color:'#0369a1' },
+      { icon:'bi-wallet2',   label:'Saldo Efectivo',  val:'$'+fmt(saldoEfectivo), color:'#7c3aed' },
+      { icon:'bi-arrow-up-circle', label:'A Cobrar',  val:'$'+fmt(facsCobrar),    color:'#15803d' },
+      { icon:'bi-arrow-down-circle', label:'A Pagar', val:'$'+fmt(facsPagar),     color:'#dc2626' },
+      { icon:'bi-check2-square', label:'Chq. Pendientes', val:chqPend,            color:'#f59e0b' },
+      { icon:'bi-exclamation-triangle', label:'Vencen en 7d', val:urgentes,       color: urgentes>0?'#dc2626':'#16a34a' },
+    ];
+    statsWrap.innerHTML = MINI.map(s => `
+      <div style="background:#fff;border:1.5px solid #e2e8f0;border-radius:10px;padding:14px 14px 10px;box-shadow:0 1px 3px rgba(0,0,0,.04)">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+          <i class="bi ${s.icon}" style="color:${s.color};font-size:.9rem"></i>
+          <span style="font-size:.68rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.04em">${s.label}</span>
+        </div>
+        <div style="font-size:1.05rem;font-weight:800;color:${s.color}">${s.val}</div>
+      </div>`).join('');
+  }
+
+  // Pending alerts
+  const alertsWrap = document.getElementById('bienvenida-alerts-wrap');
+  const alertsEl   = document.getElementById('bienvenida-alerts');
+  const hoyStr = new Date().toISOString().split('T')[0];
+  const alerts = [];
+  // Cheques a vencer hoy o vencidos
+  (ST.chequesPagar||[]).filter(c=>c.estado==='pendiente'&&c.fechaVenc&&c.fechaVenc<=hoyStr).forEach(c=>{
+    const dias = Math.round((new Date(hoyStr)-new Date(c.fechaVenc))/(86400000));
+    alerts.push(`<div style="display:flex;align-items:center;gap:8px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:8px 12px;margin-bottom:6px;font-size:.77rem">
+      <i class="bi bi-exclamation-circle-fill" style="color:#dc2626;font-size:.9rem"></i>
+      <div><strong>Cheque vencido${dias>0?' hace '+dias+' día'+(dias>1?'s':''):'hoy'}</strong> — $${fmt(+c.monto||0)} · ${c.beneficiario||'sin beneficiario'}</div>
+      <button onclick="irA('chequesPagar')" style="margin-left:auto;background:#dc2626;color:#fff;border:none;border-radius:6px;padding:2px 8px;cursor:pointer;font-size:.7rem">Ver</button>
+    </div>`);
+  });
+  if (alertsEl) alertsEl.innerHTML = alerts.join('');
+  if (alertsWrap) alertsWrap.style.display = alerts.length ? '' : 'none';
 }
 
 /* ═══════════════════════════════════════════
@@ -10824,20 +11023,103 @@ function comImprimirSaldoDesdeDetalle() {
 
 // Llamado desde el botón en la card del resumen (re-fetchea los datos)
 async function comImprimirSaldoEmpresa(sheetTab, empresaName, saldo) {
+  // ── Mostrar diálogo de filtros antes de generar el PDF ──
+  _comMostrarFiltrosPDF(sheetTab, empresaName, saldo);
+}
+
+async function _comGenerarPDFConFiltros(sheetTab, empresaName, saldo, dateFrom, dateTo) {
   toast('Cargando datos de ' + empresaName + '...', 'info');
   try {
     const rows = await comFetchSheet(sheetTab);
     if (rows.length < 2) { toast('Sin datos disponibles', 'warning'); return; }
     const parsed = _comParseSheetData(rows);
     if (!parsed) { toast('Sin datos disponibles', 'warning'); return; }
-    _comBuildPDFSaldoEmpresa(empresaName, saldo, parsed.details, parsed.isFull, parsed.hasSaldo);
+    _comBuildPDFSaldoEmpresa(empresaName, saldo, parsed.details, parsed.isFull, parsed.hasSaldo, { dateFrom, dateTo });
   } catch(e) {
     toast('Error al generar PDF: ' + e.message, 'danger');
   }
 }
 
+function _comMostrarFiltrosPDF(sheetTab, empresaName, saldo) {
+  // Calcular fecha default: primer dia del mes hace 6 meses
+  const hoy = new Date();
+  const defFrom = new Date(hoy.getFullYear(), hoy.getMonth() - 5, 1).toISOString().split('T')[0];
+  const defTo   = hoy.toISOString().split('T')[0];
+
+  // Usar _confirmar customizado con contenido HTML
+  const overlayId = 'com-filtro-overlay';
+  let el = document.getElementById(overlayId);
+  if (!el) {
+    el = document.createElement('div');
+    el.id = overlayId;
+    el.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9000;display:flex;align-items:center;justify-content:center';
+    document.body.appendChild(el);
+  }
+  el.innerHTML = `
+    <div style="background:#fff;border-radius:14px;padding:24px;width:420px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,.3)">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px">
+        <div style="background:#fef2f2;border-radius:8px;width:36px;height:36px;display:flex;align-items:center;justify-content:center">
+          <i class="bi bi-printer-fill" style="color:#dc2626;font-size:1rem"></i>
+        </div>
+        <div>
+          <div style="font-weight:800;font-size:.95rem;color:#0f172a">PDF Saldo — ${empresaName}</div>
+          <div style="font-size:.72rem;color:#64748b">Filtrá el período a imprimir</div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+        <div>
+          <label style="font-size:.72rem;font-weight:700;color:#475569;display:block;margin-bottom:4px">Fecha desde</label>
+          <input type="date" id="com-flt-from" value="${defFrom}" class="form-control form-control-sm">
+        </div>
+        <div>
+          <label style="font-size:.72rem;font-weight:700;color:#475569;display:block;margin-bottom:4px">Fecha hasta</label>
+          <input type="date" id="com-flt-to" value="${defTo}" class="form-control form-control-sm">
+        </div>
+      </div>
+      <div style="margin-bottom:16px">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:.8rem;color:#475569;font-weight:600">
+          <input type="checkbox" id="com-flt-todo" onchange="document.getElementById('com-flt-from').disabled=this.checked;document.getElementById('com-flt-to').disabled=this.checked" style="width:15px;height:15px;accent-color:#dc2626">
+          Mostrar historial completo (sin filtro de fechas)
+        </label>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button onclick="document.getElementById('${overlayId}').remove()" style="background:#f1f5f9;border:1px solid #e2e8f0;border-radius:8px;padding:7px 16px;cursor:pointer;font-size:.8rem;font-weight:600">Cancelar</button>
+        <button onclick="
+          const todo = document.getElementById('com-flt-todo').checked;
+          const from = todo ? null : document.getElementById('com-flt-from').value;
+          const to   = todo ? null : document.getElementById('com-flt-to').value;
+          document.getElementById('${overlayId}').remove();
+          _comGenerarPDFConFiltros('${sheetTab}','${empresaName.replace(/'/g,"\\'")}',${saldo||0},from,to);"
+          style="background:linear-gradient(135deg,#dc2626,#b91c1c);color:#fff;border:none;border-radius:8px;padding:7px 20px;cursor:pointer;font-size:.8rem;font-weight:700">
+          <i class="bi bi-printer me-1"></i>Generar PDF
+        </button>
+      </div>
+    </div>`;
+  el.style.display = 'flex';
+}
+
 // Generador compartido del PDF de saldo pendiente por empresa
-function _comBuildPDFSaldoEmpresa(empresaName, saldoResumen, details, isFull, hasSaldo = true) {
+function _comBuildPDFSaldoEmpresa(empresaName, saldoResumen, details, isFull, hasSaldo = true, opts = {}) {
+  // ── Filtro de fechas (si viene del diálogo de filtros) ──
+  const { dateFrom, dateTo } = opts;
+  const _rowFecha = r => {
+    if (!r.fecha || r.fecha === '–') return null;
+    const parts = r.fecha.replace(/\//g,'-').split('-');
+    if (parts.length < 3) return null;
+    const [d, m, y] = parts;
+    return `${y.length===2?'20'+y:y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`;
+  };
+  if (dateFrom || dateTo) {
+    details = details.filter(r => {
+      const iso = _rowFecha(r);
+      if (!iso) return true; // sin fecha, incluir
+      if (dateFrom && iso < dateFrom) return false;
+      if (dateTo   && iso > dateTo  ) return false;
+      return true;
+    });
+    if (!details.length) { toast('No hay movimientos en el período seleccionado', 'warning'); return; }
+  }
+
   // ── Smart period cutoff ──
   // 1. Look for last row where saldo ≈ 0 (full settlement)
   // 2. Fallback: if no zero OR too few rows after it, use last 12 months
@@ -10910,12 +11192,28 @@ function _comBuildPDFSaldoEmpresa(empresaName, saldoResumen, details, isFull, ha
   const nFacturas = pendientes.filter(r => r.fca || r.importe || r.comision).length;
   const nPagos    = pendientes.filter(r => r.pagos > 0 && !r.fca && !r.importe && !r.comision).length;
 
+  // ── Días desde el último pago ──
+  let diasDesdePago = null;
+  if (ultimoPago?.fecha) {
+    const parts = ultimoPago.fecha.replace(/\//g,'-').split('-');
+    if (parts.length >= 3) {
+      const [d,m,y] = parts;
+      const pagoDate = new Date(`${y.length===2?'20'+y:y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`);
+      diasDesdePago = Math.round((new Date() - pagoDate) / 86400000);
+    }
+  }
+  const diasBadge = diasDesdePago !== null
+    ? `<span style="background:${diasDesdePago>60?'#fef2f2;border-color:#fca5a5;color:#dc2626':diasDesdePago>30?'#fffbeb;border-color:#fde68a;color:#92400e':'#f0fdf4;border-color:#bbf7d0;color:#166534'};border:1px solid;border-radius:6px;padding:2px 8px;font-size:9px;font-weight:700;margin-left:8px">⏱ Hace ${diasDesdePago} día${diasDesdePago!==1?'s':''}</span>`
+    : '';
+
   const ultimoPagoHTML = ultimoPago
     ? `<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:8px 14px;margin-bottom:9px;display:flex;justify-content:space-between;align-items:center">
-        <span style="font-size:10px;color:#166534;font-weight:600">✔ Último pago recibido: ${ultimoPago.fecha}</span>
+        <span style="font-size:10px;color:#166534;font-weight:600">✔ Último pago recibido: ${ultimoPago.fecha}${diasBadge}</span>
         <span style="font-size:12px;font-weight:800;color:#16a34a">$${_f(ultimoPago.pagos)}</span>
        </div>`
-    : '';
+    : `<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:8px 14px;margin-bottom:9px">
+        <span style="font-size:10px;color:#dc2626;font-weight:600">⚠ Sin pagos registrados en el historial</span>
+       </div>`;
 
   // Fila saldo anterior — 9 columnas fijas: col 8 (saldo) lleva el valor
   const saldoAnteriorHTML = saldoAnterior > 0
@@ -10949,6 +11247,7 @@ function _comBuildPDFSaldoEmpresa(empresaName, saldoResumen, details, isFull, ha
   col.c-pagos   { width:10%; }
   col.c-saldo   { width:10%; }
   col.c-obs     { width:21%; }
+  thead { position:sticky; top:0; z-index:2; }
   th { background:#f1f5f9; font-size:7.5px; text-transform:uppercase; letter-spacing:.05em; color:#475569; font-weight:700; padding:5px 7px; text-align:left; border-bottom:2px solid #cbd5e1; white-space:nowrap; }
   th.r,td.r { text-align:right; }
   td { padding:4px 7px; border-bottom:1px solid #f1f5f9; vertical-align:middle; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
@@ -10989,6 +11288,7 @@ function _comBuildPDFSaldoEmpresa(empresaName, saldoResumen, details, isFull, ha
 </div>
 
 ${cutoffNote ? `<div class="period-note">📅 ${cutoffNote}</div>` : ''}
+${(dateFrom||dateTo) ? `<div class="period-note" style="background:#eff6ff;border-color:#93c5fd;color:#1d4ed8">🔍 Filtro aplicado: ${dateFrom?'desde '+dateFrom:''} ${dateTo?'hasta '+dateTo:''}</div>` : ''}
 ${ultimoPagoHTML}
 
 <table>
@@ -15877,12 +16177,15 @@ function _limpiarFiltrosStock() {
 ══════════════════════════════════════════════════════════ */
 
 // Estructura: ST.listasPrecios = [{ id, nombre, proveedor, categoria, moneda, fechaVigencia, fechaVencimiento,
-//   estado, condiciones:[{id, nombre, plazo, descuento, recargo, notas}], archivo:{nombre,tipo,driveUrl,dataB64,size},
+//   estado, condiciones:[{id, nombre, plazo, descuento, recargo, notas}],
+//   archivos:[{id,nombre,tipo,driveUrl,dataB64,size,etiqueta}],  ← multi-file (reemplaza archivo)
+//   archivo: {...},  ← legacy (se migra a archivos[])
 //   notas, createdAt, updatedAt }]
 // ST.lpDriveFolder = { url, nombre }
 
-let _lpCondiciones = []; // temp condiciones en modal
-let _lpArchivoTemp = null; // temp file data en modal
+let _lpCondiciones  = []; // temp condiciones en modal
+let _lpArchivosTemp = []; // temp archivos (multi) en modal
+let _lpArchivoTemp  = null; // legacy compat
 
 function renderListasPrecios() {
   if (!ST.listasPrecios) ST.listasPrecios = [];
@@ -15901,20 +16204,28 @@ function renderListasPrecios() {
   // KPIs
   const vigentes = listas.filter(l => l.estado === 'vigente');
   const proveedores = [...new Set(listas.map(l => l.proveedor).filter(Boolean))];
-  const archivos = listas.filter(l => l.archivo?.nombre);
-  const tiposArch = [...new Set(archivos.map(l => {
-    const ext = (l.archivo.nombre||'').split('.').pop().toLowerCase();
-    if (['xlsx','xls','csv'].includes(ext)) return 'Excel';
-    if (ext === 'pdf') return 'PDF';
-    if (['docx','doc'].includes(ext)) return 'Word';
-    return ext.toUpperCase();
-  }))];
+  // Count total archivos across all listas (multi-file aware)
+  let _totalArchivos = 0;
+  const _archTipos = new Set();
+  listas.forEach(l => {
+    const arrs = _lpGetArchivos(l);
+    _totalArchivos += arrs.length;
+    arrs.forEach(a => {
+      const ext = (a.nombre||'').split('.').pop().toLowerCase();
+      if (['xlsx','xls','csv'].includes(ext)) _archTipos.add('Excel');
+      else if (ext === 'pdf') _archTipos.add('PDF');
+      else if (['docx','doc'].includes(ext)) _archTipos.add('Word');
+      else if (a.driveUrl) _archTipos.add('Drive');
+      else if (ext) _archTipos.add(ext.toUpperCase());
+    });
+  });
+  const tiposArch = [..._archTipos];
   const condTotal = listas.reduce((s,l) => s + (l.condiciones||[]).length, 0);
   const ultimaAct = listas.reduce((max,l) => l.updatedAt > max ? l.updatedAt : max, '');
 
   _setEl('lp-total-listas', vigentes.length.toString());
   _setEl('lp-total-proveedores', proveedores.length + ' proveedor' + (proveedores.length!==1?'es':''));
-  _setEl('lp-total-archivos', archivos.length.toString());
+  _setEl('lp-total-archivos', _totalArchivos.toString());
   _setEl('lp-archivos-tipos', tiposArch.length ? tiposArch.join(', ') : 'Sin archivos');
   _setEl('lp-total-condiciones', condTotal.toString());
   if (ultimaAct) {
@@ -15983,8 +16294,9 @@ function renderListasPrecios() {
 
   let html = '<div class="row g-3">';
   for (const l of filtered) {
-    const ext = l.archivo?.nombre ? l.archivo.nombre.split('.').pop().toLowerCase() : '';
-    const fileIcon = fileIcons[ext] || 'bi-file-earmark';
+    const lpArchs   = _lpGetArchivos(l);
+    const ext       = lpArchs[0]?.nombre ? lpArchs[0].nombre.split('.').pop().toLowerCase() : '';
+    const fileIcon  = fileIcons[ext] || 'bi-file-earmark';
     const condCount = (l.condiciones||[]).length;
     const vencDias = l.fechaVencimiento ? Math.ceil((new Date(l.fechaVencimiento) - new Date()) / 86400000) : null;
     const vencTag = vencDias !== null && l.estado === 'vigente'
@@ -16006,9 +16318,10 @@ function renderListasPrecios() {
             <span class="me-2"><i class="bi bi-coin me-1"></i>${l.moneda||'ARS'}</span>
             ${condCount ? `<span class="me-2"><i class="bi bi-percent me-1"></i>${condCount} condicion${condCount!==1?'es':''}</span>` : ''}
           </div>
-          ${l.archivo?.nombre ? `<div style="font-size:.74rem;background:#eff6ff;padding:4px 8px;border-radius:5px;margin-bottom:8px">
-            <i class="bi ${fileIcon} me-1 text-primary"></i>${l.archivo.nombre}
-            ${l.archivo.driveUrl ? `<a href="${l.archivo.driveUrl}" target="_blank" class="ms-1" style="font-size:.68rem"><i class="bi bi-box-arrow-up-right"></i></a>` : ''}
+          ${lpArchs.length ? `<div style="font-size:.74rem;background:#eff6ff;padding:4px 8px;border-radius:5px;margin-bottom:8px">
+            <i class="bi ${fileIcon} me-1 text-primary"></i>${lpArchs[0].nombre||'Archivo'}
+            ${lpArchs.length > 1 ? `<span style="background:#3b82f6;color:#fff;border-radius:4px;padding:0 5px;font-size:.62rem;margin-left:4px">+${lpArchs.length-1} más</span>` : ''}
+            ${lpArchs[0].driveUrl ? `<a href="${lpArchs[0].driveUrl}" target="_blank" class="ms-1" style="font-size:.68rem"><i class="bi bi-box-arrow-up-right"></i></a>` : ''}
           </div>` : ''}
           ${(l.condiciones||[]).length > 0 ? `<div style="font-size:.72rem;margin-bottom:6px">
             ${l.condiciones.slice(0,3).map(c => `<span style="display:inline-block;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:4px;padding:1px 6px;margin:1px;font-size:.7rem">
@@ -16035,8 +16348,11 @@ function renderListasPrecios() {
 function abrirModalListaPrecio(id) {
   const listas = ST.listasPrecios || [];
   const l = id ? listas.find(x => x.id === id) : null;
-  _lpCondiciones = l ? JSON.parse(JSON.stringify(l.condiciones||[])) : [];
-  _lpArchivoTemp = null;
+  _lpCondiciones  = l ? JSON.parse(JSON.stringify(l.condiciones||[])) : [];
+  _lpArchivoTemp  = null;
+  // Migrar archivo legacy → archivos[]
+  const existing = l ? _lpGetArchivos(l) : [];
+  _lpArchivosTemp = JSON.parse(JSON.stringify(existing));
 
   document.getElementById('lp-id').value = id || '';
   document.getElementById('modalLP-title').innerHTML = `<i class="bi bi-tags me-2"></i>${id ? 'Editar' : 'Nueva'} Lista de Precios`;
@@ -16047,18 +16363,56 @@ function abrirModalListaPrecio(id) {
   document.getElementById('lp-fechaVigencia').value = l?.fechaVigencia || hoy();
   document.getElementById('lp-fechaVencimiento').value = l?.fechaVencimiento || '';
   document.getElementById('lp-estado').value = l?.estado || 'vigente';
-  document.getElementById('lp-driveUrl').value = l?.archivo?.driveUrl || '';
+  document.getElementById('lp-driveUrl').value = '';
   document.getElementById('lp-notas').value = l?.notas || '';
 
-  // File info
-  document.getElementById('lp-modal-file-name').textContent = l?.archivo?.nombre || 'Sin archivo';
-  document.getElementById('lp-modal-file-badge').innerHTML = l?.archivo?.nombre
-    ? `<span class="badge bg-primary" style="font-size:.68rem">${l.archivo.tipo||l.archivo.nombre.split('.').pop().toUpperCase()}</span>` : '';
-
-  // Render condiciones
+  // Render condiciones y archivos
   _lpRenderCondiciones();
+  _lpRenderArchivosModal();
 
   new bootstrap.Modal(document.getElementById('modalListaPrecio')).show();
+}
+
+// Helper: normaliza archivos (soporta modelo nuevo y legacy)
+function _lpGetArchivos(l) {
+  if (!l) return [];
+  if (Array.isArray(l.archivos) && l.archivos.length) return l.archivos;
+  if (l.archivo && (l.archivo.nombre || l.archivo.driveUrl)) return [{ id: uid(), ...l.archivo }];
+  return [];
+}
+
+function _lpRenderArchivosModal() {
+  const wrap = document.getElementById('lp-archivos-lista');
+  if (!wrap) return;
+  if (!_lpArchivosTemp.length) {
+    wrap.innerHTML = '<div style="font-size:.75rem;color:#94a3b8;padding:4px 0">Sin archivos — usá "Agregar archivo" o pegá un enlace de Drive</div>';
+    return;
+  }
+  const extColor = { pdf:'#dc2626', xlsx:'#16a34a', xls:'#16a34a', csv:'#0891b2', doc:'#1d4ed8', docx:'#1d4ed8', jpg:'#7c3aed', jpeg:'#7c3aed', png:'#7c3aed' };
+  wrap.innerHTML = _lpArchivosTemp.map((a, i) => {
+    const ext = (a.tipo||'').toLowerCase();
+    const col = extColor[ext] || '#475569';
+    const icon = a.driveUrl ? 'bi-google' : 'bi-file-earmark';
+    return `<div style="display:flex;align-items:center;gap:8px;background:#fff;border:1px solid #e2e8f0;border-radius:7px;padding:5px 8px;margin-bottom:4px;font-size:.76rem">
+      <i class="bi ${icon}" style="color:${col};font-size:.85rem;flex-shrink:0"></i>
+      <div style="flex:1;min-width:0;overflow:hidden">
+        <div style="font-weight:600;color:#0f172a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${a.nombre||a.driveUrl||'Archivo'}</div>
+        ${a.driveUrl?`<a href="${a.driveUrl}" target="_blank" style="font-size:.68rem;color:#1d4ed8">Ver en Drive ↗</a>`:`<span style="font-size:.68rem;color:#64748b">${a.tipo||''} ${a.size?'· '+Math.round(a.size/1024)+'KB':''}</span>`}
+      </div>
+      <input type="text" value="${a.etiqueta||''}" placeholder="Etiqueta (ej: Marzo 2026)" onchange="_lpArchivosTemp[${i}].etiqueta=this.value"
+        style="width:120px;border:1px solid #e2e8f0;border-radius:5px;padding:2px 6px;font-size:.68rem;color:#475569">
+      <button onclick="_lpArchivosTemp.splice(${i},1);_lpRenderArchivosModal()" style="background:#fee2e2;border:1px solid #fca5a5;border-radius:5px;padding:1px 7px;cursor:pointer;font-size:.7rem;color:#dc2626;flex-shrink:0"><i class="bi bi-x-lg"></i></button>
+    </div>`;
+  }).join('');
+}
+
+function _lpAgregarDriveUrl() {
+  const url = document.getElementById('lp-driveUrl').value.trim();
+  if (!url) { toast('Pegá el enlace de Drive primero','warning'); return; }
+  _lpArchivosTemp.push({ id: uid(), nombre: 'Enlace Drive', tipo: 'DRIVE', driveUrl: url, dataB64: '', size: 0, etiqueta: '' });
+  document.getElementById('lp-driveUrl').value = '';
+  _lpRenderArchivosModal();
+  toast('Enlace agregado ✓','success');
 }
 
 function _lpRenderCondiciones() {
@@ -16103,23 +16457,26 @@ function lpAgregarCondicion() {
 }
 
 function lpModalFileSelected(evt) {
-  const file = evt.target.files[0];
-  if (!file) return;
-  document.getElementById('lp-modal-file-name').textContent = file.name;
-  const ext = file.name.split('.').pop().toUpperCase();
-  document.getElementById('lp-modal-file-badge').innerHTML = `<span class="badge bg-primary" style="font-size:.68rem">${ext}</span>`;
-
-  // Read as base64 for local storage (small files) or just metadata
-  if (file.size <= 5 * 1024 * 1024) { // max 5MB
-    const reader = new FileReader();
-    reader.onload = e => {
-      _lpArchivoTemp = { nombre: file.name, tipo: ext, size: file.size, dataB64: e.target.result };
-    };
-    reader.readAsDataURL(file);
-  } else {
-    _lpArchivoTemp = { nombre: file.name, tipo: ext, size: file.size, dataB64: '' };
-    toast('Archivo muy grande para almacenar localmente. Subilo a Drive y pegá el enlace.', 'warning');
-  }
+  const files = Array.from(evt.target.files||[]);
+  if (!files.length) return;
+  let pending = files.length;
+  files.forEach(file => {
+    const ext = file.name.split('.').pop().toUpperCase();
+    if (file.size <= 5 * 1024 * 1024) {
+      const reader = new FileReader();
+      reader.onload = e => {
+        _lpArchivosTemp.push({ id: uid(), nombre: file.name, tipo: ext, size: file.size, dataB64: e.target.result, etiqueta: '' });
+        pending--;
+        if (pending === 0) { _lpRenderArchivosModal(); toast(`${files.length} archivo${files.length>1?'s':''} agregado${files.length>1?'s':''}  ✓`,'success'); }
+      };
+      reader.readAsDataURL(file);
+    } else {
+      _lpArchivosTemp.push({ id: uid(), nombre: file.name, tipo: ext, size: file.size, dataB64: '', etiqueta: '' });
+      pending--;
+      if (pending === 0) { _lpRenderArchivosModal(); toast('Archivo(s) muy grandes — se guardará metadata. Subí a Drive y pegá el enlace.','warning'); }
+    }
+  });
+  evt.target.value = '';
 }
 
 function guardarListaPrecio() {
@@ -16131,13 +16488,9 @@ function guardarListaPrecio() {
   if (!proveedor) { toast('Ingresá el proveedor','warning'); return; }
 
   const prev = id ? ST.listasPrecios.find(l => l.id === id) : null;
-  const driveUrl = document.getElementById('lp-driveUrl').value.trim();
 
-  let archivo = prev?.archivo || {};
-  if (_lpArchivoTemp) {
-    archivo = _lpArchivoTemp;
-  }
-  if (driveUrl) archivo.driveUrl = driveUrl;
+  // Modelo nuevo: archivos[] — backward compat: mantener archivo legacy si no hay nada nuevo
+  const archivos = _lpArchivosTemp.length ? _lpArchivosTemp : _lpGetArchivos(prev);
 
   const obj = {
     id: id || uid(),
@@ -16149,7 +16502,8 @@ function guardarListaPrecio() {
     fechaVencimiento: document.getElementById('lp-fechaVencimiento').value,
     estado: document.getElementById('lp-estado').value,
     condiciones: _lpCondiciones,
-    archivo,
+    archivos,
+    archivo: archivos[0] || prev?.archivo || {}, // legacy compat
     notas: document.getElementById('lp-notas').value.trim(),
     createdAt: prev?.createdAt || new Date().toISOString(),
     updatedAt: new Date().toISOString()
@@ -16158,8 +16512,9 @@ function guardarListaPrecio() {
   const idx = ST.listasPrecios.findIndex(l => l.id === obj.id);
   if (idx >= 0) ST.listasPrecios[idx] = obj; else ST.listasPrecios.push(obj);
 
-  _lpCondiciones = [];
-  _lpArchivoTemp = null;
+  _lpCondiciones  = [];
+  _lpArchivoTemp  = null;
+  _lpArchivosTemp = [];
   save();
   bootstrap.Modal.getInstance(document.getElementById('modalListaPrecio')).hide();
   renderListasPrecios();
@@ -16206,9 +16561,35 @@ function lpVerDetalle(id) {
   }
 
   const fileIcons = { xlsx:'bi-file-earmark-spreadsheet', xls:'bi-file-earmark-spreadsheet', csv:'bi-file-earmark-spreadsheet', pdf:'bi-file-earmark-pdf', docx:'bi-file-earmark-word', doc:'bi-file-earmark-word', jpg:'bi-file-earmark-image', jpeg:'bi-file-earmark-image', png:'bi-file-earmark-image' };
-  const ext = l.archivo?.nombre ? l.archivo.nombre.split('.').pop().toLowerCase() : '';
-  const fileIcon = fileIcons[ext] || 'bi-file-earmark';
-  const canPreview = l.archivo?.dataB64 && ['xlsx','xls','csv','pdf','jpg','jpeg','png'].includes(ext);
+  // Normalizar archivos (soporta legacy y nuevo modelo)
+  const archivosLista = _lpGetArchivos(l);
+  const ext = archivosLista[0]?.nombre ? archivosLista[0].nombre.split('.').pop().toLowerCase() : '';
+  const canPreview = archivosLista[0]?.dataB64 && ['xlsx','xls','csv','pdf','jpg','jpeg','png'].includes(ext);
+
+  // HTML multi-archivos
+  const archivosHTML = archivosLista.length ? `
+    <div class="card mb-3 border-0" style="background:#eff6ff;border:1px solid #93c5fd!important;border-radius:8px">
+      <div class="card-body py-2 px-3">
+        <div style="font-weight:700;font-size:.82rem;color:#1d4ed8;margin-bottom:8px"><i class="bi bi-files me-1"></i>Archivos adjuntos (${archivosLista.length})</div>
+        ${archivosLista.map((a, ai) => {
+          const aExt = (a.nombre||'').split('.').pop().toLowerCase();
+          const aIcon = fileIcons[aExt] || 'bi-file-earmark';
+          const aCan  = a.dataB64 && ['xlsx','xls','csv','pdf','jpg','jpeg','png'].includes(aExt);
+          return `<div style="display:flex;align-items:center;gap:8px;background:#fff;border:1px solid #e2e8f0;border-radius:7px;padding:6px 10px;margin-bottom:5px">
+            <i class="bi ${aIcon} text-primary" style="font-size:1.1rem;flex-shrink:0"></i>
+            <div style="flex:1;min-width:0">
+              <div style="font-weight:600;font-size:.82rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${a.nombre||'Archivo'}</div>
+              <div style="font-size:.7rem;color:#64748b">${a.etiqueta?'<span style="background:#dbeafe;color:#1d4ed8;border-radius:4px;padding:0 4px;font-size:.65rem;margin-right:4px">'+a.etiqueta+'</span>':''} ${a.tipo||''} ${a.size?'· '+(a.size/1024).toFixed(0)+' KB':''}</div>
+            </div>
+            <div style="display:flex;gap:4px;flex-shrink:0">
+              ${aCan ? `<button class="btn btn-sm btn-outline-primary" onclick="lpToggleViewer('${l.id}',${ai})" style="font-size:.68rem;padding:2px 7px"><i class="bi bi-eye me-1"></i>Ver</button>` : ''}
+              ${a.driveUrl ? `<a href="${a.driveUrl}" target="_blank" class="btn btn-sm btn-outline-secondary" style="font-size:.68rem;padding:2px 7px"><i class="bi bi-box-arrow-up-right me-1"></i>Drive</a>` : ''}
+              ${a.dataB64 ? `<button class="btn btn-sm btn-outline-success" onclick="lpDescargarArchivo('${l.id}',${ai})" style="font-size:.68rem;padding:2px 7px"><i class="bi bi-download me-1"></i></button>` : ''}
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>` : '';
 
   // Comentarios HTML
   const comentariosHtml = _lpRenderComentarios(l);
@@ -16243,16 +16624,12 @@ function lpVerDetalle(id) {
       </div>
     </div>
 
-    ${l.archivo?.nombre ? `<div class="card mb-3 border-0" style="background:#eff6ff;border:1px solid #93c5fd!important;border-radius:8px">
-      <div class="card-body py-2 px-3 d-flex align-items-center gap-2 flex-wrap">
-        <i class="bi ${fileIcon} text-primary" style="font-size:1.4rem"></i>
-        <div style="flex:1;min-width:150px">
-          <div style="font-weight:600;font-size:.85rem">${l.archivo.nombre}</div>
-          <div style="font-size:.72rem;color:#64748b">${l.archivo.size ? (l.archivo.size/1024).toFixed(0)+' KB' : ''} ${l.archivo.tipo||''}</div>
-        </div>
-        ${canPreview ? `<button class="btn btn-sm btn-primary" onclick="lpToggleViewer('${l.id}')" style="font-size:.72rem;border-radius:6px" id="lp-btn-viewer"><i class="bi bi-eye me-1"></i>Ver en la App</button>` : ''}
-        ${l.archivo.driveUrl ? `<a href="${l.archivo.driveUrl}" target="_blank" class="btn btn-sm btn-outline-primary" style="font-size:.72rem"><i class="bi bi-box-arrow-up-right me-1"></i>Abrir en Drive</a>` : ''}
-        ${l.archivo.dataB64 ? `<button class="btn btn-sm btn-outline-success" onclick="lpDescargarArchivo('${l.id}')" style="font-size:.72rem"><i class="bi bi-download me-1"></i>Descargar</button>` : ''}
+    ${archivosHTML}
+    ${archivosLista.length ? `<!-- compat placeholder so old code doesn't break --><div style="display:none">
+        </div>` : `<div class="card mb-3 border-0" style="background:#eff6ff;border:1px solid #93c5fd!important;border-radius:8px">
+      <div class="card-body py-2 px-3 d-flex align-items-center gap-2">
+        <i class="bi bi-file-earmark text-muted" style="font-size:1.2rem"></i>
+        <span style="font-size:.82rem;color:#64748b">Sin archivos adjuntos</span>
       </div>
     </div>` : ''}
 
@@ -16328,20 +16705,25 @@ function lpEliminarComentario(id, idx) {
 
 let _lpViewerSheets = {}; // cache for Excel sheet data
 
-function lpToggleViewer(id) {
+function lpToggleViewer(id, archivoIdx) {
   const viewer = document.getElementById('lp-file-viewer');
-  if (viewer.style.display !== 'none') { viewer.style.display = 'none'; return; }
+  if (viewer.style.display !== 'none' && archivoIdx === undefined) { viewer.style.display = 'none'; return; }
   viewer.style.display = '';
   const content = document.getElementById('lp-viewer-content');
   content.innerHTML = '<div class="text-center py-4 text-muted"><div class="spinner-border spinner-border-sm"></div> Cargando vista previa...</div>';
   const l = (ST.listasPrecios||[]).find(x => x.id === id);
-  if (!l?.archivo?.dataB64) { content.innerHTML = '<div class="text-muted text-center py-3">Sin archivo para previsualizar</div>'; return; }
+  // Soporte multi-archivo
+  const archivos = _lpGetArchivos(l);
+  const archivo  = archivos[archivoIdx ?? 0] || l?.archivo;
+  if (!archivo?.dataB64) { content.innerHTML = '<div class="text-muted text-center py-3">Sin archivo para previsualizar</div>'; return; }
+  // Crear objeto fake 'l' compatible con viewers
+  const lFake = { ...l, archivo };
 
-  const ext = l.archivo.nombre.split('.').pop().toLowerCase();
-  if (['xlsx','xls'].includes(ext)) _lpViewExcel(l);
-  else if (ext === 'csv') _lpViewCSV(l);
-  else if (ext === 'pdf') _lpViewPDF(l);
-  else if (['jpg','jpeg','png'].includes(ext)) _lpViewImage(l);
+  const ext = archivo.nombre.split('.').pop().toLowerCase();
+  if (['xlsx','xls'].includes(ext)) _lpViewExcel(lFake);
+  else if (ext === 'csv') _lpViewCSV(lFake);
+  else if (ext === 'pdf') _lpViewPDF(lFake);
+  else if (['jpg','jpeg','png'].includes(ext)) _lpViewImage(lFake);
   else content.innerHTML = '<div class="text-muted text-center py-3">Formato no soportado para vista previa</div>';
 }
 
@@ -16578,32 +16960,51 @@ function lpPrintDetalle() {
   setTimeout(() => w.print(), 500);
 }
 
-function lpDescargarArchivo(id) {
+function lpDescargarArchivo(id, archivoIdx) {
   const l = (ST.listasPrecios||[]).find(x => x.id === id);
-  if (!l?.archivo?.dataB64) { toast('Sin archivo almacenado','warning'); return; }
+  const archivos = _lpGetArchivos(l);
+  const archivo  = archivos[archivoIdx ?? 0] || l?.archivo;
+  if (!archivo?.dataB64) { toast('Sin archivo almacenado localmente','warning'); return; }
   const a = document.createElement('a');
-  a.href = l.archivo.dataB64;
-  a.download = l.archivo.nombre;
+  a.href = archivo.dataB64;
+  a.download = archivo.nombre;
   a.click();
 }
 
 function lpUploadArchivo(evt) {
-  const file = evt.target.files[0];
-  if (!file) return;
-  // Crear una lista rápida con el archivo
-  _lpArchivoTemp = null;
-  const reader = new FileReader();
-  reader.onload = e => {
-    _lpArchivoTemp = { nombre: file.name, tipo: file.name.split('.').pop().toUpperCase(), size: file.size, dataB64: file.size <= 5*1024*1024 ? e.target.result : '' };
-    // Open modal pre-filled with file
-    abrirModalListaPrecio(null);
-    document.getElementById('lp-modal-file-name').textContent = file.name;
-    document.getElementById('lp-modal-file-badge').innerHTML = `<span class="badge bg-primary" style="font-size:.68rem">${_lpArchivoTemp.tipo}</span>`;
-    // Try to guess proveedor from filename
-    const parts = file.name.replace(/\.[^.]+$/,'').replace(/[-_]/g,' ').split(' ');
-    if (parts.length > 1) document.getElementById('lp-nombre').value = parts.join(' ');
-  };
-  reader.readAsDataURL(file);
+  const files = Array.from(evt.target.files||[]);
+  if (!files.length) return;
+  _lpArchivosTemp = [];
+  _lpArchivoTemp  = null;
+  let pending = files.length;
+  files.forEach((file, fi) => {
+    const ext = file.name.split('.').pop().toUpperCase();
+    if (file.size <= 5 * 1024 * 1024) {
+      const reader = new FileReader();
+      reader.onload = e => {
+        _lpArchivosTemp.push({ id: uid(), nombre: file.name, tipo: ext, size: file.size, dataB64: e.target.result, etiqueta: '' });
+        pending--;
+        if (pending === 0) {
+          abrirModalListaPrecio(null);
+          // Pre-fill nombre from first file
+          const guessed = files[0].name.replace(/\.[^.]+$/,'').replace(/[-_]/g,' ');
+          document.getElementById('lp-nombre').value = guessed;
+          setTimeout(_lpRenderArchivosModal, 100);
+        }
+      };
+      reader.readAsDataURL(file);
+    } else {
+      _lpArchivosTemp.push({ id: uid(), nombre: file.name, tipo: ext, size: file.size, dataB64: '', etiqueta: '' });
+      pending--;
+      if (pending === 0) {
+        abrirModalListaPrecio(null);
+        const guessed = files[0].name.replace(/\.[^.]+$/,'').replace(/[-_]/g,' ');
+        document.getElementById('lp-nombre').value = guessed;
+        setTimeout(_lpRenderArchivosModal, 100);
+        toast('Archivo(s) muy grande(s) — subí a Drive y pegá el enlace.','warning');
+      }
+    }
+  });
   evt.target.value = '';
 }
 
@@ -20432,6 +20833,147 @@ function _cronCalendar(year, month) {
   grid.innerHTML = html;
 }
 
+// ── Truck visualization: SVG semi-trailer 26 pallets ──
+function _cronBuildTruckViz(totalPallets, palletsEntries, camiones, resto, pct, camionColor) {
+  if (totalPallets === 0) return '';
+
+  const CAP    = CRON_PALLETS_POR_CAMION; // 26
+  const COLS   = 13;
+  const ROWS   = 2;
+
+  // Build pallet assignment: map each pallet slot (0-25) to an entry color and label
+  // Entry colors by peso/tipo
+  const colorMap = { '25 kg':'#d97706', '1 kg':'#3b82f6', '50 kg':'#16a34a' };
+  const labelMap = { '25 kg':'25k', '1 kg':'1k', '50 kg':'50k' };
+
+  // Expand entries into individual pallet slots
+  const slots = [];
+  palletsEntries.forEach(e => {
+    const cnt  = Math.min(e.cantidad||0, CAP - slots.length);
+    const col  = colorMap[e.peso] || '#94a3b8';
+    const lbl  = labelMap[e.peso] || e.peso;
+    const sColor= {pendiente:'#f59e0b', entregado:'#22c55e', anulado:'#94a3b8'}[e.estado]||'#94a3b8';
+    for (let i = 0; i < cnt && slots.length < CAP; i++) {
+      slots.push({ color: sColor === '#94a3b8' ? sColor : col, lbl, client: e.cliente, sColor });
+    }
+  });
+
+  // Build SVG pallet grid inside trailer
+  const PW = 17, PH = 16, GAP = 2;
+  const gridW = COLS * (PW + GAP) - GAP;
+  const gridH = ROWS * (PH + GAP) - GAP;
+  const trailerW = gridW + 14;
+  const trailerH = gridH + 22;
+  const totalW   = trailerW + 48; // +48 for cab
+  const totalH   = trailerH + 20; // +20 for wheels
+
+  let palletSVG = '';
+  for (let i = 0; i < CAP; i++) {
+    const col = i % COLS;
+    const row = Math.floor(i / COLS);
+    const x   = 7 + col * (PW + GAP);
+    const y   = 11 + row * (PH + GAP);
+    const s   = slots[i];
+    const fill= s ? s.color : '#e2e8f0';
+    const stroke= s ? (s.color === '#e2e8f0' ? '#d1d5db' : s.color + 'cc') : '#d1d5db';
+    const title = s ? `${s.client} (${s.lbl})` : 'Libre';
+    palletSVG += `<g>
+      <rect x="${x}" y="${y}" width="${PW}" height="${PH}" rx="2" fill="${fill}" stroke="${stroke}" stroke-width=".8" opacity="${s?1:.35}">
+        <title>${title}</title>
+      </rect>
+      ${s ? `<text x="${x+PW/2}" y="${y+PH/2+3}" font-size="6" text-anchor="middle" fill="#fff" font-weight="700" pointer-events="none">${s.lbl}</text>` : ''}
+    </g>`;
+  }
+
+  // Trailer body
+  const tx = 0, ty = 8;
+  const trailerSVG = `
+    <!-- trailer body -->
+    <rect x="${tx}" y="${ty}" width="${trailerW}" height="${trailerH}" rx="4" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.5"/>
+    <!-- trailer roof stripe -->
+    <rect x="${tx}" y="${ty}" width="${trailerW}" height="8" rx="4" fill="#64748b"/>
+    <!-- pallet grid -->
+    ${palletSVG}
+    <!-- trailer wheels -->
+    <circle cx="${tx+trailerW*0.2}" cy="${ty+trailerH+6}" r="6" fill="#334155" stroke="#1e293b" stroke-width="1"/>
+    <circle cx="${tx+trailerW*0.2}" cy="${ty+trailerH+6}" r="2.5" fill="#94a3b8"/>
+    <circle cx="${tx+trailerW*0.35}" cy="${ty+trailerH+6}" r="6" fill="#334155" stroke="#1e293b" stroke-width="1"/>
+    <circle cx="${tx+trailerW*0.35}" cy="${ty+trailerH+6}" r="2.5" fill="#94a3b8"/>
+    <circle cx="${tx+trailerW*0.75}" cy="${ty+trailerH+6}" r="6" fill="#334155" stroke="#1e293b" stroke-width="1"/>
+    <circle cx="${tx+trailerW*0.75}" cy="${ty+trailerH+6}" r="2.5" fill="#94a3b8"/>
+    <circle cx="${tx+trailerW*0.88}" cy="${ty+trailerH+6}" r="6" fill="#334155" stroke="#1e293b" stroke-width="1"/>
+    <circle cx="${tx+trailerW*0.88}" cy="${ty+trailerH+6}" r="2.5" fill="#94a3b8"/>
+    <!-- hitch -->
+    <rect x="${tx+trailerW-2}" y="${ty+trailerH-4}" width="6" height="3" rx="1" fill="#64748b"/>
+  `;
+
+  // Cab
+  const cx2 = trailerW + 4;
+  const cabH = trailerH - 4;
+  const cabSVG = `
+    <!-- cab body -->
+    <rect x="${cx2}" y="${ty+4}" width="40" height="${cabH}" rx="5" fill="#4f46e5"/>
+    <!-- cab windshield -->
+    <rect x="${cx2+5}" y="${ty+8}" width="22" height="16" rx="3" fill="#bfdbfe" opacity=".85"/>
+    <!-- cab hood -->
+    <rect x="${cx2+28}" y="${ty+cabH-10}" width="12" height="10" rx="3" fill="#3730a3"/>
+    <!-- cab wheel front -->
+    <circle cx="${cx2+32}" cy="${ty+trailerH+6}" r="7" fill="#334155" stroke="#1e293b" stroke-width="1"/>
+    <circle cx="${cx2+32}" cy="${ty+trailerH+6}" r="3" fill="#94a3b8"/>
+    <!-- MÜÜK logo text on cab -->
+    <text x="${cx2+21}" y="${ty+cabH-14}" font-size="6" text-anchor="middle" fill="#fff" font-weight="800" font-family="sans-serif">MÜÜK</text>
+  `;
+
+  const svgH = totalH + 4;
+  const progressColor = camiones >= 1 ? '#22c55e' : '#f59e0b';
+  const libre = CAP - (resto || (totalPallets > 0 && camiones > 0 ? 0 : totalPallets));
+  const libreActual = CAP - Math.min(resto || (totalPallets <= CAP ? totalPallets : resto), CAP);
+
+  return `<div style="background:${camionColor}10;border:1.5px solid ${camionColor}40;border-radius:10px;padding:10px 10px 8px;margin-bottom:10px">
+    <!-- Status row -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <div>
+        <div style="font-size:.72rem;font-weight:800;color:${camionColor}">
+          ${camiones > 0 ? `<span style="background:${camionColor};color:#fff;border-radius:5px;padding:1px 6px;margin-right:4px">${camiones} semi${camiones>1?'s':''} completo${camiones>1?'s':''}</span>` : ''}
+          ${resto > 0 ? `${resto}/${CAP} pallets cargados` : (camiones > 0 ? 'Semi completo' : '0 pallets')}
+        </div>
+        <div style="font-size:.62rem;color:#64748b;margin-top:2px">Semi-remolque · 26 pallets</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:1.1rem;font-weight:900;color:${camionColor}">${totalPallets}</div>
+        <div style="font-size:.58rem;color:#94a3b8">pallets totales</div>
+      </div>
+    </div>
+
+    <!-- SVG Truck -->
+    <div style="overflow-x:auto;padding-bottom:2px">
+      <svg viewBox="0 0 ${totalW} ${svgH}" width="100%" style="max-width:340px;display:block;margin:0 auto" xmlns="http://www.w3.org/2000/svg">
+        ${trailerSVG}
+        ${cabSVG}
+      </svg>
+    </div>
+
+    <!-- Progress bar -->
+    <div style="margin-top:7px">
+      <div style="background:#e2e8f0;border-radius:20px;height:6px;overflow:hidden">
+        <div style="width:${pct}%;background:linear-gradient(90deg,${progressColor},${progressColor}cc);height:100%;border-radius:20px;transition:width .4s"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:3px">
+        <span style="font-size:.6rem;color:#94a3b8">${libreActual > 0 ? libreActual+' pallets libres' : 'Semi completo ✓'}</span>
+        <span style="font-size:.6rem;font-weight:700;color:${camionColor}">${pct}%</span>
+      </div>
+    </div>
+
+    <!-- Legend -->
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;padding-top:6px;border-top:1px solid ${camionColor}20">
+      <span style="font-size:.6rem;display:flex;align-items:center;gap:3px"><span style="width:9px;height:9px;background:#d97706;border-radius:2px;display:inline-block"></span>Bolsa 25kg</span>
+      <span style="font-size:.6rem;display:flex;align-items:center;gap:3px"><span style="width:9px;height:9px;background:#3b82f6;border-radius:2px;display:inline-block"></span>Fraccionado 1kg</span>
+      <span style="font-size:.6rem;display:flex;align-items:center;gap:3px"><span style="width:9px;height:9px;background:#16a34a;border-radius:2px;display:inline-block"></span>Bolsa 50kg</span>
+      <span style="font-size:.6rem;display:flex;align-items:center;gap:3px"><span style="width:9px;height:9px;background:#e2e8f0;border-radius:2px;display:inline-block;opacity:.5"></span>Libre</span>
+    </div>
+  </div>`;
+}
+
 function _cronSelectDay(dateStr) {
   _cronSelectedDate = dateStr;
   _cronCalendar(_cronYear, _cronMonth);  // re-highlight selected cell
@@ -20457,23 +20999,14 @@ function _cronSelectDay(dateStr) {
       <span style="font-size:.78rem">Sin entregas programadas</span>
     </div>`;
   } else {
-    // Truck capacity bar — only for Pallets
-    const totalPallets = entries.filter(e => e.tipo === 'Pallets' && e.estado !== 'anulado').reduce((s,e) => s+(e.cantidad||0), 0);
-    const camiones = Math.floor(totalPallets / CRON_PALLETS_POR_CAMION);
-    const resto    = totalPallets % CRON_PALLETS_POR_CAMION;
-    const pct      = Math.min(100, Math.round((totalPallets % CRON_PALLETS_POR_CAMION) / CRON_PALLETS_POR_CAMION * 100));
-    const camionColor = camiones >= 1 ? '#22c55e' : (totalPallets > 0 ? '#f59e0b' : '#94a3b8');
-    const camionHtml = totalPallets > 0 ? `
-      <div style="background:${camionColor}12;border:1px solid ${camionColor}30;border-radius:8px;padding:8px 10px;margin-bottom:10px">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">
-          <span style="font-size:.7rem;font-weight:700;color:${camionColor}"><i class="bi bi-truck me-1"></i>${camiones > 0 ? camiones + ' camión' + (camiones>1?'es':'')+' completo'+(camiones>1?'s':'') : ''}${camiones>0&&resto>0?' + ':''} ${resto>0?resto+' pallets extra':''}</span>
-          <span style="font-size:.65rem;font-weight:800;color:${camionColor}">${totalPallets}/${camiones*CRON_PALLETS_POR_CAMION + CRON_PALLETS_POR_CAMION} P</span>
-        </div>
-        <div style="background:#e2e8f0;border-radius:20px;height:5px;overflow:hidden">
-          <div style="width:${pct}%;background:${camionColor};height:100%;border-radius:20px;transition:width .3s"></div>
-        </div>
-        <div style="font-size:.6rem;color:#94a3b8;margin-top:3px">${CRON_PALLETS_POR_CAMION - resto} pallets para completar camión</div>
-      </div>` : '';
+    // ── Truck capacity visualizer ──
+    const palletsEntries = entries.filter(e => e.tipo === 'Pallets' && e.estado !== 'anulado');
+    const totalPallets = palletsEntries.reduce((s,e) => s+(e.cantidad||0), 0);
+    const camiones     = Math.floor(totalPallets / CRON_PALLETS_POR_CAMION);
+    const resto        = totalPallets % CRON_PALLETS_POR_CAMION;
+    const pct          = Math.min(100, Math.round((totalPallets % CRON_PALLETS_POR_CAMION) / CRON_PALLETS_POR_CAMION * 100));
+    const camionColor  = camiones >= 1 ? '#22c55e' : (totalPallets > 0 ? '#f59e0b' : '#94a3b8');
+    const camionHtml   = _cronBuildTruckViz(totalPallets, palletsEntries, camiones, resto, pct, camionColor);
 
     panelBody.innerHTML = camionHtml + entries.map(e => {
       const sColor = {pendiente:'#f59e0b', entregado:'#22c55e', anulado:'#94a3b8'}[e.estado] || '#94a3b8';
@@ -25419,14 +25952,124 @@ function abrirImportCRM() {
   // Sync segmento con tab activo
   const seg = { clientes:'clientesCRM', proveedores:'proveedoresCRM', empresas:'empresasCRM' };
   const selSeg = document.getElementById('imp-segmento');
-  if (selSeg && _crmActiveTab) selSeg.value = seg[_crmActiveTab] || 'clientesCRM';
+  const targetSeg = seg[_crmActiveTab] || 'clientesCRM';
+  if (selSeg) selSeg.value = targetSeg;
+  // Sync radio buttons
+  document.querySelectorAll('input[name="imp-seg"]').forEach(r => {
+    r.checked = r.value === targetSeg;
+    r.closest('label').style.borderColor = r.checked ? '#22c55e' : '#e2e8f0';
+    r.closest('label').style.background  = r.checked ? '#f0fdf4' : '';
+  });
+  document.querySelectorAll('input[name="imp-seg"]').forEach(r => {
+    r.addEventListener('change', () => {
+      selSeg.value = r.value;
+      document.querySelectorAll('input[name="imp-seg"]').forEach(x => {
+        x.closest('label').style.borderColor = x.checked ? '#22c55e' : '#e2e8f0';
+        x.closest('label').style.background  = x.checked ? '#f0fdf4' : '';
+      });
+    });
+  });
   // Reset estado
   _impDatos = [];
   document.getElementById('imp-file').value = '';
   document.getElementById('imp-preview-wrap').style.display = 'none';
   document.getElementById('imp-error').style.display = 'none';
   document.getElementById('imp-btn-importar').disabled = true;
+  _impSwitchTab('excel');
   new bootstrap.Modal(document.getElementById('modal-crm-import')).show();
+}
+
+function _impSwitchTab(tab) {
+  const excel = document.getElementById('imp-pane-excel');
+  const ai    = document.getElementById('imp-pane-ai');
+  const tExcel= document.getElementById('imp-tab-excel');
+  const tAI   = document.getElementById('imp-tab-ai');
+  if (!excel || !ai) return;
+  excel.style.display = tab === 'excel' ? '' : 'none';
+  ai.style.display    = tab === 'ai'    ? '' : 'none';
+  if (tExcel) tExcel.classList.toggle('active', tab === 'excel');
+  if (tAI)    tAI.classList.toggle('active', tab === 'ai');
+}
+
+async function _impAnalizarIA() {
+  const texto = (document.getElementById('imp-ai-texto')?.value||'').trim();
+  if (!texto) { _impMostrarError('Pegá algún texto con datos de contactos primero.'); return; }
+
+  const status = document.getElementById('imp-ai-status');
+  if (status) status.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Analizando con IA...';
+  document.getElementById('imp-btn-importar').disabled = true;
+  document.getElementById('imp-preview-wrap').style.display = 'none';
+  document.getElementById('imp-error').style.display = 'none';
+  _impDatos = [];
+
+  // Obtener config IA
+  const aiCfg = ST.aiConfig || {};
+  const apiKey = aiCfg.apiKey || '';
+  if (!apiKey) {
+    if (status) status.textContent = '';
+    _impMostrarError('Configurá la clave de API en Configuración → Asistente IA para usar esta función.');
+    return;
+  }
+
+  const segmento = document.getElementById('imp-segmento')?.value || 'clientesCRM';
+  const tipoLabel = { clientesCRM:'clientes', proveedoresCRM:'proveedores', empresasCRM:'empresas' }[segmento] || 'contactos';
+
+  const systemPrompt = `Eres un asistente de datos que extrae información de contactos de textos no estructurados.
+Extraé todos los contactos que encuentres y respondé SOLO con un JSON array con este esquema por objeto:
+{ "nombre":"Razón social o nombre completo", "cuit":"solo números con guiones o vacío", "contacto":"nombre del contacto", "apellido":"apellido", "tel":"teléfono principal", "tel2":"segundo teléfono", "email":"correo", "horarios":"horario de atención", "dir":"dirección principal", "dirAlt":"dirección alternativa", "notas":"observaciones" }
+Reglas: solo incluí campos con datos, dejá vacío los que no estén. Respondé ÚNICAMENTE con el JSON array, sin texto adicional, sin markdown.`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: aiCfg.model || 'claude-3-haiku-20240307',
+        max_tokens: 4096,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: `Extraé los ${tipoLabel} de este texto:\n\n${texto}` }]
+      })
+    });
+    if (!res.ok) { throw new Error('Error API: ' + res.status + ' ' + await res.text()); }
+    const data = await res.json();
+    const raw  = data.content?.[0]?.text || '';
+
+    // Parse JSON — puede venir con o sin backticks
+    let parsed;
+    try {
+      const match = raw.match(/\[[\s\S]*\]/);
+      parsed = JSON.parse(match ? match[0] : raw);
+    } catch(e) { throw new Error('La IA devolvió un formato inesperado. Revisá el texto e intentá de nuevo.'); }
+
+    if (!Array.isArray(parsed) || !parsed.length) throw new Error('No se encontraron contactos en el texto.');
+
+    const rows = parsed.filter(r => r.nombre);
+    if (!rows.length) throw new Error('No se encontraron registros con nombre válido.');
+
+    _impDatos = rows;
+    if (status) status.innerHTML = `<span class="text-success"><i class="bi bi-check-circle-fill me-1"></i>${rows.length} contacto${rows.length!==1?'s':''} detectado${rows.length!==1?'s':''}</span>`;
+
+    // Mostrar preview
+    const cols = ['nombre','cuit','contacto','tel','email','dir','notas'].filter(c => rows.some(r=>r[c]));
+    const thead = `<thead style="position:sticky;top:0"><tr>${cols.map(c=>`<th style="background:#7c3aed;color:#fff;font-size:.65rem;padding:4px 8px;white-space:nowrap">${c}</th>`).join('')}</tr></thead>`;
+    const preview = rows.slice(0,5);
+    const tbody = `<tbody>${preview.map(r=>`<tr>${cols.map(c=>`<td style="font-size:.7rem;padding:3px 8px;border-bottom:1px solid #f1f5f9;white-space:nowrap;max-width:180px;overflow:hidden;text-overflow:ellipsis" title="${r[c]||''}">${r[c]||'—'}</td>`).join('')}</tr>`).join('')}</tbody>`;
+    document.getElementById('imp-preview-table').innerHTML = thead + tbody;
+    document.getElementById('imp-preview-title').innerHTML = `<i class="bi bi-stars text-purple me-1"></i>Vista previa IA — ${preview.length} de ${rows.length} registros`;
+    document.getElementById('imp-summary').innerHTML = `<i class="bi bi-check-circle-fill text-success me-1"></i><strong>${rows.length} registro${rows.length!==1?'s':''}</strong> detectados por IA · ${cols.length} campos mapeados`;
+    document.getElementById('imp-preview-wrap').style.display = '';
+    document.getElementById('imp-error').style.display = 'none';
+    document.getElementById('imp-btn-importar').disabled = false;
+
+  } catch(e) {
+    if (status) status.textContent = '';
+    _impMostrarError(e.message);
+  }
 }
 
 function _impCargarArchivo(input) {
