@@ -1978,6 +1978,9 @@
           <h5 class="mb-0" id="com-detalle-empresa"></h5>
           <small class="text-muted" id="com-detalle-saldo"></small>
         </div>
+        <button class="btn btn-sm btn-outline-secondary" onclick="comImprimirConFiltroDesdeDetalle()" title="Imprimir con filtro de fechas">
+          <i class="bi bi-funnel me-1"></i>Imprimir con filtro
+        </button>
         <button class="btn btn-sm btn-outline-danger" onclick="comImprimirSaldoDesdeDetalle()" title="Imprime solo facturas con saldo de comisión impago">
           <i class="bi bi-printer me-1"></i>Imprimir saldo pendiente
         </button>
@@ -11163,7 +11166,7 @@ async function cargarComisionDetalle(sheetTab, empresaName) {
     if (saldoEl) saldoEl.textContent = resumenItem ? `Saldo: ${fmt(resumenItem.saldo)}` : 'Saldo: —';
 
     // Save for printing
-    _comLastDetail = { empresaName, saldo: resumenItem?.saldo || 0, details, isFull, hasSaldo };
+    _comLastDetail = { empresaName, saldo: resumenItem?.saldo || 0, details, isFull, hasSaldo, sheetTab };
 
     // Totals
     const totImporte  = details.reduce((s,d) => s + (d.importe||0), 0);
@@ -11295,6 +11298,14 @@ function comImprimirSaldoDesdeDetalle() {
   if (!_comLastDetail) { toast('Abrí el detalle de la empresa primero', 'warning'); return; }
   const { empresaName, saldo, details, isFull, hasSaldo = true } = _comLastDetail;
   _comBuildPDFSaldoEmpresa(empresaName, saldo, details, isFull, hasSaldo);
+}
+
+// Llamado desde el botón "Imprimir con filtro" en el detalle (abre diálogo de fechas)
+function comImprimirConFiltroDesdeDetalle() {
+  if (!_comLastDetail) { toast('Abrí el detalle de la empresa primero', 'warning'); return; }
+  const { empresaName, saldo, sheetTab } = _comLastDetail;
+  if (!sheetTab) { toast('Error: sin datos de hoja, volvé al listado y abrí el detalle de nuevo', 'warning'); return; }
+  _comMostrarFiltrosPDF(sheetTab, empresaName, saldo);
 }
 
 // Llamado desde el botón en la card del resumen (re-fetchea los datos)
