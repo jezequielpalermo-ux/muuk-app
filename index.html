@@ -5040,6 +5040,9 @@ CREATE POLICY "acceso total" ON muuk_daily_backups FOR ALL USING (true) WITH CHE
       </div>
     </div>
 
+    <!-- Panel semanal de entregas — HJ NAVAS -->
+    <div id="cron-semanal-wrap" style="margin-top:20px"></div>
+
     <!-- MODAL: agregar/editar entrega -->
     <div id="cron-modal-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1500;display:none;align-items:center;justify-content:center">
       <div style="background:#fff;border-radius:14px;padding:24px;width:420px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3)">
@@ -5138,11 +5141,14 @@ CREATE POLICY "acceso total" ON muuk_daily_backups FOR ALL USING (true) WITH CHE
         <div style="font-size:.7rem;color:#94a3b8;margin-top:2px">Producto físico · Reventa · Argentina</div>
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-        <button class="btn btn-sm" onclick="calcReset()" style="background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0;border-radius:7px;font-size:.72rem;padding:5px 12px">
+        <button class="btn btn-sm" onclick="calcLimpiarAuto()" style="background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0;border-radius:7px;font-size:.72rem;padding:5px 12px">
           <i class="bi bi-arrow-counterclockwise me-1"></i>Limpiar
         </button>
         <button class="btn btn-sm" onclick="calcGuardarAuto()" style="background:#16a34a;color:#fff;border:none;border-radius:7px;font-size:.72rem;padding:5px 12px">
           <i class="bi bi-floppy me-1"></i>Guardar
+        </button>
+        <button class="btn btn-sm" onclick="calcImprimirAuto()" style="background:#0891b2;color:#fff;border:none;border-radius:7px;font-size:.72rem;padding:5px 12px">
+          <i class="bi bi-printer me-1"></i>Imprimir
         </button>
         <button class="btn btn-sm" onclick="calcCopyAuto()" style="background:#4f46e5;color:#fff;border:none;border-radius:7px;font-size:.72rem;padding:5px 12px">
           <i class="bi bi-clipboard me-1"></i>Copiar
@@ -21020,6 +21026,7 @@ let _cronYear  = new Date().getFullYear();
 let _cronMonth = new Date().getMonth();  // 0-based
 let _cronSelectedDate = null;
 let _cronVista = 'calendar'; // 'calendar' | 'lista'
+let _cronSemanalOffset = 0;  // 0 = esta semana, -1 = anterior, +1 = siguiente
 
 function renderCronograma() {
   // Populate clients datalist once
@@ -21048,6 +21055,7 @@ function renderCronograma() {
 
   _cronCalendar(_cronYear, _cronMonth);
   _cronStats(_cronYear, _cronMonth);
+  _cronRenderSemanal();
 
   if (_cronVista === 'lista') _cronRenderLista(_cronYear, _cronMonth);
   if (_cronSelectedDate) _cronSelectDay(_cronSelectedDate);
@@ -21535,6 +21543,153 @@ function _cronStats(year, month) {
     s('bi-cash-stack',       totalFacturado?fmt(totalFacturado):'—', 'Facturación mes', '#10b981', ''),
     s('bi-people',           clientes.size,    'Clientes',            '#8b5cf6', ''),
   ].join('');
+}
+
+// ── Navegación semana en panel semanal ────────────────
+function _cronSemanalNav(delta) {
+  if (delta === 0) _cronSemanalOffset = 0;
+  else _cronSemanalOffset += delta;
+  _cronRenderSemanal();
+}
+
+// ── Panel semanal de entregas — Pedidos HJ NAVAS ──────
+function _cronRenderSemanal() {
+  const el = document.getElementById('cron-semanal-wrap');
+  if (!el) return;
+  const cron = ST.cronogramaHarina || {};
+  const CAP  = CRON_PALLETS_POR_CAMION;
+
+  // Calcular lunes de la semana seleccionada
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  const dow  = today.getDay();
+  const diffToMon = (dow === 0) ? -6 : 1 - dow;
+  const weekMon = new Date(today);
+  weekMon.setDate(today.getDate() + diffToMon + _cronSemanalOffset * 7);
+
+  // Construir los 7 días
+  const days = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(weekMon);
+    d.setDate(weekMon.getDate() + i);
+    const dateStr = _cronDateStr(d.getFullYear(), d.getMonth()+1, d.getDate());
+    const entries = (cron[dateStr] || []).filter(e => e.estado !== 'anulado');
+    days.push({ date: d, dateStr, entries });
+  }
+
+  const weekLabel = days[0].date.toLocaleDateString('es-AR',{day:'numeric',month:'short'}) + ' — ' +
+                    days[6].date.toLocaleDateString('es-AR',{day:'numeric',month:'short',year:'numeric'});
+
+  const todayStr = _cronTodayStr();
+  const isThisWeek = _cronSemanalOffset === 0;
+
+  let html = '<div style="border-top:2px solid #e2e8f0;padding-top:18px">'
+    + '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:14px">'
+    +   '<div>'
+    +     '<h6 style="margin:0;font-weight:800;font-size:.9rem;color:#0f172a"><i class="bi bi-truck me-2" style="color:#0891b2"></i>Pedidos Semanales — HJ NAVAS</h6>'
+    +     '<div style="font-size:.66rem;color:#94a3b8;margin-top:2px">Semana: ' + weekLabel + '</div>'
+    +   '</div>'
+    +   '<div style="display:flex;gap:6px;align-items:center">'
+    +     '<button onclick="_cronSemanalNav(-1)" style="background:#f1f5f9;border:1px solid #e2e8f0;border-radius:7px;padding:4px 11px;cursor:pointer;font-size:.75rem">‹ Anterior</button>'
+    +     (isThisWeek ? '' : '<button onclick="_cronSemanalNav(0)" style="background:#ede9fe;color:#4f46e5;border:none;border-radius:7px;padding:4px 11px;cursor:pointer;font-size:.72rem;font-weight:600">Esta semana</button>')
+    +     '<button onclick="_cronSemanalNav(1)" style="background:#f1f5f9;border:1px solid #e2e8f0;border-radius:7px;padding:4px 11px;cursor:pointer;font-size:.75rem">Siguiente ›</button>'
+    +   '</div>'
+    + '</div>';
+
+  const activeDays = days.filter(d => d.entries.length > 0);
+
+  if (!activeDays.length) {
+    html += '<div style="text-align:center;padding:28px;color:#94a3b8;background:#f8fafc;border-radius:10px;border:1.5px dashed #e2e8f0">'
+      + '<i class="bi bi-truck" style="font-size:2rem;display:block;margin-bottom:8px;opacity:.3"></i>'
+      + '<div style="font-size:.8rem">Sin entregas programadas para esta semana</div>'
+      + '</div>';
+  } else {
+    html += '<div style="display:flex;flex-direction:column;gap:12px">';
+
+    activeDays.forEach(function(item) {
+      var date    = item.date;
+      var dateStr = item.dateStr;
+      var entries = item.entries;
+
+      var isPast     = dateStr < todayStr;
+      var isToday2   = dateStr === todayStr;
+      var allEntg    = entries.every(function(e){ return e.estado === 'entregado'; });
+      var hasPend    = entries.some(function(e){ return e.estado === 'pendiente'; });
+
+      var statusColor = allEntg ? '#16a34a' : (isPast && hasPend ? '#dc2626' : (isToday2 ? '#4f46e5' : '#f59e0b'));
+      var statusBg    = allEntg ? '#f0fdf4' : (isPast && hasPend ? '#fef2f2' : (isToday2 ? '#ede9fe' : '#fffbeb'));
+      var statusIcon  = allEntg ? '✓' : (isPast && hasPend ? '⚠' : (isToday2 ? '📍' : '🚛'));
+      var statusLabel = allEntg ? 'Entregado' : (isPast && hasPend ? 'Con pendientes' : (isToday2 ? 'Hoy' : 'Programado'));
+
+      // Day name
+      var dayName = date.toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'short'});
+      dayName = dayName.charAt(0).toUpperCase() + dayName.slice(1);
+
+      // Pallet / truck calc
+      var palletsEntries = entries.filter(function(e){ return e.tipo === 'Pallets'; });
+      var totalPallets   = palletsEntries.reduce(function(s,e){ return s + (e.cantidad||0); }, 0);
+      var camiones       = Math.floor(totalPallets / CAP);
+      var resto          = totalPallets % CAP;
+      var lastFill       = totalPallets === 0 ? 0 : (resto > 0 ? resto : (camiones > 0 ? CAP : 0));
+      var pct            = Math.round(lastFill / CAP * 100);
+
+      // Client list (aggregate by client)
+      var clientMap = {};
+      entries.forEach(function(e) {
+        if (!clientMap[e.cliente]) clientMap[e.cliente] = { pallets:0, estados:[] };
+        if (e.tipo === 'Pallets') clientMap[e.cliente].pallets += (e.cantidad||0);
+        if (clientMap[e.cliente].estados.indexOf(e.estado) < 0) clientMap[e.cliente].estados.push(e.estado);
+      });
+
+      var clientRows = Object.entries(clientMap).map(function(kv) {
+        var cli = kv[0]; var d = kv[1];
+        var entg  = d.estados.every(function(s){ return s === 'entregado'; });
+        var stBg  = entg ? '#dcfce7' : '#fef9c3';
+        var stCol = entg ? '#15803d' : '#854d0e';
+        var stTxt = entg ? '✓ entregado' : '⏳ pendiente';
+        return '<div style="display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid ' + statusColor + '15">'
+          + '<i class="bi bi-person-fill" style="color:#64748b;font-size:.65rem;flex-shrink:0"></i>'
+          + '<span style="font-size:.77rem;font-weight:600;color:#334155;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + cli + '</span>'
+          + (d.pallets > 0 ? '<span style="font-size:.65rem;color:#0891b2;font-weight:700;white-space:nowrap">' + d.pallets + ' pallets</span>' : '')
+          + '<span style="font-size:.62rem;padding:2px 7px;border-radius:10px;font-weight:700;background:' + stBg + ';color:' + stCol + '">' + stTxt + '</span>'
+          + '</div>';
+      }).join('');
+
+      // Truck viz (only if pallets)
+      var truckHtml = totalPallets > 0 ? _cronBuildTruckViz(totalPallets, palletsEntries, camiones, resto, pct, statusColor) : '';
+
+      // Non-pallet entries (bolsas, unidades)
+      var otrosEntries = entries.filter(function(e){ return e.tipo !== 'Pallets'; });
+      var otrosHtml = '';
+      if (otrosEntries.length) {
+        otrosHtml = '<div style="margin-top:6px;padding:5px 8px;background:' + statusColor + '08;border-radius:6px;font-size:.68rem;color:#64748b">'
+          + otrosEntries.map(function(e){
+              return '<span style="margin-right:10px">📦 ' + e.cliente + ': ' + e.cantidad + ' ' + e.tipo + ' ' + (e.harina || '') + (e.peso ? ' ×' + e.peso : '') + '</span>';
+            }).join('')
+          + '</div>';
+      }
+
+      html += '<div style="background:' + statusBg + ';border:1.5px solid ' + statusColor + '35;border-radius:12px;padding:14px;border-left:4px solid ' + statusColor + '">'
+        + '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:10px">'
+        +   '<div>'
+        +     '<div style="font-size:.87rem;font-weight:800;color:#0f172a">' + dayName + '</div>'
+        +     '<div style="font-size:.63rem;color:#94a3b8;margin-top:1px">' + entries.length + ' entrega' + (entries.length!==1?'s':'') + (totalPallets > 0 ? ' · ' + totalPallets + ' pallets' : '') + '</div>'
+        +   '</div>'
+        +   '<span style="background:' + statusColor + '20;color:' + statusColor + ';border:1px solid ' + statusColor + '40;border-radius:20px;padding:3px 10px;font-size:.67rem;font-weight:700;white-space:nowrap">'
+        +     statusIcon + ' ' + statusLabel
+        +   '</span>'
+        + '</div>'
+        + '<div style="margin-bottom:' + (truckHtml ? '10px' : '0') + '">' + clientRows + '</div>'
+        + otrosHtml
+        + truckHtml
+        + '</div>';
+    });
+
+    html += '</div>';
+  }
+
+  html += '</div>';
+  el.innerHTML = html;
 }
 
 function _cronShowFiltro(estado) {
@@ -25339,6 +25494,216 @@ function calcGuardarAuto() {
 function calcCopyAuto() {
   if (_calcTabActivo() === 'multi') calcOpCopiar(); else calcCopy();
 }
+function calcLimpiarAuto() {
+  if (_calcTabActivo() === 'multi') calcOpReset(); else calcReset();
+}
+function calcImprimirAuto() {
+  if (_calcTabActivo() === 'multi') calcOpImprimir(); else calcImprimirSingle();
+}
+
+// ── Reset multi-product tab ────────────────────────────
+function calcOpReset() {
+  _calcOpRows = [{ id: Date.now(), nombre: '', marca: '', costo: 0, qty: 1, ivaCompra: 21 }];
+  _calcOpRenderRows();
+  ['cop-referencia','cop-cliente','cop-flete','cop-seguro','cop-deposito',
+   'cop-comision','cop-overhead','cop-plazo','cop-tasa','cop-retencion'].forEach(function(id) {
+    var el = document.getElementById(id); if (el) el.value = '';
+  });
+  var m = document.getElementById('cop-margen'); if (m) m.value = '30';
+  var ii = document.getElementById('cop-iibb'); if (ii) ii.value = '3';
+  var iv = document.getElementById('cop-iva-venta'); if (iv) iv.value = '21';
+  var iF = document.getElementById('cop-iva-flete'); if (iF) iF.value = '21';
+  var ch = document.getElementById('cop-cheque'); if (ch) ch.value = '1.2';
+  var res = document.getElementById('cop-results'); if (res) res.innerHTML = '';
+  var sm = document.getElementById('cop-summary'); if (sm) sm.style.display = 'none';
+  toast('Cotización limpiada ✓', 'info');
+}
+
+// ── Imprimir cotización producto único ─────────────────
+function calcImprimirSingle() {
+  const pvSiva = document.getElementById('calc-res-precio-siva')?.textContent || '–';
+  if (!pvSiva || pvSiva === '–') { toast('Calculá el precio primero', 'warning'); return; }
+  const item    = document.getElementById('calc-item')?.value.trim() || '(Sin nombre)';
+  const marca   = document.getElementById('calc-marca')?.value.trim() || '–';
+  const cliente = document.getElementById('calc-cliente-dest')?.value.trim() || '–';
+  const pvCiva  = document.getElementById('calc-res-precio-civa')?.textContent || '–';
+  const ganancia= document.getElementById('calc-res-ganancia')?.textContent || '–';
+  const margen  = document.getElementById('calc-res-margen')?.textContent || '–';
+  const costoTot= document.getElementById('calc-res-costo-total')?.textContent || '–';
+  const costo   = document.getElementById('calc-costo')?.value || '–';
+  const qty     = document.getElementById('calc-qty')?.value || '1';
+  const hoyStr  = new Date().toLocaleDateString('es-AR',{day:'numeric',month:'long',year:'numeric'});
+
+  // Waterfall data from calc-waterfall
+  const wfEl  = document.getElementById('calc-waterfall');
+  const wfHtml = wfEl ? wfEl.innerHTML : '';
+
+  // Simulador table
+  const simEl  = document.getElementById('calc-sim-tbody');
+  const simHtml = simEl ? simEl.innerHTML : '';
+
+  const w = window.open('', '_blank');
+  if (!w) { toast('Permitir ventanas emergentes', 'warning'); return; }
+  w.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>Cotización — ' + item + '</title>'
+  + '<style>'
+  + '@page{size:A4;margin:15mm 18mm}'
+  + '@media print{.no-print{display:none!important}}'
+  + 'body{font-family:"Segoe UI",system-ui,sans-serif;font-size:12px;color:#1e293b;background:#fff;padding:28px 32px}'
+  + '.header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;padding-bottom:12px;border-bottom:2px solid #334155}'
+  + '.logo{font-size:22px;font-weight:900;letter-spacing:-1px;color:#4f46e5}'
+  + '.doc-info{text-align:right;font-size:10px;color:#64748b}'
+  + '.cot-box{background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:8px;padding:14px;margin-bottom:14px}'
+  + '.cot-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#64748b;margin-bottom:2px}'
+  + '.cot-val{font-size:14px;font-weight:800;color:#0f172a}'
+  + '.price-hero{background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;border-radius:10px;padding:16px;text-align:center;margin-bottom:14px}'
+  + '.price-lbl{font-size:9px;text-transform:uppercase;letter-spacing:.07em;opacity:.8;margin-bottom:4px}'
+  + '.price-val{font-size:30px;font-weight:900;letter-spacing:-1px}'
+  + '.price-sub{font-size:11px;margin-top:4px;opacity:.85}'
+  + '.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}'
+  + '.kpi{background:#fff;border:1px solid #e2e8f0;border-radius:7px;padding:10px;text-align:center}'
+  + '.kpi .lbl{font-size:9px;color:#64748b;text-transform:uppercase;font-weight:600;margin-bottom:3px}'
+  + '.kpi .val{font-size:14px;font-weight:800;color:#0f172a}'
+  + 'h3{font-size:11px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.05em;margin:14px 0 7px}'
+  + '.print-btn{position:fixed;top:12px;right:12px;background:#4f46e5;color:#fff;border:none;border-radius:8px;padding:8px 18px;cursor:pointer;font-size:11px;font-weight:600}'
+  + '.footer{margin-top:20px;padding-top:10px;border-top:1px solid #e2e8f0;font-size:9px;color:#94a3b8;text-align:center}'
+  + '</style></head><body>'
+  + '<button class="print-btn no-print" onclick="window.print()"><i>🖨</i> Imprimir / PDF</button>'
+  + '<div class="header">'
+  +   '<div><div class="logo">MÜÜK</div><div style="font-size:10px;color:#64748b;margin-top:2px">Cotización de Precio — Uso Interno</div></div>'
+  +   '<div class="doc-info"><div style="font-size:12px;font-weight:700;color:#0f172a">Cotización</div><div>' + hoyStr + '</div></div>'
+  + '</div>'
+  + '<div class="cot-box" style="margin-bottom:14px">'
+  +   '<div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:12px">'
+  +     '<div><div class="cot-label">Producto</div><div class="cot-val">' + item + '</div><div style="font-size:10px;color:#64748b">' + marca + '</div></div>'
+  +     '<div><div class="cot-label">Destino / Cliente</div><div style="font-size:13px;font-weight:700;color:#0f172a">' + cliente + '</div></div>'
+  +     '<div><div class="cot-label">Cantidad</div><div style="font-size:13px;font-weight:700;color:#0f172a">' + qty + ' u.</div></div>'
+  +   '</div>'
+  + '</div>'
+  + '<div class="price-hero">'
+  +   '<div class="price-lbl">Precio de Venta Sugerido (s/IVA)</div>'
+  +   '<div class="price-val">' + pvSiva + '</div>'
+  +   '<div class="price-sub">Con IVA: ' + pvCiva + '</div>'
+  + '</div>'
+  + '<div class="grid2">'
+  +   '<div class="kpi"><div class="lbl">Costo total s/IVA</div><div class="val" style="color:#dc2626">' + costoTot + '</div></div>'
+  +   '<div class="kpi"><div class="lbl">Ganancia por unidad</div><div class="val" style="color:#16a34a">' + ganancia + '</div></div>'
+  +   '<div class="kpi"><div class="lbl">Margen efectivo</div><div class="val" style="color:#4f46e5">' + margen + '</div></div>'
+  +   '<div class="kpi"><div class="lbl">Costo unit. neto</div><div class="val">$' + parseFloat(costo||0).toLocaleString('es-AR') + '</div></div>'
+  + '</div>'
+  + '<h3>Desglose de costos</h3>'
+  + '<div style="background:#f8fafc;border-radius:8px;padding:10px">' + wfHtml + '</div>'
+  + '<h3>Simulador de márgenes</h3>'
+  + '<table style="width:100%;border-collapse:collapse;font-size:11px">'
+  +   '<thead style="background:#0f172a;color:#fff"><tr><th style="padding:6px 8px;text-align:left">Margen</th><th style="padding:6px 8px;text-align:right">Precio s/IVA</th><th style="padding:6px 8px;text-align:right">Precio c/IVA</th><th style="padding:6px 8px;text-align:right">Ganancia</th></tr></thead>'
+  +   '<tbody>' + simHtml + '</tbody>'
+  + '</table>'
+  + '<div class="footer">Generado por MÜÜK · ' + hoyStr + ' · Uso interno — no es un comprobante fiscal</div>'
+  + '</body></html>');
+  w.document.close();
+}
+
+// ── Imprimir cotización multi-producto ─────────────────
+function calcOpImprimir() {
+  _calcOpSyncFromDOM();
+  const rows = _calcOpRows.filter(r => r.costo > 0 && r.qty > 0);
+  if (!rows.length) { toast('Ingresá el costo de al menos un producto primero', 'warning'); return; }
+  const s   = _calcOpGetShared();
+  const ref = document.getElementById('cop-referencia')?.value.trim() || 'Cotización';
+  const cli = document.getElementById('cop-cliente')?.value.trim() || '–';
+  const hoyStr = new Date().toLocaleDateString('es-AR',{day:'numeric',month:'long',year:'numeric'});
+
+  const CAP_DENOM = 1 - s.iibb - s.cheque - s.comision - s.overhead - s.retencion - s.costFinPct - s.margen;
+  const _fv = v => '$' + Math.round(v).toLocaleString('es-AR');
+  const _f2 = v => '$' + v.toFixed(2);
+  const totalCostoBruto = rows.reduce((a, r) => a + r.costo * r.qty, 0);
+  const denom = CAP_DENOM > 0.01 ? CAP_DENOM : 0.01;
+
+  const calcs = rows.map(r => {
+    const costoTotal = r.costo * r.qty;
+    const frac       = totalCostoBruto > 0 ? costoTotal / totalCostoBruto : 1 / rows.length;
+    const fleteAsig  = s.flete * frac;
+    const depAsig    = s.deposito * frac;
+    const costoLogU  = (fleteAsig / r.qty) + (r.costo * s.seguro) + (depAsig / r.qty);
+    const costoDir   = r.costo + costoLogU;
+    const pvSiva     = costoDir / denom;
+    const pvCiva     = pvSiva * (1 + s.ivaVenta);
+    const gan        = pvSiva * s.margen;
+    return { ...r, costoTotal, fleteAsig, costoDir, pvSiva, pvCiva, gan, pvSivaTotal: pvSiva * r.qty, pvCivaTotal: pvCiva * r.qty, ganTotal: gan * r.qty };
+  });
+
+  const totInv   = calcs.reduce((a,c) => a + c.costoTotal, 0) + s.flete + s.deposito;
+  const totVSiva = calcs.reduce((a,c) => a + c.pvSivaTotal, 0);
+  const totVCiva = calcs.reduce((a,c) => a + c.pvCivaTotal, 0);
+  const totGan   = calcs.reduce((a,c) => a + c.ganTotal, 0);
+  const mProm    = totVSiva > 0 ? (totGan / totVSiva * 100) : 0;
+  const mColor   = m => m >= 30 ? '#16a34a' : m >= 20 ? '#d97706' : '#dc2626';
+
+  const tRows = calcs.map(c =>
+    '<tr style="border-bottom:1px solid #f1f5f9">'
+    + '<td style="padding:7px 8px;font-weight:600">' + c.nombre + (c.marca ? '<br><small style="font-weight:400;color:#94a3b8">' + c.marca + '</small>' : '') + '</td>'
+    + '<td style="padding:7px 8px;text-align:center">' + c.qty + '</td>'
+    + '<td style="padding:7px 8px;text-align:right">' + _fv(c.costo) + '</td>'
+    + '<td style="padding:7px 8px;text-align:right;color:#dc2626;font-weight:700">' + _fv(c.costoTotal + c.fleteAsig * c.qty / c.qty * c.qty) + '</td>'
+    + '<td style="padding:7px 8px;text-align:right;font-weight:800;color:#4f46e5">' + _fv(c.pvSiva) + '</td>'
+    + '<td style="padding:7px 8px;text-align:right;color:#0891b2">' + _fv(c.pvCiva) + '</td>'
+    + '<td style="padding:7px 8px;text-align:right;font-weight:700;color:#16a34a">' + _fv(c.pvSivaTotal) + '</td>'
+    + '<td style="padding:7px 8px;text-align:center"><span style="background:' + mColor(c.gan/c.pvSiva*100) + '20;color:' + mColor(c.gan/c.pvSiva*100) + ';border-radius:20px;padding:2px 7px;font-size:10px;font-weight:700">' + (c.gan/c.pvSiva*100).toFixed(1) + '%</span></td>'
+    + '</tr>'
+  ).join('');
+
+  const w = window.open('', '_blank');
+  if (!w) { toast('Permitir ventanas emergentes', 'warning'); return; }
+  w.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>Cotización — ' + ref + '</title>'
+  + '<style>'
+  + '@page{size:A4 landscape;margin:12mm 15mm}'
+  + '@media print{.no-print{display:none!important}}'
+  + 'body{font-family:"Segoe UI",system-ui,sans-serif;font-size:11px;color:#1e293b;background:#fff;padding:20px 24px}'
+  + '.header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;padding-bottom:10px;border-bottom:2px solid #334155}'
+  + '.logo{font-size:20px;font-weight:900;letter-spacing:-1px;color:#4f46e5}'
+  + 'table{width:100%;border-collapse:collapse;font-size:11px}'
+  + 'th{background:#0f172a;color:#fff;padding:7px 8px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.04em}'
+  + 'th.r{text-align:right}'
+  + '.tot td{background:#f1f5f9;font-weight:800;border-top:2px solid #334155;padding:8px}'
+  + '.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:14px}'
+  + '.kpi{background:#f8fafc;border:1px solid #e2e8f0;border-radius:7px;padding:9px;text-align:center}'
+  + '.kpi .lbl{font-size:8px;color:#64748b;text-transform:uppercase;font-weight:600;margin-bottom:3px}'
+  + '.kpi .val{font-size:14px;font-weight:800}'
+  + '.print-btn{position:fixed;top:10px;right:10px;background:#4f46e5;color:#fff;border:none;border-radius:7px;padding:7px 16px;cursor:pointer;font-size:11px;font-weight:600}'
+  + '.footer{margin-top:14px;padding-top:8px;border-top:1px solid #e2e8f0;font-size:9px;color:#94a3b8;text-align:center}'
+  + '</style></head><body>'
+  + '<button class="print-btn no-print" onclick="window.print()">🖨 Imprimir / PDF</button>'
+  + '<div class="header">'
+  +   '<div><div class="logo">MÜÜK</div><div style="font-size:10px;color:#64748b">Cotización Multi-Producto — Uso Interno</div></div>'
+  +   '<div style="text-align:right">'
+  +     '<div style="font-size:14px;font-weight:800;color:#0f172a">' + ref + '</div>'
+  +     '<div style="font-size:10px;color:#64748b">' + (cli !== '–' ? cli + ' · ' : '') + hoyStr + '</div>'
+  +   '</div>'
+  + '</div>'
+  + '<table>'
+  +   '<thead><tr>'
+  +     '<th>Producto</th><th class="r">Cant.</th><th class="r">Costo u.</th><th class="r">C.Total+log</th>'
+  +     '<th class="r">PV s/IVA</th><th class="r">PV c/IVA</th><th class="r">Vta.Total</th><th class="r">Margen</th>'
+  +   '</tr></thead>'
+  +   '<tbody>' + tRows + '</tbody>'
+  +   '<tfoot><tr class="tot">'
+  +     '<td colspan="3">TOTALES OPERACIÓN</td>'
+  +     '<td style="text-align:right;color:#dc2626">' + _fv(totInv) + '</td>'
+  +     '<td></td><td></td>'
+  +     '<td style="text-align:right;color:#4f46e5">' + _fv(totVSiva) + '</td>'
+  +     '<td style="text-align:center"><span style="background:' + mColor(mProm) + '20;color:' + mColor(mProm) + ';border-radius:20px;padding:2px 8px;font-size:10px;font-weight:700">' + mProm.toFixed(1) + '%</span></td>'
+  +   '</tr></tfoot>'
+  + '</table>'
+  + '<div class="kpi-row">'
+  +   '<div class="kpi"><div class="lbl">Inversión total</div><div class="val" style="color:#dc2626">' + _fv(totInv) + '</div></div>'
+  +   '<div class="kpi"><div class="lbl">Venta total s/IVA</div><div class="val" style="color:#4f46e5">' + _fv(totVSiva) + '</div></div>'
+  +   '<div class="kpi"><div class="lbl">Venta total c/IVA</div><div class="val" style="color:#0891b2">' + _fv(totVCiva) + '</div></div>'
+  +   '<div class="kpi"><div class="lbl">Ganancia total</div><div class="val" style="color:#16a34a">' + _fv(totGan) + '</div><div style="font-size:9px;font-weight:700;color:' + mColor(mProm) + '">' + mProm.toFixed(1) + '% margen</div></div>'
+  + '</div>'
+  + (s.fleteNeto > 0 ? '<div style="font-size:10px;color:#64748b;margin-top:8px">Flete: ' + _fv(s.fleteNeto) + ' (s/IVA) + ' + Math.round(s.ivaFlete*100) + '% IVA = ' + _fv(s.flete) + ' total · Distribuido por valor de mercadería</div>' : '')
+  + '<div class="footer">Generado por MÜÜK · ' + hoyStr + ' · Uso interno — no es un comprobante fiscal</div>'
+  + '</body></html>');
+  w.document.close();
+}
 
 function calcOpGuardar() {
   _calcOpSyncFromDOM();
@@ -27020,7 +27385,64 @@ function ingresarCobranzaGuardar() {
     pct, comision, tipoPago, createdAt: new Date().toISOString(), _manual: true,
   });
   save(); _icLimpiar(); _icRenderUltimas();
-  toast('Cobranza guardada ✓', 'success');
+
+  // ── Auto-sincronizar con Facturas a Cobrar ──────────
+  const nroFC   = document.getElementById('ic-nrofc')?.value.trim() || '';
+  const matched = _icMatchearFacturas(nroFC,
+    document.getElementById('ic-cliente')?.value || '',
+    document.getElementById('ic-empresa')?.value || '',
+    Math.round(importeFac));
+  if (matched > 0) {
+    toast('Cobranza guardada ✓  ·  ' + matched + ' factura' + (matched > 1 ? 's marcadas' : ' marcada') + ' como cobrada en Facturas a Cobrar', 'success');
+  } else {
+    toast('Cobranza guardada ✓', 'success');
+  }
+}
+
+// ── Sincronización cobranza → ST.facturasACobrar ───────
+function _icMatchearFacturas(nroFC, cliente, empresa, importeFac) {
+  const facs = ST.facturasACobrar || [];
+  const matched = [];
+
+  // Match by N° de factura (más específico)
+  if (nroFC) {
+    const norm = nroFC.replace(/[\s\-]/g, '').toLowerCase();
+    facs.forEach(function(f, i) {
+      if (f.estado === 'pendiente' || f.estado === 'vencida') {
+        const fn = (f.nroFactura || '').replace(/[\s\-]/g, '').toLowerCase();
+        if (fn && fn === norm) matched.push(i);
+      }
+    });
+  }
+
+  // Si no hay match por número, buscar por cliente + importe (±3%)
+  if (!matched.length && (cliente || empresa)) {
+    const normCli = (cliente || empresa || '').toLowerCase().trim();
+    const tolerance = importeFac * 0.03;
+    facs.forEach(function(f, i) {
+      if (f.estado === 'pendiente' || f.estado === 'vencida') {
+        const fCli = (f.cliente || '').toLowerCase().trim();
+        const fMon = +(f.total || f.monto || 0);
+        if (fCli === normCli && Math.abs(fMon - importeFac) <= tolerance) {
+          matched.push(i);
+        }
+      }
+    });
+  }
+
+  if (matched.length > 0) {
+    const hoyD = hoy();
+    matched.forEach(function(i) {
+      facs[i].estado     = 'cobrada';
+      facs[i].fechaCobro = hoyD;
+    });
+    save();
+    // Invalidar caché ECTA para que se refresque
+    Object.keys(_ectaCache).forEach(function(v) {
+      _ectaLoadTime[v] = 0;
+    });
+  }
+  return matched.length;
 }
 
 /* ═══════════════════════════════════════════
