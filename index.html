@@ -5563,17 +5563,8 @@ CREATE POLICY "acceso total" ON muuk_daily_backups FOR ALL USING (true) WITH CHE
       </div>
     </div>
 
-    <!-- Mini stats row -->
-    <div style="margin-bottom:20px">
-      <div style="font-size:.72rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px">📊 Resumen rápido</div>
-      <div id="bienvenida-stats" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px"></div>
-    </div>
-
-    <!-- Alerts / pending -->
-    <div id="bienvenida-alerts-wrap" style="display:none">
-      <div style="font-size:.72rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px">🔔 Pendientes</div>
-      <div id="bienvenida-alerts"></div>
-    </div>
+    <!-- Socios: resumen estados de cuenta -->
+    <div id="bienvenida-ecta-wrap" style="display:none;margin-top:4px"></div>
   </div>
   <!-- ══════════════════ FIN BIENVENIDA ══════════════════ -->
 
@@ -9547,8 +9538,6 @@ function irA(p) {
   if (p==='ingresarCobranza')  renderIngresarCobranza();
   if (p==='cronograma')        renderCronograma();
   if (p==='bienvenida') {
-    const el = document.getElementById('bienvenida-username');
-    if (el) el.textContent = sessionStorage.getItem('muukAuth') || '';
     renderBienvenida();
   }
   // Actualizar nav-links activos
@@ -9571,10 +9560,35 @@ function renderTodo() {
 let _bvHoraInterval = null;
 
 function renderBienvenida() {
-  // Clock
+  // Mapa de nombre completo por usuario
+  const BV_FULL_NAMES = {
+    JonathanPalermo: 'Jonathan Palermo',
+    RicardoBodini:   'Ricardo Bodini',
+    AlbertoPalermo:  'Alberto Palermo',
+    PaulaSpinelli:   'Paula Spinelli',
+    AgustinGalie:    'Agustín Galie'
+  };
+  // Socios (acceso total) → vendedor en estados de cuenta
+  const BV_SOCIOS = ['JonathanPalermo','RicardoBodini','AlbertoPalermo'];
+  const BV_USER_TO_VENDEDOR = {
+    JonathanPalermo: 'Jonathan',
+    RicardoBodini:   'Ricardo',
+    AlbertoPalermo:  'Alberto'
+  };
+
+  const user     = sessionStorage.getItem('muukAuth') || '';
+  const fullName = BV_FULL_NAMES[user] || user;
+
+  // Saludo con nombre completo
+  const nameEl = document.getElementById('bienvenida-username');
+  if (nameEl) nameEl.textContent = fullName;
+
+  // Fecha
   const fechaEl = document.getElementById('bienvenida-fecha');
-  const horaEl  = document.getElementById('bienvenida-hora');
   if (fechaEl) fechaEl.textContent = new Date().toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+
+  // Reloj en tiempo real
+  const horaEl = document.getElementById('bienvenida-hora');
   if (horaEl) {
     const tick = () => {
       const n = new Date();
@@ -9585,24 +9599,21 @@ function renderBienvenida() {
     _bvHoraInterval = setInterval(tick, 1000);
   }
 
-  // Quick actions — siempre visibles + filtradas por acceso del usuario
-  const user = sessionStorage.getItem('muukAuth') || '';
-  const acc  = typeof userCanAccess === 'function' ? null : null; // usamos irA que ya guarda acceso
+  // Acciones rápidas
   const QUICK = [
-    { icon:'bi-speedometer2',  label:'Dashboard',         page:'dashboard',         color:'#4f46e5', bg:'#ede9fe' },
-    { icon:'bi-cash-stack',    label:'Ingresar Cobranza', page:'ingresarCobranza',  color:'#16a34a', bg:'#f0fdf4' },
-    { icon:'bi-bank',          label:'Caja Bancos',        page:'cajaBancos',        color:'#0369a1', bg:'#eff6ff' },
-    { icon:'bi-wallet2',       label:'Caja Efectivo',      page:'cajaEfectivo',      color:'#7c3aed', bg:'#f5f3ff' },
-    { icon:'bi-receipt-cutoff',label:'Facturas a Cobrar',  page:'facturasACobrar',   color:'#15803d', bg:'#f0fdf4' },
-    { icon:'bi-file-earmark-minus',label:'Facturas a Pagar', page:'facturasPagar',   color:'#dc2626', bg:'#fef2f2' },
-    { icon:'bi-truck',         label:'Cronograma',         page:'cronograma',        color:'#4f46e5', bg:'#ede9fe' },
-    { icon:'bi-percent',       label:'Comisiones',         page:'comisiones',        color:'#d97706', bg:'#fffbeb' },
-    { icon:'bi-boxes',         label:'Stock',              page:'stock',             color:'#0891b2', bg:'#ecfeff' },
-    { icon:'bi-tags-fill',     label:'Listas de Precios',  page:'listasPrecios',     color:'#0ea5e9', bg:'#f0f9ff' },
-    { icon:'bi-people-fill',   label:'Gestión / CRM',      page:'gestion',           color:'#7c3aed', bg:'#faf5ff' },
-    { icon:'bi-calendar-check',label:'Vencimientos',        page:'panelVencimientos', color:'#f59e0b', bg:'#fffbeb' },
+    { icon:'bi-speedometer2',     label:'Dashboard',         page:'dashboard',         color:'#4f46e5', bg:'#ede9fe' },
+    { icon:'bi-cash-stack',       label:'Ingresar Cobranza', page:'ingresarCobranza',  color:'#16a34a', bg:'#f0fdf4' },
+    { icon:'bi-bank',             label:'Caja Bancos',        page:'cajaBancos',        color:'#0369a1', bg:'#eff6ff' },
+    { icon:'bi-wallet2',          label:'Caja Efectivo',      page:'cajaEfectivo',      color:'#7c3aed', bg:'#f5f3ff' },
+    { icon:'bi-receipt-cutoff',   label:'Facturas a Cobrar',  page:'facturasACobrar',   color:'#15803d', bg:'#f0fdf4' },
+    { icon:'bi-file-earmark-minus',label:'Facturas a Pagar', page:'facturasPagar',      color:'#dc2626', bg:'#fef2f2' },
+    { icon:'bi-truck',            label:'Cronograma',         page:'cronograma',        color:'#4f46e5', bg:'#ede9fe' },
+    { icon:'bi-percent',          label:'Comisiones',         page:'comisiones',        color:'#d97706', bg:'#fffbeb' },
+    { icon:'bi-boxes',            label:'Stock',              page:'stock',             color:'#0891b2', bg:'#ecfeff' },
+    { icon:'bi-tags-fill',        label:'Listas de Precios',  page:'listasPrecios',     color:'#0ea5e9', bg:'#f0f9ff' },
+    { icon:'bi-people-fill',      label:'Gestión / CRM',      page:'gestion',           color:'#7c3aed', bg:'#faf5ff' },
+    { icon:'bi-calendar-check',   label:'Vencimientos',        page:'panelVencimientos', color:'#f59e0b', bg:'#fffbeb' },
   ];
-
   const actWrap = document.getElementById('bienvenida-actions');
   if (actWrap) {
     actWrap.innerHTML = QUICK.map(q => `
@@ -9616,52 +9627,63 @@ function renderBienvenida() {
       </button>`).join('');
   }
 
-  // Mini stats
-  const statsWrap = document.getElementById('bienvenida-stats');
-  if (statsWrap) {
-    const saldoBancos   = (ST.cajaBancos||[]).reduce((s,m)=>s+(m.tipo==='credito'?+m.monto:-m.monto),0);
-    const saldoEfectivo = (ST.cajaEfectivo||[]).reduce((s,m)=>s+(m.tipo==='ingreso'?+m.monto:-m.monto),0);
-    const facsCobrar    = (ST.facturasACobrar||[]).filter(f=>f.estado!=='cobrada').reduce((s,f)=>s+ +f.monto,0);
-    const facsPagar     = (ST.facturasPagar||[]).filter(f=>f.estado!=='pagada').reduce((s,f)=>s+ +f.monto,0);
-    const chqPend       = (ST.chequesPagar||[]).filter(c=>c.estado==='pendiente').length;
-    const hoy           = new Date().toISOString().split('T')[0];
-    const venc7d        = new Date(); venc7d.setDate(venc7d.getDate()+7);
-    const venc7dStr     = venc7d.toISOString().split('T')[0];
-    const urgentes      = [...(ST.facturasACobrar||[]),(ST.facturasPagar||[])].filter(f=>f.estado!=='cobrada'&&f.estado!=='pagada'&&f.fechaVenc&&f.fechaVenc<=venc7dStr).length;
-    const MINI = [
-      { icon:'bi-bank',      label:'Saldo Bancos',    val:'$'+fmt(saldoBancos),   color:'#0369a1' },
-      { icon:'bi-wallet2',   label:'Saldo Efectivo',  val:'$'+fmt(saldoEfectivo), color:'#7c3aed' },
-      { icon:'bi-arrow-up-circle', label:'A Cobrar',  val:'$'+fmt(facsCobrar),    color:'#15803d' },
-      { icon:'bi-arrow-down-circle', label:'A Pagar', val:'$'+fmt(facsPagar),     color:'#dc2626' },
-      { icon:'bi-check2-square', label:'Chq. Pendientes', val:chqPend,            color:'#f59e0b' },
-      { icon:'bi-exclamation-triangle', label:'Vencen en 7d', val:urgentes,       color: urgentes>0?'#dc2626':'#16a34a' },
-    ];
-    statsWrap.innerHTML = MINI.map(s => `
-      <div style="background:#fff;border:1.5px solid #e2e8f0;border-radius:10px;padding:14px 14px 10px;box-shadow:0 1px 3px rgba(0,0,0,.04)">
-        <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
-          <i class="bi ${s.icon}" style="color:${s.color};font-size:.9rem"></i>
-          <span style="font-size:.68rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.04em">${s.label}</span>
-        </div>
-        <div style="font-size:1.05rem;font-weight:800;color:${s.color}">${s.val}</div>
-      </div>`).join('');
+  // Socios: mostrar datos de estados de cuenta
+  const ectaWrap = document.getElementById('bienvenida-ecta-wrap');
+  if (ectaWrap) {
+    if (BV_SOCIOS.includes(user)) {
+      const vendedor = BV_USER_TO_VENDEDOR[user];
+      // Intentar restaurar caché si está vacío
+      if (!_ectaCache[vendedor] && typeof _ectaRestoreCache === 'function') _ectaRestoreCache();
+      const clientes = _ectaCache[vendedor] || null;
+      if (clientes) {
+        const totalACobrar    = clientes.reduce((s,c) => s + (c.totalPendiente > 0 ? c.totalPendiente : 0), 0);
+        const clientesConDeuda = clientes.filter(c => c.totalPendiente > 0).length;
+        const hayCobrado      = totalACobrar > 0 || clientesConDeuda > 0;
+        ectaWrap.style.display = '';
+        ectaWrap.innerHTML = `
+          <div style="background:#fff;border:1.5px solid #e2e8f0;border-radius:12px;padding:16px 20px;box-shadow:0 1px 4px rgba(0,0,0,.05)">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+              <i class="bi bi-person-lines-fill" style="color:#0369a1;font-size:1rem"></i>
+              <span style="font-size:.72rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.08em">Mi Estado de Cuenta — ${vendedor}</span>
+              <button onclick="irA('estadosCuenta')" style="margin-left:auto;background:none;border:1px solid #cbd5e1;border-radius:6px;padding:3px 10px;font-size:.7rem;color:#475569;cursor:pointer">Ver detalle →</button>
+            </div>
+            <div style="display:flex;gap:20px;flex-wrap:wrap">
+              <div>
+                <div style="font-size:.7rem;color:#64748b;font-weight:600;margin-bottom:2px">Total a cobrar</div>
+                <div style="font-size:1.3rem;font-weight:800;color:${totalACobrar > 0 ? '#b91c1c' : '#15803d'}">$${totalACobrar.toLocaleString('es-AR',{minimumFractionDigits:0,maximumFractionDigits:0})}</div>
+              </div>
+              <div style="border-left:1px solid #e2e8f0;margin:0 4px"></div>
+              <div>
+                <div style="font-size:.7rem;color:#64748b;font-weight:600;margin-bottom:2px">Clientes con deuda</div>
+                <div style="font-size:1.3rem;font-weight:800;color:${clientesConDeuda > 0 ? '#b91c1c' : '#15803d'}">${clientesConDeuda}</div>
+              </div>
+            </div>
+          </div>`;
+      } else {
+        // Sin datos en caché — mostrar placeholder y disparar carga en segundo plano
+        ectaWrap.style.display = '';
+        ectaWrap.innerHTML = `
+          <div style="background:#f8fafc;border:1.5px dashed #cbd5e1;border-radius:12px;padding:14px 20px;color:#94a3b8;font-size:.8rem;display:flex;align-items:center;gap:8px">
+            <i class="bi bi-arrow-repeat" style="animation:spin 1s linear infinite"></i>
+            Cargando estado de cuenta…
+          </div>`;
+        // Intentar cargar datos y actualizar al completar
+        if (typeof _ectaLoadVendedor === 'function') {
+          _ectaLoadVendedor(vendedor).then(() => {
+            // Re-renderizar sólo el wrap si el usuario sigue en bienvenida
+            if (document.getElementById('page-bienvenida')?.classList.contains('active') ||
+                document.getElementById('page-bienvenida')?.style.display !== 'none') {
+              renderBienvenida();
+            }
+          }).catch(()=>{
+            if (ectaWrap) ectaWrap.style.display = 'none';
+          });
+        }
+      }
+    } else {
+      ectaWrap.style.display = 'none';
+    }
   }
-
-  // Pending alerts
-  const alertsWrap = document.getElementById('bienvenida-alerts-wrap');
-  const alertsEl   = document.getElementById('bienvenida-alerts');
-  const hoyStr = new Date().toISOString().split('T')[0];
-  const alerts = [];
-  // Cheques a vencer hoy o vencidos
-  (ST.chequesPagar||[]).filter(c=>c.estado==='pendiente'&&c.fechaVenc&&c.fechaVenc<=hoyStr).forEach(c=>{
-    const dias = Math.round((new Date(hoyStr)-new Date(c.fechaVenc))/(86400000));
-    alerts.push(`<div style="display:flex;align-items:center;gap:8px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:8px 12px;margin-bottom:6px;font-size:.77rem">
-      <i class="bi bi-exclamation-circle-fill" style="color:#dc2626;font-size:.9rem"></i>
-      <div><strong>Cheque vencido${dias>0?' hace '+dias+' día'+(dias>1?'s':''):'hoy'}</strong> — $${fmt(+c.monto||0)} · ${c.beneficiario||'sin beneficiario'}</div>
-      <button onclick="irA('chequesPagar')" style="margin-left:auto;background:#dc2626;color:#fff;border:none;border-radius:6px;padding:2px 8px;cursor:pointer;font-size:.7rem">Ver</button>
-    </div>`);
-  });
-  if (alertsEl) alertsEl.innerHTML = alerts.join('');
-  if (alertsWrap) alertsWrap.style.display = alerts.length ? '' : 'none';
 }
 
 /* ═══════════════════════════════════════════
@@ -9717,8 +9739,9 @@ function renderDashboard() {
   const comMes=(ST.comisiones||[]).filter(c=>c.fecha&&c.fecha.startsWith(mesActual));
 
   // Facturas stat cards en Dashboard
-  const facCobPend = (ST.facturasACobrar||[]).filter(f=>f.estado==='pendiente');
-  const facPagPend = (ST.facturasPagar||[]).filter(f=>f.estado==='pendiente');
+  // Incluye 'pendiente' y 'vencida' (ambos son deuda no cobrada/pagada todavía)
+  const facCobPend = (ST.facturasACobrar||[]).filter(f=>f.estado==='pendiente'||f.estado==='vencida');
+  const facPagPend = (ST.facturasPagar||[]).filter(f=>f.estado==='pendiente'||f.estado==='vencida');
   const facCobMonto = facCobPend.reduce((s,f)=>s+ +f.total,0);
   const facPagMonto = facPagPend.reduce((s,f)=>s+ +f.total,0);
   // Facturas pendientes del mes anterior (cobradas ese mes)
