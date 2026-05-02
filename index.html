@@ -5141,10 +5141,10 @@ CREATE POLICY "acceso total" ON muuk_daily_backups FOR ALL USING (true) WITH CHE
         <button class="btn btn-sm" onclick="calcReset()" style="background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0;border-radius:7px;font-size:.72rem;padding:5px 12px">
           <i class="bi bi-arrow-counterclockwise me-1"></i>Limpiar
         </button>
-        <button class="btn btn-sm" onclick="calcGuardar()" style="background:#16a34a;color:#fff;border:none;border-radius:7px;font-size:.72rem;padding:5px 12px">
+        <button class="btn btn-sm" onclick="calcGuardarAuto()" style="background:#16a34a;color:#fff;border:none;border-radius:7px;font-size:.72rem;padding:5px 12px">
           <i class="bi bi-floppy me-1"></i>Guardar
         </button>
-        <button class="btn btn-sm" onclick="calcCopy()" style="background:#4f46e5;color:#fff;border:none;border-radius:7px;font-size:.72rem;padding:5px 12px">
+        <button class="btn btn-sm" onclick="calcCopyAuto()" style="background:#4f46e5;color:#fff;border:none;border-radius:7px;font-size:.72rem;padding:5px 12px">
           <i class="bi bi-clipboard me-1"></i>Copiar
         </button>
       </div>
@@ -5566,6 +5566,14 @@ CREATE POLICY "acceso total" ON muuk_daily_backups FOR ALL USING (true) WITH CHE
                 <div class="input-group input-group-sm">
                   <span class="input-group-text" style="font-size:.75rem">$</span>
                   <input type="number" class="form-control" id="cop-flete" placeholder="0" min="0" step="0.01" oninput="calcOpCalc()" style="font-size:.78rem">
+                </div>
+                <div style="display:flex;align-items:center;gap:6px;margin-top:4px">
+                  <label style="font-size:.65rem;color:#64748b;white-space:nowrap;margin:0">IVA flete:</label>
+                  <select class="form-select form-select-sm" id="cop-iva-flete" onchange="calcOpCalc()" style="font-size:.72rem;padding:1px 4px;height:auto">
+                    <option value="0">Sin IVA</option>
+                    <option value="10.5">10,5%</option>
+                    <option value="21" selected>21%</option>
+                  </select>
                 </div>
                 <div style="font-size:.6rem;color:#94a3b8;margin-top:2px">Se distribuye por valor de mercadería</div>
               </div>
@@ -11398,15 +11406,16 @@ function _comBuildPDFSaldoEmpresa(empresaName, saldoResumen, details, isFull, ha
 
   let cutoffNote = '';
   let saldoAnterior = 0;
+  // Solo incluir filas con datos reales de transacción; excluir filas que solo tienen saldo (carry-over vacías)
   let pendientes = (lastZeroIdx >= 0 ? details.slice(lastZeroIdx + 1) : details)
-    .filter(r => r.fca || r.importe || r.comision || r.cliente || r.pagos || r.saldo);
+    .filter(r => (r.fca && r.fca !== '–') || (r.importe > 0) || (r.comision > 0) || (r.cliente && r.cliente !== '–') || (r.pagos > 0));
 
   // If no zero found OR pending period is unreasonably long (>80 rows), use 12-month window
   if (lastZeroIdx < 0 || pendientes.length > 80) {
     const cutoff12m = new Date(); cutoff12m.setMonth(cutoff12m.getMonth() - 12);
     const cutoffISO = cutoff12m.toISOString().split('T')[0];
     // Try to parse dates and filter
-    const allFiltered = details.filter(r => r.fca || r.importe || r.comision || r.cliente || r.pagos || r.saldo);
+    const allFiltered = details.filter(r => (r.fca && r.fca !== '–') || (r.importe > 0) || (r.comision > 0) || (r.cliente && r.cliente !== '–') || (r.pagos > 0));
     // Find the first row within 12-month window
     const firstInWindow = allFiltered.findIndex(r => {
       if (!r.fecha || r.fecha === '–') return false;
@@ -14910,9 +14919,19 @@ function _procesarPDFenModal(file) {
       if (d.tipo)        document.getElementById('mf-tipo').value = d.tipo;
       if (d.numero)      document.getElementById('mf-numero').value = d.numero;
       if (d.fecha)       document.getElementById('mf-fecha').value = d.fecha;
-      if (d.cuit)        document.getElementById('mf-cuit').value = d.cuit;
-      if (d.razonSocial) document.getElementById('mf-cliente').value = d.razonSocial;
-      if (d.receptor)    document.getElementById('mf-receptor').value = d.receptor;
+      // Para facturas a cobrar: nosotros somos el EMISOR, el cliente es el RECEPTOR
+      // Para facturas a pagar: el proveedor es el EMISOR (razonSocial), nosotros somos el RECEPTOR
+      const _mfCat = document.getElementById('mf-cat')?.value || '';
+      if (_mfCat === 'cobrar') {
+        if (d.cuitReceptor) document.getElementById('mf-cuit').value = d.cuitReceptor;
+        else if (d.cuit)    document.getElementById('mf-cuit').value = d.cuit;
+        if (d.receptor)     document.getElementById('mf-cliente').value = d.receptor;
+        if (d.razonSocial)  document.getElementById('mf-receptor').value = d.razonSocial;
+      } else {
+        if (d.cuit)         document.getElementById('mf-cuit').value = d.cuit;
+        if (d.razonSocial)  document.getElementById('mf-cliente').value = d.razonSocial;
+        if (d.receptor)     document.getElementById('mf-receptor').value = d.receptor;
+      }
       if (d.neto)        document.getElementById('mf-neto').value = d.neto.toFixed(2);
       if (d.iva)         document.getElementById('mf-iva').value = d.iva;
       if (d.ivaImporte)  document.getElementById('mf-ivaImporte').value = d.ivaImporte.toFixed(2);
@@ -14993,9 +15012,10 @@ async function _aiLeerFacturaPDF(dataUrl) {
   "tipo": "A|B|C|M|NC|ND",
   "numero": "0001-00000123",
   "fecha": "YYYY-MM-DD",
-  "cuit": "solo dígitos, sin guiones",
-  "razonSocial": "nombre/razón social del emisor",
-  "receptor": "nombre/razón social del receptor",
+  "cuit": "CUIT del emisor, solo dígitos sin guiones",
+  "cuitReceptor": "CUIT del receptor, solo dígitos sin guiones",
+  "razonSocial": "nombre/razón social del EMISOR (quien emite la factura)",
+  "receptor": "nombre/razón social del RECEPTOR (a quien va dirigida la factura)",
   "neto": numero,
   "iva": 0|10.5|21|27,
   "ivaImporte": numero,
@@ -15068,9 +15088,19 @@ Si un campo no aparece en la factura, omitirlo o poner null. Los importes son en
   if (d.tipo)        document.getElementById('mf-tipo').value        = d.tipo;
   if (d.numero)      document.getElementById('mf-numero').value      = d.numero;
   if (d.fecha)       document.getElementById('mf-fecha').value       = d.fecha;
-  if (d.cuit)        document.getElementById('mf-cuit').value        = d.cuit;
-  if (d.razonSocial) document.getElementById('mf-cliente').value     = d.razonSocial;
-  if (d.receptor)    document.getElementById('mf-receptor').value    = d.receptor;
+  // Para facturas a cobrar: nosotros somos el EMISOR, el cliente es el RECEPTOR
+  // Para facturas a pagar: el proveedor es el EMISOR (razonSocial), nosotros somos el RECEPTOR
+  const _aiMfCat = document.getElementById('mf-cat')?.value || '';
+  if (_aiMfCat === 'cobrar') {
+    if (d.cuitReceptor) document.getElementById('mf-cuit').value    = d.cuitReceptor;
+    else if (d.cuit)    document.getElementById('mf-cuit').value    = d.cuit;
+    if (d.receptor)     document.getElementById('mf-cliente').value = d.receptor;
+    if (d.razonSocial)  document.getElementById('mf-receptor').value = d.razonSocial;
+  } else {
+    if (d.cuit)         document.getElementById('mf-cuit').value    = d.cuit;
+    if (d.razonSocial)  document.getElementById('mf-cliente').value = d.razonSocial;
+    if (d.receptor)     document.getElementById('mf-receptor').value = d.receptor;
+  }
   if (d.neto)        document.getElementById('mf-neto').value        = (+d.neto).toFixed(2);
   if (d.iva)         document.getElementById('mf-iva').value         = d.iva;
   if (d.ivaImporte)  document.getElementById('mf-ivaImporte').value  = (+d.ivaImporte).toFixed(2);
@@ -24061,7 +24091,7 @@ function ectaPdfCliente(idx) {
     // Encabezado de empresa (si hay más de una)
     if (multiEmp) {
       pendRows += `<tr class="emp-header">
-        <td colspan="5" style="background:#f1f5f9;font-weight:800;font-size:9px;text-transform:uppercase;letter-spacing:.05em;color:#334155;padding:5px 8px;border-top:${ei>0?'2px solid #cbd5e1':'none'}">
+        <td colspan="5" style="background:#f1f5f9;font-weight:800;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#334155;padding:6px 9px;border-top:${ei>0?'2px solid #cbd5e1':'none'}">
           ▸ ${emp}
         </td>
       </tr>`;
@@ -24074,7 +24104,7 @@ function ectaPdfCliente(idx) {
       const dias  = _ectaDiasPendiente(f.fecha);
       const antBg  = dias === null ? 'transparent' : dias <= 30 ? '#dcfce7' : dias <= 60 ? '#fef9c3' : dias <= 90 ? '#ffedd5' : '#fee2e2';
       const antCol = dias === null ? '#94a3b8' : dias <= 30 ? '#15803d' : dias <= 60 ? '#854d0e' : dias <= 90 ? '#c2410c' : '#b91c1c';
-      const antTxt = dias === null ? '—' : `<span style="background:${antBg};color:${antCol};padding:2px 7px;border-radius:10px;font-size:9px;font-weight:700;white-space:nowrap">${dias}d</span>`;
+      const antTxt = dias === null ? '—' : `<span style="background:${antBg};color:${antCol};padding:2px 7px;border-radius:10px;font-size:11px;font-weight:700;white-space:nowrap">${dias}d</span>`;
       pendRows += `<tr style="background:${rowBg}">
         <td style="font-weight:600">${f.empresa || '-'}</td>
         <td>${f.fecha || '-'}</td>
@@ -24091,10 +24121,10 @@ function ectaPdfCliente(idx) {
       const stBg     = subtotalEmp < 0 ? '#ede9fe' : '#fef2f2';
       const stBorder = subtotalEmp < 0 ? '#a78bfa' : '#fca5a5';
       pendRows += `<tr style="background:${stBg};border-top:2px solid ${stBorder}">
-        <td colspan="3" style="font-weight:700;font-size:9px;color:${stColor};padding:6px 8px;text-transform:uppercase;letter-spacing:.03em">
-          ↳ Subtotal ${emp}${empNC ? '&nbsp;<span style="background:#ede9fe;color:#6d28d9;font-size:7px;padding:1px 4px;border-radius:3px;font-weight:700">NC descontada</span>' : ''}
+        <td colspan="3" style="font-weight:700;font-size:11px;color:${stColor};padding:7px 9px;text-transform:uppercase;letter-spacing:.03em">
+          ↳ Subtotal ${emp}${empNC ? '&nbsp;<span style="background:#ede9fe;color:#6d28d9;font-size:9px;padding:1px 4px;border-radius:3px;font-weight:700">NC descontada</span>' : ''}
         </td>
-        <td style="text-align:right;font-size:13px;font-weight:900;color:${stColor};padding:6px 10px;white-space:nowrap">${_ectaFmt(subtotalEmp)}</td>
+        <td style="text-align:right;font-size:15px;font-weight:900;color:${stColor};padding:7px 11px;white-space:nowrap">${_ectaFmt(subtotalEmp)}</td>
         <td></td><td></td>
       </tr>`;
     }
@@ -24105,10 +24135,10 @@ function ectaPdfCliente(idx) {
     <td colspan="6" style="padding:0;border-top:3px solid #b91c1c">
       <table style="width:100%;border-collapse:collapse;background:linear-gradient(135deg,#b91c1c,#dc2626);color:#fff">
         <tr>
-          <td style="padding:10px 14px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;opacity:.9">
+          <td style="padding:11px 16px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;opacity:.9">
             ▶ TOTAL A ABONAR — ${c.nombre.toUpperCase()}
           </td>
-          <td style="padding:10px 18px;text-align:right;font-size:20px;font-weight:900;white-space:nowrap;letter-spacing:-.02em">
+          <td style="padding:11px 20px;text-align:right;font-size:23px;font-weight:900;white-space:nowrap;letter-spacing:-.02em">
             ${_ectaFmt(c.totalPendiente)}
           </td>
         </tr>
@@ -24117,12 +24147,12 @@ function ectaPdfCliente(idx) {
   </tr>`;
 
   const notaNC = tieneNC
-    ? `<div style="background:#f5f3ff;border:1px solid #ddd6fe;border-radius:5px;padding:6px 10px;font-size:8px;color:#6d28d9;margin-top:8px">
+    ? `<div style="background:#f5f3ff;border:1px solid #ddd6fe;border-radius:5px;padding:7px 11px;font-size:11px;color:#6d28d9;margin-top:8px">
         <strong>Nota:</strong> Las Notas de Crédito (NC) están descontadas del subtotal de la empresa correspondiente. El total refleja el neto a abonar.
        </div>` : '';
 
   const notaEmpresas = multiEmp
-    ? `<div style="font-size:8px;color:#64748b;margin-top:6px;font-style:italic">* El total incluye deuda en ${empList.length} empresas: ${empList.join(', ')}. Cada empresa debe recibir su pago por separado.</div>`
+    ? `<div style="font-size:11px;color:#64748b;margin-top:6px;font-style:italic">* El total incluye deuda en ${empList.length} empresas: ${empList.join(', ')}. Cada empresa debe recibir su pago por separado.</div>`
     : '';
 
   const w = window.open('', '_blank');
@@ -24131,20 +24161,20 @@ function ectaPdfCliente(idx) {
   @page { size: A4; margin: 15mm 18mm; }
   @media print { .no-print { display:none!important; } }
   * { margin:0; padding:0; box-sizing:border-box; }
-  body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; font-size:11px; color:#1e293b; line-height:1.4; }
+  body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; font-size:13px; color:#1e293b; line-height:1.45; }
   .header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:18px; padding-bottom:12px; border-bottom:2px solid #334155; }
-  .doc-title { font-size:16px; font-weight:800; color:#0f172a; }
-  .doc-subtitle { font-size:9px; color:#64748b; text-transform:uppercase; letter-spacing:.5px; margin-top:2px; }
-  .doc-info { text-align:right; font-size:9px; color:#64748b; }
-  .client-box { background:#fef2f2; border:1px solid #fecaca; border-radius:6px; padding:10px 14px; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center; }
-  .client-name { font-size:14px; font-weight:700; color:#0f172a; }
-  .client-meta { font-size:9px; color:#64748b; margin-top:2px; }
+  .doc-title { font-size:18px; font-weight:800; color:#0f172a; }
+  .doc-subtitle { font-size:11px; color:#64748b; text-transform:uppercase; letter-spacing:.5px; margin-top:2px; }
+  .doc-info { text-align:right; font-size:11px; color:#64748b; }
+  .client-box { background:#fef2f2; border:1px solid #fecaca; border-radius:6px; padding:12px 16px; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center; }
+  .client-name { font-size:16px; font-weight:700; color:#0f172a; }
+  .client-meta { font-size:11px; color:#64748b; margin-top:2px; }
   .total-box { background:#dc2626; color:#fff; border-radius:8px; padding:10px 16px; margin-bottom:14px; display:flex; align-items:center; justify-content:space-between; }
-  .total-label { font-size:9px; text-transform:uppercase; letter-spacing:.06em; opacity:.85; }
-  .total-val { font-size:20px; font-weight:900; }
-  table { width:100%; border-collapse:collapse; font-size:10px; margin-bottom:4px; }
-  th { background:#f1f5f9; font-weight:700; text-align:left; padding:5px 8px; border-bottom:2px solid #cbd5e1; font-size:9px; text-transform:uppercase; letter-spacing:.04em; }
-  td { padding:5px 8px; border-bottom:1px solid #f1f5f9; }
+  .total-label { font-size:11px; text-transform:uppercase; letter-spacing:.06em; opacity:.85; }
+  .total-val { font-size:22px; font-weight:900; }
+  table { width:100%; border-collapse:collapse; font-size:12px; margin-bottom:4px; }
+  th { background:#f1f5f9; font-weight:700; text-align:left; padding:6px 9px; border-bottom:2px solid #cbd5e1; font-size:11px; text-transform:uppercase; letter-spacing:.04em; }
+  td { padding:6px 9px; border-bottom:1px solid #f1f5f9; }
   .total-row td { background:#fef2f2; font-weight:700; border-top:2px solid #dc2626; color:#dc2626; padding:7px 8px; font-size:11px; }
   .footer { margin-top:18px; padding-top:10px; border-top:1px solid #e2e8f0; font-size:8px; color:#94a3b8; text-align:center; }
   .notice { background:#fffbeb; border:1px solid #fde68a; border-radius:5px; padding:7px 12px; font-size:9px; color:#92400e; margin-bottom:12px; }
@@ -25298,6 +25328,62 @@ function calcGuardar() {
   toast('✅ Guardado en historial', 'success');
 }
 
+// Detecta el tab activo y enruta Guardar/Copiar al tab correcto
+function _calcTabActivo() {
+  const multi = document.getElementById('calc-tab-multi');
+  return multi && multi.style.display !== 'none' ? 'multi' : 'single';
+}
+function calcGuardarAuto() {
+  if (_calcTabActivo() === 'multi') calcOpGuardar(); else calcGuardar();
+}
+function calcCopyAuto() {
+  if (_calcTabActivo() === 'multi') calcOpCopiar(); else calcCopy();
+}
+
+function calcOpGuardar() {
+  _calcOpSyncFromDOM();
+  const rows = _calcOpRows.filter(r => r.costo > 0 && r.qty > 0);
+  if (!rows.length) { toast('Ingresá el costo de al menos un producto primero', 'warning'); return; }
+  const s = _calcOpGetShared();
+  const ref  = (document.getElementById('cop-referencia')?.value || '').trim() || 'Operación sin nombre';
+  const cli  = (document.getElementById('cop-cliente')?.value || '').trim() || '';
+  const totalCostoBruto = rows.reduce((a, r) => a + r.costo * r.qty, 0);
+  const cargasPct = s.iibb + s.cheque + s.comision + s.overhead + s.retencion + s.costFinPct;
+  const denom = 1 - cargasPct - s.margen;
+  const totVSiva = rows.reduce((a, r) => {
+    const ct = r.costo * r.qty;
+    const frac = totalCostoBruto > 0 ? ct / totalCostoBruto : 1 / rows.length;
+    const logU = (s.flete * frac / r.qty) + r.costo * s.seguro + (s.deposito * frac / r.qty);
+    const pv = denom > 0.01 ? (r.costo + logU) / denom : (r.costo + logU);
+    return a + pv * r.qty;
+  }, 0);
+  const totInv  = totalCostoBruto + s.flete + s.deposito;
+  const totGan  = totVSiva * s.margen;
+  const mProm   = totVSiva > 0 ? (totGan / totVSiva * 100) : 0;
+  const entrada = {
+    id: Date.now(),
+    fecha: new Date().toLocaleString('es-AR', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}),
+    item: ref + ' (' + rows.length + ' prod.)',
+    marca: rows.map(r => r.nombre || 'Prod.').join(', ').slice(0, 80),
+    cliente: cli,
+    costo: Math.round(totInv),
+    costoTotal: fmt(totInv),
+    pvSiva: fmt(totVSiva),
+    pvCiva: fmt(totVSiva * (1 + s.ivaVenta)),
+    ganancia: fmt(totGan),
+    margen: Math.round(mProm * 10) / 10,
+    ivaVenta: s.ivaVenta * 100,
+    iibb: s.iibb * 100,
+    comision: s.comision * 100
+  };
+  if (!ST.calcHistorial) ST.calcHistorial = [];
+  ST.calcHistorial.unshift(entrada);
+  if (ST.calcHistorial.length > 50) ST.calcHistorial.pop();
+  save();
+  calcRenderHistorial();
+  toast('✅ Cotización guardada en historial', 'success');
+}
+
 function calcLimpiarHistorial() {
   if (!confirm('¿Eliminar todo el historial de cálculos?')) return;
   ST.calcHistorial = [];
@@ -25752,8 +25838,11 @@ function _calcOpGetShared() {
   const _n = id => parseFloat(document.getElementById(id) && document.getElementById(id).value) || 0;
   const tasa = _n('cop-tasa') / 100;
   const plazo = _n('cop-plazo');
+  const fleteNeto = _n('cop-flete');
+  const ivaFlete  = _n('cop-iva-flete') / 100;
   return {
-    flete:     _n('cop-flete'),
+    flete:     fleteNeto * (1 + ivaFlete),   // flete con IVA incluido (costo real)
+    fleteNeto, ivaFlete,                       // guardamos neto e IVA para display
     seguro:    _n('cop-seguro')    / 100,
     deposito:  _n('cop-deposito'),
     iibb:      _n('cop-iibb')      / 100,
@@ -25850,7 +25939,7 @@ function calcOpCalc() {
     + '<th style="font-size:.64rem;padding:7px 6px">Producto</th>'
     + '<th class="text-end" style="font-size:.64rem;padding:7px 4px">Cant.</th>'
     + '<th class="text-end" style="font-size:.64rem;padding:7px 4px">Costo u.</th>'
-    + '<th class="text-end" style="font-size:.64rem;padding:7px 4px">Flete asig.</th>'
+    + '<th class="text-end" style="font-size:.64rem;padding:7px 4px">Flete asig.<br><span style="font-size:.55rem;opacity:.7">(c/IVA)</span></th>'
     + '<th class="text-end" style="font-size:.64rem;padding:7px 4px">C.Total+log</th>'
     + '<th class="text-end" style="font-size:.64rem;padding:7px 4px">PV s/IVA</th>'
     + '<th class="text-end" style="font-size:.64rem;padding:7px 4px">PV c/IVA</th>'
@@ -25865,7 +25954,7 @@ function calcOpCalc() {
     + '<div style="background:#fff;border:1.5px solid #fecaca;border-radius:9px;padding:10px;text-align:center">'
     + '<div style="font-size:.58rem;color:#64748b;font-weight:700;text-transform:uppercase;margin-bottom:3px">Inversión total</div>'
     + '<div style="font-size:.95rem;font-weight:800;color:#dc2626">' + _f(totInv) + '</div>'
-    + '<div style="font-size:.58rem;color:#94a3b8">flete incl. ' + _f(s.flete) + '</div></div>'
+    + '<div style="font-size:.58rem;color:#94a3b8">' + (s.ivaFlete > 0 ? 'flete ' + _f(s.fleteNeto) + ' + IVA ' + Math.round(s.ivaFlete*100) + '%' : 'flete incl. ' + _f(s.flete)) + '</div></div>'
     + '<div style="background:#fff;border:1.5px solid #c7d2fe;border-radius:9px;padding:10px;text-align:center">'
     + '<div style="font-size:.58rem;color:#64748b;font-weight:700;text-transform:uppercase;margin-bottom:3px">Venta total s/IVA</div>'
     + '<div style="font-size:.95rem;font-weight:800;color:#4f46e5">' + _f(totVSiva) + '</div>'
