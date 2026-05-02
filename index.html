@@ -5150,6 +5150,21 @@ CREATE POLICY "acceso total" ON muuk_daily_backups FOR ALL USING (true) WITH CHE
       </div>
     </div>
 
+    <!-- Tabs: Producto único / Operación multi-producto -->
+    <div style="display:flex;gap:4px;margin-bottom:14px;border-bottom:2px solid #e2e8f0;padding-bottom:0">
+      <button id="calc-tab-btn-single" onclick="calcSwitchTab('single')"
+        style="padding:7px 18px;font-size:.75rem;font-weight:700;border:none;background:none;cursor:pointer;border-bottom:2px solid #4f46e5;margin-bottom:-2px;color:#4f46e5">
+        <i class="bi bi-calculator me-1"></i>Producto Único
+      </button>
+      <button id="calc-tab-btn-multi" onclick="calcSwitchTab('multi')"
+        style="padding:7px 18px;font-size:.75rem;font-weight:700;border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;color:#94a3b8">
+        <i class="bi bi-cart3 me-1"></i>Cotización Multi-Producto
+      </button>
+    </div>
+
+    <!-- ── TAB: PRODUCTO ÚNICO ── -->
+    <div id="calc-tab-single">
+
     <!-- Presets de configuración rápida -->
     <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:8px 12px;margin-bottom:12px">
       <div style="font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#64748b;margin-bottom:6px"><i class="bi bi-lightning-charge-fill me-1" style="color:#f59e0b"></i>Configuración rápida</div>
@@ -5495,6 +5510,184 @@ CREATE POLICY "acceso total" ON muuk_daily_backups FOR ALL USING (true) WITH CHE
 
       </div><!-- /col-lg-5 -->
     </div><!-- /row -->
+
+    </div><!-- /calc-tab-single -->
+
+    <!-- ── TAB: COTIZACIÓN MULTI-PRODUCTO ── -->
+    <div id="calc-tab-multi" style="display:none">
+
+      <!-- Referencia y cliente -->
+      <div class="card p-3 mb-3" style="background:#fafafa;border:1px dashed #cbd5e1">
+        <div class="row g-2">
+          <div class="col-sm-5">
+            <label class="form-label small fw-bold mb-1" style="font-size:.7rem"><i class="bi bi-file-text me-1" style="color:#4f46e5"></i>Referencia / Operación</label>
+            <input type="text" class="form-control form-control-sm" id="cop-referencia" placeholder="Ej: Pedido Panadería Siglo 21 — Mayo" style="font-size:.82rem">
+          </div>
+          <div class="col-sm-4">
+            <label class="form-label small fw-bold mb-1" style="font-size:.7rem"><i class="bi bi-person me-1" style="color:#64748b"></i>Cliente destino</label>
+            <input type="text" class="form-control form-control-sm" id="cop-cliente" placeholder="Ej: Panadería Siglo 21" style="font-size:.82rem">
+          </div>
+          <div class="col-sm-3 d-flex align-items-end gap-2">
+            <button onclick="calcOpCopiar()" style="flex:1;background:#4f46e5;color:#fff;border:none;border-radius:7px;font-size:.72rem;padding:6px 10px;cursor:pointer">
+              <i class="bi bi-clipboard me-1"></i>Copiar cotización
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="row g-3">
+
+        <!-- Columna izquierda: productos + flete -->
+        <div class="col-lg-7">
+
+          <!-- Productos -->
+          <div class="card p-3 mb-3" style="border-left:4px solid #4f46e5">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+              <h6 style="font-size:.75rem;font-weight:700;color:#4f46e5;text-transform:uppercase;letter-spacing:.06em;margin:0">
+                <i class="bi bi-box-seam me-1"></i>Productos de la Operación
+              </h6>
+              <button onclick="calcOpAddRow()" style="background:#4f46e5;color:#fff;border:none;border-radius:6px;padding:4px 12px;font-size:.72rem;cursor:pointer">
+                <i class="bi bi-plus-lg me-1"></i>Agregar producto
+              </button>
+            </div>
+            <div id="calc-op-rows">
+              <div style="text-align:center;color:#94a3b8;font-size:.75rem;padding:16px">Hacé clic en "Agregar producto" para comenzar</div>
+            </div>
+          </div>
+
+          <!-- Logística compartida -->
+          <div class="card p-3 mb-3" style="border-left:4px solid #0891b2">
+            <h6 style="font-size:.75rem;font-weight:700;color:#0891b2;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">
+              <i class="bi bi-truck me-1"></i>Logística del Flete (compartida)
+            </h6>
+            <div class="row g-2">
+              <div class="col-sm-4">
+                <label class="form-label small fw-bold mb-1" style="font-size:.7rem">Flete total del viaje ($)</label>
+                <div class="input-group input-group-sm">
+                  <span class="input-group-text" style="font-size:.75rem">$</span>
+                  <input type="number" class="form-control" id="cop-flete" placeholder="0" min="0" step="0.01" oninput="calcOpCalc()" style="font-size:.78rem">
+                </div>
+                <div style="font-size:.6rem;color:#94a3b8;margin-top:2px">Se distribuye por valor de mercadería</div>
+              </div>
+              <div class="col-sm-4">
+                <label class="form-label small fw-bold mb-1" style="font-size:.7rem">Seguro (% sobre costo)</label>
+                <div class="input-group input-group-sm">
+                  <input type="number" class="form-control" id="cop-seguro" placeholder="0" min="0" step="0.01" max="100" oninput="calcOpCalc()" style="font-size:.78rem">
+                  <span class="input-group-text" style="font-size:.75rem">%</span>
+                </div>
+              </div>
+              <div class="col-sm-4">
+                <label class="form-label small fw-bold mb-1" style="font-size:.7rem">Depósito / Manipulación ($)</label>
+                <div class="input-group input-group-sm">
+                  <span class="input-group-text" style="font-size:.75rem">$</span>
+                  <input type="number" class="form-control" id="cop-deposito" placeholder="0" min="0" step="0.01" oninput="calcOpCalc()" style="font-size:.78rem">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Cargas impositivas compartidas -->
+          <div class="card p-3 mb-3" style="border-left:4px solid #dc2626">
+            <h6 style="font-size:.75rem;font-weight:700;color:#dc2626;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">
+              <i class="bi bi-receipt-cutoff me-1"></i>Cargas Impositivas (se aplican a todos)
+            </h6>
+            <div class="row g-2">
+              <div class="col-sm-3">
+                <label class="form-label small fw-bold mb-1" style="font-size:.7rem">IVA venta</label>
+                <select class="form-select form-select-sm" id="cop-iva-venta" onchange="calcOpCalc()" style="font-size:.78rem">
+                  <option value="0">Sin IVA</option>
+                  <option value="10.5">10,5%</option>
+                  <option value="21" selected>21%</option>
+                </select>
+              </div>
+              <div class="col-sm-3">
+                <label class="form-label small fw-bold mb-1" style="font-size:.7rem">IIBB</label>
+                <div class="input-group input-group-sm">
+                  <input type="number" class="form-control" id="cop-iibb" value="3" placeholder="3" min="0" step="0.1" oninput="calcOpCalc()" style="font-size:.78rem">
+                  <span class="input-group-text" style="font-size:.75rem">%</span>
+                </div>
+              </div>
+              <div class="col-sm-3">
+                <label class="form-label small fw-bold mb-1" style="font-size:.7rem">Imp. cheque</label>
+                <select class="form-select form-select-sm" id="cop-cheque" onchange="calcOpCalc()" style="font-size:.78rem">
+                  <option value="0">No aplica</option>
+                  <option value="0.6">0,6%</option>
+                  <option value="1.2" selected>1,2%</option>
+                  <option value="1.8">1,8%</option>
+                </select>
+              </div>
+              <div class="col-sm-3">
+                <label class="form-label small fw-bold mb-1" style="font-size:.7rem">Retención est.</label>
+                <div class="input-group input-group-sm">
+                  <input type="number" class="form-control" id="cop-retencion" value="0" placeholder="0" min="0" step="0.1" oninput="calcOpCalc()" style="font-size:.78rem">
+                  <span class="input-group-text" style="font-size:.75rem">%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Costos comerciales -->
+          <div class="card p-3" style="border-left:4px solid #d97706">
+            <h6 style="font-size:.75rem;font-weight:700;color:#d97706;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">
+              <i class="bi bi-briefcase me-1"></i>Costos Comerciales y Margen
+            </h6>
+            <div class="row g-2">
+              <div class="col-sm-3">
+                <label class="form-label small fw-bold mb-1" style="font-size:.7rem">Comisión de venta</label>
+                <div class="input-group input-group-sm">
+                  <input type="number" class="form-control" id="cop-comision" value="0" placeholder="0" min="0" step="0.1" oninput="calcOpCalc()" style="font-size:.78rem">
+                  <span class="input-group-text" style="font-size:.75rem">%</span>
+                </div>
+              </div>
+              <div class="col-sm-3">
+                <label class="form-label small fw-bold mb-1" style="font-size:.7rem">Overhead / Gastos</label>
+                <div class="input-group input-group-sm">
+                  <input type="number" class="form-control" id="cop-overhead" value="2" placeholder="2" min="0" step="0.1" oninput="calcOpCalc()" style="font-size:.78rem">
+                  <span class="input-group-text" style="font-size:.75rem">%</span>
+                </div>
+              </div>
+              <div class="col-sm-3">
+                <label class="form-label small fw-bold mb-1" style="font-size:.7rem">Plazo cobro (días)</label>
+                <input type="number" class="form-control form-control-sm" id="cop-plazo" value="0" placeholder="0" min="0" oninput="calcOpCalc()" style="font-size:.78rem">
+              </div>
+              <div class="col-sm-3">
+                <label class="form-label small fw-bold mb-1" style="font-size:.7rem">Tasa mensual</label>
+                <div class="input-group input-group-sm">
+                  <input type="number" class="form-control" id="cop-tasa" value="0" placeholder="0" min="0" step="0.1" oninput="calcOpCalc()" style="font-size:.78rem">
+                  <span class="input-group-text" style="font-size:.75rem">%</span>
+                </div>
+              </div>
+              <div class="col-sm-12">
+                <label class="form-label small fw-bold mb-1" style="font-size:.7rem">Margen objetivo (% sobre precio venta s/IVA)</label>
+                <div class="input-group input-group-sm" style="max-width:200px">
+                  <input type="number" class="form-control" id="cop-margen" value="30" placeholder="30" min="0" step="0.5" max="100" oninput="calcOpCalc()" style="font-size:.82rem;font-weight:700">
+                  <span class="input-group-text" style="font-size:.75rem">%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div><!-- /col-lg-7 -->
+
+        <!-- Columna derecha: resultados -->
+        <div class="col-lg-5">
+          <div class="card p-3" style="position:sticky;top:80px;background:linear-gradient(135deg,#f8fafc,#f1f5f9);border:2px solid #e2e8f0">
+            <div style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#64748b;margin-bottom:10px">
+              <i class="bi bi-table me-1"></i>Resultados por Producto
+            </div>
+            <div id="cop-results">
+              <div style="text-align:center;color:#94a3b8;font-size:.75rem;padding:28px 0">
+                <i class="bi bi-cart3" style="font-size:2rem;display:block;margin-bottom:8px;opacity:.3"></i>
+                Agregá productos y completá el costo para ver la cotización
+              </div>
+            </div>
+            <div id="cop-summary" style="display:none"></div>
+          </div>
+        </div>
+
+      </div><!-- /row -->
+
+    </div><!-- /calc-tab-multi -->
 
     <!-- ── HISTORIAL DE CÁLCULOS ── -->
     <div class="card p-3 mt-2" id="calc-hist-panel">
@@ -25477,6 +25670,256 @@ dCalcCalc = (function() {
     _t = setTimeout(calcCalc, 80);
   };
 })();
+
+/* ═══════════════════════════════════════════
+   CALCULADORA MULTI-PRODUCTO (Cotización de Operación)
+═══════════════════════════════════════════ */
+
+let _calcOpRows  = [];
+let _calcOpNextId = 0;
+
+function calcSwitchTab(tab) {
+  const single  = document.getElementById('calc-tab-single');
+  const multi   = document.getElementById('calc-tab-multi');
+  const btnS    = document.getElementById('calc-tab-btn-single');
+  const btnM    = document.getElementById('calc-tab-btn-multi');
+  if (!single || !multi) return;
+  const isMulti = tab === 'multi';
+  single.style.display = isMulti ? 'none' : '';
+  multi.style.display  = isMulti ? '' : 'none';
+  if (btnS) { btnS.style.borderBottomColor = isMulti ? 'transparent' : '#4f46e5'; btnS.style.color = isMulti ? '#94a3b8' : '#4f46e5'; }
+  if (btnM) { btnM.style.borderBottomColor = isMulti ? '#4f46e5' : 'transparent'; btnM.style.color = isMulti ? '#4f46e5' : '#94a3b8'; }
+  if (isMulti && !_calcOpRows.length) calcOpAddRow();
+}
+
+function calcOpAddRow() {
+  _calcOpRows.push({ id: ++_calcOpNextId, nombre: '', marca: '', costo: 0, qty: 1, ivaCompra: 21 });
+  _calcOpRenderRows();
+}
+
+function calcOpRemoveRow(id) {
+  _calcOpRows = _calcOpRows.filter(r => r.id !== id);
+  _calcOpRenderRows();
+  calcOpCalc();
+}
+
+function _calcOpSyncFromDOM() {
+  _calcOpRows.forEach(r => {
+    const g = suf => document.getElementById('cop-' + suf + '-' + r.id);
+    const nEl = g('nombre'); if (nEl) r.nombre = nEl.value.trim();
+    const mEl = g('marca');  if (mEl) r.marca  = mEl.value.trim();
+    const cEl = g('costo');  if (cEl) r.costo  = parseFloat(cEl.value) || 0;
+    const qEl = g('qty');    if (qEl) r.qty    = Math.max(parseInt(qEl.value) || 1, 1);
+    const iEl = g('iva');    if (iEl) r.ivaCompra = parseFloat(iEl.value) || 0;
+  });
+}
+
+function _calcOpRenderRows() {
+  const wrap = document.getElementById('calc-op-rows');
+  if (!wrap) return;
+  if (!_calcOpRows.length) {
+    wrap.innerHTML = '<div style="text-align:center;color:#94a3b8;font-size:.75rem;padding:16px">No hay productos. Hacé clic en "Agregar producto".</div>';
+    return;
+  }
+  const ivaOpts = [[0,'Sin IVA'],[10.5,'10,5%'],[21,'21%']];
+  wrap.innerHTML = _calcOpRows.map((r, idx) => {
+    const removeBtn = _calcOpRows.length > 1
+      ? '<button onclick="calcOpRemoveRow(' + r.id + ')" style="background:none;border:none;color:#dc2626;cursor:pointer;padding:0;font-size:.73rem"><i class="bi bi-x-circle"></i> Quitar</button>'
+      : '';
+    const ivaSelOpts = ivaOpts.map(([v,l]) => '<option value="' + v + '"' + (r.ivaCompra == v ? ' selected' : '') + '>' + l + '</option>').join('');
+    return '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 12px;margin-bottom:8px">'
+      + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">'
+      + '<span style="font-size:.64rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em">Producto ' + (idx + 1) + '</span>'
+      + removeBtn
+      + '</div>'
+      + '<div class="row g-2">'
+      + '<div class="col-sm-4"><label style="font-size:.67rem;font-weight:700;color:#475569;display:block;margin-bottom:2px">Producto / Ítem</label>'
+      + '<input type="text" id="cop-nombre-' + r.id + '" value="' + r.nombre.replace(/"/g,'&quot;') + '" placeholder="Ej: Harina 000 x 25kg" class="form-control form-control-sm" style="font-size:.78rem" oninput="_calcOpSyncFromDOM();calcOpCalc()"></div>'
+      + '<div class="col-sm-3"><label style="font-size:.67rem;font-weight:700;color:#475569;display:block;margin-bottom:2px">Marca</label>'
+      + '<input type="text" id="cop-marca-' + r.id + '" value="' + r.marca.replace(/"/g,'&quot;') + '" placeholder="Marca" class="form-control form-control-sm" style="font-size:.78rem" oninput="_calcOpSyncFromDOM()"></div>'
+      + '<div class="col-sm-2"><label style="font-size:.67rem;font-weight:700;color:#475569;display:block;margin-bottom:2px">Costo unit. s/IVA</label>'
+      + '<div class="input-group input-group-sm"><span class="input-group-text" style="font-size:.7rem">$</span>'
+      + '<input type="number" id="cop-costo-' + r.id + '" value="' + (r.costo || '') + '" placeholder="0.00" min="0" step="0.01" class="form-control" style="font-size:.78rem" oninput="_calcOpSyncFromDOM();calcOpCalc()"></div></div>'
+      + '<div class="col-sm-2"><label style="font-size:.67rem;font-weight:700;color:#475569;display:block;margin-bottom:2px">Cantidad</label>'
+      + '<input type="number" id="cop-qty-' + r.id + '" value="' + r.qty + '" placeholder="1" min="1" step="1" class="form-control form-control-sm" style="font-size:.78rem" oninput="_calcOpSyncFromDOM();calcOpCalc()"></div>'
+      + '<div class="col-sm-1"><label style="font-size:.67rem;font-weight:700;color:#475569;display:block;margin-bottom:2px">IVA</label>'
+      + '<select id="cop-iva-' + r.id + '" class="form-select form-select-sm" style="font-size:.72rem" onchange="_calcOpSyncFromDOM();calcOpCalc()">' + ivaSelOpts + '</select></div>'
+      + '</div></div>';
+  }).join('');
+}
+
+function _calcOpGetShared() {
+  const _n = id => parseFloat(document.getElementById(id) && document.getElementById(id).value) || 0;
+  const tasa = _n('cop-tasa') / 100;
+  const plazo = _n('cop-plazo');
+  return {
+    flete:     _n('cop-flete'),
+    seguro:    _n('cop-seguro')    / 100,
+    deposito:  _n('cop-deposito'),
+    iibb:      _n('cop-iibb')      / 100,
+    cheque:    _n('cop-cheque')    / 100,
+    comision:  _n('cop-comision')  / 100,
+    overhead:  _n('cop-overhead')  / 100,
+    margen:    _n('cop-margen')    / 100,
+    ivaVenta:  _n('cop-iva-venta') / 100,
+    retencion: _n('cop-retencion') / 100,
+    plazo, tasa,
+    costFinPct: plazo > 0 && tasa > 0 ? (tasa / 30) * plazo : 0
+  };
+}
+
+function calcOpCalc() {
+  _calcOpSyncFromDOM();
+  const rows = _calcOpRows.filter(r => r.costo > 0 && r.qty > 0);
+  const res  = document.getElementById('cop-results');
+  const sumEl = document.getElementById('cop-summary');
+  if (!res || !sumEl) return;
+
+  if (!rows.length) {
+    res.innerHTML = '<div style="text-align:center;color:#94a3b8;font-size:.75rem;padding:28px 0"><i class="bi bi-cart3" style="font-size:2rem;display:block;margin-bottom:8px;opacity:.3"></i>Ingresá el costo de al menos un producto</div>';
+    sumEl.style.display = 'none';
+    return;
+  }
+
+  const s = _calcOpGetShared();
+  const totalCostoBruto = rows.reduce((acc, r) => acc + r.costo * r.qty, 0);
+  const cargasPct = s.iibb + s.cheque + s.comision + s.overhead + s.retencion + s.costFinPct;
+  const denom = 1 - cargasPct - s.margen;
+  const _f = v => fmt(Math.round(v * 100) / 100);
+  const mColor = m => m >= 30 ? '#16a34a' : m >= 20 ? '#d97706' : '#dc2626';
+  const mBg    = m => m >= 30 ? '#f0fdf4' : m >= 20 ? '#fffbeb' : '#fef2f2';
+
+  const calcs = rows.map(r => {
+    const costoTotal = r.costo * r.qty;
+    const frac = totalCostoBruto > 0 ? costoTotal / totalCostoBruto : 1 / rows.length;
+    const fleteAsig   = s.flete    * frac;
+    const depositoAsig = s.deposito * frac;
+    const costoLogUnit = (fleteAsig / r.qty) + (r.costo * s.seguro) + (depositoAsig / r.qty);
+    const costoDir = r.costo + costoLogUnit;
+    const pvSiva = denom > 0.01 ? costoDir / denom : costoDir / 0.01;
+    const pvCiva = pvSiva * (1 + s.ivaVenta);
+    const gan    = pvSiva * s.margen;
+    return {
+      nombre: r.nombre || ('Producto ' + (rows.indexOf(r) + 1)),
+      marca: r.marca,
+      costoUnit: r.costo, qty: r.qty, costoTotal,
+      fleteAsig, costoLogUnit, costoDir,
+      pvSivaUnit: pvSiva, pvCivaUnit: pvCiva,
+      pvSivaTotal: pvSiva * r.qty, pvCivaTotal: pvCiva * r.qty,
+      ganUnit: gan, ganTotal: gan * r.qty,
+      margenPct: s.margen * 100
+    };
+  });
+
+  const totInv  = calcs.reduce((a,c) => a + c.costoTotal, 0) + s.flete + s.deposito;
+  const totVSiva = calcs.reduce((a,c) => a + c.pvSivaTotal, 0);
+  const totVCiva = calcs.reduce((a,c) => a + c.pvCivaTotal, 0);
+  const totGan   = calcs.reduce((a,c) => a + c.ganTotal, 0);
+  const mProm    = totVSiva > 0 ? (totGan / totVSiva * 100) : 0;
+
+  // Tabla de resultados
+  let tRows = calcs.map(c =>
+    '<tr>'
+    + '<td style="font-weight:600;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + c.nombre + (c.marca ? ' — ' + c.marca : '') + '">'
+    + c.nombre + (c.marca ? '<br><small style="font-weight:400;color:#94a3b8;font-size:.65rem">' + c.marca + '</small>' : '') + '</td>'
+    + '<td class="text-end" style="font-size:.72rem">' + c.qty + '</td>'
+    + '<td class="text-end gest-num">' + _f(c.costoUnit) + '</td>'
+    + '<td class="text-end" style="color:#0891b2;font-size:.68rem">' + _f(c.fleteAsig) + '</td>'
+    + '<td class="text-end gest-num" style="color:#dc2626">' + _f(c.costoDir * c.qty) + '</td>'
+    + '<td class="text-end gest-num fw-bold" style="color:#4f46e5">' + _f(c.pvSivaUnit) + '</td>'
+    + '<td class="text-end gest-num" style="color:#0891b2">' + _f(c.pvCivaUnit) + '</td>'
+    + '<td class="text-end gest-num fw-bold">' + _f(c.pvSivaTotal) + '</td>'
+    + '<td class="text-end gest-num" style="color:#16a34a">' + _f(c.ganTotal) + '</td>'
+    + '<td class="text-end"><span style="background:' + mBg(c.margenPct) + ';color:' + mColor(c.margenPct) + ';border-radius:20px;padding:2px 7px;font-size:.64rem;font-weight:700">' + c.margenPct.toFixed(1) + '%</span></td>'
+    + '</tr>'
+  ).join('');
+
+  tRows += '<tr style="background:#f1f5f9;font-weight:700;border-top:2px solid #cbd5e1">'
+    + '<td colspan="4" style="font-size:.72rem;color:#0f172a;padding:7px 6px">TOTALES OPERACIÓN</td>'
+    + '<td class="text-end gest-num" style="color:#dc2626">' + _f(totInv) + '</td>'
+    + '<td colspan="2"></td>'
+    + '<td class="text-end gest-num" style="color:#4f46e5">' + _f(totVSiva) + '</td>'
+    + '<td class="text-end gest-num" style="color:#16a34a">' + _f(totGan) + '</td>'
+    + '<td class="text-end"><span style="background:' + mBg(mProm) + ';color:' + mColor(mProm) + ';border-radius:20px;padding:2px 7px;font-size:.64rem;font-weight:700">' + mProm.toFixed(1) + '%</span></td>'
+    + '</tr>';
+
+  res.innerHTML = '<div style="overflow-x:auto;-webkit-overflow-scrolling:touch">'
+    + '<table class="table table-hover mb-0" style="font-size:.72rem;min-width:700px">'
+    + '<thead style="background:#0f172a;color:#fff">'
+    + '<tr>'
+    + '<th style="font-size:.64rem;padding:7px 6px">Producto</th>'
+    + '<th class="text-end" style="font-size:.64rem;padding:7px 4px">Cant.</th>'
+    + '<th class="text-end" style="font-size:.64rem;padding:7px 4px">Costo u.</th>'
+    + '<th class="text-end" style="font-size:.64rem;padding:7px 4px">Flete asig.</th>'
+    + '<th class="text-end" style="font-size:.64rem;padding:7px 4px">C.Total+log</th>'
+    + '<th class="text-end" style="font-size:.64rem;padding:7px 4px">PV s/IVA</th>'
+    + '<th class="text-end" style="font-size:.64rem;padding:7px 4px">PV c/IVA</th>'
+    + '<th class="text-end" style="font-size:.64rem;padding:7px 4px">Vta. total</th>'
+    + '<th class="text-end" style="font-size:.64rem;padding:7px 4px">Ganancia</th>'
+    + '<th class="text-end" style="font-size:.64rem;padding:7px 4px">Margen</th>'
+    + '</tr></thead><tbody>' + tRows + '</tbody></table></div>';
+
+  // KPI summary cards
+  sumEl.style.display = '';
+  sumEl.innerHTML = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px">'
+    + '<div style="background:#fff;border:1.5px solid #fecaca;border-radius:9px;padding:10px;text-align:center">'
+    + '<div style="font-size:.58rem;color:#64748b;font-weight:700;text-transform:uppercase;margin-bottom:3px">Inversión total</div>'
+    + '<div style="font-size:.95rem;font-weight:800;color:#dc2626">' + _f(totInv) + '</div>'
+    + '<div style="font-size:.58rem;color:#94a3b8">flete incl. ' + _f(s.flete) + '</div></div>'
+    + '<div style="background:#fff;border:1.5px solid #c7d2fe;border-radius:9px;padding:10px;text-align:center">'
+    + '<div style="font-size:.58rem;color:#64748b;font-weight:700;text-transform:uppercase;margin-bottom:3px">Venta total s/IVA</div>'
+    + '<div style="font-size:.95rem;font-weight:800;color:#4f46e5">' + _f(totVSiva) + '</div>'
+    + '<div style="font-size:.58rem;color:#94a3b8">c/IVA: ' + _f(totVCiva) + '</div></div>'
+    + '<div style="background:#fff;border:1.5px solid #bbf7d0;border-radius:9px;padding:10px;text-align:center">'
+    + '<div style="font-size:.58rem;color:#64748b;font-weight:700;text-transform:uppercase;margin-bottom:3px">Ganancia total</div>'
+    + '<div style="font-size:.95rem;font-weight:800;color:#16a34a">' + _f(totGan) + '</div></div>'
+    + '<div style="background:#fff;border:1.5px solid ' + (mProm >= 30 ? '#bbf7d0' : mProm >= 20 ? '#fde68a' : '#fecaca') + ';border-radius:9px;padding:10px;text-align:center">'
+    + '<div style="font-size:.58rem;color:#64748b;font-weight:700;text-transform:uppercase;margin-bottom:3px">Margen promedio</div>'
+    + '<div style="font-size:.95rem;font-weight:800;color:' + mColor(mProm) + '">' + mProm.toFixed(1) + '%</div></div>'
+    + '</div>';
+}
+
+function calcOpCopiar() {
+  _calcOpSyncFromDOM();
+  const rows = _calcOpRows.filter(r => r.costo > 0 && r.qty > 0);
+  if (!rows.length) { toast('No hay productos con costo cargado', 'warning'); return; }
+  const s = _calcOpGetShared();
+  const totalCostoBruto = rows.reduce((a, r) => a + r.costo * r.qty, 0);
+  const cargasPct = s.iibb + s.cheque + s.comision + s.overhead + s.retencion + s.costFinPct;
+  const denom = 1 - cargasPct - s.margen;
+  const ref = (document.getElementById('cop-referencia') && document.getElementById('cop-referencia').value.trim()) || '';
+  const cli = (document.getElementById('cop-cliente') && document.getElementById('cop-cliente').value.trim()) || '';
+  const lines = ['Cotización MÜÜK — Operación multi-producto', '═'.repeat(44)];
+  if (ref) lines.push('Referencia: ' + ref);
+  if (cli) lines.push('Cliente: ' + cli);
+  lines.push('Flete total: $' + s.flete.toLocaleString('es-AR') + ' · Margen obj.: ' + (s.margen * 100).toFixed(1) + '%');
+  lines.push('');
+  rows.forEach((r, i) => {
+    const ct = r.costo * r.qty;
+    const frac = totalCostoBruto > 0 ? ct / totalCostoBruto : 1 / rows.length;
+    const fleteU = (s.flete * frac) / r.qty;
+    const logU = fleteU + r.costo * s.seguro + (s.deposito * frac / r.qty);
+    const costoDir = r.costo + logU;
+    const pvSiva = denom > 0.01 ? costoDir / denom : costoDir;
+    const pvCiva = pvSiva * (1 + s.ivaVenta);
+    lines.push((i + 1) + '. ' + (r.nombre || 'Producto') + (r.marca ? ' (' + r.marca + ')' : '') + ' × ' + r.qty + ' uds');
+    lines.push('   PV s/IVA: $' + Math.round(pvSiva).toLocaleString('es-AR') + ' · PV c/IVA: $' + Math.round(pvCiva).toLocaleString('es-AR') + ' · Venta total: $' + Math.round(pvSiva * r.qty).toLocaleString('es-AR'));
+  });
+  const totVSiva = rows.reduce((a, r) => {
+    const ct = r.costo * r.qty;
+    const frac = totalCostoBruto > 0 ? ct / totalCostoBruto : 1/rows.length;
+    const logU = (s.flete * frac / r.qty) + r.costo * s.seguro + (s.deposito * frac / r.qty);
+    const pv = denom > 0.01 ? (r.costo + logU) / denom : (r.costo + logU);
+    return a + pv * r.qty;
+  }, 0);
+  const totInv = totalCostoBruto + s.flete + s.deposito;
+  lines.push('');
+  lines.push('─'.repeat(44));
+  lines.push('TOTAL INVERSIÓN: $' + Math.round(totInv).toLocaleString('es-AR'));
+  lines.push('TOTAL VENTA s/IVA: $' + Math.round(totVSiva).toLocaleString('es-AR'));
+  lines.push('GANANCIA EST.: $' + Math.round(totVSiva * s.margen).toLocaleString('es-AR') + ' (' + (s.margen * 100).toFixed(1) + '%)');
+  navigator.clipboard.writeText(lines.join('\n')).then(() => toast('✓ Cotización copiada al portapapeles', 'success')).catch(() => toast('No se pudo copiar', 'warning'));
+}
 
 /* ═══════════════════════════════════════════
    LIQUIDACIÓN MENSUAL POR SOCIO
