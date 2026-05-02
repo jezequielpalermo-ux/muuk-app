@@ -980,6 +980,7 @@
       <div class="sl-items-inner">
         <li><a class="nav-link" data-page="config"><i class="bi bi-gear-fill"></i>Configuración</a></li>
         <li><a class="nav-link" data-page="usuarios"><i class="bi bi-shield-lock-fill"></i>Usuarios</a></li>
+        <li><a class="nav-link" data-page="manual"><i class="bi bi-book-fill"></i>Manual</a></li>
       </div>
     </div>
 
@@ -3222,6 +3223,51 @@ CREATE POLICY "acceso total" ON muuk_daily_backups FOR ALL USING (true) WITH CHE
       </div>
     </div>
 
+  </div>
+
+
+  <!-- MANUAL DE USUARIO -->
+  <div id="page-manual" class="page">
+    <div class="page-hdr" style="flex-wrap:wrap;gap:8px">
+      <h4><i class="bi bi-book-fill me-2" style="color:#4f46e5"></i>Manual de Usuario</h4>
+      <div class="d-flex gap-2 flex-wrap" id="manual-header-btns">
+        <button class="btn btn-sm btn-outline-primary" onclick="_manualAbrir()" id="btn-manual-abrir" style="display:none">
+          <i class="bi bi-box-arrow-up-right me-1"></i>Abrir en nueva pestaña
+        </button>
+        <button class="btn btn-sm btn-outline-success" onclick="_manualDescargar()" id="btn-manual-descargar" style="display:none">
+          <i class="bi bi-download me-1"></i>Descargar
+        </button>
+        <label class="btn btn-sm btn-outline-secondary" id="btn-manual-upload-label" style="display:none;cursor:pointer;margin:0">
+          <i class="bi bi-cloud-arrow-up me-1"></i>Subir manual (HTML o PDF)
+          <input type="file" id="manual-file-input" accept=".html,.htm,.pdf" style="display:none" onchange="_manualUpload(event)">
+        </label>
+      </div>
+    </div>
+
+    <!-- Estado vacío -->
+    <div id="manual-empty" style="display:none;text-align:center;padding:60px 20px">
+      <i class="bi bi-book" style="font-size:3rem;color:#cbd5e1;display:block;margin-bottom:12px"></i>
+      <div style="font-size:1rem;font-weight:700;color:#94a3b8;margin-bottom:6px">No hay manual cargado aún</div>
+      <div style="font-size:.83rem;color:#cbd5e1;margin-bottom:20px">Solo los administradores pueden subir el manual.</div>
+      <label class="btn btn-primary btn-sm" id="btn-manual-upload-empty" style="display:none;cursor:pointer">
+        <i class="bi bi-cloud-arrow-up me-1"></i>Subir manual
+        <input type="file" id="manual-file-input-empty" accept=".html,.htm,.pdf" style="display:none" onchange="_manualUpload(event)">
+      </label>
+    </div>
+
+    <!-- Visor -->
+    <div id="manual-viewer-wrap" style="display:none">
+      <div style="font-size:.72rem;color:#94a3b8;margin-bottom:8px;display:flex;align-items:center;gap:6px">
+        <i class="bi bi-file-earmark-text"></i>
+        <span id="manual-nombre-label"></span>
+        <span style="color:#cbd5e1">·</span>
+        <span id="manual-fecha-label"></span>
+      </div>
+      <iframe id="manual-iframe"
+        style="width:100%;height:calc(100vh - 160px);min-height:600px;border:1.5px solid #e2e8f0;border-radius:10px;background:#fff"
+        sandbox="allow-same-origin allow-scripts allow-popups">
+      </iframe>
+    </div>
   </div>
 
 
@@ -8984,11 +9030,12 @@ const MUUK_ACCESS_BASE = {
   'AlbertoPalermo':  null,
   'PaulaSpinelli':   ['bienvenida','comisiones','bcra','calendarioARCA','contabilidad',
                       'facturasACobrar','facturasPagar','estadosCuenta','stock',
-                      'listasPrecios','empresas','documentos','cuentasBancarias','historialCobranzas','ingresarCobranza'],
+                      'listasPrecios','empresas','documentos','cuentasBancarias','historialCobranzas','ingresarCobranza',
+                      'manual'],
   'AgustinGalie':    ['bienvenida','comisiones','bcra','calendarioARCA','contabilidad',
                       'facturasACobrar','facturasPagar','estadosCuenta','stock',
                       'listasPrecios','empresas','documentos','cuentasBancarias','historialCobranzas','ingresarCobranza',
-                      'cronograma'],
+                      'cronograma','manual'],
 };
 const MUUK_ADMINS = ['JonathanPalermo'];
 
@@ -9074,6 +9121,11 @@ function _applyAccessToSidebar() {
     const li = el.closest('li');
     if (li) li.style.display = isAdmin() ? '' : 'none';
   });
+  // Manual: siempre visible para todos los usuarios
+  document.querySelectorAll('#sidebar-nav [data-page="manual"]').forEach(el => {
+    const li = el.closest('li');
+    if (li) li.style.display = '';
+  });
   if (acc === null || acc === undefined) return; // acceso total
   // Ocultar ítems no permitidos
   document.querySelectorAll('#sidebar-nav .nav-link[data-page]').forEach(a => {
@@ -9104,6 +9156,117 @@ const _GRUPOS_ACCESO = {
   analisis:  ['tesoreria','flujoProyectado','panelVencimientos','rentabilidad','gestion','reportes','historial','estrategicos','calculadora'],
   archivos:  ['config'],
 };
+
+/* ═══════════════════════════════════════════
+   MANUAL DE USUARIO
+═══════════════════════════════════════════ */
+function renderManual() {
+  const data    = ST.config?.manualData   || null;
+  const nombre  = ST.config?.manualNombre || '';
+  const tipo    = ST.config?.manualTipo   || '';
+  const fecha   = ST.config?.manualFecha  || '';
+  const admin   = isAdmin();
+
+  const empty   = document.getElementById('manual-empty');
+  const viewer  = document.getElementById('manual-viewer-wrap');
+  const iframe  = document.getElementById('manual-iframe');
+  const btnAbrir    = document.getElementById('btn-manual-abrir');
+  const btnDl       = document.getElementById('btn-manual-descargar');
+  const btnUpLabel  = document.getElementById('btn-manual-upload-label');
+  const btnEmptyLbl = document.getElementById('btn-manual-upload-empty');
+  const lblNombre   = document.getElementById('manual-nombre-label');
+  const lblFecha    = document.getElementById('manual-fecha-label');
+
+  if (!data) {
+    // Sin manual cargado
+    empty.style.display  = '';
+    viewer.style.display = 'none';
+    btnAbrir.style.display  = 'none';
+    btnDl.style.display     = 'none';
+    btnUpLabel.style.display = admin ? '' : 'none';
+    if (btnEmptyLbl) btnEmptyLbl.style.display = admin ? '' : 'none';
+    return;
+  }
+
+  // Manual disponible
+  empty.style.display  = 'none';
+  viewer.style.display = '';
+  btnAbrir.style.display   = '';
+  btnDl.style.display      = '';
+  btnUpLabel.style.display = admin ? '' : 'none';
+  if (lblNombre) lblNombre.textContent = nombre || 'Manual';
+  if (lblFecha)  lblFecha.textContent  = fecha  ? 'Subido el ' + fecha : '';
+
+  // Cargar en iframe
+  if (tipo === 'text/html' || tipo === 'text/htm' || nombre.endsWith('.html') || nombre.endsWith('.htm')) {
+    // HTML: usar srcdoc decodificando base64
+    try {
+      const html = decodeURIComponent(escape(atob(data)));
+      iframe.srcdoc = html;
+    } catch(e) {
+      iframe.src = 'data:text/html;base64,' + data;
+    }
+  } else {
+    // PDF u otro: src con data URL
+    iframe.src = 'data:' + (tipo || 'application/pdf') + ';base64,' + data;
+  }
+}
+
+function _manualUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const maxMB = 10;
+  if (file.size > maxMB * 1024 * 1024) {
+    toast('El archivo supera los ' + maxMB + ' MB. Comprimilo antes de subir.', 'warning');
+    event.target.value = '';
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const base64 = e.target.result.split(',')[1];
+    if (!ST.config) ST.config = {};
+    ST.config.manualData   = base64;
+    ST.config.manualNombre = file.name;
+    ST.config.manualTipo   = file.type || (file.name.endsWith('.pdf') ? 'application/pdf' : 'text/html');
+    ST.config.manualFecha  = new Date().toLocaleDateString('es-AR', { day:'2-digit', month:'2-digit', year:'numeric' });
+    save();
+    toast('Manual subido correctamente ✓', 'success');
+    renderManual();
+    event.target.value = '';
+  };
+  reader.readAsDataURL(file);
+}
+
+function _manualAbrir() {
+  const data  = ST.config?.manualData;
+  const tipo  = ST.config?.manualTipo || 'text/html';
+  const nombre = ST.config?.manualNombre || 'manual';
+  if (!data) return;
+  const url = 'data:' + tipo + ';base64,' + data;
+  const win = window.open();
+  if (win) {
+    if (tipo.includes('html')) {
+      try {
+        const html = decodeURIComponent(escape(atob(data)));
+        win.document.write(html);
+        win.document.close();
+      } catch(e) { win.location.href = url; }
+    } else {
+      win.location.href = url;
+    }
+  }
+}
+
+function _manualDescargar() {
+  const data  = ST.config?.manualData;
+  const tipo  = ST.config?.manualTipo || 'text/html';
+  const nombre = ST.config?.manualNombre || 'manual_muuk.html';
+  if (!data) return;
+  const a = document.createElement('a');
+  a.href     = 'data:' + tipo + ';base64,' + data;
+  a.download = nombre;
+  a.click();
+}
 
 function renderUsuarios() {
   if (!isAdmin()) { irA('dashboard'); return; }
@@ -9790,6 +9953,7 @@ function irA(p) {
   if (p==='liquidacion')       renderLiquidacion();
   if (p==='empresas')          renderEmpresas();
   if (p==='usuarios')          renderUsuarios();
+  if (p==='manual')            renderManual();
   if (p==='historialCobranzas') renderHistorialCobranzas();
   if (p==='ingresarCobranza')  renderIngresarCobranza();
   if (p==='cronograma')        renderCronograma();
