@@ -1280,6 +1280,14 @@
           </div>
         </div>
         <div class="col-6 col-xl">
+          <div class="stat-card" style="background:linear-gradient(135deg,#0369a1,#38bdf8);cursor:pointer" onclick="irA('chequesFisicos')">
+            <div class="bg-icon"><i class="bi bi-file-earmark-check-fill"></i></div>
+            <div class="lbl">Cartera Cheques</div>
+            <div class="val" id="stat-cartera">$0</div>
+            <div class="sub" id="stat-cartera-n">0 cheques activos</div>
+          </div>
+        </div>
+        <div class="col-6 col-xl">
           <div class="stat-card" id="stat-pos-neta-card" style="background:linear-gradient(135deg,#0f766e,#14b8a6);cursor:default">
             <div class="bg-icon"><i class="bi bi-arrow-left-right"></i></div>
             <div class="lbl">Posición Neta Comercial</div>
@@ -1807,6 +1815,10 @@
               <span style="font-size:.78rem;color:#7f1d1d">KM pendiente de pago</span>
               <span id="km-deuda-bruta" style="font-size:.9rem;font-weight:700;color:#b91c1c">$0</span>
             </div>
+            <div id="km-peajes-row" style="display:none;justify-content:space-between;align-items:center;border-bottom:1px dashed #fecaca;padding-bottom:5px;margin-bottom:5px">
+              <span style="font-size:.78rem;color:#92400e"><i class="bi bi-sign-turn-right me-1"></i>Peajes pendientes</span>
+              <span id="km-peajes-total" style="font-size:.9rem;font-weight:700;color:#d97706">$0</span>
+            </div>
             <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px dashed #fecaca;padding-bottom:5px;margin-bottom:5px">
               <span style="font-size:.78rem;color:#15803d">Pagos parciales acreditados</span>
               <span id="km-pagos-parciales-total" style="font-size:.9rem;font-weight:700;color:#16a34a">− $0</span>
@@ -1893,12 +1905,18 @@
             <input type="number" class="form-control form-control-sm" id="km-tarifa-custom" min="0" step="50" placeholder="Ej: 1500" oninput="_kmActualizarModalTotal()">
           </div>
           <div class="mb-2">
+            <label class="form-label small fw-bold mb-1" style="font-size:.78rem">Peajes <span style="font-weight:400;color:#64748b">(dejar vacío si no hay)</span></label>
+            <input type="number" class="form-control form-control-sm" id="km-peajes" min="0" step="100" placeholder="Ej: 2500" oninput="_kmActualizarModalTotal()">
+          </div>
+          <div class="mb-2">
             <label class="form-label small fw-bold mb-1" style="font-size:.78rem">Observaciones</label>
             <input type="text" class="form-control form-control-sm" id="km-obs" placeholder="Zona, cliente, etc.">
           </div>
           <div class="p-2 rounded mb-2" id="km-modal-resumen" style="font-size:.82rem;background:#f0f9ff;border:1px solid #bae6fd">
             Tarifa aplicable: <strong id="km-modal-tarifa">$1.200/km</strong><br>
-            Monto estimado: <strong id="km-modal-total" style="color:#b91c1c">$0</strong>
+            Monto KM: <strong id="km-modal-total" style="color:#b91c1c">$0</strong><br>
+            <span id="km-modal-peajes-row" style="display:none">Peajes: <strong id="km-modal-peajes-val" style="color:#d97706">$0</strong><br></span>
+            Total a cobrar: <strong id="km-modal-total-final" style="color:#0c4a6e">$0</strong>
           </div>
         </div>
         <div class="modal-footer py-2">
@@ -5887,6 +5905,9 @@ CREATE POLICY "acceso total" ON muuk_daily_backups FOR ALL USING (true) WITH CHE
       </div>
     </div>
 
+    <!-- Snapshot financiero -->
+    <div id="bienvenida-kpi-snap" style="margin-bottom:20px"></div>
+
     <!-- Socios: resumen estados de cuenta -->
     <div id="bienvenida-ecta-wrap" style="display:none;margin-top:4px"></div>
   </div>
@@ -9287,7 +9308,6 @@ function renderManual() {
 
   // Crear Blob URL (confiable en todos los navegadores, evita problemas de srcdoc/CSP)
   _manualRevoke();
-  const mimeType = isPDF ? 'application/pdf' : 'text/html; charset=utf-8';
   let blob;
   if (isPDF) {
     // content es base64 para PDFs → convertir a binario
@@ -9295,8 +9315,11 @@ function renderManual() {
     const bytes = new Uint8Array(bin.length);
     for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
     blob = new Blob([bytes], { type: 'application/pdf' });
+    // Los PDFs no ejecutan scripts: quitar sandbox para que el navegador pueda renderizarlos
+    iframe.removeAttribute('sandbox');
   } else {
     blob = new Blob([content], { type: 'text/html; charset=utf-8' });
+    iframe.setAttribute('sandbox', 'allow-same-origin allow-scripts allow-popups allow-forms allow-modals');
   }
   _manualBlobUrl = URL.createObjectURL(blob);
   iframe.removeAttribute('srcdoc');
@@ -10150,6 +10173,41 @@ function renderBienvenida() {
         <i class="bi ${q.icon}" style="font-size:1.4rem;color:${q.color}"></i>
         <span style="font-size:.73rem;font-weight:700;color:#1e293b;line-height:1.2">${q.label}</span>
       </button>`).join('');
+  }
+
+  // Snapshot financiero
+  const snapEl = document.getElementById('bienvenida-kpi-snap');
+  if (snapEl) {
+    const sB = calcSaldo(ST.cajaBancos||[]);
+    const sE = calcSaldo(ST.cajaEfectivo||[]);
+    const dispTotal = sB + sE;
+    const facPend = (ST.facturasACobrar||[]).filter(f=>f.estado==='pendiente'||f.estado==='vencida');
+    const facMonto = facPend.reduce((s,f)=>s+(+f.total||0),0);
+    const hoyStr = hoy();
+    const chqVenc7 = [
+      ...( ST.chequesFisicos||[]).filter(c=>(c.estado==='en_cartera'||c.estado==='pendiente')&&c.fechaVenc>=hoyStr&&dHasta(c.fechaVenc)<=7),
+      ...( ST.eCheques||[]).filter(c=>c.estado==='pendiente'&&c.fechaVenc>=hoyStr&&dHasta(c.fechaVenc)<=7)
+    ];
+    const chqVenc7Mon = chqVenc7.reduce((s,c)=>s+(+c.monto||0),0);
+    const facVencidas = facPend.filter(f=>f.fechaVenc&&f.fechaVenc<hoyStr).length;
+
+    const _snap = (icon, label, valor, color, bg, sub) =>
+      `<div style="flex:1;min-width:140px;background:${bg};border:1.5px solid ${color}22;border-radius:12px;padding:14px 16px">
+        <div style="display:flex;align-items:center;gap:7px;margin-bottom:6px">
+          <i class="bi ${icon}" style="color:${color};font-size:.9rem"></i>
+          <span style="font-size:.68rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.07em">${label}</span>
+        </div>
+        <div style="font-size:1.15rem;font-weight:800;color:${color};line-height:1">${valor}</div>
+        ${sub ? `<div style="font-size:.65rem;color:#94a3b8;margin-top:3px">${sub}</div>` : ''}
+      </div>`;
+
+    snapEl.innerHTML = `
+      <div style="font-size:.72rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px">📊 Estado financiero</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        ${_snap('bi-bank2','Disponible','$'+dispTotal.toLocaleString('es-AR',{maximumFractionDigits:0}),'#065f46','#f0fdf4','Bancos + Efectivo')}
+        ${_snap('bi-receipt-cutoff','A Cobrar','$'+facMonto.toLocaleString('es-AR',{maximumFractionDigits:0}), facVencidas>0?'#dc2626':'#15803d', facVencidas>0?'#fef2f2':'#f0fdf4', facPend.length+' factura'+(facPend.length!==1?'s':'')+(facVencidas>0?' · '+facVencidas+' vencida'+(facVencidas!==1?'s':''):''))}
+        ${_snap('bi-alarm','Vencen 7d', chqVenc7Mon>0?'$'+chqVenc7Mon.toLocaleString('es-AR',{maximumFractionDigits:0}):'Sin vencimientos', chqVenc7Mon>0?'#b45309':'#64748b', chqVenc7Mon>0?'#fffbeb':'#f8fafc', chqVenc7.length>0?chqVenc7.length+' cheque'+(chqVenc7.length!==1?'s':''):'')}
+      </div>`;
   }
 
   // Socios: mostrar datos de estados de cuenta
@@ -20300,19 +20358,26 @@ function kmRender() {
   const todoPendiente = (ST.kilometraje || []).filter(r => !r.pagado);
   const deudaBruta = todoPendiente.reduce((s,r) => s + r.monto, 0);
   const deudaKm    = todoPendiente.reduce((s,r) => s + r.km, 0);
+  const peajesTot  = todoPendiente.reduce((s,r) => s + (r.peajes || 0), 0);
   const ppTotal    = (ST.kmPagosParciales || []).reduce((s,p) => s + p.monto, 0);
-  const saldoNeto  = Math.max(0, deudaBruta - ppTotal);
+  const saldoNeto  = Math.max(0, deudaBruta + peajesTot - ppTotal);
 
-  const elDeudaCard = document.getElementById('km-deuda-card');
+  const elDeudaCard  = document.getElementById('km-deuda-card');
   const elDeudaTotal = document.getElementById('km-deuda-total');
   const elDeudaBruta = document.getElementById('km-deuda-bruta');
   const elPPTotal    = document.getElementById('km-pagos-parciales-total');
   const elDeudaDesc  = document.getElementById('km-deuda-desc');
+  const elPeajesRow  = document.getElementById('km-peajes-row');
+  const elPeajesTot  = document.getElementById('km-peajes-total');
   if (elDeudaCard)  elDeudaCard.style.display = (deudaBruta > 0 || ppTotal > 0) ? 'block' : 'none';
   if (elDeudaBruta) elDeudaBruta.textContent = fmt(deudaBruta);
+  if (elPeajesRow)  elPeajesRow.style.display = peajesTot > 0 ? 'flex' : 'none';
+  if (elPeajesTot)  elPeajesTot.textContent = fmt(peajesTot);
   if (elPPTotal)    elPPTotal.textContent = ppTotal > 0 ? '− ' + fmt(ppTotal) : '− $0';
   if (elDeudaTotal) elDeudaTotal.textContent = fmt(saldoNeto);
-  if (elDeudaDesc)  elDeudaDesc.textContent = deudaKm.toLocaleString('es-AR') + ' km sin pagar' + (ppTotal > 0 ? ' · ' + (ST.kmPagosParciales||[]).length + ' pago(s) parcial(es) acreditado(s)' : '');
+  if (elDeudaDesc)  elDeudaDesc.textContent = deudaKm.toLocaleString('es-AR') + ' km sin pagar'
+    + (peajesTot > 0 ? ' · peajes: ' + fmt(peajesTot) : '')
+    + (ppTotal > 0 ? ' · ' + (ST.kmPagosParciales||[]).length + ' pago(s) parcial(es) acreditado(s)' : '');
 
   // Historial pagos parciales
   const ppHistWrap = document.getElementById('km-pp-historial-wrap');
@@ -20334,8 +20399,8 @@ function kmRender() {
   const mesActual = hoyDate.substring(0,7);
   const regMes = (ST.kilometraje || []).filter(r => r.fecha.substring(0,7) === mesActual);
   const kmMes = regMes.reduce((s,r) => s + r.km, 0);
-  const totalMes = regMes.reduce((s,r) => s + r.monto, 0);
-  const pagadoMes = regMes.filter(r => r.pagado).reduce((s,r) => s + r.monto, 0);
+  const totalMes = regMes.reduce((s,r) => s + r.monto + (r.peajes||0), 0);
+  const pagadoMes = regMes.filter(r => r.pagado).reduce((s,r) => s + r.monto + (r.peajes||0), 0);
 
   const elKmMes = document.getElementById('km-mes-km');
   const elTotalMes = document.getElementById('km-mes-total');
@@ -20376,8 +20441,8 @@ function kmRender() {
   let html = '';
   for (const [mes, regs] of Object.entries(grupos)) {
     const totalKm = regs.reduce((s,r) => s + r.km, 0);
-    const totalMonto = regs.reduce((s,r) => s + r.monto, 0);
-    const totalPagado = regs.filter(r => r.pagado).reduce((s,r) => s + r.monto, 0);
+    const totalMonto = regs.reduce((s,r) => s + r.monto + (r.peajes||0), 0);
+    const totalPagado = regs.filter(r => r.pagado).reduce((s,r) => s + r.monto + (r.peajes||0), 0);
     const pendiente = totalMonto - totalPagado;
     const [y,m] = mes.split('-');
     const mesNombre = new Date(y, parseInt(m)-1, 1).toLocaleDateString('es-AR', { month:'long', year:'numeric' });
@@ -20404,7 +20469,7 @@ function kmRender() {
         <td style="padding:6px 10px;font-weight:500">${fmtF(r.fecha)}</td>
         <td class="text-end" style="padding:6px 10px;font-weight:700">${r.km.toLocaleString('es-AR')}</td>
         <td class="text-end" style="padding:6px 10px;color:${r.tarifaCustom ? '#d97706' : '#64748b'};font-weight:${r.tarifaCustom ? '700' : '400'}">$${r.tarifa.toLocaleString('es-AR')}${r.tarifaCustom ? ' <span style="background:#fef3c7;color:#92400e;font-size:.55rem;padding:1px 3px;border-radius:3px" title="Tarifa especial">ESP</span>' : ''}</td>
-        <td class="text-end" style="padding:6px 10px;font-weight:700;color:#b91c1c">${fmt(r.monto)}</td>
+        <td class="text-end" style="padding:6px 10px;font-weight:700;color:#b91c1c">${fmt(r.monto)}${r.peajes>0?`<br><span style="font-size:.65rem;color:#d97706;font-weight:600">+${fmt(r.peajes)} peajes</span>`:''}${r.peajes>0?`<br><span style="font-size:.65rem;color:#0c4a6e;font-weight:700">${fmt(r.monto+(r.peajes||0))}</span>`:''}</td>
         <td style="padding:6px 10px">${estadoBadge}</td>
         <td style="padding:6px 10px;color:#64748b;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${(r.obs||'').replace(/"/g,'&quot;')}">${r.obs || '-'}</td>
         <td style="padding:6px 10px">
@@ -20428,12 +20493,14 @@ function kmAbrir(editId) {
   const obsEl = document.getElementById('km-obs');
   const customEl = document.getElementById('km-tarifa-custom');
 
+  const peajesEl = document.getElementById('km-peajes');
   if (editId) {
     const r = (ST.kilometraje || []).find(x => x.id === editId);
     if (r) {
       fechaEl.value = r.fecha;
       cantEl.value = r.km;
       obsEl.value = r.obs || '';
+      if (peajesEl) peajesEl.value = r.peajes || '';
       // If the record used a custom tariff (different from the period tariff), show it
       const tarifaPeriodo = kmTarifaParaFecha(r.fecha);
       customEl.value = r.tarifaCustom ? r.tarifa : '';
@@ -20443,6 +20510,7 @@ function kmAbrir(editId) {
     cantEl.value = '';
     obsEl.value = '';
     customEl.value = '';
+    if (peajesEl) peajesEl.value = '';
   }
   _kmActualizarModalTotal();
   cantEl.oninput = _kmActualizarModalTotal;
@@ -20454,14 +20522,23 @@ function _kmActualizarModalTotal() {
   const fecha = document.getElementById('km-fecha').value || hoy();
   const km = parseFloat(document.getElementById('km-cantidad').value) || 0;
   const customVal = parseFloat(document.getElementById('km-tarifa-custom').value);
+  const peajes = parseFloat(document.getElementById('km-peajes')?.value) || 0;
   const tarifaPeriodo = kmTarifaParaFecha(fecha);
   const valorFinal = (customVal > 0) ? customVal : tarifaPeriodo.valor;
   const isCustom = customVal > 0;
+  const montoKm = km * valorFinal;
   const resumenEl = document.getElementById('km-modal-resumen');
 
   document.getElementById('km-modal-tarifa').innerHTML = '$' + valorFinal.toLocaleString('es-AR') + '/km'
     + (isCustom ? ' <span style="background:#f59e0b;color:#fff;font-size:.65rem;padding:1px 5px;border-radius:3px;margin-left:4px">ESPECIAL</span>' : '');
-  document.getElementById('km-modal-total').textContent = fmt(km * valorFinal);
+  document.getElementById('km-modal-total').textContent = fmt(montoKm);
+
+  const peajesRow = document.getElementById('km-modal-peajes-row');
+  const peajesVal = document.getElementById('km-modal-peajes-val');
+  const totalFinal = document.getElementById('km-modal-total-final');
+  if (peajesRow) peajesRow.style.display = peajes > 0 ? '' : 'none';
+  if (peajesVal) peajesVal.textContent = fmt(peajes);
+  if (totalFinal) totalFinal.textContent = fmt(montoKm + peajes);
 
   if (resumenEl) {
     resumenEl.style.background = isCustom ? '#fffbeb' : '#f0f9ff';
@@ -20475,6 +20552,7 @@ function kmGuardar() {
   const km = parseFloat(document.getElementById('km-cantidad').value);
   const obs = document.getElementById('km-obs').value;
   const customVal = parseFloat(document.getElementById('km-tarifa-custom').value);
+  const peajes = parseFloat(document.getElementById('km-peajes')?.value) || 0;
 
   if (!fecha || isNaN(km) || km <= 0) { toast('Completá fecha y kilómetros','warning'); return; }
 
@@ -20488,10 +20566,10 @@ function kmGuardar() {
   if (editId) {
     const idx = ST.kilometraje.findIndex(r => r.id === editId);
     if (idx >= 0) {
-      ST.kilometraje[idx] = { ...ST.kilometraje[idx], fecha, km, tarifa: valorKm, monto, obs, tarifaCustom };
+      ST.kilometraje[idx] = { ...ST.kilometraje[idx], fecha, km, tarifa: valorKm, monto, peajes, obs, tarifaCustom };
     }
   } else {
-    ST.kilometraje.push({ id: uid(), fecha, km, tarifa: valorKm, monto, obs, tarifaCustom, pagado: false, pagoId: null });
+    ST.kilometraje.push({ id: uid(), fecha, km, tarifa: valorKm, monto, peajes, obs, tarifaCustom, pagado: false, pagoId: null });
   }
 
   save();
@@ -20505,17 +20583,19 @@ function kmEditar(id) { kmAbrir(id); }
 function kmPagarRegistro(id) {
   const r = (ST.kilometraje || []).find(x => x.id === id);
   if (!r || r.pagado) return;
-  if (!confirm(`¿Registrar pago en Caja Efectivo?\n\n${fmtF(r.fecha)} — ${r.km.toLocaleString('es-AR')} km\nMonto: ${fmt(r.monto)}\n\nSe creará un egreso en Caja Efectivo.`)) return;
+  const totalConPeajes = r.monto + (r.peajes || 0);
+  const peajesStr = r.peajes > 0 ? ` + ${fmt(r.peajes)} peajes` : '';
+  if (!confirm(`¿Registrar pago en Caja Efectivo?\n\n${fmtF(r.fecha)} — ${r.km.toLocaleString('es-AR')} km\nKM: ${fmt(r.monto)}${peajesStr}\nTotal: ${fmt(totalConPeajes)}\n\nSe creará un egreso en Caja Efectivo.`)) return;
   const pagoId = uid();
   ST.cajaEfectivo.push({
     id: pagoId,
     fecha: hoy(),
-    monto: r.monto,
+    monto: totalConPeajes,
     concepto: 'Kilometraje',
     socioId: '',
     banco: '',
     tipo: 'egreso',
-    desc: `Kilometraje cobrador — ${fmtF(r.fecha)} (${r.km.toLocaleString('es-AR')} km)`
+    desc: `Kilometraje cobrador — ${fmtF(r.fecha)} (${r.km.toLocaleString('es-AR')} km${r.peajes>0?' + peajes':''})`
   });
   r.pagado = true;
   r.pagoId = pagoId;
@@ -20523,7 +20603,7 @@ function kmPagarRegistro(id) {
   kmRender();
   renderMovimientos('cajaEfectivo');
   renderDashboard();
-  toast('Pago registrado: ' + fmt(r.monto), 'success');
+  toast('Pago registrado: ' + fmt(totalConPeajes), 'success');
 }
 
 function kmEliminar(id) {
@@ -20551,9 +20631,12 @@ function kmPagarMes() {
   if (pendientes.length === 0) { toast('No hay registros pendientes de pago en ' + mesNombre, 'info'); return; }
 
   const totalKm = pendientes.reduce((s,r) => s + r.km, 0);
-  const totalMonto = pendientes.reduce((s,r) => s + r.monto, 0);
+  const totalKmMonto = pendientes.reduce((s,r) => s + r.monto, 0);
+  const totalPeajes = pendientes.reduce((s,r) => s + (r.peajes||0), 0);
+  const totalMonto = totalKmMonto + totalPeajes;
+  const peajesStr = totalPeajes > 0 ? '\nPeajes: ' + fmt(totalPeajes) : '';
 
-  if (!confirm('¿Registrar pago en Caja Efectivo?\n\nMes: ' + mesNombre + '\nKilómetros: ' + totalKm.toLocaleString('es-AR') + ' km\nMonto: ' + fmt(totalMonto) + '\n\nSe creará un egreso en Caja Efectivo.')) return;
+  if (!confirm('¿Registrar pago en Caja Efectivo?\n\nMes: ' + mesNombre + '\nKilómetros: ' + totalKm.toLocaleString('es-AR') + ' km\nKM: ' + fmt(totalKmMonto) + peajesStr + '\nTotal: ' + fmt(totalMonto) + '\n\nSe creará un egreso en Caja Efectivo.')) return;
 
   // Create caja efectivo movement
   const pagoId = uid();
@@ -20565,7 +20648,7 @@ function kmPagarMes() {
     socioId: '',
     banco: '',
     tipo: 'egreso',
-    desc: 'Kilometraje cobrador — ' + mesNombre + ' (' + totalKm.toLocaleString('es-AR') + ' km)'
+    desc: 'Kilometraje cobrador — ' + mesNombre + ' (' + totalKm.toLocaleString('es-AR') + ' km' + (totalPeajes>0?' + peajes':'') + ')'
   });
 
   // Mark all as paid
@@ -20587,7 +20670,8 @@ function kmPagarMes() {
 function kmAbrirPagoParcial() {
   if (!ST.kmPagosParciales) ST.kmPagosParciales = [];
   // Mostrar saldo actual en el modal
-  const pendiente  = (ST.kilometraje || []).filter(r => !r.pagado).reduce((s,r) => s + r.monto, 0);
+  const _pending   = (ST.kilometraje || []).filter(r => !r.pagado);
+  const pendiente  = _pending.reduce((s,r) => s + r.monto + (r.peajes||0), 0);
   const aplicado   = ST.kmPagosParciales.reduce((s,p) => s + p.monto, 0);
   const saldo      = Math.max(0, pendiente - aplicado);
   const infoEl     = document.getElementById('kmpp-saldo-info');
