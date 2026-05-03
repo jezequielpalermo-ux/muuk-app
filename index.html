@@ -921,6 +921,7 @@
         <li><a class="nav-link" data-page="cajaBancos"><i class="bi bi-bank2"></i>Caja — Bancos</a></li>
         <li><a class="nav-link" data-page="cajaEfectivo"><i class="bi bi-cash-coin"></i>Caja — Efectivo</a></li>
         <li><a class="nav-link" data-page="chequesFisicos"><i class="bi bi-file-earmark-check-fill"></i>Cheques Físicos</a></li>
+        <li><a class="nav-link" data-page="eCheques"><i class="bi bi-credit-card-fill"></i>E-Cheques</a></li>
         <li><a class="nav-link" data-page="chequesPagar"><i class="bi bi-file-earmark-minus-fill"></i>Cheques a Pagar</a></li>
         <li><a class="nav-link" data-page="kilometraje"><i class="bi bi-speedometer2"></i>Kilometraje</a></li>
       </div>
@@ -1450,186 +1451,139 @@
     <div class="card"><div class="card-body p-0" id="wrap-chequesFisicos"></div></div>
   </div>
 
-  <!-- E-CHEQUES stub (contenido movido a página unificada) -->
-  <div id="page-eCheques" class="page" style="display:none"></div>
+  <!-- E-CHEQUES (recibidos de clientes) -->
+  <div id="page-eCheques" class="page">
+    <div class="page-hdr">
+      <h4><i class="bi bi-credit-card-fill me-2 text-info"></i>E-Cheques en Cartera</h4>
+      <button class="btn btn-primary btn-sm" onclick="abrirModalCheque('echeque')" data-muuk-accion="eCheques:agregar"><i class="bi bi-plus-lg me-1"></i>Agregar</button>
+    </div>
+    <div class="card mb-2 border-0 bg-light">
+      <div class="card-body py-2 px-3">
+        <div class="row g-2 align-items-end">
+          <div class="col-6 col-sm-4 col-md-3">
+            <label class="form-label small mb-0 fw-bold" style="font-size:.7rem">Buscar</label>
+            <input type="text" class="form-control form-control-sm" id="filtro-buscar-eCheques" placeholder="Nro, banco, cliente…" oninput="dRenderChequesE()">
+          </div>
+          <div class="col-6 col-sm-4 col-md-2">
+            <label class="form-label small mb-0 fw-bold" style="font-size:.7rem">Estado</label>
+            <select class="form-select form-select-sm" id="filtro-estado-eCheques" onchange="renderCheques('eCheques')">
+              <option value="">Todos</option>
+              <option value="pendiente">Pendiente</option>
+              <option value="depositado">Depositado</option>
+              <option value="rechazado">Rechazado</option>
+            </select>
+          </div>
+          <div class="col-6 col-sm-4 col-md-3">
+            <label class="form-label small mb-0 fw-bold" style="font-size:.7rem">Cliente</label>
+            <input type="text" class="form-control form-control-sm" id="filtro-cliente-eCheques" placeholder="Nombre del cliente…" oninput="dRenderChequesE()">
+          </div>
+          <div class="col-6 col-sm-4 col-md-2">
+            <label class="form-label small mb-0 fw-bold" style="font-size:.7rem">Banco Emisor</label>
+            <input type="text" class="form-control form-control-sm" id="filtro-banco-eCheques" placeholder="Banco…" oninput="dRenderChequesE()">
+          </div>
+          <div class="col-6 col-sm-4 col-md-2">
+            <label class="form-label small mb-0 fw-bold" style="font-size:.7rem">Banco Custodia</label>
+            <input type="text" class="form-control form-control-sm" id="filtro-custodia-eCheques" placeholder="Ej: Galicia…" oninput="dRenderChequesE()">
+          </div>
+          <div class="col-6 col-sm-4 col-md-2">
+            <label class="form-label small mb-0 fw-bold" style="font-size:.7rem">Factura</label>
+            <input type="text" class="form-control form-control-sm" id="filtro-factura-eCheques" placeholder="Nro. factura…" oninput="dRenderChequesE()">
+          </div>
+          <div class="col-6 col-sm-3 col-md-2">
+            <label class="form-label small mb-0 fw-bold" style="font-size:.7rem">Venc. desde</label>
+            <input type="date" class="form-control form-control-sm" id="filtro-desde-eCheques" onchange="renderCheques('eCheques')">
+          </div>
+          <div class="col-6 col-sm-3 col-md-2">
+            <label class="form-label small mb-0 fw-bold" style="font-size:.7rem">Venc. hasta</label>
+            <input type="date" class="form-control form-control-sm" id="filtro-hasta-eCheques" onchange="renderCheques('eCheques')">
+          </div>
+          <div class="col-6 col-sm-3 col-md-2">
+            <label class="form-label small mb-0 fw-bold" style="font-size:.7rem">Monto mín.</label>
+            <input type="number" class="form-control form-control-sm" id="filtro-monto-eCheques" placeholder="$0" min="0" oninput="dRenderChequesE()">
+          </div>
+          <div class="col-6 col-sm-3 col-md-2">
+            <label class="form-label small mb-0 fw-bold" style="font-size:.7rem">Monto máx.</label>
+            <input type="number" class="form-control form-control-sm" id="filtro-montoMax-eCheques" placeholder="Sin límite" min="0" oninput="dRenderChequesE()">
+          </div>
+          <div class="col-6 col-sm-3 col-md-1 d-flex align-items-end">
+            <button class="btn btn-sm btn-outline-secondary w-100" onclick="limpiarFiltros('eCheques')" title="Limpiar filtros" style="font-size:.72rem">
+              <i class="bi bi-x-lg"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card"><div class="card-body p-0" id="wrap-eCheques"></div></div>
+  </div>
 
-  <!-- CHEQUES A PAGAR + eCHEQUES — página unificada -->
+  <!-- CHEQUES A PAGAR (librados por MÜÜK a terceros — físico, e-cheque o transfer.) -->
   <div id="page-chequesPagar" class="page">
-
-    <!-- ── Header ── -->
-    <div class="page-hdr" style="flex-wrap:wrap;gap:8px;align-items:center">
-      <h4 style="margin:0"><i class="bi bi-file-earmark-minus-fill me-2 text-danger"></i>Cheques</h4>
-      <!-- Tabs -->
-      <ul class="nav nav-pills ms-2" id="chq-tabs" style="gap:5px;flex-shrink:0">
-        <li class="nav-item">
-          <button class="nav-link active" id="chq-tab-btn-pagar" onclick="chqTab('pagar',this)"
-            style="font-size:.8rem;padding:5px 14px;border-radius:8px">
-            <i class="bi bi-file-earmark-minus me-1"></i>A Pagar
-          </button>
-        </li>
-        <li class="nav-item">
-          <button class="nav-link" id="chq-tab-btn-echeques" onclick="chqTab('eCheques',this)"
-            style="font-size:.8rem;padding:5px 14px;border-radius:8px">
-            <i class="bi bi-credit-card-fill me-1"></i>eCheques en Cartera
-          </button>
-        </li>
-      </ul>
-      <!-- Add button (cambia según tab) -->
-      <div class="ms-auto d-flex gap-2">
-        <button class="btn btn-primary btn-sm" id="btn-chq-agregar" onclick="_chqAgregarActivo()" data-muuk-accion="chequesPagar:agregar">
-          <i class="bi bi-plus-lg me-1"></i>Agregar
-        </button>
-      </div>
+    <div class="page-hdr">
+      <h4><i class="bi bi-file-earmark-minus-fill me-2 text-danger"></i>Cheques a Pagar</h4>
+      <button class="btn btn-primary btn-sm" onclick="abrirModalCheque('pagar')" data-muuk-accion="chequesPagar:agregar"><i class="bi bi-plus-lg me-1"></i>Agregar</button>
     </div>
-
-    <!-- ══════════ TAB: A PAGAR ══════════ -->
-    <div id="chq-panel-pagar">
-      <!-- Filtros extendidos -->
-      <div class="card mb-2 border-0 bg-light">
-        <div class="card-body py-2 px-3">
-          <div class="row g-2 align-items-end">
-            <div class="col-6 col-sm-4 col-md-3">
-              <label class="form-label small mb-0 fw-bold" style="font-size:.7rem">Buscar</label>
-              <input type="text" class="form-control form-control-sm" id="filtro-buscar-chequesPagar"
-                     placeholder="Nro, banco, proveedor…" oninput="dRenderChequesP()">
-            </div>
-            <div class="col-6 col-sm-4 col-md-2">
-              <label class="form-label small mb-0 fw-bold" style="font-size:.7rem">Estado</label>
-              <select class="form-select form-select-sm" id="filtro-estado-chequesPagar" onchange="renderCheques('chequesPagar')">
-                <option value="">Todos</option>
-                <option value="pendiente">Pendiente</option>
-                <option value="pagado">Pagado</option>
-                <option value="rechazado">Rechazado</option>
-              </select>
-            </div>
-            <div class="col-6 col-sm-4 col-md-2">
-              <label class="form-label small mb-0 fw-bold" style="font-size:.7rem">Instrumento</label>
-              <select class="form-select form-select-sm" id="filtro-instrumento-chequesPagar" onchange="renderCheques('chequesPagar')">
-                <option value="">Todos</option>
-                <option value="cheque">Cheque Físico</option>
-                <option value="echeque">E-Cheque</option>
-                <option value="transferencia">Transferencia</option>
-              </select>
-            </div>
-            <div class="col-6 col-sm-4 col-md-3">
-              <label class="form-label small mb-0 fw-bold" style="font-size:.7rem">Proveedor</label>
-              <input type="text" class="form-control form-control-sm" id="filtro-cliente-chequesPagar"
-                     placeholder="Nombre del proveedor…" oninput="dRenderChequesP()">
-            </div>
-            <div class="col-6 col-sm-4 col-md-2">
-              <label class="form-label small mb-0 fw-bold" style="font-size:.7rem">Banco</label>
-              <input type="text" class="form-control form-control-sm" id="filtro-banco-chequesPagar"
-                     placeholder="Banco…" oninput="dRenderChequesP()">
-            </div>
-            <div class="col-6 col-sm-4 col-md-2">
-              <label class="form-label small mb-0 fw-bold" style="font-size:.7rem">Factura</label>
-              <input type="text" class="form-control form-control-sm" id="filtro-factura-chequesPagar"
-                     placeholder="Nro. factura…" oninput="dRenderChequesP()">
-            </div>
-            <div class="col-6 col-sm-3 col-md-2">
-              <label class="form-label small mb-0 fw-bold" style="font-size:.7rem">Venc. desde</label>
-              <input type="date" class="form-control form-control-sm" id="filtro-desde-chequesPagar"
-                     onchange="renderCheques('chequesPagar')">
-            </div>
-            <div class="col-6 col-sm-3 col-md-2">
-              <label class="form-label small mb-0 fw-bold" style="font-size:.7rem">Venc. hasta</label>
-              <input type="date" class="form-control form-control-sm" id="filtro-hasta-chequesPagar"
-                     onchange="renderCheques('chequesPagar')">
-            </div>
-            <div class="col-6 col-sm-3 col-md-2">
-              <label class="form-label small mb-0 fw-bold" style="font-size:.7rem">Monto mín.</label>
-              <input type="number" class="form-control form-control-sm" id="filtro-monto-chequesPagar"
-                     placeholder="$0" min="0" oninput="dRenderChequesP()">
-            </div>
-            <div class="col-6 col-sm-3 col-md-2">
-              <label class="form-label small mb-0 fw-bold" style="font-size:.7rem">Monto máx.</label>
-              <input type="number" class="form-control form-control-sm" id="filtro-montoMax-chequesPagar"
-                     placeholder="Sin límite" min="0" oninput="dRenderChequesP()">
-            </div>
-            <div class="col-6 col-sm-3 col-md-1 d-flex align-items-end">
-              <button class="btn btn-sm btn-outline-secondary w-100" onclick="limpiarFiltros('chequesPagar')"
-                      title="Limpiar filtros" style="font-size:.72rem">
-                <i class="bi bi-x-lg"></i>
-              </button>
-            </div>
+    <div class="card mb-2 border-0 bg-light">
+      <div class="card-body py-2 px-3">
+        <div class="row g-2 align-items-end">
+          <div class="col-6 col-sm-4 col-md-3">
+            <label class="form-label small mb-0 fw-bold" style="font-size:.7rem">Buscar</label>
+            <input type="text" class="form-control form-control-sm" id="filtro-buscar-chequesPagar" placeholder="Nro, banco, proveedor…" oninput="dRenderChequesP()">
+          </div>
+          <div class="col-6 col-sm-4 col-md-2">
+            <label class="form-label small mb-0 fw-bold" style="font-size:.7rem">Estado</label>
+            <select class="form-select form-select-sm" id="filtro-estado-chequesPagar" onchange="renderCheques('chequesPagar')">
+              <option value="">Todos</option>
+              <option value="pendiente">Pendiente</option>
+              <option value="pagado">Pagado</option>
+              <option value="rechazado">Rechazado</option>
+            </select>
+          </div>
+          <div class="col-6 col-sm-4 col-md-2">
+            <label class="form-label small mb-0 fw-bold" style="font-size:.7rem">Instrumento</label>
+            <select class="form-select form-select-sm" id="filtro-instrumento-chequesPagar" onchange="renderCheques('chequesPagar')">
+              <option value="">Todos</option>
+              <option value="cheque">Cheque Físico</option>
+              <option value="echeque">E-Cheque</option>
+              <option value="transferencia">Transferencia</option>
+            </select>
+          </div>
+          <div class="col-6 col-sm-4 col-md-3">
+            <label class="form-label small mb-0 fw-bold" style="font-size:.7rem">Proveedor</label>
+            <input type="text" class="form-control form-control-sm" id="filtro-cliente-chequesPagar" placeholder="Nombre del proveedor…" oninput="dRenderChequesP()">
+          </div>
+          <div class="col-6 col-sm-4 col-md-2">
+            <label class="form-label small mb-0 fw-bold" style="font-size:.7rem">Banco</label>
+            <input type="text" class="form-control form-control-sm" id="filtro-banco-chequesPagar" placeholder="Banco…" oninput="dRenderChequesP()">
+          </div>
+          <div class="col-6 col-sm-4 col-md-2">
+            <label class="form-label small mb-0 fw-bold" style="font-size:.7rem">Factura</label>
+            <input type="text" class="form-control form-control-sm" id="filtro-factura-chequesPagar" placeholder="Nro. factura…" oninput="dRenderChequesP()">
+          </div>
+          <div class="col-6 col-sm-3 col-md-2">
+            <label class="form-label small mb-0 fw-bold" style="font-size:.7rem">Venc. desde</label>
+            <input type="date" class="form-control form-control-sm" id="filtro-desde-chequesPagar" onchange="renderCheques('chequesPagar')">
+          </div>
+          <div class="col-6 col-sm-3 col-md-2">
+            <label class="form-label small mb-0 fw-bold" style="font-size:.7rem">Venc. hasta</label>
+            <input type="date" class="form-control form-control-sm" id="filtro-hasta-chequesPagar" onchange="renderCheques('chequesPagar')">
+          </div>
+          <div class="col-6 col-sm-3 col-md-2">
+            <label class="form-label small mb-0 fw-bold" style="font-size:.7rem">Monto mín.</label>
+            <input type="number" class="form-control form-control-sm" id="filtro-monto-chequesPagar" placeholder="$0" min="0" oninput="dRenderChequesP()">
+          </div>
+          <div class="col-6 col-sm-3 col-md-2">
+            <label class="form-label small mb-0 fw-bold" style="font-size:.7rem">Monto máx.</label>
+            <input type="number" class="form-control form-control-sm" id="filtro-montoMax-chequesPagar" placeholder="Sin límite" min="0" oninput="dRenderChequesP()">
+          </div>
+          <div class="col-6 col-sm-3 col-md-1 d-flex align-items-end">
+            <button class="btn btn-sm btn-outline-secondary w-100" onclick="limpiarFiltros('chequesPagar')" title="Limpiar filtros" style="font-size:.72rem">
+              <i class="bi bi-x-lg"></i>
+            </button>
           </div>
         </div>
       </div>
-      <div class="card"><div class="card-body p-0" id="wrap-chequesPagar"></div></div>
     </div>
-
-    <!-- ══════════ TAB: eCHEQUES EN CARTERA ══════════ -->
-    <div id="chq-panel-eCheques" style="display:none">
-      <!-- Filtros extendidos -->
-      <div class="card mb-2 border-0 bg-light">
-        <div class="card-body py-2 px-3">
-          <div class="row g-2 align-items-end">
-            <div class="col-6 col-sm-4 col-md-3">
-              <label class="form-label small mb-0 fw-bold" style="font-size:.7rem">Buscar</label>
-              <input type="text" class="form-control form-control-sm" id="filtro-buscar-eCheques"
-                     placeholder="Nro, banco, cliente…" oninput="dRenderChequesE()">
-            </div>
-            <div class="col-6 col-sm-4 col-md-2">
-              <label class="form-label small mb-0 fw-bold" style="font-size:.7rem">Estado</label>
-              <select class="form-select form-select-sm" id="filtro-estado-eCheques" onchange="renderCheques('eCheques')">
-                <option value="">Todos</option>
-                <option value="pendiente">Pendiente</option>
-                <option value="depositado">Depositado</option>
-                <option value="rechazado">Rechazado</option>
-              </select>
-            </div>
-            <div class="col-6 col-sm-4 col-md-3">
-              <label class="form-label small mb-0 fw-bold" style="font-size:.7rem">Cliente</label>
-              <input type="text" class="form-control form-control-sm" id="filtro-cliente-eCheques"
-                     placeholder="Nombre del cliente…" oninput="dRenderChequesE()">
-            </div>
-            <div class="col-6 col-sm-4 col-md-2">
-              <label class="form-label small mb-0 fw-bold" style="font-size:.7rem">Banco Emisor</label>
-              <input type="text" class="form-control form-control-sm" id="filtro-banco-eCheques"
-                     placeholder="Banco…" oninput="dRenderChequesE()">
-            </div>
-            <div class="col-6 col-sm-4 col-md-2">
-              <label class="form-label small mb-0 fw-bold" style="font-size:.7rem">Banco Custodia</label>
-              <input type="text" class="form-control form-control-sm" id="filtro-custodia-eCheques"
-                     placeholder="Ej: Cuenta Corriente…" oninput="dRenderChequesE()">
-            </div>
-            <div class="col-6 col-sm-4 col-md-2">
-              <label class="form-label small mb-0 fw-bold" style="font-size:.7rem">Factura</label>
-              <input type="text" class="form-control form-control-sm" id="filtro-factura-eCheques"
-                     placeholder="Nro. factura…" oninput="dRenderChequesE()">
-            </div>
-            <div class="col-6 col-sm-3 col-md-2">
-              <label class="form-label small mb-0 fw-bold" style="font-size:.7rem">Venc. desde</label>
-              <input type="date" class="form-control form-control-sm" id="filtro-desde-eCheques"
-                     onchange="renderCheques('eCheques')">
-            </div>
-            <div class="col-6 col-sm-3 col-md-2">
-              <label class="form-label small mb-0 fw-bold" style="font-size:.7rem">Venc. hasta</label>
-              <input type="date" class="form-control form-control-sm" id="filtro-hasta-eCheques"
-                     onchange="renderCheques('eCheques')">
-            </div>
-            <div class="col-6 col-sm-3 col-md-2">
-              <label class="form-label small mb-0 fw-bold" style="font-size:.7rem">Monto mín.</label>
-              <input type="number" class="form-control form-control-sm" id="filtro-monto-eCheques"
-                     placeholder="$0" min="0" oninput="dRenderChequesE()">
-            </div>
-            <div class="col-6 col-sm-3 col-md-2">
-              <label class="form-label small mb-0 fw-bold" style="font-size:.7rem">Monto máx.</label>
-              <input type="number" class="form-control form-control-sm" id="filtro-montoMax-eCheques"
-                     placeholder="Sin límite" min="0" oninput="dRenderChequesE()">
-            </div>
-            <div class="col-6 col-sm-3 col-md-1 d-flex align-items-end">
-              <button class="btn btn-sm btn-outline-secondary w-100" onclick="limpiarFiltros('eCheques')"
-                      title="Limpiar filtros" style="font-size:.72rem">
-                <i class="bi bi-x-lg"></i>
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="card"><div class="card-body p-0" id="wrap-eCheques"></div></div>
-    </div>
-
+    <div class="card"><div class="card-body p-0" id="wrap-chequesPagar"></div></div>
   </div>
 
   <!-- CAJA BANCOS -->
@@ -7066,26 +7020,7 @@ const dRenderChequesF     = debounced(() => renderCheques('chequesFisicos'), 220
 const dRenderChequesE     = debounced(() => renderCheques('eCheques'), 220);
 const dRenderChequesP     = debounced(() => renderCheques('chequesPagar'), 220);
 
-let _chqActiveTab = 'pagar'; // 'pagar' | 'eCheques'
 
-function chqTab(tab, btnEl) {
-  _chqActiveTab = tab;
-  // Panels
-  document.getElementById('chq-panel-pagar').style.display    = tab === 'pagar'    ? '' : 'none';
-  document.getElementById('chq-panel-eCheques').style.display = tab === 'eCheques' ? '' : 'none';
-  // Tab buttons
-  document.querySelectorAll('#chq-tabs .nav-link').forEach(b => b.classList.remove('active'));
-  const btn = btnEl || document.getElementById('chq-tab-btn-' + (tab === 'eCheques' ? 'echeques' : 'pagar'));
-  if (btn) btn.classList.add('active');
-  // Render the active tab
-  if (tab === 'pagar')    renderCheques('chequesPagar');
-  else                    renderCheques('eCheques');
-}
-
-function _chqAgregarActivo() {
-  if (_chqActiveTab === 'eCheques') abrirModalCheque('echeque');
-  else                              abrirModalCheque('pagar');
-}
 const dRenderCajaBancos   = debounced(() => renderMovimientos('cajaBancos'), 220);
 const dRenderCajaEfectivo = debounced(() => renderMovimientos('cajaEfectivo'), 220);
 const dRenderComResumen   = debounced(renderComResumen, 220);
@@ -10013,11 +9948,6 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function irA(p) {
-  // eCheques fue unificado en la página chequesPagar — activar tab correspondiente
-  if (p === 'eCheques') {
-    _chqActiveTab = 'eCheques';
-    p = 'chequesPagar';
-  }
   // Guard de acceso: redirige si el usuario no tiene permiso para esta página
   if (typeof userCanAccess === 'function' && sessionStorage.getItem('muukAuth') && !userCanAccess(p)) {
     const _acc = _getAccess()[sessionStorage.getItem('muukAuth')] || [];
@@ -10040,11 +9970,8 @@ function irA(p) {
   if (p==='dashboard')         renderDashboard();
   if (p==='socios')            renderSocios();
   if (p==='chequesFisicos')    renderCheques('chequesFisicos');
-  if (p==='chequesPagar') {
-    // Restaurar tab activo y renderizar
-    const tabBtn = document.getElementById(_chqActiveTab === 'eCheques' ? 'chq-tab-btn-echeques' : 'chq-tab-btn-pagar');
-    chqTab(_chqActiveTab, tabBtn);
-  }
+  if (p==='eCheques')          renderCheques('eCheques');
+  if (p==='chequesPagar')      renderCheques('chequesPagar');
   if (p==='cajaBancos')        { renderMovimientos('cajaBancos');   renderSaldosBancos(); }
   if (p==='cajaEfectivo')      renderMovimientos('cajaEfectivo');
   if (p==='reportes')          renderReportes();
@@ -12122,9 +12049,8 @@ const CAT_CH={fisico:'chequesFisicos',echeque:'eCheques',pagar:'chequesPagar'};
 const TTL_CH={fisico:'Cheque Físico',echeque:'E-Cheque',pagar:'Cheque a Pagar'};
 
 function limpiarFiltros(cat) {
-  const ids = _FL_IDS[cat] || ['filtro-buscar-'+cat,'filtro-estado-'+cat,'filtro-desde-'+cat,'filtro-hasta-'+cat,'filtro-monto-'+cat];
-  const allIds = typeof ids[0] === 'string' && ids[0].endsWith(cat) ? ids : ['filtro-buscar-','filtro-estado-','filtro-instrumento-','filtro-cliente-','filtro-banco-','filtro-custodia-','filtro-factura-','filtro-desde-','filtro-hasta-','filtro-monto-','filtro-montoMax-'].map(p => p+cat);
-  allIds.forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
+  const ids = _FL_IDS[cat] || [];
+  ids.forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
   _saveFilters(cat);
   renderCheques(cat);
 }
