@@ -1048,7 +1048,7 @@
   </div>
 
   <!-- DASHBOARD -->
-  <div id="page-dashboard" class="page active">
+  <div id="page-dashboard" class="page">
     <!-- MUUK Logo banner — compacto -->
     <div class="mb-3" style="background:linear-gradient(120deg,#0f172a 0%,#1e293b 100%);border-radius:12px;padding:10px 18px;display:flex;align-items:center;gap:12px">
       <!-- Logo pequeño -->
@@ -1096,7 +1096,8 @@
             <div style="display:flex;flex-wrap:wrap;gap:6px" id="kpi-liquidez-detail">
               <span style="display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,.1);border-radius:20px;padding:3px 10px;font-size:.7rem"><i class="bi bi-bank" style="opacity:.7"></i><span style="opacity:.7">Bancos</span> <b id="kpi-liq-bancos">$0</b></span>
               <span style="display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,.1);border-radius:20px;padding:3px 10px;font-size:.7rem"><i class="bi bi-cash" style="opacity:.7"></i><span style="opacity:.7">Efectivo</span> <b id="kpi-liq-efectivo">$0</b></span>
-              <span style="display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,.1);border-radius:20px;padding:3px 10px;font-size:.7rem"><i class="bi bi-file-check" style="opacity:.7"></i><span style="opacity:.7">Cartera</span> <b id="kpi-liq-cartera">$0</b></span>
+              <span style="display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,.1);border-radius:20px;padding:3px 10px;font-size:.7rem"><i class="bi bi-file-earmark-check" style="opacity:.7"></i><span style="opacity:.7">Cartera</span> <b id="kpi-liq-cartera">$0</b></span>
+              <span style="display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,.1);border-radius:20px;padding:3px 10px;font-size:.7rem"><i class="bi bi-receipt-cutoff" style="opacity:.7"></i><span style="opacity:.7">A Cobrar</span> <b id="kpi-liq-cobrar">$0</b></span>
               <span style="display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,.1);border-radius:20px;padding:3px 10px;font-size:.7rem"><i class="bi bi-percent" style="opacity:.7"></i><span style="opacity:.7">Comisiones</span> <b id="kpi-liq-comisiones">$0</b></span>
               <span style="display:inline-flex;align-items:center;gap:5px;background:rgba(220,38,38,.25);border:1px solid rgba(252,165,165,.3);border-radius:20px;padding:3px 10px;font-size:.7rem;color:#fca5a5"><i class="bi bi-dash-circle"></i><span>A Pagar</span> <b id="kpi-liq-pagar">$0</b></span>
             </div>
@@ -5865,7 +5866,7 @@ CREATE POLICY "acceso total" ON muuk_daily_backups FOR ALL USING (true) WITH CHE
   <!-- ══════════════════ FIN CALCULADORA ══════════════════ -->
 
   <!-- ══════════════════ BIENVENIDA ══════════════════ -->
-  <div id="page-bienvenida" class="page">
+  <div id="page-bienvenida" class="page active">
     <!-- Header banner -->
     <div style="background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 60%,#1e293b 100%);border-radius:14px;padding:28px 32px;margin-bottom:24px;position:relative;overflow:hidden">
       <div style="position:absolute;inset:0;opacity:.07;background:repeating-linear-gradient(45deg,#fff 0,#fff 1px,transparent 0,transparent 50%);background-size:20px 20px"></div>
@@ -5879,8 +5880,9 @@ CREATE POLICY "acceso total" ON muuk_daily_backups FOR ALL USING (true) WITH CHE
               <rect x="54" y="54" width="44" height="44" rx="9" fill="#ef4444"/>
             </svg>
             <div>
-              <div style="font-size:.7rem;color:#94a3b8;text-transform:uppercase;letter-spacing:.12em;font-weight:600">Müük S.R.L. — Panel de Control</div>
-              <h2 id="bienvenida-greeting" style="color:#fff;font-weight:800;font-size:1.45rem;margin:0;line-height:1.2">Bienvenido</h2>
+              <div style="font-size:.7rem;color:#94a3b8;text-transform:uppercase;letter-spacing:.12em;font-weight:600">Müük S.R.L.</div>
+              <h2 style="color:#fff;font-weight:800;font-size:1.35rem;margin:0 0 4px;line-height:1.2">Bienvenido al panel de control de Müük S.R.L.</h2>
+              <div id="bienvenida-greeting" style="font-size:.95rem;font-weight:600;color:#93c5fd;line-height:1.2"></div>
             </div>
           </div>
           <div style="display:flex;align-items:center;gap:8px;margin-top:4px">
@@ -10423,11 +10425,12 @@ function renderDashboard() {
   // ── LIQUIDEZ NETA ──
   const totFacPagar = facPagPend.reduce((s,f)=>s+ +f.total,0);
   const totObligaciones = totPagar + totFacPagar;
-  // Comisiones pendientes: saldo > 0 excluyendo las que ya tienen "Factura Muuk" (ya cobradas/facturadas)
+  // Comisiones pendientes: saldo > 0
   const totComisiones = (ST.comisionesResumen||[])
-    .filter(c => c.saldo > 0 && !(c.obs||'').toLowerCase().includes('factura muuk'))
+    .filter(c => c.saldo > 0)
     .reduce((s,c) => s + c.saldo, 0);
-  const totalActivos = sB + sE + totCartera + totComisiones;
+  // Activos: disponible + cartera cheques + facturas a cobrar + comisiones
+  const totalActivos = sB + sE + totCartera + facCobMonto + totComisiones;
   const liquidez = totalActivos - totObligaciones;
   const elLiq = document.getElementById('kpi-liquidez');
   if (elLiq) {
@@ -10437,6 +10440,7 @@ function renderDashboard() {
   _setEl('kpi-liq-bancos', fmt(sB));
   _setEl('kpi-liq-efectivo', fmt(sE));
   _setEl('kpi-liq-cartera', fmt(totCartera));
+  _setEl('kpi-liq-cobrar', fmt(facCobMonto));
   _setEl('kpi-liq-comisiones', fmt(totComisiones));
   _setEl('kpi-liq-pagar', fmt(totObligaciones));
   // Barra de salud: cobertura = activos / obligaciones (0→crítico, 1→moderado, 2+→saludable)
