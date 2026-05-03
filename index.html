@@ -949,6 +949,7 @@
         <li><a class="nav-link" data-page="historialCobranzas"><i class="bi bi-receipt"></i>Historial de Cobranzas</a></li>
         <li><a class="nav-link" data-page="ingresarCobranza"><i class="bi bi-journal-plus"></i>Ingresar Cobranza</a></li>
         <li><a class="nav-link" data-page="cronograma"><i class="bi bi-truck"></i>Cronograma Camiones</a></li>
+        <li><a class="nav-link" data-page="manual"><i class="bi bi-book-fill"></i>Manual de Usuario</a></li>
       </div>
     </div>
 
@@ -1064,7 +1065,7 @@
         <div style="color:#e2e8f0;font-weight:600;font-size:.8rem" id="fecha-hoy"></div>
         <div id="dash-gest-sync" style="font-size:.6rem;color:#64748b;margin-top:1px"></div>
       </div>
-      <button onclick="generarReportePDF()" style="flex-shrink:0;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);color:#e2e8f0;border-radius:7px;padding:5px 12px;font-size:.72rem;cursor:pointer;white-space:nowrap">
+      <button onclick="generarReportePDF()" title="Genera un PDF con el estado financiero completo: liquidez, facturas, cheques y comisiones" style="flex-shrink:0;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);color:#e2e8f0;border-radius:7px;padding:5px 12px;font-size:.72rem;cursor:pointer;white-space:nowrap">
         <i class="bi bi-file-earmark-pdf me-1"></i>Reporte PDF
       </button>
     </div>
@@ -1127,6 +1128,15 @@
     <!-- ALERTAS URGENTES -->
     <div id="dash-alertas" class="mb-3"></div>
 
+    <!-- PRÓXIMOS VENCIMIENTOS 15 DÍAS — posición prioritaria -->
+    <div class="card p-3 mb-4">
+      <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+        <h6 class="fw-bold mb-0"><i class="bi bi-calendar-event text-warning me-2"></i>Próximos Vencimientos — 15 días</h6>
+        <div id="dash-venc-resumen" style="font-size:.72rem;color:#64748b"></div>
+      </div>
+      <div id="dash-venc"></div>
+    </div>
+
     <!-- ACCIONES RÁPIDAS -->
     <div class="mb-4">
       <div style="font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#94a3b8;margin-bottom:10px">Acciones rápidas</div>
@@ -1165,6 +1175,9 @@
         </div>
       </div>
     </div>
+
+    <!-- TOP 3 DEUDORES -->
+    <div id="dash-top3" class="mb-4"></div>
 
     <!-- RESUMEN DEL MES -->
     <div class="mb-4" id="dash-resumen-mes">
@@ -1304,7 +1317,11 @@
           <div class="stat-card" style="background:linear-gradient(135deg,#b45309,#f59e0b);cursor:pointer" onclick="irA('panelVencimientos')">
             <div class="bg-icon"><i class="bi bi-alarm"></i></div>
             <div class="lbl">Vencen en 7 días</div>
-            <div class="val" id="stat-v7">$0</div>
+            <div class="val" id="stat-v7" style="font-size:1rem;line-height:1.2" title="Cobros + Pagos">$0</div>
+            <div style="display:flex;gap:6px;margin-top:2px;flex-wrap:wrap">
+              <span id="stat-v7-cobrar" style="font-size:.62rem;font-weight:700;color:#86efac">↓ cobrar $0</span>
+              <span id="stat-v7-pagar"  style="font-size:.62rem;font-weight:700;color:#fca5a5">↑ pagar $0</span>
+            </div>
             <div class="sub" id="stat-v7-n">0 cheques</div>
           </div>
         </div>
@@ -1330,13 +1347,6 @@
           <canvas id="ch-dist" height="195"></canvas>
         </div>
       </div>
-    </div>
-    <div class="card p-3">
-      <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
-        <h6 class="fw-bold mb-0"><i class="bi bi-calendar-event text-warning me-2"></i>Próximos Vencimientos — 15 días</h6>
-        <div id="dash-venc-resumen" style="font-size:.72rem;color:#64748b"></div>
-      </div>
-      <div id="dash-venc"></div>
     </div>
     <!-- PROYECCION FLUJO DE CAJA (Feature 1) -->
     <div id="dash-proyeccion-flujo" class="mt-3"></div>
@@ -1409,7 +1419,10 @@
   <div id="page-chequesFisicos" class="page">
     <div class="page-hdr">
       <h4><i class="bi bi-file-earmark-check-fill me-2 text-primary"></i>Cheques Físicos en Cartera</h4>
-      <button class="btn btn-primary btn-sm" onclick="abrirModalCheque('fisico')" data-muuk-accion="chequesFisicos:agregar"><i class="bi bi-plus-lg me-1"></i>Agregar</button>
+      <div class="d-flex gap-2">
+        <button class="btn btn-outline-secondary btn-sm" onclick="irA('flujoProyectado')" title="Ver flujo de caja proyectado" style="font-size:.72rem"><i class="bi bi-graph-up me-1"></i>Flujo</button>
+        <button class="btn btn-primary btn-sm" onclick="abrirModalCheque('fisico')" data-muuk-accion="chequesFisicos:agregar"><i class="bi bi-plus-lg me-1"></i>Agregar</button>
+      </div>
     </div>
     <!-- FILTROS -->
     <div class="card mb-2 border-0 bg-light" id="filtros-chequesFisicos">
@@ -1455,7 +1468,10 @@
   <div id="page-eCheques" class="page">
     <div class="page-hdr">
       <h4><i class="bi bi-credit-card-fill me-2 text-info"></i>E-Cheques en Cartera</h4>
-      <button class="btn btn-primary btn-sm" onclick="abrirModalCheque('echeque')" data-muuk-accion="eCheques:agregar"><i class="bi bi-plus-lg me-1"></i>Agregar</button>
+      <div class="d-flex gap-2">
+        <button class="btn btn-outline-secondary btn-sm" onclick="irA('flujoProyectado')" title="Ver flujo de caja proyectado" style="font-size:.72rem"><i class="bi bi-graph-up me-1"></i>Flujo</button>
+        <button class="btn btn-primary btn-sm" onclick="abrirModalCheque('echeque')" data-muuk-accion="eCheques:agregar"><i class="bi bi-plus-lg me-1"></i>Agregar</button>
+      </div>
     </div>
     <div class="card mb-2 border-0 bg-light">
       <div class="card-body py-2 px-3">
@@ -1520,7 +1536,10 @@
   <div id="page-chequesPagar" class="page">
     <div class="page-hdr">
       <h4><i class="bi bi-file-earmark-minus-fill me-2 text-danger"></i>Cheques a Pagar</h4>
-      <button class="btn btn-primary btn-sm" onclick="abrirModalCheque('pagar')" data-muuk-accion="chequesPagar:agregar"><i class="bi bi-plus-lg me-1"></i>Agregar</button>
+      <div class="d-flex gap-2">
+        <button class="btn btn-outline-secondary btn-sm" onclick="irA('flujoProyectado')" title="Ver flujo de caja proyectado" style="font-size:.72rem"><i class="bi bi-graph-up me-1"></i>Flujo</button>
+        <button class="btn btn-primary btn-sm" onclick="abrirModalCheque('pagar')" data-muuk-accion="chequesPagar:agregar"><i class="bi bi-plus-lg me-1"></i>Agregar</button>
+      </div>
     </div>
     <div class="card mb-2 border-0 bg-light">
       <div class="card-body py-2 px-3">
@@ -2627,6 +2646,7 @@
       </div>
     </div>
     <!-- Vendedor tabs -->
+    <div id="ecta-global-summary" class="mb-3" style="display:none"></div>
     <ul class="nav nav-pills mb-3" id="ecta-vendedor-tabs" style="gap:6px">
       <li class="nav-item"><button class="nav-link active" onclick="ectaTab('Alberto',this)" style="font-size:.82rem;padding:5px 14px;border-radius:8px"><i class="bi bi-person me-1"></i>Alberto</button></li>
       <li class="nav-item"><button class="nav-link" onclick="ectaTab('Ricardo',this)" style="font-size:.82rem;padding:5px 14px;border-radius:8px"><i class="bi bi-person me-1"></i>Ricardo</button></li>
@@ -5267,19 +5287,19 @@ CREATE POLICY "acceso total" ON muuk_daily_backups FOR ALL USING (true) WITH CHE
     <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:8px 12px;margin-bottom:12px">
       <div style="font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#64748b;margin-bottom:6px"><i class="bi bi-lightning-charge-fill me-1" style="color:#f59e0b"></i>Configuración rápida</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap">
-        <button onclick="calcPreset('alimentos')" style="background:#fff;border:1px solid #e2e8f0;border-radius:6px;padding:3px 10px;font-size:.68rem;cursor:pointer;color:#334155;transition:all .15s" onmouseover="this.style.borderColor='#4f46e5';this.style.color='#4f46e5'" onmouseout="this.style.borderColor='#e2e8f0';this.style.color='#334155'">
+        <button onclick="calcPreset('alimentos')" title="IIBB 3% · Cheque 1.2% · Percepción 1% · Sellos 0.5% · Overhead 2% · Margen 25% · IVA venta 21%" style="background:#fff;border:1px solid #e2e8f0;border-radius:6px;padding:3px 10px;font-size:.68rem;cursor:pointer;color:#334155;transition:all .15s" onmouseover="this.style.borderColor='#4f46e5';this.style.color='#4f46e5'" onmouseout="this.style.borderColor='#e2e8f0';this.style.color='#334155'">
           <i class="bi bi-basket2 me-1"></i>Alimentos
         </button>
-        <button onclick="calcPreset('industrial')" style="background:#fff;border:1px solid #e2e8f0;border-radius:6px;padding:3px 10px;font-size:.68rem;cursor:pointer;color:#334155;transition:all .15s" onmouseover="this.style.borderColor='#4f46e5';this.style.color='#4f46e5'" onmouseout="this.style.borderColor='#e2e8f0';this.style.color='#334155'">
+        <button onclick="calcPreset('industrial')" title="IIBB 3% · Cheque 1.2% · Percepción 2% · Retención 1% · Sellos 0.5% · Comisión 3% · Overhead 3% · Margen 30% · IVA venta 21%" style="background:#fff;border:1px solid #e2e8f0;border-radius:6px;padding:3px 10px;font-size:.68rem;cursor:pointer;color:#334155;transition:all .15s" onmouseover="this.style.borderColor='#4f46e5';this.style.color='#4f46e5'" onmouseout="this.style.borderColor='#e2e8f0';this.style.color='#334155'">
           <i class="bi bi-gear me-1"></i>Industrial
         </button>
-        <button onclick="calcPreset('limpieza')" style="background:#fff;border:1px solid #e2e8f0;border-radius:6px;padding:3px 10px;font-size:.68rem;cursor:pointer;color:#334155;transition:all .15s" onmouseover="this.style.borderColor='#4f46e5';this.style.color='#4f46e5'" onmouseout="this.style.borderColor='#e2e8f0';this.style.color='#334155'">
+        <button onclick="calcPreset('limpieza')" title="IIBB 3% · Cheque 1.2% · Percepción 1% · Retención 0.5% · Sellos 0.5% · Comisión 2% · Overhead 2% · Margen 28% · IVA venta 21%" style="background:#fff;border:1px solid #e2e8f0;border-radius:6px;padding:3px 10px;font-size:.68rem;cursor:pointer;color:#334155;transition:all .15s" onmouseover="this.style.borderColor='#4f46e5';this.style.color='#4f46e5'" onmouseout="this.style.borderColor='#e2e8f0';this.style.color='#334155'">
           <i class="bi bi-droplet me-1"></i>Limpieza
         </button>
-        <button onclick="calcPreset('cheque30')" style="background:#fff;border:1px solid #e2e8f0;border-radius:6px;padding:3px 10px;font-size:.68rem;cursor:pointer;color:#334155;transition:all .15s" onmouseover="this.style.borderColor='#4f46e5';this.style.color='#4f46e5'" onmouseout="this.style.borderColor='#e2e8f0';this.style.color='#334155'">
+        <button onclick="calcPreset('cheque30')" title="IIBB 3% · Cheque 1.2% · Percepción 1% · Retención 0.5% · Overhead 2% · Margen 30% · Plazo 30d · Tasa 8% mensual · IVA 21%" style="background:#fff;border:1px solid #e2e8f0;border-radius:6px;padding:3px 10px;font-size:.68rem;cursor:pointer;color:#334155;transition:all .15s" onmouseover="this.style.borderColor='#4f46e5';this.style.color='#4f46e5'" onmouseout="this.style.borderColor='#e2e8f0';this.style.color='#334155'">
           <i class="bi bi-calendar-check me-1"></i>Cheque 30d
         </button>
-        <button onclick="calcPreset('cheque60')" style="background:#fff;border:1px solid #e2e8f0;border-radius:6px;padding:3px 10px;font-size:.68rem;cursor:pointer;color:#334155;transition:all .15s" onmouseover="this.style.borderColor='#4f46e5';this.style.color='#4f46e5'" onmouseout="this.style.borderColor='#e2e8f0';this.style.color='#334155'">
+        <button onclick="calcPreset('cheque60')" title="IIBB 3% · Cheque 1.2% · Percepción 1% · Retención 0.5% · Overhead 2% · Margen 35% · Plazo 60d · Tasa 8% mensual · IVA 21%" style="background:#fff;border:1px solid #e2e8f0;border-radius:6px;padding:3px 10px;font-size:.68rem;cursor:pointer;color:#334155;transition:all .15s" onmouseover="this.style.borderColor='#4f46e5';this.style.color='#4f46e5'" onmouseout="this.style.borderColor='#e2e8f0';this.style.color='#334155'">
           <i class="bi bi-calendar2-check me-1"></i>Cheque 60d
         </button>
         <div style="display:flex;align-items:center;gap:6px;margin-left:6px;padding-left:8px;border-left:1px solid #e2e8f0">
@@ -5649,7 +5669,12 @@ CREATE POLICY "acceso total" ON muuk_daily_backups FOR ALL USING (true) WITH CHE
               </button>
             </div>
             <div id="calc-op-rows">
-              <div style="text-align:center;color:#94a3b8;font-size:.75rem;padding:16px">Hacé clic en "Agregar producto" para comenzar</div>
+              <div style="text-align:center;color:#94a3b8;font-size:.75rem;padding:20px 16px">
+                <i class="bi bi-cart-plus" style="font-size:1.6rem;display:block;margin-bottom:8px;opacity:.35"></i>
+                Usá <b>Multi-Producto</b> cuando tenés varios artículos que comparten flete y cargas en una misma operación.<br>
+                <span style="font-size:.68rem;color:#cbd5e1;display:block;margin-top:6px">Ej: Harina 000 × 50 kg + Levadura × 20 kg, compartiendo flete de $15.000</span>
+                <button onclick="calcOpAddRow()" style="margin-top:10px;background:#4f46e5;color:#fff;border:none;border-radius:6px;padding:5px 14px;font-size:.72rem;cursor:pointer"><i class="bi bi-plus-lg me-1"></i>Agregar primer producto</button>
+              </div>
             </div>
           </div>
 
@@ -9205,13 +9230,30 @@ const _GRUPOS_ACCESO = {
 /* ═══════════════════════════════════════════
    MANUAL DE USUARIO
 ═══════════════════════════════════════════ */
+// ── Manual: contenido en localStorage (evita límites de Supabase JSON)
+//    Metadatos (nombre, fecha, tipo) en ST.config
+const _MANUAL_LS_KEY = 'muuk_manual_content';
+
+function _manualGetContent() {
+  try { return localStorage.getItem(_MANUAL_LS_KEY) || ''; } catch(e) { return ''; }
+}
+function _manualSetContent(val) {
+  try { if (val) localStorage.setItem(_MANUAL_LS_KEY, val); else localStorage.removeItem(_MANUAL_LS_KEY); } catch(e) {}
+}
+
+// Blob URL activo (se regenera en cada render, se libera al reemplazar)
+let _manualBlobUrl = null;
+function _manualRevoke() {
+  if (_manualBlobUrl) { try { URL.revokeObjectURL(_manualBlobUrl); } catch(e) {} _manualBlobUrl = null; }
+}
+
 function renderManual() {
   const cfg    = ST.config || {};
   const nombre = cfg.manualNombre || '';
   const fecha  = cfg.manualFecha  || '';
   const isPDF  = (cfg.manualTipo || '').includes('pdf') || nombre.toLowerCase().endsWith('.pdf');
-  // HTML stored as text, PDF stored as base64
-  const hasContent = isPDF ? !!cfg.manualData : !!cfg.manualHtml;
+  const content = _manualGetContent();
+  const hasContent = !!content;
   const admin  = isAdmin();
 
   const empty      = document.getElementById('manual-empty');
@@ -9231,6 +9273,7 @@ function renderManual() {
     btnDl.style.display    = 'none';
     if (btnUp)      btnUp.style.display      = admin ? '' : 'none';
     if (btnUpEmpty) btnUpEmpty.style.display = admin ? '' : 'none';
+    _manualRevoke();
     return;
   }
 
@@ -9242,15 +9285,22 @@ function renderManual() {
   if (lblNombre) lblNombre.textContent = nombre || 'Manual';
   if (lblFecha)  lblFecha.textContent  = fecha ? 'Subido el ' + fecha : '';
 
+  // Crear Blob URL (confiable en todos los navegadores, evita problemas de srcdoc/CSP)
+  _manualRevoke();
+  const mimeType = isPDF ? 'application/pdf' : 'text/html; charset=utf-8';
+  let blob;
   if (isPDF) {
-    // PDF: data URL desde base64
-    iframe.removeAttribute('srcdoc');
-    iframe.src = 'data:application/pdf;base64,' + cfg.manualData;
+    // content es base64 para PDFs → convertir a binario
+    const bin = atob(content);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    blob = new Blob([bytes], { type: 'application/pdf' });
   } else {
-    // HTML: srcdoc directo (sin re-codificar)
-    iframe.removeAttribute('src');
-    iframe.srcdoc = cfg.manualHtml;
+    blob = new Blob([content], { type: 'text/html; charset=utf-8' });
   }
+  _manualBlobUrl = URL.createObjectURL(blob);
+  iframe.removeAttribute('srcdoc');
+  iframe.src = _manualBlobUrl;
 }
 
 function _manualUpload(event) {
@@ -9263,65 +9313,64 @@ function _manualUpload(event) {
     return;
   }
   const isPDF = file.type.includes('pdf') || file.name.toLowerCase().endsWith('.pdf');
-  if (!ST.config) ST.config = {};
-  ST.config.manualNombre = file.name;
-  ST.config.manualTipo   = isPDF ? 'application/pdf' : 'text/html';
-  ST.config.manualFecha  = new Date().toLocaleDateString('es-AR', { day:'2-digit', month:'2-digit', year:'numeric' });
+  const fecha = new Date().toLocaleDateString('es-AR', { day:'2-digit', month:'2-digit', year:'numeric' });
 
   const reader = new FileReader();
-  if (isPDF) {
-    reader.onload = function(e) {
-      ST.config.manualData = e.target.result.split(',')[1];
-      ST.config.manualHtml = '';
-      save();
-      toast('Manual subido correctamente ✓', 'success');
-      renderManual();
-    };
-    reader.readAsDataURL(file);
-  } else {
-    // HTML: leer como texto plano, sin base64
-    reader.onload = function(e) {
-      ST.config.manualHtml = e.target.result;
-      ST.config.manualData = '';
-      save();
-      toast('Manual subido correctamente ✓', 'success');
-      renderManual();
-    };
-    reader.readAsText(file, 'UTF-8');
-  }
+  reader.onload = function(e) {
+    let content;
+    if (isPDF) {
+      // PDF: guardar como base64
+      content = e.target.result.split(',')[1];
+    } else {
+      // HTML: guardar texto plano
+      content = e.target.result;
+    }
+    // Contenido en localStorage (no Supabase — evita límites de tamaño)
+    _manualSetContent(content);
+    // Metadatos en ST (pequeños, sincronizan con Supabase)
+    if (!ST.config) ST.config = {};
+    ST.config.manualNombre = file.name;
+    ST.config.manualTipo   = isPDF ? 'application/pdf' : 'text/html';
+    ST.config.manualFecha  = fecha;
+    // Limpiar campos legacy para no confundir renderManual()
+    delete ST.config.manualData;
+    delete ST.config.manualHtml;
+    save();
+    toast('Manual subido correctamente ✓', 'success');
+    renderManual();
+  };
+  if (isPDF) reader.readAsDataURL(file);
+  else       reader.readAsText(file, 'UTF-8');
   event.target.value = '';
 }
 
 function _manualAbrir() {
-  const cfg  = ST.config || {};
-  const isPDF = (cfg.manualTipo || '').includes('pdf');
-  if (isPDF) {
-    const win = window.open();
-    if (win) win.location.href = 'data:application/pdf;base64,' + cfg.manualData;
-  } else {
-    if (!cfg.manualHtml) return;
-    const blob = new Blob([cfg.manualHtml], { type: 'text/html; charset=utf-8' });
-    const url  = URL.createObjectURL(blob);
-    window.open(url, '_blank');
-    setTimeout(() => URL.revokeObjectURL(url), 60000);
-  }
+  if (!_manualBlobUrl) return;
+  window.open(_manualBlobUrl, '_blank');
 }
 
 function _manualDescargar() {
+  const content = _manualGetContent();
+  if (!content) return;
   const cfg    = ST.config || {};
   const nombre = cfg.manualNombre || 'manual_muuk.html';
   const isPDF  = (cfg.manualTipo || '').includes('pdf');
-  const a = document.createElement('a');
-  a.download = nombre;
+  const a      = document.createElement('a');
+  a.download   = nombre;
   if (isPDF) {
-    a.href = 'data:application/pdf;base64,' + cfg.manualData;
-  } else {
-    if (!cfg.manualHtml) return;
-    const blob = new Blob([cfg.manualHtml], { type: 'text/html; charset=utf-8' });
+    const bin = atob(content);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    const blob = new Blob([bytes], { type: 'application/pdf' });
     a.href = URL.createObjectURL(blob);
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+  } else {
+    const blob = new Blob([content], { type: 'text/html; charset=utf-8' });
+    a.href = URL.createObjectURL(blob);
+    a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 10000);
   }
-  a.click();
 }
 
 function renderUsuarios() {
@@ -10176,6 +10225,46 @@ function _trendBadge(current, prev) {
   return ` <span style="font-size:.62rem;font-weight:700;color:${col}">${arrow}${capped.toFixed(1)}%</span>`;
 }
 
+function _renderTop3Deudores() {
+  const el = document.getElementById('dash-top3');
+  if (!el) return;
+  const hoy = new Date(); hoy.setHours(0,0,0,0);
+  // Agrupar facturas vencidas por cliente
+  const mapa = {};
+  (ST.facturasACobrar||[]).filter(f=>f.estado==='pendiente'&&f.fechaVenc&&f.fechaVenc<new Date().toISOString().slice(0,10)).forEach(f=>{
+    const k = (f.cliente||f.razonSocial||'Sin nombre').trim();
+    if (!mapa[k]) mapa[k] = { cliente: k, total: 0, count: 0, diasMax: 0 };
+    mapa[k].total += +f.total||0;
+    mapa[k].count++;
+    const dias = Math.round((hoy - new Date(f.fechaVenc+'T00:00:00')) / 86400000);
+    if (dias > mapa[k].diasMax) mapa[k].diasMax = dias;
+  });
+  const top3 = Object.values(mapa).sort((a,b)=>b.total-a.total).slice(0,3);
+  if (!top3.length) { el.innerHTML = ''; return; }
+  const maxTot = top3[0].total;
+  const _fc = v => '$' + Math.round(v).toLocaleString('es-AR');
+  el.innerHTML = `<div class="card p-3">
+    <div class="d-flex align-items-center justify-content-between mb-2">
+      <h6 class="fw-bold mb-0" style="font-size:.85rem"><i class="bi bi-exclamation-circle-fill text-danger me-2"></i>Top deudores vencidos</h6>
+      <button onclick="irA('facturasACobrar')" style="background:none;border:none;color:#3b82f6;font-size:.72rem;cursor:pointer;font-weight:600;padding:0">Ver todas →</button>
+    </div>
+    ${top3.map((d,i)=>{
+      const pct = Math.round(d.total/maxTot*100);
+      const diasColor = d.diasMax>90?'#dc2626':d.diasMax>60?'#f97316':d.diasMax>30?'#d97706':'#64748b';
+      return `<div style="margin-bottom:${i<top3.length-1?'10px':'0'}">
+        <div class="d-flex justify-content-between align-items-baseline mb-1">
+          <span style="font-size:.8rem;font-weight:600;color:#0f172a">${d.cliente}</span>
+          <span style="font-size:.82rem;font-weight:800;color:#dc2626">${_fc(d.total)}</span>
+        </div>
+        <div style="height:5px;background:#f1f5f9;border-radius:3px;margin-bottom:3px">
+          <div style="height:5px;background:#dc2626;border-radius:3px;width:${pct}%;transition:width .4s"></div>
+        </div>
+        <div style="font-size:.66rem;color:#94a3b8">${d.count} factura${d.count!==1?'s':''} · <span style="color:${diasColor};font-weight:700">${d.diasMax}d vencida</span></div>
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
 function renderDashboard() {
   const cartera = [...ST.chequesFisicos.filter(c=>c.estado==='en_cartera'||c.estado==='pendiente'),...ST.eCheques.filter(c=>c.estado==='pendiente')];
   const totCartera = cartera.reduce((s,c)=>s+ +c.monto,0);
@@ -10184,10 +10273,18 @@ function renderDashboard() {
   const _elCarteraN = document.getElementById('stat-cartera-n');
   if(_elCarteraN) _elCarteraN.textContent = `${cartera.length} cheque${cartera.length!==1?'s':''} activo${cartera.length!==1?'s':''}`;
 
-  const todosChq=[...ST.chequesFisicos.filter(c=>c.estado==='en_cartera'||c.estado==='pendiente'),...ST.eCheques.filter(c=>c.estado==='pendiente'),...ST.chequesPagar.filter(c=>c.estado==='pendiente')];
-  const v7=todosChq.filter(c=>{const d=dHasta(c.fechaVenc);return d>=0&&d<=7;});
-  document.getElementById('stat-v7').textContent = fmt(v7.reduce((s,c)=>s+ +c.monto,0));
-  document.getElementById('stat-v7-n').textContent = `${v7.length} cheque${v7.length!==1?'s':''}`;
+  const v7Cobrar=[...ST.chequesFisicos.filter(c=>c.estado==='en_cartera'||c.estado==='pendiente'),...ST.eCheques.filter(c=>c.estado==='pendiente')].filter(c=>{const d=dHasta(c.fechaVenc);return d>=0&&d<=7;});
+  const v7Pagar=ST.chequesPagar.filter(c=>c.estado==='pendiente').filter(c=>{const d=dHasta(c.fechaVenc);return d>=0&&d<=7;});
+  const v7=[...v7Cobrar,...v7Pagar];
+  const v7MonCobrar=v7Cobrar.reduce((s,c)=>s+ +c.monto,0);
+  const v7MonPagar=v7Pagar.reduce((s,c)=>s+ +c.monto,0);
+  document.getElementById('stat-v7').textContent = fmt(v7MonCobrar - v7MonPagar);
+  document.getElementById('stat-v7').title = `Neto: cobrar ${fmt(v7MonCobrar)} − pagar ${fmt(v7MonPagar)}`;
+  const _elV7cob = document.getElementById('stat-v7-cobrar');
+  const _elV7pag = document.getElementById('stat-v7-pagar');
+  if(_elV7cob) _elV7cob.textContent = `↓ cobrar ${fmt(v7MonCobrar)}`;
+  if(_elV7pag) _elV7pag.textContent = `↑ pagar ${fmt(v7MonPagar)}`;
+  document.getElementById('stat-v7-n').textContent = `${v7.length} cheque${v7.length!==1?'s':''}${v7Cobrar.length&&v7Pagar.length?' ('+v7Cobrar.length+' cobrar · '+v7Pagar.length+' pagar)':''}`;
 
   const pagarPend=ST.chequesPagar.filter(c=>c.estado==='pendiente');
   const totPagar=pagarPend.reduce((s,c)=>s+ +c.monto,0);
@@ -10450,6 +10547,7 @@ function renderDashboard() {
       </div>
     </div>`;
   }
+  _renderTop3Deudores();
   renderDashCharts(sB,sE,totCartera);
   renderAlertas();
   renderActividadReciente();
@@ -11106,12 +11204,14 @@ function renderComResumen() {
   }
 
   // Build cards grid
+  const maxSaldo = Math.max(...filtrados.map(e => e.saldo), 1);
   grid.innerHTML = filtrados.map(item => {
     // Buscar pestaña: primero por nombre exacto, luego por match parcial
     let sheetTab = COM_SHEETS[item.empresa] || COM_SHEETS['CC - ' + item.empresa] || item.empresa;
     const isZero = item.saldo === 0;
     const borderColor = isZero ? '#28a745' : '#dc3545';
     const bgColor = isZero ? '#f0fff4' : '#fff5f5';
+    const barPct = isZero ? 0 : Math.round(item.saldo / maxSaldo * 100);
 
     return `
       <div class="col-sm-6 col-lg-4">
@@ -11124,7 +11224,10 @@ function renderComResumen() {
             ${item.obs ? `<span class="badge bg-info" style="font-size:0.65rem;border-radius:5px">${item.obs}</span>` : ''}
           </div>
           <div class="fs-4 fw-bold" style="color: ${borderColor}">${fmt(item.saldo)}</div>
-          <small class="text-muted" style="font-size:.7rem">Saldo pendiente</small>
+          <div style="height:5px;background:#e2e8f0;border-radius:3px;margin:5px 0 2px">
+            <div style="height:5px;background:${borderColor};border-radius:3px;width:${barPct}%;transition:width .5s ease" title="${barPct}% del mayor saldo"></div>
+          </div>
+          <small class="text-muted" style="font-size:.7rem">Saldo pendiente${barPct>0?' · '+barPct+'% del total':''}</small>
           <div class="mt-2 pt-2 border-top d-flex justify-content-between align-items-center">
             <small class="text-primary d-flex align-items-center gap-1" style="font-size:.72rem">
               <i class="bi bi-table me-1"></i>Ver detalle de cuenta
@@ -23754,11 +23857,17 @@ function renderAlertas() {
 
   if(!alerts.length){el.innerHTML='';return;}
   const btnStyle='flex-shrink:0;background:rgba(255,255,255,.6);border:1px solid currentColor;border-radius:6px;padding:2px 10px;font-size:.7rem;font-weight:700;cursor:pointer;white-space:nowrap;color:inherit';
-  el.innerHTML=alerts.map(a=>`<div class="dash-alert dash-alert-${a.type}" style="cursor:pointer" onclick="irA('${a.action||''}')">
+  const renderAlert = a => `<div class="dash-alert dash-alert-${a.type}" style="cursor:pointer" onclick="irA('${a.action||''}')">
     <i class="bi ${a.icon}"></i>
     <span style="flex:1">${a.msg}</span>
     ${a.btn?`<button style="${btnStyle}" onclick="event.stopPropagation();irA('${a.action||''}')">${a.btn} <i class="bi bi-arrow-right"></i></button>`:''}
-  </div>`).join('');
+  </div>`;
+  const dangers  = alerts.filter(a=>a.type==='danger');
+  const others   = alerts.filter(a=>a.type!=='danger');
+  const separator = dangers.length && others.length
+    ? '<div style="height:1px;background:#e2e8f0;margin:4px 0"></div>'
+    : '';
+  el.innerHTML = dangers.map(renderAlert).join('') + separator + others.map(renderAlert).join('');
 }
 
 /* ═══════════════════════════════════════════
@@ -24184,6 +24293,60 @@ function ectaToggleAll() {
     : '<i class="bi bi-arrows-expand me-1"></i>Expandir todo';
 }
 
+// ── Resumen global cross-vendedor ─────────────────────────────────────────
+function _ectaUpdateGlobalSummary() {
+  const el = document.getElementById('ecta-global-summary');
+  if (!el) return;
+  const vendedores = Object.keys(_ectaCache);
+  if (!vendedores.length) { el.style.display = 'none'; return; }
+  let totalPend = 0, totalCli = 0, conDeuda = 0;
+  vendedores.forEach(v => {
+    (_ectaCache[v] || []).forEach(c => {
+      totalCli++;
+      // Use adjusted pending (apply same overlay logic at summary level — simplified)
+      const cobNros = _ectaGetCobradasNros(c.nombre);
+      const adjPend = c.pendientes.filter(f => {
+        const n = (f.factura||'').replace(/[\s\-\.\/]/g,'').toLowerCase();
+        return !n || !cobNros.has(n);
+      }).reduce((s,f)=>s+f.monto, 0);
+      totalPend += adjPend;
+      if (adjPend > 0) conDeuda++;
+    });
+  });
+  el.style.display = '';
+  el.innerHTML = `<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:10px 16px;display:flex;flex-wrap:wrap;gap:6px 24px;align-items:center">
+    <span style="font-size:.72rem;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.05em"><i class="bi bi-globe me-1"></i>Todos los vendedores</span>
+    <span style="font-size:.8rem;font-weight:700;color:#0f172a">${totalCli} clientes</span>
+    <span style="font-size:.72rem;color:#94a3b8">·</span>
+    <span style="font-size:.8rem;font-weight:700;color:#dc2626">${conDeuda} con pendiente</span>
+    <span style="font-size:.72rem;color:#94a3b8">·</span>
+    <span style="font-size:.82rem;font-weight:800;color:#dc2626">Total: ${_ectaFmt(totalPend)}</span>
+    <span style="font-size:.64rem;color:#94a3b8;margin-left:auto">Datos: ${vendedores.join(', ')}</span>
+  </div>`;
+}
+
+// ── Overlay: cobros registrados en MÜÜK que aún no se reflejan en Sheets ──
+function _ectaGetCobradasNros(clienteNombre) {
+  const norm = s => (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+  const cn = norm(clienteNombre).slice(0, 6);
+  const nros = new Set();
+  const _matchCli = s => { const sc = norm(s).slice(0,6); return sc && (sc.includes(cn) || cn.includes(sc)); };
+
+  // De cobranzasIngresadas: si el nroFC fue registrado para este cliente
+  (ST.cobranzasIngresadas || []).forEach(c => {
+    if (_matchCli(c.cliente || c.empresa) && c.nroFC) {
+      nros.add(c.nroFC.replace(/[\s\-\.\/]/g,'').toLowerCase());
+    }
+  });
+  // De facturasACobrar cobradas: si el nroFactura pertenece a este cliente
+  (ST.facturasACobrar || []).filter(f => f.estado === 'cobrada').forEach(f => {
+    if (_matchCli(f.cliente) && f.nroFactura) {
+      nros.add(f.nroFactura.replace(/[\s\-\.\/]/g,'').toLowerCase());
+    }
+  });
+  return nros;
+}
+
 function _ectaRenderData(vendedor) {
   const clientes = _ectaCache[vendedor] || [];
   const summary   = document.getElementById('ecta-summary');
@@ -24224,7 +24387,10 @@ function _ectaRenderData(vendedor) {
   const luEl = document.getElementById('ecta-last-update');
   if (luEl && _ectaLoadTime[vendedor]) {
     const mins = Math.round((Date.now() - _ectaLoadTime[vendedor]) / 60000);
-    luEl.textContent = mins === 0 ? 'Actualizado hace un momento' : `Act. hace ${mins} min`;
+    const luTxt = mins === 0 ? 'Actualizado hace un momento' : `Act. hace ${mins} min`;
+    const luColor = mins > 30 ? '#dc2626' : mins > 10 ? '#d97706' : '#94a3b8';
+    const luTitle = mins > 30 ? 'Datos desactualizados — hacé clic en ↺ para refrescar' : '';
+    luEl.innerHTML = `<span style="color:${luColor};font-weight:${mins>30?'700':'400'}" title="${luTitle}">${mins>30?'⚠ ':''} ${luTxt}</span>`;
   }
 
   // ── Sort ──────────────────────────────────────────────────────────────────
@@ -24251,17 +24417,30 @@ function _ectaRenderData(vendedor) {
   for (let i = 0; i < sorted.length; i++) {
     const c        = sorted[i];
     const origIdx  = c._origIdx;
-    const hasPend  = c.totalPendiente > 0;
+    // ── Overlay: separar pendientes reales de cobradas en MÜÜK ──────────────
+    const _cobradasNros = _ectaGetCobradasNros(c.nombre);
+    const _pendReales   = c.pendientes.filter(f => {
+      const n = (f.factura||'').replace(/[\s\-\.\/]/g,'').toLowerCase();
+      return !n || !_cobradasNros.has(n);
+    });
+    const _cobLocales = c.pendientes.filter(f => {
+      const n = (f.factura||'').replace(/[\s\-\.\/]/g,'').toLowerCase();
+      return n && _cobradasNros.has(n);
+    });
+    const _adjPend = _pendReales.reduce((s,f)=>s+f.monto, 0);
+
+    const hasPend  = _adjPend > 0;
     const palette  = CARD_COLORS[i % CARD_COLORS.length];
     const cardBg   = hasPend ? '#fffbfb' : '#f8fdf9';
 
     // Badge (mejora 5: muestra pend + cobradas por separado)
+    const _cobTotal = c.cobradas.length + _cobLocales.length;
     const pendInfo = hasPend
-      ? `<span style="font-size:.76rem;color:#64748b;margin-left:8px"><span style="color:#dc2626;font-weight:700">${c.pendientes.length} pend.</span> / ${c.cobradas.length} cobradas</span>`
-      : `<span style="font-size:.76rem;color:#64748b;margin-left:8px">${c.cobradas.length} cobradas</span>`;
+      ? `<span style="font-size:.76rem;color:#64748b;margin-left:8px"><span style="color:#dc2626;font-weight:700">${_pendReales.length} pend.</span> / ${_cobTotal} cobradas</span>`
+      : `<span style="font-size:.76rem;color:#64748b;margin-left:8px">${_cobTotal} cobradas</span>`;
 
     const badge = hasPend
-      ? `<span class="badge" style="background:#dc2626;color:#fff;font-size:.76rem;font-weight:700;border-radius:6px;padding:4px 10px;white-space:nowrap"><i class="bi bi-exclamation-circle me-1"></i>${_ectaFmt(c.totalPendiente)}</span>`
+      ? `<span class="badge" style="background:#dc2626;color:#fff;font-size:.76rem;font-weight:700;border-radius:6px;padding:4px 10px;white-space:nowrap"><i class="bi bi-exclamation-circle me-1"></i>${_ectaFmt(_adjPend)}</span>`
       : `<span class="badge" style="background:#16a34a;color:#fff;font-size:.76rem;font-weight:700;border-radius:6px;padding:4px 10px"><i class="bi bi-check-circle me-1"></i>Al día</span>`;
 
     // Botón PDF solo visible si tiene deuda (mejora 6)
@@ -24296,10 +24475,10 @@ function _ectaRenderData(vendedor) {
       <div class="ecta-body ${bodyOpen}" style="padding:0">`;
 
     // ── Tabla pendientes (con columna Antigüedad — mejora 3) ─────────────
-    if (c.pendientes.length > 0) {
+    if (_pendReales.length > 0) {
       html += `<div style="padding:12px 16px 8px">
         <div style="font-size:.8rem;font-weight:700;color:#b91c1c;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">
-          <i class="bi bi-clock-history me-1"></i>Pendientes de cobro (${c.pendientes.length})
+          <i class="bi bi-clock-history me-1"></i>Pendientes de cobro (${_pendReales.length})
         </div>
         <div class="table-responsive"><table class="table table-sm mb-0" style="font-size:.86rem">
         <thead><tr style="background:#fef2f2">
@@ -24308,12 +24487,13 @@ function _ectaRenderData(vendedor) {
           <th style="font-size:.76rem;color:#991b1b;font-weight:700;padding:7px 8px">Factura</th>
           <th class="text-end" style="font-size:.76rem;color:#991b1b;font-weight:700;padding:7px 8px">Importe</th>
           <th style="font-size:.76rem;color:#991b1b;font-weight:700;padding:7px 8px">Vto. Pago</th>
-          <th style="font-size:.76rem;color:#991b1b;font-weight:700;padding:7px 8px">Antigüedad</th>
+          <th style="font-size:.76rem;color:#991b1b;font-weight:700;padding:7px 8px" title="Días desde vencimiento pactado (o desde emisión si no hay vto.)">Venc./Antigüedad</th>
         </tr></thead><tbody>`;
-      for (let j = 0; j < c.pendientes.length; j++) {
-        const f = c.pendientes[j];
+      for (let j = 0; j < _pendReales.length; j++) {
+        const f = _pendReales[j];
         const isNC  = /\bNC\b/i.test(f.factura);
-        const dias  = _ectaDiasPendiente(f.fecha);
+        const fechaRef = f.fechaPago || f.fecha;
+        const dias  = _ectaDiasPendiente(fechaRef);
         const rowBg = dias !== null && dias > 90 ? '#fff5f5'
                     : dias !== null && dias > 60 ? '#fff8f0'
                     : j % 2 === 0 ? '#fff' : '#fef8f8';
@@ -24324,12 +24504,12 @@ function _ectaRenderData(vendedor) {
           <td style="padding:6px 8px">${f.factura}${isNC ? ' <span style="font-size:.7rem;background:#ede9fe;color:#6d28d9;padding:2px 5px;border-radius:4px;font-weight:700">NC</span>' : ''}</td>
           <td class="text-end" style="${tdStyle};padding:6px 8px">${f.importe}</td>
           <td style="padding:6px 8px;font-weight:500">${f.fechaPago || '—'}</td>
-          <td style="padding:6px 8px">${_ectaAntiguedadBadge(f.fecha)}</td>
+          <td style="padding:6px 8px">${_ectaAntiguedadBadge(fechaRef)}</td>
         </tr>`;
       }
       html += `<tr style="background:#fecaca;font-weight:800">
         <td colspan="4" style="padding:7px 8px;font-size:.88rem;color:#7f1d1d">TOTAL PENDIENTE</td>
-        <td class="text-end" style="color:#7f1d1d;font-size:.92rem;padding:7px 8px"><strong>${_ectaFmt(c.totalPendiente)}</strong></td>
+        <td class="text-end" style="color:#7f1d1d;font-size:.92rem;padding:7px 8px"><strong>${_ectaFmt(_adjPend)}</strong></td>
         <td></td>
       </tr>`;
       html += '</tbody></table></div></div>';
@@ -24375,9 +24555,48 @@ function _ectaRenderData(vendedor) {
         const rowBg = j % 2 === 0 ? '#fff' : '#f0fdf4';
         html += `<tr style="background:${rowBg}"><td style="padding:6px 8px">${f.empresa}</td><td style="padding:6px 8px">${f.fecha}</td><td style="padding:6px 8px">${f.factura}${isNC ? ' <span style="font-size:.7rem;background:#ede9fe;color:#6d28d9;padding:2px 5px;border-radius:4px;font-weight:700">NC</span>' : ''}</td><td class="text-end" style="padding:6px 8px;color:#15803d;font-weight:600">${f.importe}</td></tr>`;
       }
+      // Cobradas localmente en MÜÜK (pendientes en Sheets pero ya registradas en el sistema)
+      for (const f of _cobLocales) {
+        const isNC = /\bNC\b/i.test(f.factura);
+        html += `<tr style="background:#ecfdf5;border-left:3px solid #16a34a">
+          <td style="padding:6px 8px;color:#166534">${f.empresa}</td>
+          <td style="padding:6px 8px;color:#166534">${f.fecha}</td>
+          <td style="padding:6px 8px;color:#166534">${f.factura}${isNC ? ' <span style="font-size:.7rem;background:#ede9fe;color:#6d28d9;padding:2px 5px;border-radius:4px;font-weight:700">NC</span>' : ''} <span style="font-size:.68rem;background:#dcfce7;color:#15803d;padding:2px 6px;border-radius:4px;font-weight:700;border:1px solid #86efac"><i class="bi bi-check-circle-fill me-1"></i>En MÜÜK</span></td>
+          <td class="text-end" style="padding:6px 8px;color:#15803d;font-weight:600">${f.importe}</td>
+        </tr>`;
+      }
+      const totalCobLocal = _cobLocales.reduce((s,f)=>s+f.monto,0);
       html += `<tr style="background:#bbf7d0;font-weight:800">
         <td colspan="3" style="padding:7px 8px;font-size:.88rem;color:#14532d">TOTAL COBRADO</td>
-        <td class="text-end" style="color:#14532d;font-size:.92rem;padding:7px 8px"><strong>${_ectaFmt(c.totalCobrado)}</strong></td>
+        <td class="text-end" style="color:#14532d;font-size:.92rem;padding:7px 8px"><strong>${_ectaFmt(c.totalCobrado + totalCobLocal)}</strong></td>
+      </tr>`;
+      html += '</tbody></table></div></div>';
+    } else if (_cobLocales.length > 0) {
+      // No hay cobradas en Sheets pero sí en MÜÜK — mostrar sección cobradas con overlay
+      html += `<div style="padding:12px 16px 12px">
+        <div style="font-size:.8rem;font-weight:700;color:#15803d;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">
+          <i class="bi bi-check-circle me-1"></i>Cobradas (${_cobLocales.length})
+        </div>
+        <div class="table-responsive"><table class="table table-sm mb-0" style="font-size:.86rem">
+        <thead><tr style="background:#dcfce7">
+          <th style="font-size:.76rem;color:#14532d;font-weight:700;padding:7px 8px">Empresa</th>
+          <th style="font-size:.76rem;color:#14532d;font-weight:700;padding:7px 8px">Fecha</th>
+          <th style="font-size:.76rem;color:#14532d;font-weight:700;padding:7px 8px">Factura</th>
+          <th class="text-end" style="font-size:.76rem;color:#14532d;font-weight:700;padding:7px 8px">Importe</th>
+        </tr></thead><tbody>`;
+      for (const f of _cobLocales) {
+        const isNC = /\bNC\b/i.test(f.factura);
+        html += `<tr style="background:#ecfdf5;border-left:3px solid #16a34a">
+          <td style="padding:6px 8px;color:#166534">${f.empresa}</td>
+          <td style="padding:6px 8px;color:#166534">${f.fecha}</td>
+          <td style="padding:6px 8px;color:#166534">${f.factura}${isNC ? ' <span style="font-size:.7rem;background:#ede9fe;color:#6d28d9;padding:2px 5px;border-radius:4px;font-weight:700">NC</span>' : ''} <span style="font-size:.68rem;background:#dcfce7;color:#15803d;padding:2px 6px;border-radius:4px;font-weight:700;border:1px solid #86efac"><i class="bi bi-check-circle-fill me-1"></i>En MÜÜK</span></td>
+          <td class="text-end" style="padding:6px 8px;color:#15803d;font-weight:600">${f.importe}</td>
+        </tr>`;
+      }
+      const totalCobLocal2 = _cobLocales.reduce((s,f)=>s+f.monto,0);
+      html += `<tr style="background:#bbf7d0;font-weight:800">
+        <td colspan="3" style="padding:7px 8px;font-size:.88rem;color:#14532d">TOTAL COBRADO</td>
+        <td class="text-end" style="color:#14532d;font-size:.92rem;padding:7px 8px"><strong>${_ectaFmt(totalCobLocal2)}</strong></td>
       </tr>`;
       html += '</tbody></table></div></div>';
     }
@@ -24391,7 +24610,7 @@ function _ectaRenderData(vendedor) {
     if (sistFacts.length > 0) {
       const sistPend = sistFacts.filter(f=>f.estado==='pendiente');
       const sistTotal = sistPend.reduce((s,f)=>s+(+f.total||0),0);
-      const ectaTotal = c.totalPendiente;
+      const ectaTotal = _adjPend;
       const diff = sistTotal - ectaTotal;
       const hasDiff = Math.abs(diff) > 50; // diferencia > $50
       html += `<div style="padding:8px 16px 12px;background:#f0f9ff;border-top:1px solid #bae6fd">
@@ -24426,6 +24645,9 @@ function _ectaRenderData(vendedor) {
 
   // Apply active filter + search after render
   ectaFilter();
+
+  // Actualizar resumen global cross-vendedor
+  _ectaUpdateGlobalSummary();
 }
 
 function ectaFilter() {
@@ -26433,6 +26655,10 @@ function calcCalc() {
   const margins = [5, 10, 15, 20, 25, 30, 35, 40, 50];
   const tbody = document.getElementById('calc-sim-tbody');
   if (tbody) {
+    const margenPctVal = margenObj * 100;
+    // Fila más cercana al margen ingresado (para resaltar aunque no sea exacto)
+    const closestM = margins.reduce((prev, curr) =>
+      Math.abs(curr - margenPctVal) < Math.abs(prev - margenPctVal) ? curr : prev);
     tbody.innerHTML = margins.map(m => {
       const mPct = m / 100;
       const den2 = 1 - totalCargasPorc - mPct;
@@ -26440,11 +26666,18 @@ function calcCalc() {
       const pv2 = costoDirectoUnit / den2;
       const pc2 = pv2 * (1 + ivaVenta);
       const g2  = pv2 * mPct;
-      const isObj = m === Math.round(margenObj * 100);
+      const isClosest = m === closestM;
+      const isExact   = Math.abs(m - margenPctVal) < 0.1;
       const mColor = m >= 30 ? '#16a34a' : m >= 20 ? '#d97706' : '#dc2626';
       const mBg    = m >= 30 ? '#f0fdf4' : m >= 20 ? '#fffbeb' : '#fef2f2';
-      return `<tr style="${isObj ? 'background:#eef2ff;font-weight:700;box-shadow:inset 3px 0 0 #4f46e5' : ''}">
-        <td><span style="background:${mBg};color:${mColor};border-radius:20px;padding:1px 7px;font-size:.68rem;font-weight:700">${m}%</span>${isObj ? ' <span style="font-size:.58rem;background:#4f46e5;color:#fff;border-radius:3px;padding:1px 4px">★ obj</span>' : ''}</td>
+      const rowStyle = isClosest ? 'background:#eef2ff;font-weight:700;box-shadow:inset 3px 0 0 #4f46e5' : '';
+      const label = isExact
+        ? ' <span style="font-size:.58rem;background:#4f46e5;color:#fff;border-radius:3px;padding:1px 4px">★ exacto</span>'
+        : isClosest
+          ? ' <span style="font-size:.58rem;background:#818cf8;color:#fff;border-radius:3px;padding:1px 4px">≈ tu margen</span>'
+          : '';
+      return `<tr style="${rowStyle}">
+        <td><span style="background:${mBg};color:${mColor};border-radius:20px;padding:1px 7px;font-size:.68rem;font-weight:700">${m}%</span>${label}</td>
         <td class="text-end gest-num" style="font-size:.78rem">${_f(pv2)}</td>
         <td class="text-end gest-num" style="font-size:.78rem;color:#64748b">${_f(pc2)}</td>
         <td class="text-end gest-num" style="font-size:.78rem;color:${mColor};font-weight:700">${_f(g2)}</td>
@@ -26580,6 +26813,18 @@ function calcOpCalc() {
   const cargasPct = s.iibb + s.cheque + s.comision + s.overhead + s.retencion + s.costFinPct;
   const denom = 1 - cargasPct - s.margen;
   const _f = v => fmt(Math.round(v * 100) / 100);
+
+  // Advertencia de margen imposible (misma guardia que calculadora simple)
+  const _denomWarn = document.getElementById('cop-denom-warn') || (() => {
+    const w = document.createElement('div'); w.id = 'cop-denom-warn';
+    sumEl.parentNode.insertBefore(w, sumEl); return w;
+  })();
+  if (denom <= 0.01) {
+    const exceso = Math.round((cargasPct + s.margen) * 100);
+    _denomWarn.innerHTML = `<div class="alert alert-danger py-2 mb-2" style="font-size:.8rem"><i class="bi bi-exclamation-triangle-fill me-2"></i><strong>Margen imposible:</strong> las cargas + margen suman ${exceso}% — el precio de venta resultante es irreal. Reducí el margen o las cargas.</div>`;
+  } else {
+    _denomWarn.innerHTML = '';
+  }
   const mColor = m => m >= 30 ? '#16a34a' : m >= 20 ? '#d97706' : '#dc2626';
   const mBg    = m => m >= 30 ? '#f0fdf4' : m >= 20 ? '#fffbeb' : '#fef2f2';
 
@@ -27710,28 +27955,32 @@ function ingresarCobranzaGuardar() {
   if (!importeFac || importeFac <= 0) { toast('Ingresá el Importe Facturado', 'danger'); return; }
   if (!importeSIVA || importeSIVA <= 0) { toast('Ingresá el Importe S/IVA', 'danger'); return; }
   if (!tipoPago) { toast('Seleccioná el Tipo de pago', 'danger'); return; }
+
+  // Leer todos los campos del formulario ANTES de limpiarlo
+  const nroFC    = (document.getElementById('ic-nrofc')?.value||'').trim();
+  const cliente  = document.getElementById('ic-cliente')?.value||'';
+  const empresa  = document.getElementById('ic-empresa')?.value||'';
   const pct      = parseFloat(document.getElementById('ic-pct-com')?.value||'0') || 0;
   const comision = pct ? Math.round(importeSIVA * pct / 100) : 0;
+
   if (!Array.isArray(ST.cobranzasIngresadas)) ST.cobranzasIngresadas = [];
   ST.cobranzasIngresadas.push({
     id: uid(), mes: document.getElementById('ic-mes')?.value||'', fecha: hoy(),
-    cliente:   document.getElementById('ic-cliente')?.value||'',
-    empresa:   document.getElementById('ic-empresa')?.value||'',
+    cliente, empresa,
     documento: document.getElementById('ic-documento')?.value||'',
     detalle:   document.getElementById('ic-detalle')?.value||'',
-    nroFC:     document.getElementById('ic-nrofc')?.value||'',
-    nroPedido: document.getElementById('ic-nropedido')?.value||'',
+    nroFC, nroPedido: document.getElementById('ic-nropedido')?.value||'',
     importeFac: Math.round(importeFac), importeSIVA: Math.round(importeSIVA),
     pct, comision, tipoPago, createdAt: new Date().toISOString(), _manual: true,
   });
-  save(); _icLimpiar(); _icRenderUltimas();
 
-  // ── Auto-sincronizar con Facturas a Cobrar ──────────
-  const nroFC   = document.getElementById('ic-nrofc')?.value.trim() || '';
-  const matched = _icMatchearFacturas(nroFC,
-    document.getElementById('ic-cliente')?.value || '',
-    document.getElementById('ic-empresa')?.value || '',
-    Math.round(importeFac));
+  // Sincronizar con Facturas a Cobrar (modifica ST sin save propio)
+  const matched = _icMatchearFacturas(nroFC, cliente, empresa, Math.round(importeFac));
+
+  // Un único save captura tanto la cobranza como las facturas marcadas cobradas
+  save();
+  _icLimpiar(); _icRenderUltimas();
+
   if (matched > 0) {
     toast('Cobranza guardada ✓  ·  ' + matched + ' factura' + (matched > 1 ? 's marcadas' : ' marcada') + ' como cobrada en Facturas a Cobrar', 'success');
   } else {
@@ -27776,8 +28025,7 @@ function _icMatchearFacturas(nroFC, cliente, empresa, importeFac) {
       facs[i].estado     = 'cobrada';
       facs[i].fechaCobro = hoyD;
     });
-    save();
-    // Invalidar caché ECTA para que se refresque
+    // save() es responsabilidad del llamador (ingresarCobranzaGuardar)
     Object.keys(_ectaCache).forEach(function(v) {
       _ectaLoadTime[v] = 0;
     });
