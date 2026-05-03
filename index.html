@@ -18,7 +18,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
   <style>
     :root { --sidebar-w: 255px; --sidebar-bg: #0f172a; }
-    body { background: #f1f5f9; font-family: 'Segoe UI', system-ui, sans-serif; margin: 0; }
+    body { background: #f1f5f9; font-family: 'Segoe UI', system-ui, sans-serif; margin: 0; font-size: 15px; }
 
     /* ══ LOGIN OVERLAY ══ */
     #login-overlay {
@@ -110,7 +110,7 @@
       position: relative;
     }
     .sidebar .nav-link:hover { color: #e2e8f0; background: rgba(255,255,255,.07); transform: translateX(2px); }
-    .sidebar .nav-link.active { color: #fff; background: linear-gradient(135deg,#4f46e5,#6366f1); box-shadow: 0 2px 8px rgba(79,70,229,.4); padding-left: 16px; }
+    .sidebar .nav-link.active { color: #fff; background: linear-gradient(135deg,#4f46e5,#6366f1); box-shadow: 0 2px 8px rgba(79,70,229,.4); padding-left: 16px; font-weight: 700; }
     .sidebar .nav-link i { font-size: .9rem; width: 16px; text-align: center; flex-shrink: 0; }
     .sidebar-footer { padding: 8px 10px; border-top: 1px solid rgba(255,255,255,.08); flex-shrink: 0; }
     .sb-btn { 
@@ -1763,8 +1763,26 @@
   <!-- ══════════════════ KILOMETRAJE ══════════════════ -->
   <div id="page-kilometraje" class="page">
     <div class="page-hdr">
-      <h4><i class="bi bi-speedometer2 me-2" style="color:#0891b2"></i>Kilometraje — Cobrador</h4>
-      <button class="btn btn-primary btn-sm" onclick="kmAbrir()"><i class="bi bi-plus-lg me-1"></i>Registrar KM</button>
+      <h4 class="d-flex align-items-center gap-2">
+        <i class="bi bi-speedometer2 me-1" style="color:#0891b2"></i>
+        Kilometraje — Cobrador
+        <!-- Peugeot 2008 SVG icon -->
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 24" width="54" height="20" style="opacity:.75" title="Peugeot 2008">
+          <path d="M6 18 Q4 18 3 16 L1 12 Q0 10 2 10 L8 9 L14 6 L32 5 L46 6 L54 9 L60 10 Q62 10 62 12 L61 16 Q60 18 58 18 Z" fill="#334155"/>
+          <path d="M14 6 L32 5 L46 6 L54 9 L8 9 Z" fill="#475569"/>
+          <circle cx="14" cy="18" r="4" fill="#1e293b" stroke="#94a3b8" stroke-width="1.2"/>
+          <circle cx="14" cy="18" r="1.8" fill="#64748b"/>
+          <circle cx="50" cy="18" r="4" fill="#1e293b" stroke="#94a3b8" stroke-width="1.2"/>
+          <circle cx="50" cy="18" r="1.8" fill="#64748b"/>
+          <path d="M28 5 L28 9" stroke="#94a3b8" stroke-width=".8"/>
+        </svg>
+      </h4>
+      <div class="d-flex gap-2">
+        <button class="btn btn-outline-info btn-sm" onclick="kmImprimirReporteMensual()">
+          <i class="bi bi-file-earmark-pdf me-1"></i>Reporte PDF
+        </button>
+        <button class="btn btn-primary btn-sm" onclick="kmAbrir()"><i class="bi bi-plus-lg me-1"></i>Registrar KM</button>
+      </div>
     </div>
 
     <!-- Tarifa vigente + resumen -->
@@ -3787,6 +3805,9 @@ CREATE POLICY "acceso total" ON muuk_daily_backups FOR ALL USING (true) WITH CHE
         <input type="file" id="pdf-pagar" accept=".pdf" style="display:none" onchange="handlePDFUpload(event,'pagar')">
         <button class="btn btn-outline-success btn-sm" onclick="_abrirZIPImport('pagar')" title="Importar múltiples PDFs desde un ZIP de AFIP">
           <i class="bi bi-file-earmark-zip me-1"></i>ZIP AFIP
+        </button>
+        <button class="btn btn-warning btn-sm" onclick="_abrirModalCombustible()" style="background:#f59e0b;border-color:#d97706;color:#fff">
+          <i class="bi bi-fuel-pump me-1"></i>Combustible
         </button>
         <button class="btn btn-primary btn-sm" onclick="abrirModalFactura('pagar',null)" data-muuk-accion="facturasPagar:nueva">
           <i class="bi bi-plus-lg me-1"></i>Nueva Factura
@@ -6070,6 +6091,14 @@ CREATE POLICY "acceso total" ON muuk_daily_backups FOR ALL USING (true) WITH CHE
           <div class="col-12" id="mf-nc-info" style="display:none">
             <div class="alert alert-warning py-2 mb-0" style="font-size:.78rem"></div>
           </div>
+          <div class="col-sm-2">
+            <label class="form-label small fw-bold">Categoría</label>
+            <select class="form-select form-select-sm" id="mf-tipoItem">
+              <option value="">— Sin categoría —</option>
+              <option value="servicio">Servicio</option>
+              <option value="producto">Producto</option>
+            </select>
+          </div>
           <div class="col-sm-4">
             <label class="form-label small fw-bold">N° Comprobante</label>
             <input type="text" class="form-control form-control-sm" id="mf-numero" placeholder="0001-00001234">
@@ -6356,6 +6385,60 @@ CREATE POLICY "acceso total" ON muuk_daily_backups FOR ALL USING (true) WITH CHE
   </div>
   <div id="zip-status" class="mb-2"></div>
   <div id="zip-preview-list"></div>
+</div>
+
+<!-- ══════════ MODAL: Combustible ══════════ -->
+<div class="modal fade" id="modalCombustible" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header" style="background:linear-gradient(135deg,#d97706,#f59e0b);border:none">
+        <h5 class="modal-title text-white"><i class="bi bi-fuel-pump me-2"></i>Carga de Combustible</h5>
+        <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-info py-2 mb-3" style="font-size:.8rem">
+          <i class="bi bi-info-circle me-1"></i>Se registra como <strong>pagada</strong> con tarjeta corporativa y se suma a Facturas a Pagar del mes.
+        </div>
+        <div class="row g-3">
+          <div class="col-sm-6">
+            <label class="form-label small fw-bold">Fecha <span class="text-danger">*</span></label>
+            <input type="date" class="form-control form-control-sm" id="comb-fecha">
+          </div>
+          <div class="col-sm-6">
+            <label class="form-label small fw-bold">Importe Total <span class="text-danger">*</span></label>
+            <input type="number" class="form-control form-control-sm" id="comb-total" placeholder="0.00" min="0" step="0.01">
+          </div>
+          <div class="col-12">
+            <label class="form-label small fw-bold">Estación / Proveedor</label>
+            <input type="text" class="form-control form-control-sm" id="comb-proveedor" placeholder="Ej: YPF San Martín, Shell Av. Corrientes...">
+          </div>
+          <div class="col-12">
+            <label class="form-label small fw-bold">Observaciones</label>
+            <input type="text" class="form-control form-control-sm" id="comb-obs" placeholder="Litros, tipo de combustible, etc.">
+          </div>
+          <div class="col-12">
+            <label class="form-label small fw-bold">Comprobante (PDF o foto)</label>
+            <div class="d-flex gap-2 align-items-center">
+              <button type="button" class="btn btn-outline-secondary btn-sm" onclick="document.getElementById('comb-archivo').click()">
+                <i class="bi bi-paperclip me-1"></i>Adjuntar
+              </button>
+              <span id="comb-archivo-nombre" class="text-muted" style="font-size:.8rem">Sin archivo</span>
+            </div>
+            <input type="file" id="comb-archivo" accept=".pdf,image/*" style="display:none" onchange="_combArchivoSeleccionado(event)">
+            <div id="comb-preview-wrap" style="display:none;margin-top:8px">
+              <img id="comb-preview-img" src="" style="max-width:100%;max-height:180px;border-radius:6px;border:1px solid #e2e8f0">
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+        <button class="btn btn-warning btn-sm text-white" onclick="guardarCombustible()" style="background:#d97706;border-color:#b45309">
+          <i class="bi bi-check-lg me-1"></i>Guardar
+        </button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- ══════════ MODAL: Informe de Retenciones ══════════ -->
@@ -6956,7 +7039,7 @@ CREATE POLICY "acceso total" ON muuk_daily_backups FOR ALL USING (true) WITH CHE
 </div>
 
 <div class="position-fixed bottom-0 end-0 p-3" style="z-index:9999">
-  <div id="toast" class="toast align-items-center text-white border-0" role="alert">
+  <div id="toast" class="toast align-items-center text-white border-0" role="alert" style="border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,.25);min-width:280px">
     <div class="d-flex">
       <div class="toast-body" id="toast-msg"></div>
       <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
@@ -9690,7 +9773,7 @@ function initApp() {
   setTimeout(_sbScrollCheck, 400);
   updateBreadcrumb('bienvenida');
   renderTodo();
-  setTimeout(() => irA('bienvenida'), 80);
+  irA('bienvenida');
   _aiRestoreConfig();
   // Restaurar datos empresa en config
   (function(){
@@ -11668,8 +11751,14 @@ async function cargarComisionDetalle(sheetTab, empresaName) {
 // Llamado desde el botón en el detalle (datos ya en memoria)
 function comImprimirSaldoDesdeDetalle() {
   if (!_comLastDetail) { toast('Abrí el detalle de la empresa primero', 'warning'); return; }
-  const { empresaName, saldo, details, isFull, hasSaldo = true } = _comLastDetail;
-  _comBuildPDFSaldoEmpresa(empresaName, saldo, details, isFull, hasSaldo);
+  const { empresaName, saldo, sheetTab } = _comLastDetail;
+  if (sheetTab) {
+    _comMostrarFiltrosPDF(sheetTab, empresaName, saldo);
+  } else {
+    // fallback sin sheetTab: usar datos en memoria con filtro manual
+    const { details, isFull, hasSaldo = true } = _comLastDetail;
+    _comBuildPDFSaldoEmpresa(empresaName, saldo, details, isFull, hasSaldo);
+  }
 }
 
 // Llamado desde el botón "Imprimir con filtro" en el detalle (abre diálogo de fechas)
@@ -12426,7 +12515,7 @@ function renderCheques(cat){
     transferencia:'<span class="badge bg-success" style="font-size:.65rem"><i class="bi bi-arrow-left-right me-1"></i>Transfer.</span>'
   }[inst] || '<span class="badge bg-secondary" style="font-size:.65rem">Cheque</span>');
 
-  wrap.innerHTML=headerExtra+filterTag+`<div class="table-responsive"><table class="table table-hover mb-0">
+  wrap.innerHTML=headerExtra+filterTag+`<div class="table-responsive"><table class="table table-sm table-hover mb-0">
     <thead><tr><th class="ps-3">Emisión</th><th>${isPagar?'Fecha de pago':'Vencimiento'}</th>
       ${isPagar?'<th>Instrumento</th><th>Proveedor</th><th>Factura</th>':''}
       <th>${isPagar?'Banco origen':'Banco Emisor'}</th>
@@ -15577,6 +15666,7 @@ function abrirModalFactura(cat, id) {
   document.getElementById('mf-fechaVenc').value   = f?.fechaVenc || '';
   document.getElementById('mf-fechaPago').value   = f?.fechaPago || '';
   document.getElementById('mf-tipo').value        = f?.tipo || 'B';
+  document.getElementById('mf-tipoItem').value    = f?.tipoItem || '';
   document.getElementById('mf-numero').value      = f?.numero || '';
   document.getElementById('mf-cliente').value     = f?.cliente || '';
   document.getElementById('mf-cuit').value        = f?.cuit || '';
@@ -15724,6 +15814,7 @@ function guardarFactura() {
     fechaVenc:  document.getElementById('mf-fechaVenc').value,
     fechaPago:  document.getElementById('mf-fechaPago').value,
     tipo:       document.getElementById('mf-tipo').value,
+    tipoItem:   document.getElementById('mf-tipoItem').value,
     numero:     document.getElementById('mf-numero').value.trim(),
     cliente:    cli,
     cuit:       document.getElementById('mf-cuit').value.trim(),
@@ -16055,13 +16146,19 @@ function _tablaFacturas(list, cat) {
     const isNC = f.tipo === 'NC';
     const isND = f.tipo === 'ND';
     const ncBadge = isNC ? `<span class="bdg ms-1" style="background:#7c3aed;color:#fff">NC</span>` : isND ? `<span class="bdg ms-1" style="background:#0891b2;color:#fff">ND</span>` : '';
+    // Badge Servicio/Producto
+    const tipoItemBadge = f.tipoItem === 'servicio'
+      ? `<span class="bdg ms-1" style="background:#0e7490;color:#fff" title="Servicio"><i class="bi bi-headset"></i></span>`
+      : f.tipoItem === 'producto'
+      ? `<span class="bdg ms-1" style="background:#15803d;color:#fff" title="Producto"><i class="bi bi-box-seam"></i></span>`
+      : '';
     const totalDisplay = isNC ? `<strong style="color:#7c3aed">${fmt(f.total)}</strong>` : `<strong>${fmt(f.total)}</strong>`;
     const rowStyle = isNC ? 'background:#faf5ff' : isND ? 'background:#f0f9ff' : '';
 
     // Fila principal
     let mainRow = `<tr style="${rowStyle}">
       <td>${fmtF(f.fecha)}</td>
-      <td><strong>${f.tipo||''} ${f.numero||'—'}</strong>${ncBadge}</td>
+      <td><strong>${f.tipo||''} ${f.numero||'—'}</strong>${ncBadge}${tipoItemBadge}</td>
       <td>${f.cliente||'—'}<br><small class="text-muted">${f.cuit||''}</small>${f.receptor?`<br><small class="text-muted">→ ${f.receptor}</small>`:''}</td>
       <td>${f.fechaVenc?fmtF(f.fechaVenc):'—'}</td>
       <td>${_diasBadge(f)}</td>
@@ -16176,6 +16273,82 @@ function _verPdfPreview(cat, id) {
 }
 
 // ── Imprimir reporte de pendientes ───────────────────
+// ── Combustible ───────────────────────────────────
+let _combPdfPreview = '';
+let _combPdfNombre  = '';
+
+function _abrirModalCombustible() {
+  _combPdfPreview = ''; _combPdfNombre = '';
+  document.getElementById('comb-fecha').value      = hoy();
+  document.getElementById('comb-total').value      = '';
+  document.getElementById('comb-proveedor').value  = '';
+  document.getElementById('comb-obs').value        = '';
+  document.getElementById('comb-archivo-nombre').textContent = 'Sin archivo';
+  const pw = document.getElementById('comb-preview-wrap');
+  if (pw) pw.style.display = 'none';
+  new bootstrap.Modal(document.getElementById('modalCombustible')).show();
+}
+
+function _combArchivoSeleccionado(event) {
+  const file = event.target.files[0]; if (!file) return;
+  _combPdfNombre = file.name;
+  document.getElementById('comb-archivo-nombre').textContent = file.name;
+  if (file.type.startsWith('image/')) {
+    const reader = new FileReader();
+    reader.onload = e => {
+      _combPdfPreview = e.target.result;
+      const img = document.getElementById('comb-preview-img');
+      const pw  = document.getElementById('comb-preview-wrap');
+      if (img) img.src = _combPdfPreview;
+      if (pw)  pw.style.display = '';
+    };
+    reader.readAsDataURL(file);
+  } else {
+    _combPdfPreview = '';
+    const pw = document.getElementById('comb-preview-wrap');
+    if (pw) pw.style.display = 'none';
+  }
+}
+
+function guardarCombustible() {
+  const fecha  = document.getElementById('comb-fecha').value;
+  const total  = parseFloat(document.getElementById('comb-total').value) || 0;
+  const prov   = (document.getElementById('comb-proveedor').value || 'Combustible').trim();
+  const obs    = document.getElementById('comb-obs').value.trim();
+  if (!fecha)  { toast('Ingresá la fecha', 'warning'); return; }
+  if (!total)  { toast('Ingresá el importe', 'warning'); return; }
+
+  if (!ST.facturasPagar) ST.facturasPagar = [];
+  const obj = {
+    id:         Date.now().toString(36) + Math.random().toString(36).slice(2,6),
+    fecha,
+    fechaVenc:  fecha,
+    fechaPago:  fecha,
+    tipo:       'X',
+    tipoItem:   'servicio',
+    categoria:  'combustible',
+    numero:     '',
+    cliente:    prov || 'Combustible',
+    cuit:       '',
+    neto:       Math.round(total / 1.21 * 100) / 100,
+    iva:        21,
+    ivaImporte: Math.round((total - total / 1.21) * 100) / 100,
+    total,
+    estado:     'pagada',
+    medioPago:  'tarjetaCorporativa',
+    desc:       obs,
+    receptor:   '',
+    pdfNombre:  _combPdfNombre,
+    pdfPreview: _combPdfPreview,
+    lineas: [], impuestos: [], retenciones: [], netoCobrar: total
+  };
+  ST.facturasPagar.push(obj);
+  saveData();
+  renderFacturasPagar();
+  bootstrap.Modal.getInstance(document.getElementById('modalCombustible'))?.hide();
+  toast('Combustible registrado: ' + fmt(total), 'success');
+}
+
 function printReportePendientes(cat) {
   const arr = cat === 'cobrar' ? (ST.facturasACobrar||[]) : (ST.facturasPagar||[]);
   const pend = arr.filter(f => f.estado === 'pendiente' || f.estado === 'vencida')
@@ -20775,6 +20948,92 @@ function kmEliminarTarifa(id) {
     kmRender();
     toast('Tarifa eliminada', 'warning');
   }, { title:'Eliminar tarifa', btnLabel:'Eliminar' });
+}
+
+function kmImprimirReporteMensual() {
+  const filtroMes = document.getElementById('km-filtro-mes')?.value || hoy().substring(0, 7);
+  const registros = (ST.kilometraje || [])
+    .filter(r => r.fecha.substring(0, 7) === filtroMes)
+    .sort((a, b) => a.fecha.localeCompare(b.fecha));
+
+  const [anio, mes] = filtroMes.split('-');
+  const mesNombres = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const mesLabel = mesNombres[parseInt(mes, 10) - 1] + ' ' + anio;
+
+  const totalKm    = registros.reduce((s, r) => s + r.km, 0);
+  const totalMonto = registros.reduce((s, r) => s + r.monto, 0);
+  const totalPeajes = registros.reduce((s, r) => s + (r.peajes || 0), 0);
+  const totalNeto  = totalMonto + totalPeajes;
+
+  const rows = registros.map(r => `
+    <tr>
+      <td>${fmtF(r.fecha)}</td>
+      <td class="text-end">${r.km.toLocaleString('es-AR')}</td>
+      <td class="text-end">$${r.tarifa ? r.tarifa.toLocaleString('es-AR') : '—'}</td>
+      <td class="text-end"><strong>$${r.monto.toLocaleString('es-AR')}</strong></td>
+      <td class="text-end">${r.peajes > 0 ? '$' + r.peajes.toLocaleString('es-AR') : '—'}</td>
+      <td class="text-end"><strong>$${(r.monto + (r.peajes || 0)).toLocaleString('es-AR')}</strong></td>
+      <td>${r.pagado ? '<span style="color:#16a34a;font-weight:600">✓ Pagado</span>' : '<span style="color:#dc2626">Pendiente</span>'}</td>
+      <td>${r.obs || '—'}</td>
+    </tr>`).join('');
+
+  const html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
+  <title>Reporte KM ${mesLabel}</title>
+  <style>
+    body { font-family: Arial, sans-serif; font-size: 12px; margin: 30px; color: #1e293b; }
+    h1 { font-size: 18px; margin: 0 0 4px; color: #0c4a6e; }
+    .sub { font-size: 11px; color: #64748b; margin-bottom: 20px; }
+    .logo { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+    .logo-box { background: #0369a1; color: #fff; font-weight: 800; font-size: 20px; padding: 6px 12px; border-radius: 6px; letter-spacing: 1px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+    th { background: #0369a1; color: #fff; padding: 7px 8px; text-align: left; font-size: 11px; }
+    th.r, td.r { text-align: right; }
+    td { padding: 6px 8px; border-bottom: 1px solid #e2e8f0; }
+    tr:nth-child(even) { background: #f8fafc; }
+    tfoot td { font-weight: 700; border-top: 2px solid #0369a1; background: #eff6ff; }
+    .totales { margin-top: 16px; display: flex; gap: 20px; }
+    .tot-card { background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; padding: 10px 16px; min-width: 140px; }
+    .tot-label { font-size: 10px; color: #0369a1; font-weight: 600; text-transform: uppercase; }
+    .tot-val { font-size: 18px; font-weight: 800; color: #0c4a6e; margin-top: 2px; }
+    @media print { body { margin: 15px; } }
+  </style></head><body>
+  <div class="logo">
+    <div class="logo-box">MÜÜK</div>
+    <div>
+      <h1>Reporte de Kilometraje — ${mesLabel}</h1>
+      <div class="sub">Cobrador · Müük S.R.L. · Generado ${fmtF(hoy())}</div>
+    </div>
+  </div>
+  ${registros.length === 0 ? '<p style="color:#64748b;font-style:italic">Sin registros para este mes.</p>' : `
+  <table>
+    <thead><tr>
+      <th>Fecha</th><th class="r">KM</th><th class="r">Tarifa</th>
+      <th class="r">Monto KM</th><th class="r">Peajes</th><th class="r">Total</th>
+      <th>Estado</th><th>Observaciones</th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+    <tfoot><tr>
+      <td><strong>TOTAL</strong></td>
+      <td class="r">${totalKm.toLocaleString('es-AR')} km</td>
+      <td>—</td>
+      <td class="r">$${totalMonto.toLocaleString('es-AR')}</td>
+      <td class="r">${totalPeajes > 0 ? '$' + totalPeajes.toLocaleString('es-AR') : '—'}</td>
+      <td class="r">$${totalNeto.toLocaleString('es-AR')}</td>
+      <td colspan="2"></td>
+    </tr></tfoot>
+  </table>
+  <div class="totales">
+    <div class="tot-card"><div class="tot-label">Total KM</div><div class="tot-val">${totalKm.toLocaleString('es-AR')}</div></div>
+    <div class="tot-card"><div class="tot-label">Monto KM</div><div class="tot-val">$${totalMonto.toLocaleString('es-AR')}</div></div>
+    ${totalPeajes > 0 ? `<div class="tot-card"><div class="tot-label">Peajes</div><div class="tot-val">$${totalPeajes.toLocaleString('es-AR')}</div></div>` : ''}
+    <div class="tot-card" style="background:#fef2f2;border-color:#fecaca"><div class="tot-label" style="color:#991b1b">Total a Cobrar</div><div class="tot-val" style="color:#b91c1c">$${totalNeto.toLocaleString('es-AR')}</div></div>
+  </div>`}
+  <script>window.onload=()=>window.print();<\/script>
+  </body></html>`;
+
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  const url  = URL.createObjectURL(blob);
+  window.open(url, '_blank');
 }
 
 /* ═══════════════════════════════════════════
