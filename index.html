@@ -3308,7 +3308,7 @@ CREATE POLICY "acceso total" ON muuk_daily_backups FOR ALL USING (true) WITH CHE
       </div>
       <iframe id="manual-iframe"
         style="width:100%;height:calc(100vh - 160px);min-height:600px;border:1.5px solid #e2e8f0;border-radius:10px;background:#fff"
-        sandbox="allow-same-origin allow-scripts allow-popups">
+        sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-modals">
       </iframe>
     </div>
   </div>
@@ -9206,110 +9206,121 @@ const _GRUPOS_ACCESO = {
    MANUAL DE USUARIO
 ═══════════════════════════════════════════ */
 function renderManual() {
-  const data    = ST.config?.manualData   || null;
-  const nombre  = ST.config?.manualNombre || '';
-  const tipo    = ST.config?.manualTipo   || '';
-  const fecha   = ST.config?.manualFecha  || '';
-  const admin   = isAdmin();
+  const cfg    = ST.config || {};
+  const nombre = cfg.manualNombre || '';
+  const fecha  = cfg.manualFecha  || '';
+  const isPDF  = (cfg.manualTipo || '').includes('pdf') || nombre.toLowerCase().endsWith('.pdf');
+  // HTML stored as text, PDF stored as base64
+  const hasContent = isPDF ? !!cfg.manualData : !!cfg.manualHtml;
+  const admin  = isAdmin();
 
-  const empty   = document.getElementById('manual-empty');
-  const viewer  = document.getElementById('manual-viewer-wrap');
-  const iframe  = document.getElementById('manual-iframe');
-  const btnAbrir    = document.getElementById('btn-manual-abrir');
-  const btnDl       = document.getElementById('btn-manual-descargar');
-  const btnUpLabel  = document.getElementById('btn-manual-upload-label');
-  const btnEmptyLbl = document.getElementById('btn-manual-upload-empty');
-  const lblNombre   = document.getElementById('manual-nombre-label');
-  const lblFecha    = document.getElementById('manual-fecha-label');
+  const empty      = document.getElementById('manual-empty');
+  const viewer     = document.getElementById('manual-viewer-wrap');
+  const iframe     = document.getElementById('manual-iframe');
+  const btnAbrir   = document.getElementById('btn-manual-abrir');
+  const btnDl      = document.getElementById('btn-manual-descargar');
+  const btnUp      = document.getElementById('btn-manual-upload-label');
+  const btnUpEmpty = document.getElementById('btn-manual-upload-empty');
+  const lblNombre  = document.getElementById('manual-nombre-label');
+  const lblFecha   = document.getElementById('manual-fecha-label');
 
-  if (!data) {
-    // Sin manual cargado
+  if (!hasContent) {
     empty.style.display  = '';
     viewer.style.display = 'none';
-    btnAbrir.style.display  = 'none';
-    btnDl.style.display     = 'none';
-    btnUpLabel.style.display = admin ? '' : 'none';
-    if (btnEmptyLbl) btnEmptyLbl.style.display = admin ? '' : 'none';
+    btnAbrir.style.display = 'none';
+    btnDl.style.display    = 'none';
+    if (btnUp)      btnUp.style.display      = admin ? '' : 'none';
+    if (btnUpEmpty) btnUpEmpty.style.display = admin ? '' : 'none';
     return;
   }
 
-  // Manual disponible
   empty.style.display  = 'none';
   viewer.style.display = '';
-  btnAbrir.style.display   = '';
-  btnDl.style.display      = '';
-  btnUpLabel.style.display = admin ? '' : 'none';
+  btnAbrir.style.display = '';
+  btnDl.style.display    = '';
+  if (btnUp) btnUp.style.display = admin ? '' : 'none';
   if (lblNombre) lblNombre.textContent = nombre || 'Manual';
-  if (lblFecha)  lblFecha.textContent  = fecha  ? 'Subido el ' + fecha : '';
+  if (lblFecha)  lblFecha.textContent  = fecha ? 'Subido el ' + fecha : '';
 
-  // Cargar en iframe
-  if (tipo === 'text/html' || tipo === 'text/htm' || nombre.endsWith('.html') || nombre.endsWith('.htm')) {
-    // HTML: usar srcdoc decodificando base64
-    try {
-      const html = decodeURIComponent(escape(atob(data)));
-      iframe.srcdoc = html;
-    } catch(e) {
-      iframe.src = 'data:text/html;base64,' + data;
-    }
+  if (isPDF) {
+    // PDF: data URL desde base64
+    iframe.removeAttribute('srcdoc');
+    iframe.src = 'data:application/pdf;base64,' + cfg.manualData;
   } else {
-    // PDF u otro: src con data URL
-    iframe.src = 'data:' + (tipo || 'application/pdf') + ';base64,' + data;
+    // HTML: srcdoc directo (sin re-codificar)
+    iframe.removeAttribute('src');
+    iframe.srcdoc = cfg.manualHtml;
   }
 }
 
 function _manualUpload(event) {
   const file = event.target.files[0];
   if (!file) return;
-  const maxMB = 10;
+  const maxMB = 8;
   if (file.size > maxMB * 1024 * 1024) {
-    toast('El archivo supera los ' + maxMB + ' MB. Comprimilo antes de subir.', 'warning');
+    toast('El archivo supera los ' + maxMB + ' MB', 'warning');
     event.target.value = '';
     return;
   }
+  const isPDF = file.type.includes('pdf') || file.name.toLowerCase().endsWith('.pdf');
+  if (!ST.config) ST.config = {};
+  ST.config.manualNombre = file.name;
+  ST.config.manualTipo   = isPDF ? 'application/pdf' : 'text/html';
+  ST.config.manualFecha  = new Date().toLocaleDateString('es-AR', { day:'2-digit', month:'2-digit', year:'numeric' });
+
   const reader = new FileReader();
-  reader.onload = function(e) {
-    const base64 = e.target.result.split(',')[1];
-    if (!ST.config) ST.config = {};
-    ST.config.manualData   = base64;
-    ST.config.manualNombre = file.name;
-    ST.config.manualTipo   = file.type || (file.name.endsWith('.pdf') ? 'application/pdf' : 'text/html');
-    ST.config.manualFecha  = new Date().toLocaleDateString('es-AR', { day:'2-digit', month:'2-digit', year:'numeric' });
-    save();
-    toast('Manual subido correctamente ✓', 'success');
-    renderManual();
-    event.target.value = '';
-  };
-  reader.readAsDataURL(file);
+  if (isPDF) {
+    reader.onload = function(e) {
+      ST.config.manualData = e.target.result.split(',')[1];
+      ST.config.manualHtml = '';
+      save();
+      toast('Manual subido correctamente ✓', 'success');
+      renderManual();
+    };
+    reader.readAsDataURL(file);
+  } else {
+    // HTML: leer como texto plano, sin base64
+    reader.onload = function(e) {
+      ST.config.manualHtml = e.target.result;
+      ST.config.manualData = '';
+      save();
+      toast('Manual subido correctamente ✓', 'success');
+      renderManual();
+    };
+    reader.readAsText(file, 'UTF-8');
+  }
+  event.target.value = '';
 }
 
 function _manualAbrir() {
-  const data  = ST.config?.manualData;
-  const tipo  = ST.config?.manualTipo || 'text/html';
-  const nombre = ST.config?.manualNombre || 'manual';
-  if (!data) return;
-  const url = 'data:' + tipo + ';base64,' + data;
-  const win = window.open();
-  if (win) {
-    if (tipo.includes('html')) {
-      try {
-        const html = decodeURIComponent(escape(atob(data)));
-        win.document.write(html);
-        win.document.close();
-      } catch(e) { win.location.href = url; }
-    } else {
-      win.location.href = url;
-    }
+  const cfg  = ST.config || {};
+  const isPDF = (cfg.manualTipo || '').includes('pdf');
+  if (isPDF) {
+    const win = window.open();
+    if (win) win.location.href = 'data:application/pdf;base64,' + cfg.manualData;
+  } else {
+    if (!cfg.manualHtml) return;
+    const blob = new Blob([cfg.manualHtml], { type: 'text/html; charset=utf-8' });
+    const url  = URL.createObjectURL(blob);
+    window.open(url, '_blank');
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
   }
 }
 
 function _manualDescargar() {
-  const data  = ST.config?.manualData;
-  const tipo  = ST.config?.manualTipo || 'text/html';
-  const nombre = ST.config?.manualNombre || 'manual_muuk.html';
-  if (!data) return;
+  const cfg    = ST.config || {};
+  const nombre = cfg.manualNombre || 'manual_muuk.html';
+  const isPDF  = (cfg.manualTipo || '').includes('pdf');
   const a = document.createElement('a');
-  a.href     = 'data:' + tipo + ';base64,' + data;
   a.download = nombre;
+  if (isPDF) {
+    a.href = 'data:application/pdf;base64,' + cfg.manualData;
+  } else {
+    if (!cfg.manualHtml) return;
+    const blob = new Blob([cfg.manualHtml], { type: 'text/html; charset=utf-8' });
+    a.href = URL.createObjectURL(blob);
+    setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+  }
   a.click();
 }
 
