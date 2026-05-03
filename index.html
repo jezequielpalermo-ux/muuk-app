@@ -1781,6 +1781,9 @@
         <button class="btn btn-outline-info btn-sm" onclick="kmImprimirReporteMensual()">
           <i class="bi bi-file-earmark-pdf me-1"></i>Reporte PDF
         </button>
+        <button class="btn btn-outline-warning btn-sm" onclick="kmAbrirPeajeSolo()" style="color:#92400e;border-color:#d97706">
+          <i class="bi bi-sign-turn-right me-1"></i>Agregar Peaje
+        </button>
         <button class="btn btn-primary btn-sm" onclick="kmAbrir()"><i class="bi bi-plus-lg me-1"></i>Registrar KM</button>
       </div>
     </div>
@@ -2018,6 +2021,37 @@
         <div class="modal-footer py-2">
           <button class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancelar</button>
           <button class="btn btn-sm btn-warning" onclick="kmGuardarTarifa()"><i class="bi bi-check-lg me-1"></i>Guardar Ajuste</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Peaje sin KM -->
+  <div class="modal fade" id="modalKmPeajeSolo" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+      <div class="modal-content" style="border-radius:12px">
+        <div class="modal-header py-2" style="background:#fffbeb;border-bottom:2px solid #d97706">
+          <h6 class="modal-title" style="font-weight:700;color:#92400e"><i class="bi bi-sign-turn-right me-2"></i>Registrar Peaje</h6>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="alert alert-info py-2 mb-3" style="font-size:.78rem"><i class="bi bi-info-circle me-1"></i>Solo peaje, sin kilómetros. Se suma a la cuenta pendiente del cobrador.</div>
+          <div class="mb-2">
+            <label class="form-label small fw-bold mb-1">Fecha <span class="text-danger">*</span></label>
+            <input type="date" class="form-control form-control-sm" id="kmp-fecha">
+          </div>
+          <div class="mb-2">
+            <label class="form-label small fw-bold mb-1">Monto peaje <span class="text-danger">*</span></label>
+            <input type="number" class="form-control form-control-sm" id="kmp-monto" min="0" step="100" placeholder="Ej: 2500">
+          </div>
+          <div class="mb-2">
+            <label class="form-label small fw-bold mb-1">Observaciones</label>
+            <input type="text" class="form-control form-control-sm" id="kmp-obs" placeholder="Autopista, ruta, etc.">
+          </div>
+        </div>
+        <div class="modal-footer py-2">
+          <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+          <button class="btn btn-warning btn-sm text-white" onclick="kmGuardarPeajeSolo()" style="background:#d97706;border-color:#b45309"><i class="bi bi-check-lg me-1"></i>Guardar</button>
         </div>
       </div>
     </div>
@@ -4753,6 +4787,9 @@ CREATE POLICY "acceso total" ON muuk_daily_backups FOR ALL USING (true) WITH CHE
       <li class="nav-item">
         <a class="nav-link" id="crm-tab-empresas" href="#" onclick="crmSetTab('empresas',event)" style="font-size:.78rem;font-weight:600;padding:6px 14px"><i class="bi bi-building-check me-1"></i>Empresas</a>
       </li>
+      <li class="nav-item">
+        <a class="nav-link" id="crm-tab-kinto" href="#" onclick="crmSetTab('kinto',event)" style="font-size:.78rem;font-weight:600;padding:6px 14px"><i class="bi bi-car-front-fill me-1" style="color:#cc0000"></i>KINTO</a>
+      </li>
     </ul>
 
     <!-- Stats row -->
@@ -4770,6 +4807,161 @@ CREATE POLICY "acceso total" ON muuk_daily_backups FOR ALL USING (true) WITH CHE
     <div id="crm-tab-content-empresas" style="display:none">
       <div id="crm-cards" class="row g-3"></div>
     </div>
+
+    <!-- ══ KINTO Tab Content ══ -->
+    <div id="crm-tab-content-kinto" style="display:none">
+      <!-- Header KINTO -->
+      <div style="background:linear-gradient(135deg,#cc0000,#ff4444);border-radius:12px;padding:16px 20px;margin-bottom:20px;display:flex;align-items:center;gap:14px">
+        <div style="background:#fff;border-radius:8px;padding:6px 10px">
+          <!-- Toyota logo simplified -->
+          <svg width="48" height="28" viewBox="0 0 100 58" xmlns="http://www.w3.org/2000/svg">
+            <ellipse cx="50" cy="30" rx="48" ry="24" fill="none" stroke="#cc0000" stroke-width="5"/>
+            <ellipse cx="50" cy="30" rx="22" ry="18" fill="none" stroke="#cc0000" stroke-width="5"/>
+            <ellipse cx="50" cy="12" rx="12" ry="8" fill="none" stroke="#cc0000" stroke-width="4"/>
+          </svg>
+        </div>
+        <div>
+          <div style="color:#fff;font-weight:800;font-size:1.1rem;letter-spacing:.05em">KINTO — Renting Müük S.R.L.</div>
+          <div style="color:#fca5a5;font-size:.75rem;margin-top:2px">Gestión de flota vehicular · Facturas y contratos vigentes</div>
+        </div>
+      </div>
+
+      <!-- 3 car cards -->
+      <div class="row g-4">
+
+        <!-- Jonathan — Toyota Yaris 2022 -->
+        <div class="col-12 col-lg-4">
+          <div class="card h-100" style="border:2px solid #e2e8f0;border-radius:14px;overflow:hidden">
+            <div style="background:linear-gradient(135deg,#1e3a5f,#0369a1);padding:16px;text-align:center">
+              <!-- Toyota Yaris 2022 SVG -->
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 80" width="180" height="72" style="display:block;margin:0 auto 8px">
+                <!-- Body -->
+                <path d="M20 55 Q22 55 25 50 L40 32 Q50 22 70 20 L130 20 Q148 20 158 30 L172 50 Q175 52 178 55 Z" fill="#e2e8f0"/>
+                <path d="M40 32 Q50 22 70 20 L130 20 Q148 20 158 30 L172 50 L25 50 Z" fill="#cbd5e1"/>
+                <!-- Windows -->
+                <path d="M70 22 L65 47 L100 47 L100 22 Z" fill="#bfdbfe" opacity=".85"/>
+                <path d="M102 22 L102 47 L135 47 L148 32 Q140 22 125 22 Z" fill="#bfdbfe" opacity=".85"/>
+                <!-- Window divider -->
+                <line x1="100" y1="22" x2="100" y2="47" stroke="#94a3b8" stroke-width="1.5"/>
+                <!-- Headlights -->
+                <ellipse cx="174" cy="47" rx="6" ry="4" fill="#fef9c3"/>
+                <ellipse cx="25" cy="49" rx="5" ry="3.5" fill="#fef3c7"/>
+                <!-- Wheels -->
+                <circle cx="52" cy="57" r="12" fill="#1e293b"/>
+                <circle cx="52" cy="57" r="6" fill="#64748b"/>
+                <circle cx="52" cy="57" r="2" fill="#94a3b8"/>
+                <circle cx="150" cy="57" r="12" fill="#1e293b"/>
+                <circle cx="150" cy="57" r="6" fill="#64748b"/>
+                <circle cx="150" cy="57" r="2" fill="#94a3b8"/>
+                <!-- Ground shadow -->
+                <ellipse cx="101" cy="70" rx="75" ry="4" fill="#94a3b8" opacity=".25"/>
+              </svg>
+              <div style="color:#fff;font-weight:800;font-size:1rem">Jonathan Palermo</div>
+              <div style="color:#bae6fd;font-size:.78rem;margin-top:2px">Toyota Yaris 2022</div>
+            </div>
+            <div class="card-body p-3" id="kinto-body-jonathan">
+              <!-- Rendered by renderKinto() -->
+              <div class="text-center text-muted py-2" style="font-size:.8rem"><i class="bi bi-arrow-repeat me-1"></i>Cargando...</div>
+            </div>
+            <div class="card-footer p-2 d-flex gap-2">
+              <input type="file" id="kinto-file-jonathan-factura" accept=".pdf,image/*" style="display:none" onchange="_kintoSubirArchivo(event,'jonathan','factura')">
+              <input type="file" id="kinto-file-jonathan-contrato" accept=".pdf,image/*" style="display:none" onchange="_kintoSubirArchivo(event,'jonathan','contrato')">
+              <button class="btn btn-outline-primary btn-sm flex-fill" style="font-size:.72rem" onclick="document.getElementById('kinto-file-jonathan-factura').click()"><i class="bi bi-receipt me-1"></i>Subir Factura</button>
+              <button class="btn btn-outline-success btn-sm flex-fill" style="font-size:.72rem" onclick="document.getElementById('kinto-file-jonathan-contrato').click()"><i class="bi bi-file-earmark-check me-1"></i>Contrato</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Alberto — Toyota Corolla Cross Hybrid 2024 -->
+        <div class="col-12 col-lg-4">
+          <div class="card h-100" style="border:2px solid #e2e8f0;border-radius:14px;overflow:hidden">
+            <div style="background:linear-gradient(135deg,#14532d,#16a34a);padding:16px;text-align:center">
+              <!-- Toyota Corolla Cross SVG (SUV profile) -->
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 80" width="180" height="72" style="display:block;margin:0 auto 8px">
+                <!-- Body (taller, more boxy SUV) -->
+                <path d="M18 58 L18 46 Q20 42 24 40 L38 28 Q46 18 66 17 L136 17 Q156 17 164 27 L174 40 Q178 43 180 46 L180 58 Z" fill="#dcfce7"/>
+                <path d="M38 28 Q46 18 66 17 L136 17 Q156 17 164 27 L174 40 L24 40 Z" fill="#bbf7d0"/>
+                <!-- Windows (squarer SUV shape) -->
+                <path d="M67 19 L62 38 L98 38 L98 19 Z" fill="#bfdbfe" opacity=".85"/>
+                <path d="M101 19 L101 38 L140 38 L152 28 Q144 19 128 19 Z" fill="#bfdbfe" opacity=".85"/>
+                <line x1="100" y1="19" x2="100" y2="38" stroke="#86efac" stroke-width="1.5"/>
+                <!-- Roof rack hint -->
+                <line x1="67" y1="18" x2="152" y2="18" stroke="#86efac" stroke-width="2"/>
+                <!-- Headlights -->
+                <path d="M172 43 L178 46 L178 52 L172 50 Z" fill="#fef9c3"/>
+                <ellipse cx="22" cy="50" rx="5" ry="3.5" fill="#fef3c7"/>
+                <!-- Skid plate / cladding -->
+                <rect x="18" y="55" width="162" height="5" rx="1" fill="#94a3b8"/>
+                <!-- Wheels (slightly larger for SUV) -->
+                <circle cx="50" cy="60" r="13" fill="#1e293b"/>
+                <circle cx="50" cy="60" r="6.5" fill="#64748b"/>
+                <circle cx="50" cy="60" r="2.5" fill="#94a3b8"/>
+                <circle cx="152" cy="60" r="13" fill="#1e293b"/>
+                <circle cx="152" cy="60" r="6.5" fill="#64748b"/>
+                <circle cx="152" cy="60" r="2.5" fill="#94a3b8"/>
+                <!-- Hybrid badge hint -->
+                <rect x="88" y="50" width="24" height="6" rx="2" fill="#16a34a"/>
+                <text x="100" y="55" text-anchor="middle" font-size="4.5" fill="#fff" font-family="Arial" font-weight="bold">HYBRID</text>
+                <!-- Ground shadow -->
+                <ellipse cx="101" cy="74" rx="75" ry="4" fill="#86efac" opacity=".25"/>
+              </svg>
+              <div style="color:#fff;font-weight:800;font-size:1rem">Alberto Palermo</div>
+              <div style="color:#bbf7d0;font-size:.78rem;margin-top:2px">Toyota Corolla Cross Hybrid 2024</div>
+            </div>
+            <div class="card-body p-3" id="kinto-body-alberto">
+              <div class="text-center text-muted py-2" style="font-size:.8rem"><i class="bi bi-arrow-repeat me-1"></i>Cargando...</div>
+            </div>
+            <div class="card-footer p-2 d-flex gap-2">
+              <input type="file" id="kinto-file-alberto-factura" accept=".pdf,image/*" style="display:none" onchange="_kintoSubirArchivo(event,'alberto','factura')">
+              <input type="file" id="kinto-file-alberto-contrato" accept=".pdf,image/*" style="display:none" onchange="_kintoSubirArchivo(event,'alberto','contrato')">
+              <button class="btn btn-outline-primary btn-sm flex-fill" style="font-size:.72rem" onclick="document.getElementById('kinto-file-alberto-factura').click()"><i class="bi bi-receipt me-1"></i>Subir Factura</button>
+              <button class="btn btn-outline-success btn-sm flex-fill" style="font-size:.72rem" onclick="document.getElementById('kinto-file-alberto-contrato').click()"><i class="bi bi-file-earmark-check me-1"></i>Contrato</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Ricardo — Toyota Corolla Cross Hybrid 2024 -->
+        <div class="col-12 col-lg-4">
+          <div class="card h-100" style="border:2px solid #e2e8f0;border-radius:14px;overflow:hidden">
+            <div style="background:linear-gradient(135deg,#44403c,#78716c);padding:16px;text-align:center">
+              <!-- Same Corolla Cross SVG in dark tone -->
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 80" width="180" height="72" style="display:block;margin:0 auto 8px">
+                <path d="M18 58 L18 46 Q20 42 24 40 L38 28 Q46 18 66 17 L136 17 Q156 17 164 27 L174 40 Q178 43 180 46 L180 58 Z" fill="#e7e5e4"/>
+                <path d="M38 28 Q46 18 66 17 L136 17 Q156 17 164 27 L174 40 L24 40 Z" fill="#d6d3d1"/>
+                <path d="M67 19 L62 38 L98 38 L98 19 Z" fill="#bfdbfe" opacity=".85"/>
+                <path d="M101 19 L101 38 L140 38 L152 28 Q144 19 128 19 Z" fill="#bfdbfe" opacity=".85"/>
+                <line x1="100" y1="19" x2="100" y2="38" stroke="#a8a29e" stroke-width="1.5"/>
+                <line x1="67" y1="18" x2="152" y2="18" stroke="#a8a29e" stroke-width="2"/>
+                <path d="M172 43 L178 46 L178 52 L172 50 Z" fill="#fef9c3"/>
+                <ellipse cx="22" cy="50" rx="5" ry="3.5" fill="#fef3c7"/>
+                <rect x="18" y="55" width="162" height="5" rx="1" fill="#78716c"/>
+                <circle cx="50" cy="60" r="13" fill="#1e293b"/>
+                <circle cx="50" cy="60" r="6.5" fill="#64748b"/>
+                <circle cx="50" cy="60" r="2.5" fill="#94a3b8"/>
+                <circle cx="152" cy="60" r="13" fill="#1e293b"/>
+                <circle cx="152" cy="60" r="6.5" fill="#64748b"/>
+                <circle cx="152" cy="60" r="2.5" fill="#94a3b8"/>
+                <rect x="88" y="50" width="24" height="6" rx="2" fill="#78716c"/>
+                <text x="100" y="55" text-anchor="middle" font-size="4.5" fill="#fff" font-family="Arial" font-weight="bold">HYBRID</text>
+                <ellipse cx="101" cy="74" rx="75" ry="4" fill="#a8a29e" opacity=".25"/>
+              </svg>
+              <div style="color:#fff;font-weight:800;font-size:1rem">Ricardo Bodini</div>
+              <div style="color:#e7e5e4;font-size:.78rem;margin-top:2px">Toyota Corolla Cross Hybrid 2024</div>
+            </div>
+            <div class="card-body p-3" id="kinto-body-ricardo">
+              <div class="text-center text-muted py-2" style="font-size:.8rem"><i class="bi bi-arrow-repeat me-1"></i>Cargando...</div>
+            </div>
+            <div class="card-footer p-2 d-flex gap-2">
+              <input type="file" id="kinto-file-ricardo-factura" accept=".pdf,image/*" style="display:none" onchange="_kintoSubirArchivo(event,'ricardo','factura')">
+              <input type="file" id="kinto-file-ricardo-contrato" accept=".pdf,image/*" style="display:none" onchange="_kintoSubirArchivo(event,'ricardo','contrato')">
+              <button class="btn btn-outline-primary btn-sm flex-fill" style="font-size:.72rem" onclick="document.getElementById('kinto-file-ricardo-factura').click()"><i class="bi bi-receipt me-1"></i>Subir Factura</button>
+              <button class="btn btn-outline-success btn-sm flex-fill" style="font-size:.72rem" onclick="document.getElementById('kinto-file-ricardo-contrato').click()"><i class="bi bi-file-earmark-check me-1"></i>Contrato</button>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /row -->
+    </div><!-- /crm-tab-content-kinto -->
 
     <!-- Shared CRM modal -->
     <div class="modal fade" id="modal-crm-empresa" tabindex="-1">
@@ -5921,8 +6113,20 @@ CREATE POLICY "acceso total" ON muuk_daily_backups FOR ALL USING (true) WITH CHE
     <!-- Quick actions grid -->
     <div style="margin-bottom:20px">
       <div style="font-size:.72rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px">⚡ Acciones rápidas</div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px" id="bienvenida-actions">
-        <!-- se rellena dinámicamente -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px" id="bienvenida-actions">
+        <!-- Botones estáticos de fallback; renderBienvenida() los reemplaza dinámicamente -->
+        <button onclick="irA('dashboard')" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:#fff;border:1.5px solid #e2e8f0;border-radius:12px;padding:16px 10px;cursor:pointer;text-align:center;min-height:90px;box-shadow:0 1px 4px rgba(0,0,0,.05)"><i class="bi bi-speedometer2" style="font-size:1.4rem;color:#4f46e5"></i><span style="font-size:.73rem;font-weight:700;color:#1e293b">Dashboard</span></button>
+        <button onclick="irA('ingresarCobranza')" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:#fff;border:1.5px solid #e2e8f0;border-radius:12px;padding:16px 10px;cursor:pointer;text-align:center;min-height:90px;box-shadow:0 1px 4px rgba(0,0,0,.05)"><i class="bi bi-cash-stack" style="font-size:1.4rem;color:#16a34a"></i><span style="font-size:.73rem;font-weight:700;color:#1e293b">Ingresar Cobranza</span></button>
+        <button onclick="irA('cajaBancos')" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:#fff;border:1.5px solid #e2e8f0;border-radius:12px;padding:16px 10px;cursor:pointer;text-align:center;min-height:90px;box-shadow:0 1px 4px rgba(0,0,0,.05)"><i class="bi bi-bank" style="font-size:1.4rem;color:#0369a1"></i><span style="font-size:.73rem;font-weight:700;color:#1e293b">Caja Bancos</span></button>
+        <button onclick="irA('cajaEfectivo')" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:#fff;border:1.5px solid #e2e8f0;border-radius:12px;padding:16px 10px;cursor:pointer;text-align:center;min-height:90px;box-shadow:0 1px 4px rgba(0,0,0,.05)"><i class="bi bi-wallet2" style="font-size:1.4rem;color:#7c3aed"></i><span style="font-size:.73rem;font-weight:700;color:#1e293b">Caja Efectivo</span></button>
+        <button onclick="irA('facturasACobrar')" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:#fff;border:1.5px solid #e2e8f0;border-radius:12px;padding:16px 10px;cursor:pointer;text-align:center;min-height:90px;box-shadow:0 1px 4px rgba(0,0,0,.05)"><i class="bi bi-receipt-cutoff" style="font-size:1.4rem;color:#15803d"></i><span style="font-size:.73rem;font-weight:700;color:#1e293b">Facturas a Cobrar</span></button>
+        <button onclick="irA('facturasPagar')" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:#fff;border:1.5px solid #e2e8f0;border-radius:12px;padding:16px 10px;cursor:pointer;text-align:center;min-height:90px;box-shadow:0 1px 4px rgba(0,0,0,.05)"><i class="bi bi-file-earmark-minus" style="font-size:1.4rem;color:#dc2626"></i><span style="font-size:.73rem;font-weight:700;color:#1e293b">Facturas a Pagar</span></button>
+        <button onclick="irA('cronograma')" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:#fff;border:1.5px solid #e2e8f0;border-radius:12px;padding:16px 10px;cursor:pointer;text-align:center;min-height:90px;box-shadow:0 1px 4px rgba(0,0,0,.05)"><i class="bi bi-truck" style="font-size:1.4rem;color:#4f46e5"></i><span style="font-size:.73rem;font-weight:700;color:#1e293b">Cronograma</span></button>
+        <button onclick="irA('comisiones')" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:#fff;border:1.5px solid #e2e8f0;border-radius:12px;padding:16px 10px;cursor:pointer;text-align:center;min-height:90px;box-shadow:0 1px 4px rgba(0,0,0,.05)"><i class="bi bi-percent" style="font-size:1.4rem;color:#d97706"></i><span style="font-size:.73rem;font-weight:700;color:#1e293b">Comisiones</span></button>
+        <button onclick="irA('stock')" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:#fff;border:1.5px solid #e2e8f0;border-radius:12px;padding:16px 10px;cursor:pointer;text-align:center;min-height:90px;box-shadow:0 1px 4px rgba(0,0,0,.05)"><i class="bi bi-boxes" style="font-size:1.4rem;color:#0891b2"></i><span style="font-size:.73rem;font-weight:700;color:#1e293b">Stock</span></button>
+        <button onclick="irA('listasPrecios')" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:#fff;border:1.5px solid #e2e8f0;border-radius:12px;padding:16px 10px;cursor:pointer;text-align:center;min-height:90px;box-shadow:0 1px 4px rgba(0,0,0,.05)"><i class="bi bi-tags-fill" style="font-size:1.4rem;color:#0ea5e9"></i><span style="font-size:.73rem;font-weight:700;color:#1e293b">Listas de Precios</span></button>
+        <button onclick="irA('gestion')" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:#fff;border:1.5px solid #e2e8f0;border-radius:12px;padding:16px 10px;cursor:pointer;text-align:center;min-height:90px;box-shadow:0 1px 4px rgba(0,0,0,.05)"><i class="bi bi-people-fill" style="font-size:1.4rem;color:#7c3aed"></i><span style="font-size:.73rem;font-weight:700;color:#1e293b">Gestión / CRM</span></button>
+        <button onclick="irA('panelVencimientos')" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:#fff;border:1.5px solid #e2e8f0;border-radius:12px;padding:16px 10px;cursor:pointer;text-align:center;min-height:90px;box-shadow:0 1px 4px rgba(0,0,0,.05)"><i class="bi bi-calendar-check" style="font-size:1.4rem;color:#f59e0b"></i><span style="font-size:.73rem;font-weight:700;color:#1e293b">Vencimientos</span></button>
       </div>
     </div>
 
@@ -9774,6 +9978,10 @@ function initApp() {
   updateBreadcrumb('bienvenida');
   renderTodo();
   irA('bienvenida');
+  // Backup render: garantiza que el contenido dinámico se muestre aunque irA falle
+  setTimeout(() => {
+    try { renderBienvenida(); } catch(e) { console.warn('[bienvenida backup]', e); }
+  }, 120);
   _aiRestoreConfig();
   // Restaurar datos empresa en config
   (function(){
@@ -16343,7 +16551,7 @@ function guardarCombustible() {
     lineas: [], impuestos: [], retenciones: [], netoCobrar: total
   };
   ST.facturasPagar.push(obj);
-  saveData();
+  save();
   renderFacturasPagar();
   bootstrap.Modal.getInstance(document.getElementById('modalCombustible'))?.hide();
   toast('Combustible registrado: ' + fmt(total), 'success');
@@ -20948,6 +21156,30 @@ function kmEliminarTarifa(id) {
     kmRender();
     toast('Tarifa eliminada', 'warning');
   }, { title:'Eliminar tarifa', btnLabel:'Eliminar' });
+}
+
+function kmAbrirPeajeSolo() {
+  document.getElementById('kmp-fecha').value  = hoy();
+  document.getElementById('kmp-monto').value  = '';
+  document.getElementById('kmp-obs').value    = '';
+  new bootstrap.Modal(document.getElementById('modalKmPeajeSolo')).show();
+}
+
+function kmGuardarPeajeSolo() {
+  const fecha  = document.getElementById('kmp-fecha').value;
+  const monto  = parseFloat(document.getElementById('kmp-monto').value) || 0;
+  const obs    = document.getElementById('kmp-obs').value.trim();
+  if (!fecha) { toast('Ingresá la fecha', 'warning'); return; }
+  if (!monto) { toast('Ingresá el monto del peaje', 'warning'); return; }
+  if (!ST.kilometraje) ST.kilometraje = [];
+  ST.kilometraje.push({
+    id: uid(), fecha, km: 0, tarifa: 0, monto: 0, peajes: monto,
+    obs: obs || 'Peaje (sin km)', pagado: false
+  });
+  save();
+  kmRender();
+  bootstrap.Modal.getInstance(document.getElementById('modalKmPeajeSolo'))?.hide();
+  toast('Peaje registrado: ' + fmt(monto), 'success');
 }
 
 function kmImprimirReporteMensual() {
@@ -27478,7 +27710,7 @@ let _crmEditTipo  = 'empresa';
 function crmSetTab(tab, event) {
   if (event) event.preventDefault();
   _crmActiveTab = tab;
-  ['clientes','proveedores','empresas'].forEach(t => {
+  ['clientes','proveedores','empresas','kinto'].forEach(t => {
     const nav = document.getElementById('crm-tab-'+t);
     if (nav) nav.classList.toggle('active', t === tab);
     const ct = document.getElementById('crm-tab-content-'+t);
@@ -27487,13 +27719,134 @@ function crmSetTab(tab, event) {
   const lblMap = { clientes:'Nuevo cliente', proveedores:'Nuevo proveedor', empresas:'Nueva empresa' };
   const lbl = document.getElementById('crm-btn-label');
   if (lbl) lbl.textContent = lblMap[tab] || 'Nuevo';
+  const btnNuevo = document.getElementById('crm-btn-nuevo');
+  if (btnNuevo) btnNuevo.style.display = tab === 'kinto' ? 'none' : '';
   _crmRenderActive();
 }
 
 function _crmRenderActive() {
-  if (_crmActiveTab === 'clientes')    renderCRMClientes();
+  if (_crmActiveTab === 'clientes')       renderCRMClientes();
   else if (_crmActiveTab === 'proveedores') renderCRMProveedores();
+  else if (_crmActiveTab === 'kinto')     renderKinto();
   else renderCRMEmpresas();
+}
+
+// ── KINTO ──────────────────────────────────────────
+const _KINTO_CONDUCTORES = ['jonathan', 'alberto', 'ricardo'];
+
+function renderKinto() {
+  if (!ST.kinto) ST.kinto = {};
+  _KINTO_CONDUCTORES.forEach(c => {
+    if (!ST.kinto[c]) ST.kinto[c] = { facturas: [], contrato: null };
+    _kintoRenderCard(c);
+  });
+}
+
+function _kintoRenderCard(conductor) {
+  const wrap = document.getElementById('kinto-body-' + conductor);
+  if (!wrap) return;
+  const data = ST.kinto[conductor] || { facturas: [], contrato: null };
+  const facturas = data.facturas || [];
+  const contrato = data.contrato;
+
+  let html = '';
+
+  // Contrato vigente
+  html += `<div style="margin-bottom:10px">
+    <div style="font-size:.68rem;font-weight:700;text-transform:uppercase;color:#64748b;letter-spacing:.05em;margin-bottom:4px"><i class="bi bi-file-earmark-check me-1 text-success"></i>Contrato de Renting</div>`;
+  if (contrato) {
+    html += `<div style="display:flex;align-items:center;gap:6px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:7px;padding:7px 10px">
+      <i class="bi bi-file-earmark-pdf text-success"></i>
+      <span style="font-size:.78rem;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${contrato.nombre}</span>
+      <small class="text-muted" style="font-size:.65rem">${contrato.fecha||''}</small>
+      <button class="btn btn-sm p-0" style="font-size:.7rem;color:#0369a1" onclick="_kintoVerArchivo('${conductor}','contrato',null)" title="Ver"><i class="bi bi-eye"></i></button>
+      <button class="btn btn-sm p-0" style="font-size:.7rem;color:#dc2626" onclick="_kintoEliminar('${conductor}','contrato',null)" title="Eliminar"><i class="bi bi-trash"></i></button>
+    </div>`;
+  } else {
+    html += `<div style="font-size:.75rem;color:#94a3b8;font-style:italic;padding:4px 0">Sin contrato cargado</div>`;
+  }
+  html += `</div>`;
+
+  // Facturas
+  html += `<div>
+    <div style="font-size:.68rem;font-weight:700;text-transform:uppercase;color:#64748b;letter-spacing:.05em;margin-bottom:4px"><i class="bi bi-receipt me-1 text-primary"></i>Facturas (${facturas.length})</div>`;
+  if (facturas.length) {
+    html += `<div style="max-height:180px;overflow-y:auto">`;
+    facturas.slice().reverse().forEach((f, idx) => {
+      const realIdx = facturas.length - 1 - idx;
+      html += `<div style="display:flex;align-items:center;gap:6px;padding:5px 8px;border-bottom:1px solid #f1f5f9">
+        <i class="bi bi-file-earmark-pdf" style="color:#dc2626;font-size:.85rem"></i>
+        <span style="font-size:.76rem;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${f.nombre}">${f.nombre}</span>
+        <small class="text-muted" style="font-size:.65rem;flex-shrink:0">${f.fecha||''}</small>
+        <button class="btn btn-sm p-0" style="font-size:.7rem;color:#0369a1" onclick="_kintoVerArchivo('${conductor}','factura',${realIdx})" title="Ver"><i class="bi bi-eye"></i></button>
+        <button class="btn btn-sm p-0" style="font-size:.7rem;color:#dc2626" onclick="_kintoEliminar('${conductor}','factura',${realIdx})" title="Eliminar"><i class="bi bi-trash"></i></button>
+      </div>`;
+    });
+    html += `</div>`;
+  } else {
+    html += `<div style="font-size:.75rem;color:#94a3b8;font-style:italic;padding:4px 0">Sin facturas cargadas</div>`;
+  }
+  html += `</div>`;
+
+  wrap.innerHTML = html;
+}
+
+function _kintoSubirArchivo(event, conductor, tipo) {
+  const file = event.target.files[0];
+  if (!file) return;
+  event.target.value = '';
+  const reader = new FileReader();
+  reader.onload = e => {
+    if (!ST.kinto) ST.kinto = {};
+    if (!ST.kinto[conductor]) ST.kinto[conductor] = { facturas: [], contrato: null };
+    const doc = { nombre: file.name, fecha: hoy(), dataUrl: e.target.result };
+    if (tipo === 'contrato') {
+      ST.kinto[conductor].contrato = doc;
+    } else {
+      ST.kinto[conductor].facturas.push(doc);
+    }
+    save();
+    _kintoRenderCard(conductor);
+    toast((tipo === 'contrato' ? 'Contrato' : 'Factura') + ' guardado: ' + file.name, 'success');
+  };
+  reader.readAsDataURL(file);
+}
+
+function _kintoVerArchivo(conductor, tipo, idx) {
+  const data = ST.kinto?.[conductor];
+  if (!data) return;
+  const doc = tipo === 'contrato' ? data.contrato : (data.facturas || [])[idx];
+  if (!doc?.dataUrl) { toast('Archivo no disponible', 'warning'); return; }
+  const w = window.open('', '_blank');
+  if (doc.dataUrl.startsWith('data:image/')) {
+    w.document.write(`<html><body style="margin:0;background:#111"><img src="${doc.dataUrl}" style="max-width:100%"></body></html>`);
+  } else {
+    const blob = _dataUrlToBlob(doc.dataUrl);
+    const url  = URL.createObjectURL(blob);
+    w.location.href = url;
+  }
+}
+
+function _kintoEliminar(conductor, tipo, idx) {
+  _confirmar('¿Eliminar este archivo? No se puede deshacer.', () => {
+    if (tipo === 'contrato') {
+      ST.kinto[conductor].contrato = null;
+    } else {
+      ST.kinto[conductor].facturas.splice(idx, 1);
+    }
+    save();
+    _kintoRenderCard(conductor);
+    toast('Archivo eliminado', 'warning');
+  }, { title: 'Eliminar archivo', btnLabel: 'Eliminar' });
+}
+
+function _dataUrlToBlob(dataUrl) {
+  const [header, data] = dataUrl.split(',');
+  const mime = header.match(/:(.*?);/)[1];
+  const bin  = atob(data);
+  const arr  = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+  return new Blob([arr], { type: mime });
 }
 
 function _crmNuevoActivo() {
