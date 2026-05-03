@@ -5879,14 +5879,12 @@ CREATE POLICY "acceso total" ON muuk_daily_backups FOR ALL USING (true) WITH CHE
               <rect x="54" y="54" width="44" height="44" rx="9" fill="#ef4444"/>
             </svg>
             <div>
-              <div style="font-size:.7rem;color:#94a3b8;text-transform:uppercase;letter-spacing:.12em;font-weight:600">Panel de Control</div>
-              <h2 style="color:#fff;font-weight:800;font-size:1.45rem;margin:0;line-height:1.1">Bienvenido al panel de control de Müük S.R.L.</h2>
+              <div style="font-size:.7rem;color:#94a3b8;text-transform:uppercase;letter-spacing:.12em;font-weight:600">Müük S.R.L. — Panel de Control</div>
+              <h2 id="bienvenida-greeting" style="color:#fff;font-weight:800;font-size:1.45rem;margin:0;line-height:1.2">Bienvenido</h2>
             </div>
           </div>
           <div style="display:flex;align-items:center;gap:8px;margin-top:4px">
-            <i class="bi bi-person-circle" style="color:#94a3b8;font-size:.9rem"></i>
-            <span id="bienvenida-username" style="color:#cbd5e1;font-size:.85rem;font-weight:600">—</span>
-            <span style="color:#334155;font-size:.8rem">·</span>
+            <i class="bi bi-calendar3" style="color:#94a3b8;font-size:.85rem"></i>
             <span id="bienvenida-fecha" style="color:#94a3b8;font-size:.8rem"></span>
           </div>
         </div>
@@ -5904,9 +5902,6 @@ CREATE POLICY "acceso total" ON muuk_daily_backups FOR ALL USING (true) WITH CHE
         <!-- se rellena dinámicamente -->
       </div>
     </div>
-
-    <!-- Snapshot financiero -->
-    <div id="bienvenida-kpi-snap" style="margin-bottom:20px"></div>
 
     <!-- Socios: resumen estados de cuenta -->
     <div id="bienvenida-ecta-wrap" style="display:none;margin-top:4px"></div>
@@ -10127,9 +10122,13 @@ function renderBienvenida() {
   const user     = sessionStorage.getItem('muukAuth') || '';
   const fullName = BV_FULL_NAMES[user] || user;
 
-  // Saludo con nombre completo
-  const nameEl = document.getElementById('bienvenida-username');
-  if (nameEl) nameEl.textContent = fullName;
+  // Saludo personalizado con nombre y apellido
+  const greetingEl = document.getElementById('bienvenida-greeting');
+  if (greetingEl) {
+    const hora = new Date().getHours();
+    const saludo = hora < 12 ? 'Buenos días' : hora < 20 ? 'Buenas tardes' : 'Buenas noches';
+    greetingEl.textContent = saludo + ', ' + fullName + '!';
+  }
 
   // Fecha
   const fechaEl = document.getElementById('bienvenida-fecha');
@@ -10175,41 +10174,6 @@ function renderBienvenida() {
       </button>`).join('');
   }
 
-  // Snapshot financiero
-  const snapEl = document.getElementById('bienvenida-kpi-snap');
-  if (snapEl) {
-    const sB = calcSaldo(ST.cajaBancos||[]);
-    const sE = calcSaldo(ST.cajaEfectivo||[]);
-    const dispTotal = sB + sE;
-    const facPend = (ST.facturasACobrar||[]).filter(f=>f.estado==='pendiente'||f.estado==='vencida');
-    const facMonto = facPend.reduce((s,f)=>s+(+f.total||0),0);
-    const hoyStr = hoy();
-    const chqVenc7 = [
-      ...( ST.chequesFisicos||[]).filter(c=>(c.estado==='en_cartera'||c.estado==='pendiente')&&c.fechaVenc>=hoyStr&&dHasta(c.fechaVenc)<=7),
-      ...( ST.eCheques||[]).filter(c=>c.estado==='pendiente'&&c.fechaVenc>=hoyStr&&dHasta(c.fechaVenc)<=7)
-    ];
-    const chqVenc7Mon = chqVenc7.reduce((s,c)=>s+(+c.monto||0),0);
-    const facVencidas = facPend.filter(f=>f.fechaVenc&&f.fechaVenc<hoyStr).length;
-
-    const _snap = (icon, label, valor, color, bg, sub) =>
-      `<div style="flex:1;min-width:140px;background:${bg};border:1.5px solid ${color}22;border-radius:12px;padding:14px 16px">
-        <div style="display:flex;align-items:center;gap:7px;margin-bottom:6px">
-          <i class="bi ${icon}" style="color:${color};font-size:.9rem"></i>
-          <span style="font-size:.68rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.07em">${label}</span>
-        </div>
-        <div style="font-size:1.15rem;font-weight:800;color:${color};line-height:1">${valor}</div>
-        ${sub ? `<div style="font-size:.65rem;color:#94a3b8;margin-top:3px">${sub}</div>` : ''}
-      </div>`;
-
-    snapEl.innerHTML = `
-      <div style="font-size:.72rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px">📊 Estado financiero</div>
-      <div style="display:flex;gap:10px;flex-wrap:wrap">
-        ${_snap('bi-bank2','Disponible','$'+dispTotal.toLocaleString('es-AR',{maximumFractionDigits:0}),'#065f46','#f0fdf4','Bancos + Efectivo')}
-        ${_snap('bi-receipt-cutoff','A Cobrar','$'+facMonto.toLocaleString('es-AR',{maximumFractionDigits:0}), facVencidas>0?'#dc2626':'#15803d', facVencidas>0?'#fef2f2':'#f0fdf4', facPend.length+' factura'+(facPend.length!==1?'s':'')+(facVencidas>0?' · '+facVencidas+' vencida'+(facVencidas!==1?'s':''):''))}
-        ${_snap('bi-alarm','Vencen 7d', chqVenc7Mon>0?'$'+chqVenc7Mon.toLocaleString('es-AR',{maximumFractionDigits:0}):'Sin vencimientos', chqVenc7Mon>0?'#b45309':'#64748b', chqVenc7Mon>0?'#fffbeb':'#f8fafc', chqVenc7.length>0?chqVenc7.length+' cheque'+(chqVenc7.length!==1?'s':''):'')}
-      </div>`;
-  }
-
   // Socios: mostrar datos de estados de cuenta
   const ectaWrap = document.getElementById('bienvenida-ecta-wrap');
   if (ectaWrap) {
@@ -10219,26 +10183,49 @@ function renderBienvenida() {
       if (!_ectaCache[vendedor] && typeof _ectaRestoreCache === 'function') _ectaRestoreCache();
       const clientes = _ectaCache[vendedor] || null;
       if (clientes) {
-        const totalACobrar    = clientes.reduce((s,c) => s + (c.totalPendiente > 0 ? c.totalPendiente : 0), 0);
-        const clientesConDeuda = clientes.filter(c => c.totalPendiente > 0).length;
-        const hayCobrado      = totalACobrar > 0 || clientesConDeuda > 0;
+        // Aplicar overlay: descontar facturas ya cobradas en MÜÜK
+        let totalACobrar = 0, clientesConDeuda = 0;
+        clientes.forEach(c => {
+          const cobradasNros = (typeof _ectaGetCobradasNros === 'function') ? _ectaGetCobradasNros(c.nombre) : new Set();
+          const adjPend = (c.pendientes || []).filter(f => {
+            const n = (f.factura || '').replace(/[\s\-\.\/]/g, '').toLowerCase();
+            return !n || !cobradasNros.has(n);
+          }).reduce((s, f) => s + f.monto, 0);
+          totalACobrar += adjPend;
+          if (adjPend > 0) clientesConDeuda++;
+        });
+
         ectaWrap.style.display = '';
         ectaWrap.innerHTML = `
-          <div style="background:#fff;border:1.5px solid #e2e8f0;border-radius:12px;padding:16px 20px;box-shadow:0 1px 4px rgba(0,0,0,.05)">
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
-              <i class="bi bi-person-lines-fill" style="color:#0369a1;font-size:1rem"></i>
-              <span style="font-size:.72rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.08em">Mi Estado de Cuenta — ${vendedor}</span>
-              <button onclick="irA('estadosCuenta')" style="margin-left:auto;background:none;border:1px solid #cbd5e1;border-radius:6px;padding:3px 10px;font-size:.7rem;color:#475569;cursor:pointer">Ver detalle →</button>
-            </div>
-            <div style="display:flex;gap:20px;flex-wrap:wrap">
-              <div>
-                <div style="font-size:.7rem;color:#64748b;font-weight:600;margin-bottom:2px">Total a cobrar</div>
-                <div style="font-size:1.3rem;font-weight:800;color:${totalACobrar > 0 ? '#b91c1c' : '#15803d'}">$${totalACobrar.toLocaleString('es-AR',{minimumFractionDigits:0,maximumFractionDigits:0})}</div>
+          <div style="background:#fff;border:1.5px solid #e2e8f0;border-radius:12px;padding:20px 24px;box-shadow:0 1px 4px rgba(0,0,0,.06)">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px">
+              <div style="display:flex;align-items:center;gap:8px">
+                <i class="bi bi-graph-up-arrow" style="color:#0369a1;font-size:1.1rem"></i>
+                <span style="font-size:.8rem;font-weight:700;color:#1e293b">Mi Estado de Cuenta</span>
+                <span style="font-size:.72rem;color:#64748b;font-weight:500">— ${vendedor}</span>
               </div>
-              <div style="border-left:1px solid #e2e8f0;margin:0 4px"></div>
-              <div>
-                <div style="font-size:.7rem;color:#64748b;font-weight:600;margin-bottom:2px">Clientes con deuda</div>
-                <div style="font-size:1.3rem;font-weight:800;color:${clientesConDeuda > 0 ? '#b91c1c' : '#15803d'}">${clientesConDeuda}</div>
+              <button onclick="irA('estadosCuenta')" style="background:none;border:1px solid #cbd5e1;border-radius:8px;padding:4px 12px;font-size:.72rem;color:#475569;cursor:pointer;font-weight:600">
+                Ver detalle →
+              </button>
+            </div>
+            <div style="display:flex;gap:0;flex-wrap:wrap;border:1.5px solid #e2e8f0;border-radius:10px;overflow:hidden">
+              <div style="flex:1;min-width:160px;padding:16px 20px;background:#fef2f2;border-right:1px solid #fecaca">
+                <div style="font-size:.7rem;font-weight:700;color:#7f1d1d;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">
+                  <i class="bi bi-currency-dollar me-1"></i>Total a cobrar
+                </div>
+                <div style="font-size:1.6rem;font-weight:900;color:${totalACobrar > 0 ? '#dc2626' : '#16a34a'};line-height:1;font-variant-numeric:tabular-nums">
+                  $${totalACobrar.toLocaleString('es-AR', {minimumFractionDigits:0, maximumFractionDigits:0})}
+                </div>
+                <div style="font-size:.65rem;color:#94a3b8;margin-top:4px">Pendiente de tus clientes</div>
+              </div>
+              <div style="flex:1;min-width:160px;padding:16px 20px;background:#f8fafc">
+                <div style="font-size:.7rem;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">
+                  <i class="bi bi-people-fill me-1"></i>Clientes con deuda
+                </div>
+                <div style="font-size:1.6rem;font-weight:900;color:${clientesConDeuda > 0 ? '#dc2626' : '#16a34a'};line-height:1">
+                  ${clientesConDeuda}
+                </div>
+                <div style="font-size:.65rem;color:#94a3b8;margin-top:4px">de ${clientes.length} clientes en cartera</div>
               </div>
             </div>
           </div>`;
