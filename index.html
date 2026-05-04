@@ -13722,7 +13722,7 @@ function guardarMov(){
   const idx=ST[cat].findIndex(x=>x.id===obj.id);
   if(idx>=0)ST[cat][idx]=obj;else ST[cat].push(obj);
   save();renderMovimientos(cat);renderDashboard();
-  bootstrap.Modal.getInstance(document.getElementById('modalMov')).hide();
+  bootstrap.Modal.getOrCreateInstance(document.getElementById('modalMov')).hide();
   toast('Movimiento guardado');
 }
 function eliminarMov(cat,id){
@@ -25017,8 +25017,8 @@ async function _ectaLoadVendedor(vendedor) {
   const summary = document.getElementById('ecta-summary');
   const luEl = document.getElementById('ecta-last-update');
   if (luEl) luEl.textContent = 'Actualizando…';
-  loading.style.display = 'block';
-  if (!_ectaCache[vendedor]) { container.innerHTML = ''; summary.innerHTML = ''; }
+  if (loading) loading.style.display = 'block';
+  if (!_ectaCache[vendedor]) { if (container) container.innerHTML = ''; if (summary) summary.innerHTML = ''; }
   try {
     const url = 'https://docs.google.com/spreadsheets/d/' + ECTA_SHEET_ID +
       '/gviz/tq?tqx=out:csv&sheet=' + encodeURIComponent(vendedor);
@@ -25032,11 +25032,11 @@ async function _ectaLoadVendedor(vendedor) {
   } catch(e) {
     console.error('[ECTA] Error:', e);
     if (!_ectaCache[vendedor]) {
-      container.innerHTML = '<div class="alert alert-danger"><i class="bi bi-exclamation-triangle me-2"></i>Error cargando datos: ' + e.message + '</div>';
+      if (container) container.innerHTML = '<div class="alert alert-danger"><i class="bi bi-exclamation-triangle me-2"></i>Error cargando datos: ' + e.message + '</div>';
     }
     if (luEl) luEl.textContent = 'Error al actualizar';
   } finally {
-    loading.style.display = 'none';
+    if (loading) loading.style.display = 'none';
   }
 }
 
