@@ -852,7 +852,7 @@
       <i class="bi bi-search" style="color:#94a3b8;font-size:.9rem;flex-shrink:0"></i>
       <input id="global-search-input" type="text" placeholder="Buscar facturas, cheques, movimientos, socios..." autocomplete="off"
         style="border:none;outline:none;font-size:.9rem;flex:1;background:transparent;color:#1e293b"
-        oninput="ejecutarBusquedaGlobal()" onkeydown="navBusquedaGlobal(event)">
+        oninput="dBusquedaGlobal()" onkeydown="navBusquedaGlobal(event)">
       <span style="font-size:.68rem;color:#94a3b8;background:#f1f5f9;border-radius:5px;padding:2px 6px;flex-shrink:0">ESC</span>
     </div>
     <div id="global-search-results" style="max-height:420px;overflow-y:auto;padding:6px 0"></div>
@@ -898,6 +898,7 @@
 
     <!-- ── Fijos ── -->
     <li><a class="nav-link active" data-page="dashboard"><i class="bi bi-speedometer2"></i>Dashboard</a></li>
+    <li><a class="nav-link" data-page="incidencias" style="position:relative"><i class="bi bi-bug-fill" style="color:#ef4444"></i>Reportar Problema<span id="sb-inc-badge" style="display:none;position:absolute;top:6px;right:10px;background:#ef4444;color:#fff;border-radius:50%;width:16px;height:16px;font-size:.6rem;font-weight:800;line-height:16px;text-align:center"></span></a></li>
 
     <!-- ── Empresa ── -->
     <div class="sl" data-group="empresa" onclick="toggleSBGroup('empresa')">
@@ -6272,6 +6273,139 @@ CREATE POLICY "acceso total" ON muuk_daily_backups FOR ALL USING (true) WITH CHE
   </div>
   <!-- ══════════════════ FIN BIENVENIDA ══════════════════ -->
 
+  <!-- ══════════════════ INCIDENCIAS / CENTRO DE AYUDA ══════════════════ -->
+  <div id="page-incidencias" class="page">
+    <div class="page-hdr">
+      <h4><i class="bi bi-bug-fill me-2" style="color:#ef4444"></i>Centro de Ayuda — Reportar Problema</h4>
+      <button class="btn btn-sm" style="background:#ef4444;color:#fff;border:none;border-radius:7px;font-size:.75rem;padding:5px 14px" onclick="_incAbrirForm(null)">
+        <i class="bi bi-plus-lg me-1"></i>Nueva incidencia
+      </button>
+    </div>
+    <p style="font-size:.8rem;color:#64748b;margin-bottom:14px">
+      <i class="bi bi-info-circle me-1"></i>Usá este panel para reportar errores, proponer mejoras o solicitar correcciones en cualquier módulo del sistema.
+    </p>
+
+    <!-- KPIs -->
+    <div class="row g-2 mb-3" id="inc-kpis"></div>
+
+    <!-- Filtros -->
+    <div class="d-flex gap-2 mb-3 flex-wrap align-items-center">
+      <input type="text" id="inc-buscar" class="form-control form-control-sm" placeholder="Buscar por título o módulo..." style="max-width:220px;font-size:.8rem" oninput="renderIncidencias()">
+      <select id="inc-fil-tipo" class="form-select form-select-sm" style="max-width:150px;font-size:.8rem" onchange="renderIncidencias()">
+        <option value="">Todos los tipos</option>
+        <option value="bug">🐛 Error / Bug</option>
+        <option value="mejora">💡 Mejora</option>
+        <option value="correccion">✏️ Corrección de datos</option>
+        <option value="consulta">❓ Consulta</option>
+      </select>
+      <select id="inc-fil-estado" class="form-select form-select-sm" style="max-width:150px;font-size:.8rem" onchange="renderIncidencias()">
+        <option value="">Todos los estados</option>
+        <option value="nuevo">Nuevo</option>
+        <option value="en_proceso">En proceso</option>
+        <option value="resuelto">Resuelto</option>
+      </select>
+      <select id="inc-fil-prio" class="form-select form-select-sm" style="max-width:140px;font-size:.8rem" onchange="renderIncidencias()">
+        <option value="">Toda prioridad</option>
+        <option value="alta">🔴 Alta</option>
+        <option value="media">🟡 Media</option>
+        <option value="baja">🟢 Baja</option>
+      </select>
+    </div>
+
+    <div id="inc-lista"></div>
+  </div>
+
+  <!-- Modal nueva/editar incidencia -->
+  <div class="modal fade" id="modalIncidencia" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header py-2" style="background:linear-gradient(135deg,#b91c1c,#ef4444)">
+          <h6 class="modal-title text-white"><i class="bi bi-bug-fill me-2"></i><span id="inc-modal-title">Nueva incidencia</span></h6>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body" style="font-size:.85rem">
+          <input type="hidden" id="inc-id">
+          <div class="row g-2">
+            <div class="col-sm-4">
+              <label class="form-label small fw-bold">Tipo *</label>
+              <select class="form-select form-select-sm" id="inc-tipo">
+                <option value="bug">🐛 Error / Bug</option>
+                <option value="mejora">💡 Mejora</option>
+                <option value="correccion">✏️ Corrección de datos</option>
+                <option value="consulta">❓ Consulta</option>
+              </select>
+            </div>
+            <div class="col-sm-4">
+              <label class="form-label small fw-bold">Módulo afectado *</label>
+              <select class="form-select form-select-sm" id="inc-modulo">
+                <option value="Dashboard">Dashboard</option>
+                <option value="Bienvenida">Bienvenida</option>
+                <option value="Facturas a Cobrar">Facturas a Cobrar</option>
+                <option value="Facturas a Pagar">Facturas a Pagar</option>
+                <option value="Estados de Cuenta">Estados de Cuenta</option>
+                <option value="Caja Bancos">Caja Bancos</option>
+                <option value="Caja Efectivo">Caja Efectivo</option>
+                <option value="Cheques">Cheques</option>
+                <option value="Comisiones">Comisiones</option>
+                <option value="Stock">Stock</option>
+                <option value="Listas de Precios">Listas de Precios</option>
+                <option value="CRM">CRM</option>
+                <option value="Kilometraje">Kilometraje</option>
+                <option value="Socios / Empresa">Socios / Empresa</option>
+                <option value="KINTO">KINTO</option>
+                <option value="Recursos Humanos">Recursos Humanos</option>
+                <option value="Contabilidad">Contabilidad</option>
+                <option value="BCRA">BCRA</option>
+                <option value="Cronograma">Cronograma</option>
+                <option value="Tesorería">Tesorería</option>
+                <option value="Reportes">Reportes</option>
+                <option value="Otro">Otro</option>
+              </select>
+            </div>
+            <div class="col-sm-4">
+              <label class="form-label small fw-bold">Prioridad</label>
+              <select class="form-select form-select-sm" id="inc-prioridad">
+                <option value="alta">🔴 Alta — Impide trabajar</option>
+                <option value="media" selected>🟡 Media — Molesta pero funciona</option>
+                <option value="baja">🟢 Baja — Sería bueno tenerlo</option>
+              </select>
+            </div>
+            <div class="col-12">
+              <label class="form-label small fw-bold">Título / Resumen *</label>
+              <input class="form-control form-control-sm" id="inc-titulo" placeholder="Describí brevemente el problema o mejora (ej: 'El total de facturas no cierra con el extracto')">
+            </div>
+            <div class="col-12">
+              <label class="form-label small fw-bold">Descripción detallada</label>
+              <textarea class="form-control form-control-sm" id="inc-descripcion" rows="3"
+                placeholder="Describí paso a paso cómo reproducirlo, qué esperabas y qué pasó en cambio. Incluí valores o fechas si aplica."></textarea>
+            </div>
+            <div class="col-12">
+              <label class="form-label small fw-bold">Pasos para reproducir (opcional)</label>
+              <textarea class="form-control form-control-sm" id="inc-pasos" rows="2"
+                placeholder="1. Ir a Facturas a Cobrar&#10;2. Hacer clic en...&#10;3. El error aparece cuando..."></textarea>
+            </div>
+          </div>
+          <!-- Nota admin (solo visible si es admin o está editando) -->
+          <div id="inc-admin-block" style="display:none;margin-top:10px;padding:10px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px">
+            <div class="d-flex gap-2 align-items-center mb-1">
+              <strong style="font-size:.78rem;color:#15803d"><i class="bi bi-shield-check me-1"></i>Área Admin</strong>
+              <select class="form-select form-select-sm" id="inc-estado" style="max-width:160px;font-size:.75rem">
+                <option value="nuevo">Nuevo</option>
+                <option value="en_proceso">En proceso</option>
+                <option value="resuelto">Resuelto ✓</option>
+              </select>
+            </div>
+            <textarea class="form-control form-control-sm" id="inc-notas-admin" rows="2" placeholder="Notas internas / respuesta al usuario..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer py-2">
+          <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+          <button class="btn btn-sm" style="background:#ef4444;color:#fff" onclick="_incGuardar()"><i class="bi bi-check-lg me-1"></i>Enviar reporte</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- ══════════════════ GESTIÓN DE USUARIOS ══════════════════ -->
   <div id="page-usuarios" class="page">
     <div class="page-hdr">
@@ -7492,6 +7626,7 @@ const dRenderCajaBancos   = debounced(() => renderMovimientos('cajaBancos'), 220
 const dRenderCajaEfectivo = debounced(() => renderMovimientos('cajaEfectivo'), 220);
 const dRenderComResumen   = debounced(renderComResumen, 220);
 const dRenderHistorial    = debounced(renderHistorial, 220);
+const dBusquedaGlobal     = debounced(ejecutarBusquedaGlobal, 250);
 
 // ── Filtros persistentes: guarda/restaura valores de filtro en sessionStorage ──
 const _FL_IDS = {
@@ -9540,11 +9675,11 @@ const MUUK_ACCESS_BASE = {
   'JonathanPalermo': null,
   'RicardoBodini':   null,
   'AlbertoPalermo':  null,
-  'PaulaSpinelli':   ['bienvenida','comisiones','bcra','calendarioARCA','contabilidad',
+  'PaulaSpinelli':   ['bienvenida','incidencias','comisiones','bcra','calendarioARCA','contabilidad',
                       'facturasACobrar','facturasPagar','estadosCuenta','stock',
                       'listasPrecios','empresas','documentos','cuentasBancarias','historialCobranzas','ingresarCobranza',
                       'rrhh','manual'],
-  'AgustinGalie':    ['bienvenida','comisiones','bcra','calendarioARCA','contabilidad',
+  'AgustinGalie':    ['bienvenida','incidencias','comisiones','bcra','calendarioARCA','contabilidad',
                       'facturasACobrar','facturasPagar','estadosCuenta','stock',
                       'listasPrecios','empresas','documentos','cuentasBancarias','historialCobranzas','ingresarCobranza',
                       'cronograma','rrhh','manual'],
@@ -10086,7 +10221,8 @@ function initApp() {
   load();
   cargarTipoCambio();
   cargarRatesSidebar();
-  setInterval(cargarRatesSidebar, 300000);
+  if (window._ratesInterval) clearInterval(window._ratesInterval);
+  window._ratesInterval = setInterval(cargarRatesSidebar, 300000);
   initDarkMode();
   document.getElementById('fecha-hoy').textContent =
     new Date().toLocaleDateString('es-AR',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
@@ -10119,6 +10255,7 @@ function initApp() {
   // Backup render: garantiza que el contenido dinámico se muestre aunque irA falle
   setTimeout(() => {
     try { renderBienvenida(); } catch(e) { console.warn('[bienvenida backup]', e); }
+    try { _incUpdateBadge(); } catch(e) {}
   }, 120);
   _aiRestoreConfig();
   // Restaurar datos empresa en config
@@ -10140,6 +10277,7 @@ function initApp() {
 const _SB_GROUPS = {
   empresa:  ['socios','cuentaSocios','liquidacion','kinto'],
   rrhh:     ['rrhh'],
+  incidencias: ['incidencias'],
   caja:     ['cajaBancos','cajaEfectivo','chequesFisicos','eCheques','chequesPagar','kilometraje'],
   gestion:  ['comisiones','bcra','calendarioARCA','contabilidad','facturasACobrar','facturasPagar','estadosCuenta','stock','listasPrecios','empresas','documentos','cuentasBancarias','historialCobranzas','ingresarCobranza'],
   analisis: ['tesoreria','flujoProyectado','panelVencimientos','rentabilidad','gestion','reportes','historial','estrategicos','calculadora'],
@@ -10419,7 +10557,8 @@ function initAutoRefresh() {
   }, 10000); // Esperar 10s después de init para no saturar
 
   // Polling periódico
-  setInterval(_arPollAll, AUTO_REFRESH_INTERVAL);
+  if (window._arPollInterval) clearInterval(window._arPollInterval);
+  window._arPollInterval = setInterval(_arPollAll, AUTO_REFRESH_INTERVAL);
 
   // También chequear cuando el usuario vuelve a la pestaña
   document.addEventListener('visibilitychange', () => {
@@ -10478,6 +10617,7 @@ function irA(p) {
 
   // Lazy rendering: cada sección se renderiza al navegar a ella
   if (p==='dashboard')         renderDashboard();
+  if (p==='incidencias')       renderIncidencias();
   if (p==='socios')            renderSocios();
   if (p==='chequesFisicos')    renderCheques('chequesFisicos');
   if (p==='eCheques')          renderCheques('eCheques');
@@ -13713,7 +13853,7 @@ function renderReportes(){
     CHARTS.rB=new Chart(rb,{type:'bar',data:{
       labels:bL.length?bL:['Sin datos'],
       datasets:[{label:'Saldo',data:bL.length?Object.values(bnk):[0],
-        backgroundColor:Object.values(bnk).map(v=>v>=0?'rgba(16,185,129,.75)':'rgba(239,68,68,.75)'),borderRadius:5}]
+        backgroundColor:bL.length?Object.values(bnk).map(v=>v>=0?'rgba(16,185,129,.75)':'rgba(239,68,68,.75)'):['rgba(148,163,184,.5)'],borderRadius:5}]
     },options:{responsive:true,indexAxis:'y',plugins:{legend:{display:false}},
       scales:{x:{ticks:{callback:v=>fmt(v),font:{size:9}}}}}});
   }
@@ -20999,7 +21139,7 @@ function kmRender() {
   const anioActual = hoyDate.substring(0,4);
   const regAnio = (ST.kilometraje || []).filter(r => r.fecha.substring(0,4) === anioActual);
   const kmAnio = regAnio.reduce((s,r) => s + r.km, 0);
-  const totalAnio = regAnio.reduce((s,r) => s + r.monto, 0);
+  const totalAnio = regAnio.reduce((s,r) => s + r.monto + (r.peajes||0), 0);
   const elAnioLabel = document.getElementById('km-anio-label');
   const elAnioKm = document.getElementById('km-anio-km');
   const elAnioTotal = document.getElementById('km-anio-total');
@@ -28321,6 +28461,185 @@ function _rrhhEliminarRecordatorio(id) {
     ST.rrhh.recordatorios = (ST.rrhh.recordatorios||[]).filter(r=>r.id!==id);
     save(); renderRRHH(); toast('Recordatorio eliminado');
   }, { title:'Eliminar recordatorio', btnLabel:'Eliminar' });
+}
+
+/* ═══════════════════════════════════════════
+   INCIDENCIAS — Centro de Ayuda
+═══════════════════════════════════════════ */
+const _INC_TIPO_LABEL  = { bug:'🐛 Error/Bug', mejora:'💡 Mejora', correccion:'✏️ Corrección', consulta:'❓ Consulta' };
+const _INC_PRIO_COLOR  = { alta:'#dc2626', media:'#d97706', baja:'#16a34a' };
+const _INC_PRIO_LABEL  = { alta:'🔴 Alta', media:'🟡 Media', baja:'🟢 Baja' };
+const _INC_EST_LABEL   = { nuevo:'Nuevo', en_proceso:'En proceso', resuelto:'Resuelto ✓' };
+const _INC_EST_COLOR   = { nuevo:'#3b82f6', en_proceso:'#d97706', resuelto:'#16a34a' };
+
+function renderIncidencias() {
+  if (!ST.incidencias) ST.incidencias = [];
+  const user = sessionStorage.getItem('muukAuth') || '';
+  const admin = isAdmin();
+  const inc   = ST.incidencias;
+
+  // Badge en sidebar
+  const pendientes = inc.filter(i => i.estado !== 'resuelto').length;
+  const badge = document.getElementById('sb-inc-badge');
+  if (badge) { badge.textContent = pendientes; badge.style.display = pendientes ? 'inline-flex' : 'none'; }
+
+  // KPIs
+  const kpiWrap = document.getElementById('inc-kpis');
+  if (kpiWrap) kpiWrap.innerHTML = [
+    { label:'Total reportados', value: inc.length,                              icon:'bi-list-check',   color:'#4f46e5', bg:'#ede9fe' },
+    { label:'Pendientes',       value: inc.filter(i=>i.estado!=='resuelto').length, icon:'bi-hourglass-split', color:'#d97706', bg:'#fffbeb' },
+    { label:'Alta prioridad',   value: inc.filter(i=>i.prioridad==='alta'&&i.estado!=='resuelto').length, icon:'bi-exclamation-triangle-fill', color:'#dc2626', bg:'#fef2f2' },
+    { label:'Resueltos',        value: inc.filter(i=>i.estado==='resuelto').length, icon:'bi-check-circle-fill', color:'#16a34a', bg:'#f0fdf4' },
+  ].map(k=>`<div class="col-6 col-md-3">
+    <div class="card border-0 h-100" style="background:${k.bg};border-radius:10px;padding:12px 14px">
+      <div style="font-size:.65rem;font-weight:700;color:${k.color};text-transform:uppercase;letter-spacing:.06em"><i class="bi ${k.icon} me-1"></i>${k.label}</div>
+      <div style="font-size:1.5rem;font-weight:900;color:#0f172a;margin-top:4px">${k.value}</div>
+    </div>
+  </div>`).join('');
+
+  // Filtros
+  const buscar  = (document.getElementById('inc-buscar')?.value||'').toLowerCase();
+  const filTipo = document.getElementById('inc-fil-tipo')?.value||'';
+  const filEst  = document.getElementById('inc-fil-estado')?.value||'';
+  const filPrio = document.getElementById('inc-fil-prio')?.value||'';
+
+  let filtered = inc.filter(i => {
+    if (filTipo && i.tipo !== filTipo) return false;
+    if (filEst  && i.estado !== filEst) return false;
+    if (filPrio && i.prioridad !== filPrio) return false;
+    if (buscar  && !`${i.titulo} ${i.modulo} ${i.descripcion}`.toLowerCase().includes(buscar)) return false;
+    return true;
+  }).slice().sort((a,b) => {
+    const prioOrder = { alta:0, media:1, baja:2 };
+    const estOrder  = { nuevo:0, en_proceso:1, resuelto:2 };
+    if (a.estado !== b.estado) return estOrder[a.estado||'nuevo'] - estOrder[b.estado||'nuevo'];
+    if (a.prioridad !== b.prioridad) return (prioOrder[a.prioridad||'media']||1) - (prioOrder[b.prioridad||'media']||1);
+    return (b.fecha||'').localeCompare(a.fecha||'');
+  });
+
+  const lista = document.getElementById('inc-lista');
+  if (!lista) return;
+
+  if (!inc.length) {
+    lista.innerHTML = `<div class="text-center py-5" style="color:#94a3b8">
+      <i class="bi bi-bug" style="font-size:2.5rem;display:block;margin-bottom:10px;color:#fca5a5"></i>
+      <div style="font-size:.9rem;font-weight:600;margin-bottom:4px">Sin incidencias reportadas</div>
+      <div style="font-size:.78rem">Usá "Nueva incidencia" para reportar un error o sugerir una mejora.</div>
+    </div>`;
+    return;
+  }
+  if (!filtered.length) {
+    lista.innerHTML = `<div class="text-center text-muted py-4" style="font-size:.82rem">Sin resultados para los filtros aplicados.</div>`;
+    return;
+  }
+
+  const _fd = d => d ? new Date(d).toLocaleDateString('es-AR',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '';
+
+  lista.innerHTML = filtered.map(i => {
+    const pColor = _INC_PRIO_COLOR[i.prioridad||'media'];
+    const eColor = _INC_EST_COLOR[i.estado||'nuevo'];
+    const canEdit = admin || i.usuario === user;
+    return `<div class="card mb-2 border-0" style="border-left:4px solid ${pColor}!important;border:1px solid #e2e8f0;border-radius:10px">
+      <div class="card-body p-3">
+        <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap">
+          <div style="flex:1;min-width:0">
+            <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+              <span style="font-weight:800;font-size:.92rem;color:#0f172a">${i.titulo||'Sin título'}</span>
+              <span class="bdg" style="background:${eColor}20;color:${eColor};font-size:.65rem">${_INC_EST_LABEL[i.estado||'nuevo']}</span>
+              <span class="bdg" style="background:#f1f5f9;color:#475569;font-size:.65rem">${_INC_TIPO_LABEL[i.tipo]||i.tipo}</span>
+              <span class="bdg" style="background:${pColor}15;color:${pColor};font-size:.65rem">${_INC_PRIO_LABEL[i.prioridad||'media']}</span>
+            </div>
+            <div style="font-size:.76rem;color:#64748b;margin-bottom:4px">
+              <i class="bi bi-grid me-1"></i><strong>${i.modulo||'—'}</strong>
+              <span class="ms-2"><i class="bi bi-person me-1"></i>${i.usuario||'—'}</span>
+              <span class="ms-2"><i class="bi bi-clock me-1"></i>${_fd(i.fecha)}</span>
+            </div>
+            ${i.descripcion ? `<div style="font-size:.78rem;color:#475569;margin-bottom:4px">${i.descripcion}</div>` : ''}
+            ${i.pasos ? `<div style="font-size:.73rem;color:#64748b;background:#f8fafc;border-radius:5px;padding:5px 8px;white-space:pre-line;margin-top:4px"><strong>Pasos:</strong> ${i.pasos}</div>` : ''}
+            ${i.notasAdmin ? `<div style="font-size:.75rem;color:#15803d;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:5px;padding:5px 8px;margin-top:6px"><i class="bi bi-shield-check me-1"></i><strong>Admin:</strong> ${i.notasAdmin}</div>` : ''}
+          </div>
+          <div class="d-flex gap-1 flex-shrink-0">
+            ${canEdit ? `<button class="btn btn-a btn-outline-primary" onclick="_incAbrirForm('${i.id}')" title="Editar"><i class="bi bi-pencil"></i></button>` : ''}
+            ${admin ? `<button class="btn btn-a btn-outline-success" onclick="_incMarcarResuelto('${i.id}')" title="Marcar resuelto"><i class="bi bi-check-lg"></i></button>
+              <button class="btn btn-a btn-outline-danger" onclick="_incEliminar('${i.id}')" title="Eliminar"><i class="bi bi-trash"></i></button>` : ''}
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function _incAbrirForm(id) {
+  if (!ST.incidencias) ST.incidencias = [];
+  const i = id ? ST.incidencias.find(x=>x.id===id) : null;
+  const admin = isAdmin();
+
+  document.getElementById('inc-id').value            = id || '';
+  document.getElementById('inc-modal-title').textContent = id ? 'Editar incidencia' : 'Nueva incidencia';
+  document.getElementById('inc-tipo').value          = i?.tipo       || 'bug';
+  document.getElementById('inc-modulo').value        = i?.modulo     || 'Dashboard';
+  document.getElementById('inc-prioridad').value     = i?.prioridad  || 'media';
+  document.getElementById('inc-titulo').value        = i?.titulo     || '';
+  document.getElementById('inc-descripcion').value   = i?.descripcion|| '';
+  document.getElementById('inc-pasos').value         = i?.pasos      || '';
+
+  const adminBlock = document.getElementById('inc-admin-block');
+  if (adminBlock) adminBlock.style.display = (admin && id) ? '' : 'none';
+  if (admin && id) {
+    document.getElementById('inc-estado').value       = i?.estado       || 'nuevo';
+    document.getElementById('inc-notas-admin').value  = i?.notasAdmin   || '';
+  }
+  new bootstrap.Modal(document.getElementById('modalIncidencia')).show();
+}
+
+function _incGuardar() {
+  if (!ST.incidencias) ST.incidencias = [];
+  const titulo = document.getElementById('inc-titulo').value.trim();
+  if (!titulo) { toast('Ingresá un título para la incidencia','warning'); return; }
+  const admin  = isAdmin();
+  const id     = document.getElementById('inc-id').value || uid();
+  const prev   = ST.incidencias.find(x=>x.id===id);
+  const obj = {
+    id,
+    tipo:        document.getElementById('inc-tipo').value,
+    modulo:      document.getElementById('inc-modulo').value,
+    prioridad:   document.getElementById('inc-prioridad').value,
+    titulo,
+    descripcion: document.getElementById('inc-descripcion').value.trim(),
+    pasos:       document.getElementById('inc-pasos').value.trim(),
+    usuario:     prev?.usuario || (sessionStorage.getItem('muukAuth')||''),
+    fecha:       prev?.fecha   || new Date().toISOString(),
+    estado:      (admin && document.getElementById('inc-estado')?.value) || prev?.estado || 'nuevo',
+    notasAdmin:  (admin && document.getElementById('inc-notas-admin')?.value.trim()) || prev?.notasAdmin || '',
+  };
+  const idx = ST.incidencias.findIndex(x=>x.id===id);
+  if (idx>=0) ST.incidencias[idx]=obj; else ST.incidencias.push(obj);
+  save();
+  bootstrap.Modal.getInstance(document.getElementById('modalIncidencia'))?.hide();
+  renderIncidencias();
+  toast('Incidencia guardada ✓', 'success');
+}
+
+function _incMarcarResuelto(id) {
+  const i = (ST.incidencias||[]).find(x=>x.id===id);
+  if (!i) return;
+  i.estado = 'resuelto';
+  i.resolvedAt = new Date().toISOString();
+  save(); renderIncidencias(); toast('Marcada como resuelta ✓', 'success');
+}
+
+function _incEliminar(id) {
+  _confirmar('¿Eliminar esta incidencia?', ()=>{
+    ST.incidencias = (ST.incidencias||[]).filter(x=>x.id!==id);
+    save(); renderIncidencias(); toast('Incidencia eliminada');
+  }, { title:'Eliminar incidencia', btnLabel:'Eliminar' });
+}
+
+function _incUpdateBadge() {
+  if (!ST.incidencias) return;
+  const n = ST.incidencias.filter(i=>i.estado!=='resuelto').length;
+  const b = document.getElementById('sb-inc-badge');
+  if (b) { b.textContent = n; b.style.display = n ? 'inline-flex' : 'none'; }
 }
 
 function _crmNuevoActivo() {
