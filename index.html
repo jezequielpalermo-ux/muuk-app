@@ -148,6 +148,7 @@
     .sl[data-group="gestion"].sl-active  { border-left: 3px solid #f59e0b; padding-left: 11px; }
     .sl[data-group="analisis"].sl-active { border-left: 3px solid #8b5cf6; padding-left: 11px; }
     .sl[data-group="archivos"].sl-active { border-left: 3px solid #64748b; padding-left: 11px; }
+    .sl[data-group="rrhh"].sl-active    { border-left: 3px solid #ec4899; padding-left: 11px; }
 
     .sl-items-inner { min-height: 0; }
 
@@ -186,6 +187,7 @@
     .sl[data-group="gestion"].sl-active > span > i { color: #f59e0b; }
     .sl[data-group="analisis"].sl-active > span > i{ color: #8b5cf6; }
     .sl[data-group="archivos"].sl-active > span > i{ color: #94a3b8; }
+    .sl[data-group="rrhh"].sl-active > span > i   { color: #ec4899; }
     .bcra-rate-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:2px; }
     .bcra-rate-lbl { font-size:.62rem; color:#475569; font-weight:600; text-transform:uppercase; letter-spacing:.04em; }
     .bcra-rate-val { font-size:.72rem; color:#94a3b8; font-weight:600; font-variant-numeric: tabular-nums; }
@@ -907,6 +909,18 @@
         <li><a class="nav-link" data-page="socios"><i class="bi bi-people-fill"></i>Socios</a></li>
         <li><a class="nav-link" data-page="cuentaSocios"><i class="bi bi-bar-chart-steps"></i>Cuenta Socios</a></li>
         <li><a class="nav-link" data-page="liquidacion"><i class="bi bi-cash-stack"></i>Liquidación Socios</a></li>
+        <li><a class="nav-link" data-page="kinto"><i class="bi bi-car-front-fill" style="color:#cc0000"></i>KINTO</a></li>
+      </div>
+    </div>
+
+    <!-- ── RR.HH. ── -->
+    <div class="sl" data-group="rrhh" onclick="toggleSBGroup('rrhh')">
+      <span><i class="bi bi-person-badge-fill me-1" style="font-size:.6rem;opacity:.7"></i>RR.HH.</span>
+      <span style="display:flex;align-items:center;gap:4px"><span class="sl-badge" id="sb-badge-rrhh" style="display:none">0</span><i class="bi bi-chevron-down sl-chevron"></i></span>
+    </div>
+    <div class="sl-items" id="sg-rrhh">
+      <div class="sl-items-inner">
+        <li><a class="nav-link" data-page="rrhh"><i class="bi bi-people-fill"></i>Recursos Humanos</a></li>
       </div>
     </div>
 
@@ -4527,6 +4541,19 @@ CREATE POLICY "acceso total" ON muuk_daily_backups FOR ALL USING (true) WITH CHE
           <input type="hidden" id="lp-modal-file-name">
           <span id="lp-modal-file-badge" style="display:none"></span>
 
+          <!-- Fotos de Productos -->
+          <div class="card mb-3 border-0" style="background:#fff7ed;border:1px solid #fed7aa!important;border-radius:8px">
+            <div class="card-body py-2 px-3">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <strong style="font-size:.82rem;color:#c2410c"><i class="bi bi-image me-1"></i>Fotos de Productos</strong>
+                <button class="btn btn-sm btn-outline-warning" onclick="lpAgregarProducto()" style="font-size:.72rem;padding:2px 8px;border-radius:6px;color:#c2410c;border-color:#fed7aa"><i class="bi bi-plus me-1"></i>Agregar producto</button>
+              </div>
+              <div id="lp-productos-wrap">
+                <div style="font-size:.76rem;color:#94a3b8;font-style:italic">Sin productos cargados.</div>
+              </div>
+            </div>
+          </div>
+
           <!-- Notas -->
           <div class="row g-2">
             <div class="col-12">
@@ -4758,6 +4785,273 @@ CREATE POLICY "acceso total" ON muuk_daily_backups FOR ALL USING (true) WITH CHE
     </div>
   </div>
 
+  <!-- ══════════════════ KINTO ══════════════════ -->
+  <div id="page-kinto" class="page">
+    <div class="page-hdr">
+      <h4 class="d-flex align-items-center gap-2">
+        <div style="background:#cc0000;border-radius:8px;padding:5px 10px;display:inline-flex;align-items:center">
+          <svg width="44" height="26" viewBox="0 0 100 58" xmlns="http://www.w3.org/2000/svg">
+            <ellipse cx="50" cy="30" rx="48" ry="24" fill="none" stroke="#fff" stroke-width="5"/>
+            <ellipse cx="50" cy="30" rx="22" ry="18" fill="none" stroke="#fff" stroke-width="5"/>
+            <ellipse cx="50" cy="12" rx="12" ry="8" fill="none" stroke="#fff" stroke-width="4"/>
+          </svg>
+        </div>
+        KINTO — Renting Flota
+      </h4>
+      <div style="font-size:.72rem;color:#64748b;margin-top:2px">Gestión vehicular · Facturas y contratos de renting · Müük S.R.L.</div>
+    </div>
+
+    <div class="row g-4 mt-1">
+
+      <!-- Jonathan — Toyota Yaris S 2025 -->
+      <div class="col-12 col-lg-4">
+        <div class="card h-100" style="border:2px solid #e2e8f0;border-radius:14px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.07)">
+          <div style="background:linear-gradient(135deg,#1e3a5f,#0369a1);padding:18px 16px;text-align:center">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 88" width="200" height="80" style="display:block;margin:0 auto 10px">
+              <!-- Yaris S 2025 — sporty hatchback profile -->
+              <path d="M22 60 Q22 58 26 55 L44 36 Q52 24 72 21 L148 21 Q162 21 170 30 L180 44 Q184 50 185 57 L185 60 Z" fill="#dbeafe"/>
+              <path d="M44 36 Q52 24 72 21 L148 21 Q162 21 170 30 L180 44 L26 55 Z" fill="#bfdbfe"/>
+              <!-- Windshield -->
+              <path d="M72 23 L56 52 L105 52 L105 23 Z" fill="#93c5fd" opacity=".9"/>
+              <!-- Rear window -->
+              <path d="M107 23 L107 52 L148 52 L165 34 Q156 23 140 23 Z" fill="#93c5fd" opacity=".9"/>
+              <!-- Pillar -->
+              <line x1="106" y1="23" x2="106" y2="52" stroke="#60a5fa" stroke-width="2"/>
+              <!-- Rear spoiler hint -->
+              <path d="M148 21 L158 19 L165 22 L162 23 L148 22 Z" fill="#60a5fa"/>
+              <!-- Front fascia -->
+              <path d="M22 60 L26 55 L22 55 Z" fill="#93c5fd"/>
+              <!-- Headlight R (LED strip) -->
+              <rect x="178" y="43" width="8" height="3" rx="1.5" fill="#fef08a"/>
+              <!-- Taillight hint -->
+              <rect x="19" y="53" width="7" height="4" rx="1.5" fill="#fca5a5"/>
+              <!-- Lower body cladding -->
+              <rect x="22" y="58" width="163" height="4" rx="1" fill="#94a3b8"/>
+              <!-- Wheels -->
+              <circle cx="56" cy="63" r="13" fill="#1e293b"/><circle cx="56" cy="63" r="7" fill="#475569"/><circle cx="56" cy="63" r="2.5" fill="#94a3b8"/>
+              <circle cx="158" cy="63" r="13" fill="#1e293b"/><circle cx="158" cy="63" r="7" fill="#475569"/><circle cx="158" cy="63" r="2.5" fill="#94a3b8"/>
+              <!-- Shadow -->
+              <ellipse cx="107" cy="77" rx="80" ry="4" fill="#93c5fd" opacity=".2"/>
+              <!-- Yaris badge -->
+              <rect x="82" y="53" width="36" height="8" rx="3" fill="#1d4ed8"/>
+              <text x="100" y="59" text-anchor="middle" font-size="5" fill="#fff" font-family="Arial" font-weight="bold">YARIS S</text>
+            </svg>
+            <div style="color:#fff;font-weight:800;font-size:1rem">Jonathan Palermo</div>
+            <div style="color:#bae6fd;font-size:.8rem;margin-top:3px;font-weight:600">Toyota Yaris S 2025</div>
+          </div>
+          <div class="card-body p-3" id="kinto-body-jonathan">
+            <div class="text-center text-muted py-2" style="font-size:.8rem"><i class="bi bi-arrow-repeat me-1"></i>Cargando...</div>
+          </div>
+          <div class="card-footer p-2 d-flex gap-2 bg-transparent border-top">
+            <input type="file" id="kinto-file-jonathan-factura" accept=".pdf,image/*" style="display:none" onchange="_kintoSubirArchivo(event,'jonathan','factura')">
+            <input type="file" id="kinto-file-jonathan-contrato" accept=".pdf,image/*" style="display:none" onchange="_kintoSubirArchivo(event,'jonathan','contrato')">
+            <button class="btn btn-outline-primary btn-sm flex-fill" style="font-size:.72rem" onclick="document.getElementById('kinto-file-jonathan-factura').click()"><i class="bi bi-receipt me-1"></i>Subir Factura</button>
+            <button class="btn btn-outline-success btn-sm flex-fill" style="font-size:.72rem" onclick="document.getElementById('kinto-file-jonathan-contrato').click()"><i class="bi bi-file-earmark-check me-1"></i>Contrato</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Alberto — Toyota Corolla Cross Hybrid 2025 -->
+      <div class="col-12 col-lg-4">
+        <div class="card h-100" style="border:2px solid #e2e8f0;border-radius:14px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.07)">
+          <div style="background:linear-gradient(135deg,#14532d,#16a34a);padding:18px 16px;text-align:center">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 88" width="200" height="80" style="display:block;margin:0 auto 10px">
+              <!-- Corolla Cross Hybrid 2025 — SUV profile -->
+              <path d="M20 62 L20 48 Q22 44 26 42 L42 28 Q52 17 72 16 L148 16 Q168 16 176 28 L186 44 Q190 48 190 54 L190 62 Z" fill="#dcfce7"/>
+              <path d="M42 28 Q52 17 72 16 L148 16 Q168 16 176 28 L186 44 L26 42 Z" fill="#bbf7d0"/>
+              <!-- Windshield -->
+              <path d="M72 18 L60 40 L106 40 L106 18 Z" fill="#6ee7b7" opacity=".8"/>
+              <!-- Rear window -->
+              <path d="M109 18 L109 40 L152 40 L168 28 Q158 18 140 18 Z" fill="#6ee7b7" opacity=".8"/>
+              <line x1="107" y1="18" x2="107" y2="40" stroke="#34d399" stroke-width="2"/>
+              <!-- Roof rails -->
+              <rect x="72" y="15" width="76" height="2" rx="1" fill="#34d399"/>
+              <!-- LED headlight -->
+              <path d="M186 47 L192 50 L192 57 L186 55 Z" fill="#fef08a"/>
+              <rect x="17" y="52" width="7" height="5" rx="2" fill="#fca5a5"/>
+              <!-- Cladding -->
+              <rect x="20" y="59" width="170" height="5" rx="1" fill="#86efac"/>
+              <!-- Wheels (bigger SUV) -->
+              <circle cx="54" cy="64" r="14" fill="#1e293b"/><circle cx="54" cy="64" r="7" fill="#475569"/><circle cx="54" cy="64" r="2.5" fill="#94a3b8"/>
+              <circle cx="158" cy="64" r="14" fill="#1e293b"/><circle cx="158" cy="64" r="7" fill="#475569"/><circle cx="158" cy="64" r="2.5" fill="#94a3b8"/>
+              <!-- Hybrid badge -->
+              <rect x="84" y="54" width="42" height="8" rx="3" fill="#15803d"/>
+              <text x="105" y="60" text-anchor="middle" font-size="5" fill="#fff" font-family="Arial" font-weight="bold">HYBRID 2025</text>
+              <ellipse cx="105" cy="78" rx="82" ry="4" fill="#86efac" opacity=".2"/>
+            </svg>
+            <div style="color:#fff;font-weight:800;font-size:1rem">Alberto Palermo</div>
+            <div style="color:#bbf7d0;font-size:.8rem;margin-top:3px;font-weight:600">Toyota Corolla Cross Hybrid 2025</div>
+          </div>
+          <div class="card-body p-3" id="kinto-body-alberto">
+            <div class="text-center text-muted py-2" style="font-size:.8rem"><i class="bi bi-arrow-repeat me-1"></i>Cargando...</div>
+          </div>
+          <div class="card-footer p-2 d-flex gap-2 bg-transparent border-top">
+            <input type="file" id="kinto-file-alberto-factura" accept=".pdf,image/*" style="display:none" onchange="_kintoSubirArchivo(event,'alberto','factura')">
+            <input type="file" id="kinto-file-alberto-contrato" accept=".pdf,image/*" style="display:none" onchange="_kintoSubirArchivo(event,'alberto','contrato')">
+            <button class="btn btn-outline-primary btn-sm flex-fill" style="font-size:.72rem" onclick="document.getElementById('kinto-file-alberto-factura').click()"><i class="bi bi-receipt me-1"></i>Subir Factura</button>
+            <button class="btn btn-outline-success btn-sm flex-fill" style="font-size:.72rem" onclick="document.getElementById('kinto-file-alberto-contrato').click()"><i class="bi bi-file-earmark-check me-1"></i>Contrato</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Ricardo — Toyota Corolla Cross Hybrid 2025 -->
+      <div class="col-12 col-lg-4">
+        <div class="card h-100" style="border:2px solid #e2e8f0;border-radius:14px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.07)">
+          <div style="background:linear-gradient(135deg,#1e1b4b,#3730a3);padding:18px 16px;text-align:center">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 88" width="200" height="80" style="display:block;margin:0 auto 10px">
+              <path d="M20 62 L20 48 Q22 44 26 42 L42 28 Q52 17 72 16 L148 16 Q168 16 176 28 L186 44 Q190 48 190 54 L190 62 Z" fill="#e0e7ff"/>
+              <path d="M42 28 Q52 17 72 16 L148 16 Q168 16 176 28 L186 44 L26 42 Z" fill="#c7d2fe"/>
+              <path d="M72 18 L60 40 L106 40 L106 18 Z" fill="#a5b4fc" opacity=".8"/>
+              <path d="M109 18 L109 40 L152 40 L168 28 Q158 18 140 18 Z" fill="#a5b4fc" opacity=".8"/>
+              <line x1="107" y1="18" x2="107" y2="40" stroke="#818cf8" stroke-width="2"/>
+              <rect x="72" y="15" width="76" height="2" rx="1" fill="#818cf8"/>
+              <path d="M186 47 L192 50 L192 57 L186 55 Z" fill="#fef08a"/>
+              <rect x="17" y="52" width="7" height="5" rx="2" fill="#fca5a5"/>
+              <rect x="20" y="59" width="170" height="5" rx="1" fill="#818cf8"/>
+              <circle cx="54" cy="64" r="14" fill="#1e293b"/><circle cx="54" cy="64" r="7" fill="#475569"/><circle cx="54" cy="64" r="2.5" fill="#94a3b8"/>
+              <circle cx="158" cy="64" r="14" fill="#1e293b"/><circle cx="158" cy="64" r="7" fill="#475569"/><circle cx="158" cy="64" r="2.5" fill="#94a3b8"/>
+              <rect x="84" y="54" width="42" height="8" rx="3" fill="#3730a3"/>
+              <text x="105" y="60" text-anchor="middle" font-size="5" fill="#fff" font-family="Arial" font-weight="bold">HYBRID 2025</text>
+              <ellipse cx="105" cy="78" rx="82" ry="4" fill="#a5b4fc" opacity=".2"/>
+            </svg>
+            <div style="color:#fff;font-weight:800;font-size:1rem">Ricardo Bodini</div>
+            <div style="color:#c7d2fe;font-size:.8rem;margin-top:3px;font-weight:600">Toyota Corolla Cross Hybrid 2025</div>
+          </div>
+          <div class="card-body p-3" id="kinto-body-ricardo">
+            <div class="text-center text-muted py-2" style="font-size:.8rem"><i class="bi bi-arrow-repeat me-1"></i>Cargando...</div>
+          </div>
+          <div class="card-footer p-2 d-flex gap-2 bg-transparent border-top">
+            <input type="file" id="kinto-file-ricardo-factura" accept=".pdf,image/*" style="display:none" onchange="_kintoSubirArchivo(event,'ricardo','factura')">
+            <input type="file" id="kinto-file-ricardo-contrato" accept=".pdf,image/*" style="display:none" onchange="_kintoSubirArchivo(event,'ricardo','contrato')">
+            <button class="btn btn-outline-primary btn-sm flex-fill" style="font-size:.72rem" onclick="document.getElementById('kinto-file-ricardo-factura').click()"><i class="bi bi-receipt me-1"></i>Subir Factura</button>
+            <button class="btn btn-outline-success btn-sm flex-fill" style="font-size:.72rem" onclick="document.getElementById('kinto-file-ricardo-contrato').click()"><i class="bi bi-file-earmark-check me-1"></i>Contrato</button>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /row -->
+  </div><!-- /page-kinto -->
+
+  <!-- ══════════════════ RECURSOS HUMANOS ══════════════════ -->
+  <div id="page-rrhh" class="page">
+    <div class="page-hdr">
+      <h4><i class="bi bi-person-badge-fill me-2" style="color:#ec4899"></i>Recursos Humanos</h4>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-sm" style="background:#ec4899;color:#fff;border:none;border-radius:7px;font-size:.75rem;padding:5px 13px" onclick="_rrhhAbrirEmpleado(null)"><i class="bi bi-plus-lg me-1"></i>Agregar</button>
+        <button class="btn btn-sm btn-outline-secondary" onclick="_rrhhAbrirVacacion()" style="font-size:.75rem;padding:5px 13px;border-radius:7px"><i class="bi bi-calendar-plus me-1"></i>Vacación</button>
+        <button class="btn btn-sm btn-outline-warning" onclick="_rrhhAbrirRecordatorio()" style="font-size:.75rem;padding:5px 13px;border-radius:7px"><i class="bi bi-bell-fill me-1"></i>Recordatorio</button>
+      </div>
+    </div>
+
+    <!-- KPIs -->
+    <div class="row g-2 mb-3" id="rrhh-kpis"></div>
+
+    <!-- Tabs -->
+    <ul class="nav nav-tabs mb-3" style="border-bottom:2px solid #fce7f3">
+      <li class="nav-item"><a class="nav-link active" id="rrhh-tab-empleados" href="#" onclick="_rrhhSetTab('empleados',event)" style="font-size:.8rem;font-weight:600"><i class="bi bi-people-fill me-1" style="color:#ec4899"></i>Empleados</a></li>
+      <li class="nav-item"><a class="nav-link" id="rrhh-tab-vacaciones" href="#" onclick="_rrhhSetTab('vacaciones',event)" style="font-size:.8rem;font-weight:600"><i class="bi bi-calendar-week me-1" style="color:#0369a1"></i>Vacaciones</a></li>
+      <li class="nav-item"><a class="nav-link" id="rrhh-tab-recordatorios" href="#" onclick="_rrhhSetTab('recordatorios',event)" style="font-size:.8rem;font-weight:600"><i class="bi bi-bell-fill me-1" style="color:#d97706"></i>Recordatorios</a></li>
+    </ul>
+
+    <div id="rrhh-tab-content-empleados"></div>
+    <div id="rrhh-tab-content-vacaciones" style="display:none"></div>
+    <div id="rrhh-tab-content-recordatorios" style="display:none"></div>
+  </div><!-- /page-rrhh -->
+
+  <!-- Modal empleado RRHH -->
+  <div class="modal fade" id="modalRrhhEmpleado" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header py-2" style="background:linear-gradient(135deg,#be185d,#ec4899)">
+          <h6 class="modal-title text-white"><i class="bi bi-person-fill me-2"></i><span id="rrhh-modal-emp-title">Empleado</span></h6>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body" style="font-size:.85rem">
+          <input type="hidden" id="rrhh-emp-id">
+          <div class="row g-2">
+            <div class="col-sm-6"><label class="form-label small fw-bold">Nombre completo *</label><input class="form-control form-control-sm" id="rrhh-emp-nombre" placeholder="Nombre y apellido"></div>
+            <div class="col-sm-6"><label class="form-label small fw-bold">Rol / Puesto</label><input class="form-control form-control-sm" id="rrhh-emp-rol" placeholder="Ej: Administrativo, Socio..."></div>
+            <div class="col-sm-4"><label class="form-label small fw-bold">Tipo</label>
+              <select class="form-select form-select-sm" id="rrhh-emp-tipo">
+                <option value="empleado">Empleado</option>
+                <option value="socio">Socio</option>
+              </select>
+            </div>
+            <div class="col-sm-4"><label class="form-label small fw-bold">Sueldo bruto (ARS)</label><input class="form-control form-control-sm" id="rrhh-emp-sueldo" type="number" min="0" placeholder="0"></div>
+            <div class="col-sm-4"><label class="form-label small fw-bold">Fecha de ingreso</label><input class="form-control form-control-sm" id="rrhh-emp-ingreso" type="date"></div>
+            <div class="col-sm-6"><label class="form-label small fw-bold">Email</label><input class="form-control form-control-sm" id="rrhh-emp-email" type="email" placeholder="correo@empresa.com"></div>
+            <div class="col-sm-6"><label class="form-label small fw-bold">Teléfono</label><input class="form-control form-control-sm" id="rrhh-emp-tel" placeholder="+54 9 ..."></div>
+            <div class="col-12"><label class="form-label small fw-bold">Observaciones</label><textarea class="form-control form-control-sm" id="rrhh-emp-obs" rows="2" placeholder="Notas adicionales..."></textarea></div>
+          </div>
+        </div>
+        <div class="modal-footer py-2">
+          <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+          <button class="btn btn-sm" style="background:#ec4899;color:#fff" onclick="_rrhhGuardarEmpleado()"><i class="bi bi-check-lg me-1"></i>Guardar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal vacación RRHH -->
+  <div class="modal fade" id="modalRrhhVacacion" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header py-2" style="background:linear-gradient(135deg,#0369a1,#38bdf8)">
+          <h6 class="modal-title text-white"><i class="bi bi-calendar-check me-2"></i>Período de Vacaciones</h6>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body" style="font-size:.85rem">
+          <input type="hidden" id="rrhh-vac-id">
+          <div class="row g-2">
+            <div class="col-12"><label class="form-label small fw-bold">Empleado *</label>
+              <select class="form-select form-select-sm" id="rrhh-vac-empleado"></select>
+            </div>
+            <div class="col-sm-6"><label class="form-label small fw-bold">Fecha inicio *</label><input class="form-control form-control-sm" id="rrhh-vac-inicio" type="date"></div>
+            <div class="col-sm-6"><label class="form-label small fw-bold">Fecha fin *</label><input class="form-control form-control-sm" id="rrhh-vac-fin" type="date"></div>
+            <div class="col-12"><label class="form-label small fw-bold">Observaciones</label><input class="form-control form-control-sm" id="rrhh-vac-obs" placeholder="Ej: Vacaciones anuales, licencia..."></div>
+          </div>
+        </div>
+        <div class="modal-footer py-2">
+          <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+          <button class="btn btn-primary btn-sm" onclick="_rrhhGuardarVacacion()"><i class="bi bi-check-lg me-1"></i>Guardar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal recordatorio RRHH -->
+  <div class="modal fade" id="modalRrhhRecordatorio" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header py-2" style="background:linear-gradient(135deg,#d97706,#fbbf24)">
+          <h6 class="modal-title text-white"><i class="bi bi-bell-fill me-2"></i>Recordatorio</h6>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body" style="font-size:.85rem">
+          <input type="hidden" id="rrhh-rec-id">
+          <div class="row g-2">
+            <div class="col-12"><label class="form-label small fw-bold">Título *</label><input class="form-control form-control-sm" id="rrhh-rec-titulo" placeholder="Ej: Pago sueldo Paula, Renovar contrato..."></div>
+            <div class="col-sm-6"><label class="form-label small fw-bold">Fecha *</label><input class="form-control form-control-sm" id="rrhh-rec-fecha" type="date"></div>
+            <div class="col-sm-6"><label class="form-label small fw-bold">Categoría</label>
+              <select class="form-select form-select-sm" id="rrhh-rec-cat">
+                <option value="sueldo">Sueldo</option>
+                <option value="contrato">Contrato</option>
+                <option value="licencia">Licencia</option>
+                <option value="evaluacion">Evaluación</option>
+                <option value="otro">Otro</option>
+              </select>
+            </div>
+            <div class="col-12"><label class="form-label small fw-bold">Nota</label><textarea class="form-control form-control-sm" id="rrhh-rec-nota" rows="2" placeholder="Detalle del recordatorio..."></textarea></div>
+          </div>
+        </div>
+        <div class="modal-footer py-2">
+          <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+          <button class="btn btn-sm" style="background:#d97706;color:#fff" onclick="_rrhhGuardarRecordatorio()"><i class="bi bi-check-lg me-1"></i>Guardar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- ══════════════════ CRM EMPRESAS ══════════════════ -->
   <div id="page-empresas" class="page">
     <!-- Header -->
@@ -4787,9 +5081,6 @@ CREATE POLICY "acceso total" ON muuk_daily_backups FOR ALL USING (true) WITH CHE
       <li class="nav-item">
         <a class="nav-link" id="crm-tab-empresas" href="#" onclick="crmSetTab('empresas',event)" style="font-size:.78rem;font-weight:600;padding:6px 14px"><i class="bi bi-building-check me-1"></i>Empresas</a>
       </li>
-      <li class="nav-item">
-        <a class="nav-link" id="crm-tab-kinto" href="#" onclick="crmSetTab('kinto',event)" style="font-size:.78rem;font-weight:600;padding:6px 14px"><i class="bi bi-car-front-fill me-1" style="color:#cc0000"></i>KINTO</a>
-      </li>
     </ul>
 
     <!-- Stats row -->
@@ -4808,160 +5099,6 @@ CREATE POLICY "acceso total" ON muuk_daily_backups FOR ALL USING (true) WITH CHE
       <div id="crm-cards" class="row g-3"></div>
     </div>
 
-    <!-- ══ KINTO Tab Content ══ -->
-    <div id="crm-tab-content-kinto" style="display:none">
-      <!-- Header KINTO -->
-      <div style="background:linear-gradient(135deg,#cc0000,#ff4444);border-radius:12px;padding:16px 20px;margin-bottom:20px;display:flex;align-items:center;gap:14px">
-        <div style="background:#fff;border-radius:8px;padding:6px 10px">
-          <!-- Toyota logo simplified -->
-          <svg width="48" height="28" viewBox="0 0 100 58" xmlns="http://www.w3.org/2000/svg">
-            <ellipse cx="50" cy="30" rx="48" ry="24" fill="none" stroke="#cc0000" stroke-width="5"/>
-            <ellipse cx="50" cy="30" rx="22" ry="18" fill="none" stroke="#cc0000" stroke-width="5"/>
-            <ellipse cx="50" cy="12" rx="12" ry="8" fill="none" stroke="#cc0000" stroke-width="4"/>
-          </svg>
-        </div>
-        <div>
-          <div style="color:#fff;font-weight:800;font-size:1.1rem;letter-spacing:.05em">KINTO — Renting Müük S.R.L.</div>
-          <div style="color:#fca5a5;font-size:.75rem;margin-top:2px">Gestión de flota vehicular · Facturas y contratos vigentes</div>
-        </div>
-      </div>
-
-      <!-- 3 car cards -->
-      <div class="row g-4">
-
-        <!-- Jonathan — Toyota Yaris 2022 -->
-        <div class="col-12 col-lg-4">
-          <div class="card h-100" style="border:2px solid #e2e8f0;border-radius:14px;overflow:hidden">
-            <div style="background:linear-gradient(135deg,#1e3a5f,#0369a1);padding:16px;text-align:center">
-              <!-- Toyota Yaris 2022 SVG -->
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 80" width="180" height="72" style="display:block;margin:0 auto 8px">
-                <!-- Body -->
-                <path d="M20 55 Q22 55 25 50 L40 32 Q50 22 70 20 L130 20 Q148 20 158 30 L172 50 Q175 52 178 55 Z" fill="#e2e8f0"/>
-                <path d="M40 32 Q50 22 70 20 L130 20 Q148 20 158 30 L172 50 L25 50 Z" fill="#cbd5e1"/>
-                <!-- Windows -->
-                <path d="M70 22 L65 47 L100 47 L100 22 Z" fill="#bfdbfe" opacity=".85"/>
-                <path d="M102 22 L102 47 L135 47 L148 32 Q140 22 125 22 Z" fill="#bfdbfe" opacity=".85"/>
-                <!-- Window divider -->
-                <line x1="100" y1="22" x2="100" y2="47" stroke="#94a3b8" stroke-width="1.5"/>
-                <!-- Headlights -->
-                <ellipse cx="174" cy="47" rx="6" ry="4" fill="#fef9c3"/>
-                <ellipse cx="25" cy="49" rx="5" ry="3.5" fill="#fef3c7"/>
-                <!-- Wheels -->
-                <circle cx="52" cy="57" r="12" fill="#1e293b"/>
-                <circle cx="52" cy="57" r="6" fill="#64748b"/>
-                <circle cx="52" cy="57" r="2" fill="#94a3b8"/>
-                <circle cx="150" cy="57" r="12" fill="#1e293b"/>
-                <circle cx="150" cy="57" r="6" fill="#64748b"/>
-                <circle cx="150" cy="57" r="2" fill="#94a3b8"/>
-                <!-- Ground shadow -->
-                <ellipse cx="101" cy="70" rx="75" ry="4" fill="#94a3b8" opacity=".25"/>
-              </svg>
-              <div style="color:#fff;font-weight:800;font-size:1rem">Jonathan Palermo</div>
-              <div style="color:#bae6fd;font-size:.78rem;margin-top:2px">Toyota Yaris 2022</div>
-            </div>
-            <div class="card-body p-3" id="kinto-body-jonathan">
-              <!-- Rendered by renderKinto() -->
-              <div class="text-center text-muted py-2" style="font-size:.8rem"><i class="bi bi-arrow-repeat me-1"></i>Cargando...</div>
-            </div>
-            <div class="card-footer p-2 d-flex gap-2">
-              <input type="file" id="kinto-file-jonathan-factura" accept=".pdf,image/*" style="display:none" onchange="_kintoSubirArchivo(event,'jonathan','factura')">
-              <input type="file" id="kinto-file-jonathan-contrato" accept=".pdf,image/*" style="display:none" onchange="_kintoSubirArchivo(event,'jonathan','contrato')">
-              <button class="btn btn-outline-primary btn-sm flex-fill" style="font-size:.72rem" onclick="document.getElementById('kinto-file-jonathan-factura').click()"><i class="bi bi-receipt me-1"></i>Subir Factura</button>
-              <button class="btn btn-outline-success btn-sm flex-fill" style="font-size:.72rem" onclick="document.getElementById('kinto-file-jonathan-contrato').click()"><i class="bi bi-file-earmark-check me-1"></i>Contrato</button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Alberto — Toyota Corolla Cross Hybrid 2024 -->
-        <div class="col-12 col-lg-4">
-          <div class="card h-100" style="border:2px solid #e2e8f0;border-radius:14px;overflow:hidden">
-            <div style="background:linear-gradient(135deg,#14532d,#16a34a);padding:16px;text-align:center">
-              <!-- Toyota Corolla Cross SVG (SUV profile) -->
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 80" width="180" height="72" style="display:block;margin:0 auto 8px">
-                <!-- Body (taller, more boxy SUV) -->
-                <path d="M18 58 L18 46 Q20 42 24 40 L38 28 Q46 18 66 17 L136 17 Q156 17 164 27 L174 40 Q178 43 180 46 L180 58 Z" fill="#dcfce7"/>
-                <path d="M38 28 Q46 18 66 17 L136 17 Q156 17 164 27 L174 40 L24 40 Z" fill="#bbf7d0"/>
-                <!-- Windows (squarer SUV shape) -->
-                <path d="M67 19 L62 38 L98 38 L98 19 Z" fill="#bfdbfe" opacity=".85"/>
-                <path d="M101 19 L101 38 L140 38 L152 28 Q144 19 128 19 Z" fill="#bfdbfe" opacity=".85"/>
-                <line x1="100" y1="19" x2="100" y2="38" stroke="#86efac" stroke-width="1.5"/>
-                <!-- Roof rack hint -->
-                <line x1="67" y1="18" x2="152" y2="18" stroke="#86efac" stroke-width="2"/>
-                <!-- Headlights -->
-                <path d="M172 43 L178 46 L178 52 L172 50 Z" fill="#fef9c3"/>
-                <ellipse cx="22" cy="50" rx="5" ry="3.5" fill="#fef3c7"/>
-                <!-- Skid plate / cladding -->
-                <rect x="18" y="55" width="162" height="5" rx="1" fill="#94a3b8"/>
-                <!-- Wheels (slightly larger for SUV) -->
-                <circle cx="50" cy="60" r="13" fill="#1e293b"/>
-                <circle cx="50" cy="60" r="6.5" fill="#64748b"/>
-                <circle cx="50" cy="60" r="2.5" fill="#94a3b8"/>
-                <circle cx="152" cy="60" r="13" fill="#1e293b"/>
-                <circle cx="152" cy="60" r="6.5" fill="#64748b"/>
-                <circle cx="152" cy="60" r="2.5" fill="#94a3b8"/>
-                <!-- Hybrid badge hint -->
-                <rect x="88" y="50" width="24" height="6" rx="2" fill="#16a34a"/>
-                <text x="100" y="55" text-anchor="middle" font-size="4.5" fill="#fff" font-family="Arial" font-weight="bold">HYBRID</text>
-                <!-- Ground shadow -->
-                <ellipse cx="101" cy="74" rx="75" ry="4" fill="#86efac" opacity=".25"/>
-              </svg>
-              <div style="color:#fff;font-weight:800;font-size:1rem">Alberto Palermo</div>
-              <div style="color:#bbf7d0;font-size:.78rem;margin-top:2px">Toyota Corolla Cross Hybrid 2024</div>
-            </div>
-            <div class="card-body p-3" id="kinto-body-alberto">
-              <div class="text-center text-muted py-2" style="font-size:.8rem"><i class="bi bi-arrow-repeat me-1"></i>Cargando...</div>
-            </div>
-            <div class="card-footer p-2 d-flex gap-2">
-              <input type="file" id="kinto-file-alberto-factura" accept=".pdf,image/*" style="display:none" onchange="_kintoSubirArchivo(event,'alberto','factura')">
-              <input type="file" id="kinto-file-alberto-contrato" accept=".pdf,image/*" style="display:none" onchange="_kintoSubirArchivo(event,'alberto','contrato')">
-              <button class="btn btn-outline-primary btn-sm flex-fill" style="font-size:.72rem" onclick="document.getElementById('kinto-file-alberto-factura').click()"><i class="bi bi-receipt me-1"></i>Subir Factura</button>
-              <button class="btn btn-outline-success btn-sm flex-fill" style="font-size:.72rem" onclick="document.getElementById('kinto-file-alberto-contrato').click()"><i class="bi bi-file-earmark-check me-1"></i>Contrato</button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Ricardo — Toyota Corolla Cross Hybrid 2024 -->
-        <div class="col-12 col-lg-4">
-          <div class="card h-100" style="border:2px solid #e2e8f0;border-radius:14px;overflow:hidden">
-            <div style="background:linear-gradient(135deg,#44403c,#78716c);padding:16px;text-align:center">
-              <!-- Same Corolla Cross SVG in dark tone -->
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 80" width="180" height="72" style="display:block;margin:0 auto 8px">
-                <path d="M18 58 L18 46 Q20 42 24 40 L38 28 Q46 18 66 17 L136 17 Q156 17 164 27 L174 40 Q178 43 180 46 L180 58 Z" fill="#e7e5e4"/>
-                <path d="M38 28 Q46 18 66 17 L136 17 Q156 17 164 27 L174 40 L24 40 Z" fill="#d6d3d1"/>
-                <path d="M67 19 L62 38 L98 38 L98 19 Z" fill="#bfdbfe" opacity=".85"/>
-                <path d="M101 19 L101 38 L140 38 L152 28 Q144 19 128 19 Z" fill="#bfdbfe" opacity=".85"/>
-                <line x1="100" y1="19" x2="100" y2="38" stroke="#a8a29e" stroke-width="1.5"/>
-                <line x1="67" y1="18" x2="152" y2="18" stroke="#a8a29e" stroke-width="2"/>
-                <path d="M172 43 L178 46 L178 52 L172 50 Z" fill="#fef9c3"/>
-                <ellipse cx="22" cy="50" rx="5" ry="3.5" fill="#fef3c7"/>
-                <rect x="18" y="55" width="162" height="5" rx="1" fill="#78716c"/>
-                <circle cx="50" cy="60" r="13" fill="#1e293b"/>
-                <circle cx="50" cy="60" r="6.5" fill="#64748b"/>
-                <circle cx="50" cy="60" r="2.5" fill="#94a3b8"/>
-                <circle cx="152" cy="60" r="13" fill="#1e293b"/>
-                <circle cx="152" cy="60" r="6.5" fill="#64748b"/>
-                <circle cx="152" cy="60" r="2.5" fill="#94a3b8"/>
-                <rect x="88" y="50" width="24" height="6" rx="2" fill="#78716c"/>
-                <text x="100" y="55" text-anchor="middle" font-size="4.5" fill="#fff" font-family="Arial" font-weight="bold">HYBRID</text>
-                <ellipse cx="101" cy="74" rx="75" ry="4" fill="#a8a29e" opacity=".25"/>
-              </svg>
-              <div style="color:#fff;font-weight:800;font-size:1rem">Ricardo Bodini</div>
-              <div style="color:#e7e5e4;font-size:.78rem;margin-top:2px">Toyota Corolla Cross Hybrid 2024</div>
-            </div>
-            <div class="card-body p-3" id="kinto-body-ricardo">
-              <div class="text-center text-muted py-2" style="font-size:.8rem"><i class="bi bi-arrow-repeat me-1"></i>Cargando...</div>
-            </div>
-            <div class="card-footer p-2 d-flex gap-2">
-              <input type="file" id="kinto-file-ricardo-factura" accept=".pdf,image/*" style="display:none" onchange="_kintoSubirArchivo(event,'ricardo','factura')">
-              <input type="file" id="kinto-file-ricardo-contrato" accept=".pdf,image/*" style="display:none" onchange="_kintoSubirArchivo(event,'ricardo','contrato')">
-              <button class="btn btn-outline-primary btn-sm flex-fill" style="font-size:.72rem" onclick="document.getElementById('kinto-file-ricardo-factura').click()"><i class="bi bi-receipt me-1"></i>Subir Factura</button>
-              <button class="btn btn-outline-success btn-sm flex-fill" style="font-size:.72rem" onclick="document.getElementById('kinto-file-ricardo-contrato').click()"><i class="bi bi-file-earmark-check me-1"></i>Contrato</button>
-            </div>
-          </div>
-        </div>
-
-      </div><!-- /row -->
-    </div><!-- /crm-tab-content-kinto -->
 
     <!-- Shared CRM modal -->
     <div class="modal fade" id="modal-crm-empresa" tabindex="-1">
@@ -6104,7 +6241,7 @@ CREATE POLICY "acceso total" ON muuk_daily_backups FOR ALL USING (true) WITH CHE
           </div>
         </div>
         <div style="text-align:right">
-          <div id="bienvenida-hora" style="font-size:2.2rem;font-weight:800;color:#fff;line-height:1;letter-spacing:-.5px;font-variant-numeric:tabular-nums"></div>
+          <div id="bienvenida-hora" style="font-size:2.2rem;font-weight:800;color:#fff;line-height:1;letter-spacing:-.5px;font-variant-numeric:tabular-nums">00:00:00</div>
           <div style="font-size:.7rem;color:#64748b;margin-top:3px">hora local</div>
         </div>
       </div>
@@ -6130,7 +6267,7 @@ CREATE POLICY "acceso total" ON muuk_daily_backups FOR ALL USING (true) WITH CHE
       </div>
     </div>
 
-    <!-- Socios: resumen estados de cuenta -->
+    <!-- Socios: resumen estados de cuenta (renderBienvenida lo muestra/oculta según usuario) -->
     <div id="bienvenida-ecta-wrap" style="display:none;margin-top:4px"></div>
   </div>
   <!-- ══════════════════ FIN BIENVENIDA ══════════════════ -->
@@ -9406,11 +9543,11 @@ const MUUK_ACCESS_BASE = {
   'PaulaSpinelli':   ['bienvenida','comisiones','bcra','calendarioARCA','contabilidad',
                       'facturasACobrar','facturasPagar','estadosCuenta','stock',
                       'listasPrecios','empresas','documentos','cuentasBancarias','historialCobranzas','ingresarCobranza',
-                      'manual'],
+                      'rrhh','manual'],
   'AgustinGalie':    ['bienvenida','comisiones','bcra','calendarioARCA','contabilidad',
                       'facturasACobrar','facturasPagar','estadosCuenta','stock',
                       'listasPrecios','empresas','documentos','cuentasBancarias','historialCobranzas','ingresarCobranza',
-                      'cronograma','manual'],
+                      'cronograma','rrhh','manual'],
 };
 const MUUK_ADMINS = ['JonathanPalermo'];
 
@@ -9525,7 +9662,8 @@ function _applyAccessToSidebar() {
 ═══════════════════════════════════════════ */
 const _GRUPOS_ACCESO = {
   dashboard: ['dashboard'],
-  empresa:   ['socios','cuentaSocios','liquidacion'],
+  empresa:   ['socios','cuentaSocios','liquidacion','kinto'],
+  rrhh:      ['rrhh'],
   caja:      ['cajaBancos','cajaEfectivo','chequesFisicos','eCheques','chequesPagar','kilometraje'],
   gestion:   ['comisiones','bcra','calendarioARCA','contabilidad','facturasACobrar','facturasPagar','estadosCuenta','stock','listasPrecios','empresas','documentos','cuentasBancarias','historialCobranzas'],
   analisis:  ['tesoreria','flujoProyectado','panelVencimientos','rentabilidad','gestion','reportes','historial','estrategicos','calculadora'],
@@ -10000,7 +10138,8 @@ function initApp() {
    SIDEBAR — Grupos Colapsables
 ═══════════════════════════════════════════ */
 const _SB_GROUPS = {
-  empresa:  ['socios','cuentaSocios','liquidacion'],
+  empresa:  ['socios','cuentaSocios','liquidacion','kinto'],
+  rrhh:     ['rrhh'],
   caja:     ['cajaBancos','cajaEfectivo','chequesFisicos','eCheques','chequesPagar','kilometraje'],
   gestion:  ['comisiones','bcra','calendarioARCA','contabilidad','facturasACobrar','facturasPagar','estadosCuenta','stock','listasPrecios','empresas','documentos','cuentasBancarias','historialCobranzas','ingresarCobranza'],
   analisis: ['tesoreria','flujoProyectado','panelVencimientos','rentabilidad','gestion','reportes','historial','estrategicos','calculadora'],
@@ -10367,6 +10506,8 @@ function irA(p) {
   if (p==='kilometraje')       kmRender();
   if (p==='calculadora')       try { calcRenderHistorial(); calcRestoreConfig(); } catch(e) {}
   if (p==='liquidacion')       renderLiquidacion();
+  if (p==='kinto')             renderKinto();
+  if (p==='rrhh')              renderRRHH();
   if (p==='empresas')          renderEmpresas();
   if (p==='usuarios')          renderUsuarios();
   if (p==='manual')            renderManual();
@@ -17272,6 +17413,7 @@ function _limpiarFiltrosStock() {
 let _lpCondiciones  = []; // temp condiciones en modal
 let _lpArchivosTemp = []; // temp archivos (multi) en modal
 let _lpArchivoTemp  = null; // legacy compat
+let _lpProductos    = []; // temp productos con fotos en modal
 
 function renderListasPrecios() {
   if (!ST.listasPrecios) ST.listasPrecios = [];
@@ -17403,6 +17545,7 @@ function renderListasPrecios() {
             ${l.categoria ? `<span class="me-2"><i class="bi bi-tag me-1"></i>${l.categoria}</span>` : ''}
             <span class="me-2"><i class="bi bi-coin me-1"></i>${l.moneda||'ARS'}</span>
             ${condCount ? `<span class="me-2"><i class="bi bi-percent me-1"></i>${condCount} condicion${condCount!==1?'es':''}</span>` : ''}
+            ${(l.productos||[]).length ? `<span class="me-2" style="color:#c2410c"><i class="bi bi-image me-1"></i>${l.productos.length} foto${l.productos.length!==1?'s':''}</span>` : ''}
           </div>
           ${lpArchs.length ? `<div style="font-size:.74rem;background:#eff6ff;padding:4px 8px;border-radius:5px;margin-bottom:8px">
             <i class="bi ${fileIcon} me-1 text-primary"></i>${lpArchs[0].nombre||'Archivo'}
@@ -17452,9 +17595,11 @@ function abrirModalListaPrecio(id) {
   document.getElementById('lp-driveUrl').value = '';
   document.getElementById('lp-notas').value = l?.notas || '';
 
-  // Render condiciones y archivos
+  // Render condiciones, archivos y productos
+  _lpProductos = l ? JSON.parse(JSON.stringify(l.productos || [])) : [];
   _lpRenderCondiciones();
   _lpRenderArchivosModal();
+  _lpRenderProductos();
 
   new bootstrap.Modal(document.getElementById('modalListaPrecio')).show();
 }
@@ -17542,6 +17687,53 @@ function lpAgregarCondicion() {
   _lpRenderCondiciones();
 }
 
+function lpAgregarProducto() {
+  _lpProductos.push({ id: uid(), nombre: '', empresa: '', detalle: '', foto: null });
+  _lpRenderProductos();
+}
+
+function _lpRenderProductos() {
+  const wrap = document.getElementById('lp-productos-wrap');
+  if (!wrap) return;
+  if (!_lpProductos.length) {
+    wrap.innerHTML = `<div style="font-size:.76rem;color:#94a3b8;font-style:italic">Sin productos cargados.</div>`;
+    return;
+  }
+  wrap.innerHTML = _lpProductos.map((p, i) => `
+    <div style="display:flex;gap:8px;align-items:flex-start;padding:8px;background:#fff;border:1px solid #fed7aa;border-radius:8px;margin-bottom:6px">
+      <!-- Foto -->
+      <div style="flex-shrink:0;width:64px;height:64px;border-radius:8px;overflow:hidden;background:#f1f5f9;display:flex;align-items:center;justify-content:center;border:1.5px dashed #fed7aa;cursor:pointer;position:relative"
+           onclick="document.getElementById('lp-prod-file-${i}').click()" title="Subir foto">
+        ${p.foto
+          ? `<img src="${p.foto}" style="width:100%;height:100%;object-fit:cover">`
+          : `<i class="bi bi-camera" style="font-size:1.3rem;color:#fdba74"></i>`}
+        <input type="file" id="lp-prod-file-${i}" accept="image/*" style="display:none" onchange="_lpProductoFotoSelected(event,${i})">
+      </div>
+      <!-- Campos -->
+      <div style="flex:1;display:flex;flex-direction:column;gap:4px">
+        <input class="form-control form-control-sm" value="${p.nombre||''}" placeholder="Nombre del producto *"
+               oninput="_lpProductos[${i}].nombre=this.value" style="font-size:.8rem;font-weight:600">
+        <input class="form-control form-control-sm" value="${p.empresa||''}" placeholder="Empresa / Marca"
+               oninput="_lpProductos[${i}].empresa=this.value" style="font-size:.78rem">
+        <input class="form-control form-control-sm" value="${p.detalle||''}" placeholder="Detalle / descripción"
+               oninput="_lpProductos[${i}].detalle=this.value" style="font-size:.76rem;color:#475569">
+      </div>
+      <button class="btn btn-sm btn-outline-danger" onclick="_lpProductos.splice(${i},1);_lpRenderProductos()" style="padding:3px 7px;flex-shrink:0" title="Eliminar"><i class="bi bi-x-lg"></i></button>
+    </div>`).join('');
+}
+
+function _lpProductoFotoSelected(event, idx) {
+  const file = event.target.files[0];
+  if (!file) return;
+  if (file.size > 3 * 1024 * 1024) { toast('La foto no puede superar 3 MB', 'warning'); return; }
+  const reader = new FileReader();
+  reader.onload = e => {
+    _lpProductos[idx].foto = e.target.result;
+    _lpRenderProductos();
+  };
+  reader.readAsDataURL(file);
+}
+
 function lpModalFileSelected(evt) {
   const files = Array.from(evt.target.files||[]);
   if (!files.length) return;
@@ -17590,6 +17782,7 @@ function guardarListaPrecio() {
     condiciones: _lpCondiciones,
     archivos,
     archivo: archivos[0] || prev?.archivo || {}, // legacy compat
+    productos: _lpProductos,
     notas: document.getElementById('lp-notas').value.trim(),
     createdAt: prev?.createdAt || new Date().toISOString(),
     updatedAt: new Date().toISOString()
@@ -17601,6 +17794,7 @@ function guardarListaPrecio() {
   _lpCondiciones  = [];
   _lpArchivoTemp  = null;
   _lpArchivosTemp = [];
+  _lpProductos    = [];
   save();
   bootstrap.Modal.getInstance(document.getElementById('modalListaPrecio')).hide();
   renderListasPrecios();
@@ -17733,6 +17927,26 @@ function lpVerDetalle(id) {
     </div>
 
     ${l.condiciones?.length ? `<div style="font-weight:700;font-size:.88rem;margin-bottom:4px"><i class="bi bi-percent me-1 text-success"></i>Condiciones de Pago (${l.condiciones.length})</div>${condHtml}` : '<div class="text-muted" style="font-size:.82rem">Sin condiciones de pago configuradas</div>'}
+
+    ${(l.productos||[]).length ? `
+    <div class="mt-3 mb-2">
+      <div style="font-weight:700;font-size:.88rem;margin-bottom:8px"><i class="bi bi-image me-1" style="color:#c2410c"></i>Fotos de Productos (${l.productos.length})</div>
+      <div class="row g-2">
+        ${l.productos.map(p=>`
+          <div class="col-6 col-md-4 col-lg-3">
+            <div style="border:1px solid #fed7aa;border-radius:10px;overflow:hidden;background:#fff7ed">
+              ${p.foto
+                ? `<img src="${p.foto}" style="width:100%;height:110px;object-fit:cover;display:block">`
+                : `<div style="width:100%;height:110px;display:flex;align-items:center;justify-content:center;background:#f1f5f9"><i class="bi bi-image text-muted" style="font-size:1.8rem"></i></div>`}
+              <div style="padding:6px 8px">
+                <div style="font-weight:700;font-size:.8rem;color:#0f172a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.nombre||'Sin nombre'}</div>
+                ${p.empresa ? `<div style="font-size:.72rem;color:#0369a1"><i class="bi bi-building me-1"></i>${p.empresa}</div>` : ''}
+                ${p.detalle ? `<div style="font-size:.7rem;color:#64748b;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${p.detalle}">${p.detalle}</div>` : ''}
+              </div>
+            </div>
+          </div>`).join('')}
+      </div>
+    </div>` : ''}
 
     ${l.notas ? `<div class="mt-3 mb-3" style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:8px 12px;font-size:.82rem"><i class="bi bi-sticky me-1 text-warning"></i><strong>Notas:</strong> ${l.notas}</div>` : ''}
 
@@ -27710,7 +27924,7 @@ let _crmEditTipo  = 'empresa';
 function crmSetTab(tab, event) {
   if (event) event.preventDefault();
   _crmActiveTab = tab;
-  ['clientes','proveedores','empresas','kinto'].forEach(t => {
+  ['clientes','proveedores','empresas'].forEach(t => {
     const nav = document.getElementById('crm-tab-'+t);
     if (nav) nav.classList.toggle('active', t === tab);
     const ct = document.getElementById('crm-tab-content-'+t);
@@ -27719,16 +27933,13 @@ function crmSetTab(tab, event) {
   const lblMap = { clientes:'Nuevo cliente', proveedores:'Nuevo proveedor', empresas:'Nueva empresa' };
   const lbl = document.getElementById('crm-btn-label');
   if (lbl) lbl.textContent = lblMap[tab] || 'Nuevo';
-  const btnNuevo = document.getElementById('crm-btn-nuevo');
-  if (btnNuevo) btnNuevo.style.display = tab === 'kinto' ? 'none' : '';
   _crmRenderActive();
 }
 
 function _crmRenderActive() {
-  if (_crmActiveTab === 'clientes')       renderCRMClientes();
+  if (_crmActiveTab === 'clientes')         renderCRMClientes();
   else if (_crmActiveTab === 'proveedores') renderCRMProveedores();
-  else if (_crmActiveTab === 'kinto')     renderKinto();
-  else renderCRMEmpresas();
+  else                                       renderCRMEmpresas();
 }
 
 // ── KINTO ──────────────────────────────────────────
@@ -27847,6 +28058,269 @@ function _dataUrlToBlob(dataUrl) {
   const arr  = new Uint8Array(bin.length);
   for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
   return new Blob([arr], { type: mime });
+}
+
+/* ═══════════════════════════════════════════
+   RECURSOS HUMANOS (RRHH)
+═══════════════════════════════════════════ */
+let _rrhhActiveTab = 'empleados';
+
+function renderRRHH() {
+  if (!ST.rrhh) ST.rrhh = { empleados: [], vacaciones: [], recordatorios: [] };
+  const r = ST.rrhh;
+
+  // KPIs
+  const hoy = new Date().toISOString().slice(0,10);
+  const vacActivas = (r.vacaciones||[]).filter(v => v.inicio <= hoy && v.fin >= hoy);
+  const recVencen  = (r.recordatorios||[]).filter(v => v.fecha >= hoy && v.fecha <= new Date(Date.now()+7*86400000).toISOString().slice(0,10));
+  const sueldoTotal = (r.empleados||[]).filter(e=>e.tipo==='empleado').reduce((s,e)=>s+(+e.sueldo||0),0);
+
+  const kpiWrap = document.getElementById('rrhh-kpis');
+  if (kpiWrap) kpiWrap.innerHTML = [
+    { label:'Empleados', value: (r.empleados||[]).filter(e=>e.tipo==='empleado').length, icon:'bi-person-fill', color:'#ec4899', bg:'#fdf2f8' },
+    { label:'Socios',    value: (r.empleados||[]).filter(e=>e.tipo==='socio').length,    icon:'bi-person-badge-fill', color:'#7c3aed', bg:'#f5f3ff' },
+    { label:'De vacaciones hoy', value: vacActivas.length, icon:'bi-calendar-check', color:'#0369a1', bg:'#eff6ff' },
+    { label:'Recordatorios próximos', value: recVencen.length, icon:'bi-bell-fill', color:'#d97706', bg:'#fffbeb' },
+    { label:'Masa salarial', value: '$' + sueldoTotal.toLocaleString('es-AR'), icon:'bi-cash-stack', color:'#16a34a', bg:'#f0fdf4' },
+  ].map(k=>`<div class="col-6 col-md-4 col-lg" >
+    <div class="card border-0 h-100" style="background:${k.bg};border-radius:10px;padding:12px 14px">
+      <div style="font-size:.65rem;font-weight:700;color:${k.color};text-transform:uppercase;letter-spacing:.06em"><i class="bi ${k.icon} me-1"></i>${k.label}</div>
+      <div style="font-size:1.4rem;font-weight:900;color:#0f172a;margin-top:4px">${k.value}</div>
+    </div>
+  </div>`).join('');
+
+  _rrhhRenderTab();
+}
+
+function _rrhhSetTab(tab, event) {
+  if (event) event.preventDefault();
+  _rrhhActiveTab = tab;
+  ['empleados','vacaciones','recordatorios'].forEach(t => {
+    const nav = document.getElementById('rrhh-tab-'+t);
+    if (nav) nav.classList.toggle('active', t === tab);
+    const ct = document.getElementById('rrhh-tab-content-'+t);
+    if (ct) ct.style.display = t === tab ? '' : 'none';
+  });
+  _rrhhRenderTab();
+}
+
+function _rrhhRenderTab() {
+  if (_rrhhActiveTab === 'empleados')     _rrhhRenderEmpleados();
+  else if (_rrhhActiveTab === 'vacaciones')  _rrhhRenderVacaciones();
+  else                                       _rrhhRenderRecordatorios();
+}
+
+function _rrhhRenderEmpleados() {
+  const wrap = document.getElementById('rrhh-tab-content-empleados');
+  if (!wrap) return;
+  const emps = ST.rrhh?.empleados || [];
+  if (!emps.length) {
+    wrap.innerHTML = `<div class="text-center text-muted py-5"><i class="bi bi-people" style="font-size:2rem;display:block;margin-bottom:8px"></i>Sin empleados registrados.<br><small>Usá "Agregar" para añadir uno.</small></div>`;
+    return;
+  }
+  const _fd = d => d ? new Date(d+'T12:00').toLocaleDateString('es-AR',{day:'2-digit',month:'short',year:'numeric'}) : '—';
+  wrap.innerHTML = `<div class="table-responsive"><table class="table table-sm table-hover" style="font-size:.82rem">
+    <thead style="background:#fdf2f8"><tr>
+      <th>Nombre</th><th>Rol</th><th>Tipo</th><th>Sueldo bruto</th><th>Ingreso</th><th>Contacto</th><th style="text-align:right">Acciones</th>
+    </tr></thead><tbody>
+    ${emps.map(e=>`<tr>
+      <td style="font-weight:700">${e.nombre||'—'}</td>
+      <td style="color:#64748b">${e.rol||'—'}</td>
+      <td><span class="bdg" style="background:${e.tipo==='socio'?'#ede9fe':'#fce7f3'};color:${e.tipo==='socio'?'#7c3aed':'#be185d'}">${e.tipo||'empleado'}</span></td>
+      <td style="font-weight:600;color:#16a34a">${e.sueldo ? '$'+Number(e.sueldo).toLocaleString('es-AR') : '—'}</td>
+      <td>${_fd(e.ingreso)}</td>
+      <td style="font-size:.75rem">${e.email||''} ${e.tel ? '<br>'+e.tel : ''}</td>
+      <td style="text-align:right">
+        <button class="btn btn-a btn-outline-primary me-1" onclick="_rrhhAbrirEmpleado('${e.id}')" title="Editar"><i class="bi bi-pencil"></i></button>
+        <button class="btn btn-a btn-outline-danger" onclick="_rrhhEliminarEmpleado('${e.id}')" title="Eliminar"><i class="bi bi-trash"></i></button>
+      </td>
+    </tr>`).join('')}
+    </tbody></table></div>`;
+}
+
+function _rrhhRenderVacaciones() {
+  const wrap = document.getElementById('rrhh-tab-content-vacaciones');
+  if (!wrap) return;
+  const vacs = (ST.rrhh?.vacaciones||[]).slice().sort((a,b)=>a.inicio.localeCompare(b.inicio));
+  const hoy  = new Date().toISOString().slice(0,10);
+  const _fd  = d => d ? new Date(d+'T12:00').toLocaleDateString('es-AR',{day:'2-digit',month:'short',year:'numeric'}) : '—';
+  const _dias = (a,b) => Math.round((new Date(b)-new Date(a))/86400000)+1;
+
+  if (!vacs.length) {
+    wrap.innerHTML = `<div class="text-center text-muted py-5"><i class="bi bi-calendar-x" style="font-size:2rem;display:block;margin-bottom:8px"></i>Sin vacaciones registradas.</div>`;
+    return;
+  }
+  wrap.innerHTML = `<div class="table-responsive"><table class="table table-sm table-hover" style="font-size:.82rem">
+    <thead style="background:#eff6ff"><tr>
+      <th>Empleado</th><th>Desde</th><th>Hasta</th><th>Días</th><th>Estado</th><th>Obs.</th><th style="text-align:right">Acciones</th>
+    </tr></thead><tbody>
+    ${vacs.map(v=>{
+      const activa = v.inicio<=hoy && v.fin>=hoy;
+      const pasada = v.fin < hoy;
+      const estado = activa ? '<span class="bdg bg-success text-white">Activa</span>' : pasada ? '<span class="bdg bg-secondary text-white">Finalizada</span>' : '<span class="bdg bg-info text-white">Próxima</span>';
+      return `<tr style="${activa?'background:#f0fdf4':''}">
+        <td style="font-weight:700">${v.empleado||'—'}</td>
+        <td>${_fd(v.inicio)}</td><td>${_fd(v.fin)}</td>
+        <td style="font-weight:600">${_dias(v.inicio,v.fin)}</td>
+        <td>${estado}</td>
+        <td style="font-size:.75rem;color:#64748b">${v.obs||''}</td>
+        <td style="text-align:right">
+          <button class="btn btn-a btn-outline-danger" onclick="_rrhhEliminarVacacion('${v.id}')" title="Eliminar"><i class="bi bi-trash"></i></button>
+        </td>
+      </tr>`;
+    }).join('')}
+    </tbody></table></div>`;
+}
+
+function _rrhhRenderRecordatorios() {
+  const wrap = document.getElementById('rrhh-tab-content-recordatorios');
+  if (!wrap) return;
+  const recs = (ST.rrhh?.recordatorios||[]).slice().sort((a,b)=>a.fecha.localeCompare(b.fecha));
+  const hoy  = new Date().toISOString().slice(0,10);
+  const _fd  = d => d ? new Date(d+'T12:00').toLocaleDateString('es-AR',{day:'2-digit',month:'short',year:'numeric'}) : '—';
+  const catColors = { sueldo:'#16a34a', contrato:'#0369a1', licencia:'#7c3aed', evaluacion:'#d97706', otro:'#64748b' };
+
+  if (!recs.length) {
+    wrap.innerHTML = `<div class="text-center text-muted py-5"><i class="bi bi-bell-slash" style="font-size:2rem;display:block;margin-bottom:8px"></i>Sin recordatorios cargados.</div>`;
+    return;
+  }
+  wrap.innerHTML = `<div class="row g-3">
+    ${recs.map(r=>{
+      const pasado = r.fecha < hoy;
+      const hoyMismo = r.fecha === hoy;
+      const color = catColors[r.cat||'otro'] || '#64748b';
+      return `<div class="col-md-6 col-lg-4">
+        <div class="card border-0 h-100" style="border-left:4px solid ${color}!important;border:1px solid #e2e8f0;border-radius:10px;opacity:${pasado?'.6':'1'}">
+          <div class="card-body p-3">
+            <div class="d-flex justify-content-between align-items-start mb-1">
+              <div style="font-weight:700;font-size:.88rem">${r.titulo||'Sin título'}</div>
+              <span class="bdg" style="background:${color}20;color:${color};font-size:.65rem">${r.cat||'otro'}</span>
+            </div>
+            <div style="font-size:.78rem;color:#475569;margin-bottom:6px">
+              <i class="bi bi-calendar me-1"></i>${_fd(r.fecha)}
+              ${hoyMismo ? '<span class="bdg bg-danger text-white ms-1">¡HOY!</span>' : ''}
+            </div>
+            ${r.nota ? `<div style="font-size:.75rem;color:#64748b">${r.nota}</div>` : ''}
+          </div>
+          <div class="card-footer bg-transparent border-top-0 pt-0 px-3 pb-2 text-end">
+            <button class="btn btn-a btn-outline-danger" onclick="_rrhhEliminarRecordatorio('${r.id}')" title="Eliminar"><i class="bi bi-trash"></i></button>
+          </div>
+        </div>
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
+function _rrhhAbrirEmpleado(id) {
+  const e = id ? (ST.rrhh?.empleados||[]).find(x=>x.id===id) : null;
+  document.getElementById('rrhh-emp-id').value    = id || '';
+  document.getElementById('rrhh-modal-emp-title').textContent = id ? 'Editar empleado' : 'Nuevo empleado';
+  document.getElementById('rrhh-emp-nombre').value = e?.nombre || '';
+  document.getElementById('rrhh-emp-rol').value    = e?.rol    || '';
+  document.getElementById('rrhh-emp-tipo').value   = e?.tipo   || 'empleado';
+  document.getElementById('rrhh-emp-sueldo').value = e?.sueldo || '';
+  document.getElementById('rrhh-emp-ingreso').value= e?.ingreso|| '';
+  document.getElementById('rrhh-emp-email').value  = e?.email  || '';
+  document.getElementById('rrhh-emp-tel').value    = e?.tel    || '';
+  document.getElementById('rrhh-emp-obs').value    = e?.obs    || '';
+  new bootstrap.Modal(document.getElementById('modalRrhhEmpleado')).show();
+}
+
+function _rrhhGuardarEmpleado() {
+  if (!ST.rrhh) ST.rrhh = { empleados:[], vacaciones:[], recordatorios:[] };
+  const nombre = document.getElementById('rrhh-emp-nombre').value.trim();
+  if (!nombre) { toast('Ingresá el nombre','warning'); return; }
+  const id = document.getElementById('rrhh-emp-id').value || uid();
+  const obj = {
+    id, nombre,
+    rol:     document.getElementById('rrhh-emp-rol').value.trim(),
+    tipo:    document.getElementById('rrhh-emp-tipo').value,
+    sueldo:  document.getElementById('rrhh-emp-sueldo').value,
+    ingreso: document.getElementById('rrhh-emp-ingreso').value,
+    email:   document.getElementById('rrhh-emp-email').value.trim(),
+    tel:     document.getElementById('rrhh-emp-tel').value.trim(),
+    obs:     document.getElementById('rrhh-emp-obs').value.trim(),
+  };
+  const idx = ST.rrhh.empleados.findIndex(e=>e.id===id);
+  if (idx>=0) ST.rrhh.empleados[idx]=obj; else ST.rrhh.empleados.push(obj);
+  save();
+  bootstrap.Modal.getInstance(document.getElementById('modalRrhhEmpleado'))?.hide();
+  renderRRHH();
+  toast('Empleado guardado ✓', 'success');
+}
+
+function _rrhhEliminarEmpleado(id) {
+  _confirmar('¿Eliminar este empleado?', ()=>{
+    ST.rrhh.empleados = (ST.rrhh.empleados||[]).filter(e=>e.id!==id);
+    save(); renderRRHH(); toast('Empleado eliminado');
+  }, { title:'Eliminar empleado', btnLabel:'Eliminar' });
+}
+
+function _rrhhAbrirVacacion() {
+  if (!ST.rrhh) ST.rrhh = { empleados:[], vacaciones:[], recordatorios:[] };
+  document.getElementById('rrhh-vac-id').value = '';
+  const sel = document.getElementById('rrhh-vac-empleado');
+  const emps = ST.rrhh.empleados || [];
+  sel.innerHTML = emps.length
+    ? emps.map(e=>`<option value="${e.nombre}">${e.nombre}</option>`).join('')
+    : '<option value="">— Sin empleados —</option>';
+  document.getElementById('rrhh-vac-inicio').value = '';
+  document.getElementById('rrhh-vac-fin').value    = '';
+  document.getElementById('rrhh-vac-obs').value    = '';
+  new bootstrap.Modal(document.getElementById('modalRrhhVacacion')).show();
+}
+
+function _rrhhGuardarVacacion() {
+  const empleado = document.getElementById('rrhh-vac-empleado').value;
+  const inicio   = document.getElementById('rrhh-vac-inicio').value;
+  const fin      = document.getElementById('rrhh-vac-fin').value;
+  if (!empleado||!inicio||!fin) { toast('Completá los campos requeridos','warning'); return; }
+  if (fin < inicio) { toast('La fecha fin debe ser posterior al inicio','warning'); return; }
+  if (!ST.rrhh) ST.rrhh = { empleados:[], vacaciones:[], recordatorios:[] };
+  ST.rrhh.vacaciones.push({ id:uid(), empleado, inicio, fin, obs:document.getElementById('rrhh-vac-obs').value.trim() });
+  save();
+  bootstrap.Modal.getInstance(document.getElementById('modalRrhhVacacion'))?.hide();
+  renderRRHH();
+  toast('Vacaciones registradas ✓', 'success');
+}
+
+function _rrhhEliminarVacacion(id) {
+  _confirmar('¿Eliminar este período?', ()=>{
+    ST.rrhh.vacaciones = (ST.rrhh.vacaciones||[]).filter(v=>v.id!==id);
+    save(); renderRRHH(); toast('Período eliminado');
+  }, { title:'Eliminar vacaciones', btnLabel:'Eliminar' });
+}
+
+function _rrhhAbrirRecordatorio() {
+  document.getElementById('rrhh-rec-id').value    = '';
+  document.getElementById('rrhh-rec-titulo').value= '';
+  document.getElementById('rrhh-rec-fecha').value = hoy();
+  document.getElementById('rrhh-rec-cat').value   = 'sueldo';
+  document.getElementById('rrhh-rec-nota').value  = '';
+  new bootstrap.Modal(document.getElementById('modalRrhhRecordatorio')).show();
+}
+
+function _rrhhGuardarRecordatorio() {
+  const titulo = document.getElementById('rrhh-rec-titulo').value.trim();
+  const fecha  = document.getElementById('rrhh-rec-fecha').value;
+  if (!titulo||!fecha) { toast('Completá título y fecha','warning'); return; }
+  if (!ST.rrhh) ST.rrhh = { empleados:[], vacaciones:[], recordatorios:[] };
+  ST.rrhh.recordatorios.push({
+    id: uid(), titulo, fecha,
+    cat:  document.getElementById('rrhh-rec-cat').value,
+    nota: document.getElementById('rrhh-rec-nota').value.trim(),
+  });
+  save();
+  bootstrap.Modal.getInstance(document.getElementById('modalRrhhRecordatorio'))?.hide();
+  renderRRHH();
+  toast('Recordatorio guardado ✓', 'success');
+}
+
+function _rrhhEliminarRecordatorio(id) {
+  _confirmar('¿Eliminar este recordatorio?', ()=>{
+    ST.rrhh.recordatorios = (ST.rrhh.recordatorios||[]).filter(r=>r.id!==id);
+    save(); renderRRHH(); toast('Recordatorio eliminado');
+  }, { title:'Eliminar recordatorio', btnLabel:'Eliminar' });
 }
 
 function _crmNuevoActivo() {
