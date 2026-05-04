@@ -909,7 +909,6 @@
       <div class="sl-items-inner">
         <li><a class="nav-link" data-page="socios"><i class="bi bi-people-fill"></i>Socios</a></li>
         <li><a class="nav-link" data-page="cuentaSocios"><i class="bi bi-bar-chart-steps"></i>Cuenta Socios</a></li>
-        <li><a class="nav-link" data-page="liquidacion"><i class="bi bi-cash-stack"></i>Liquidación Socios</a></li>
         <li><a class="nav-link" data-page="kinto"><i class="bi bi-car-front-fill" style="color:#cc0000"></i>KINTO</a></li>
       </div>
     </div>
@@ -10250,13 +10249,13 @@ function initApp() {
   initSBGroups();
   setTimeout(_sbScrollCheck, 400);
   updateBreadcrumb('bienvenida');
-  renderTodo();
-  irA('bienvenida');
-  // Backup render: garantiza que el contenido dinámico se muestre aunque irA falle
+  // Backup render: registrado ANTES de renderTodo/irA para que siempre se ejecute
   setTimeout(() => {
     try { renderBienvenida(); } catch(e) { console.warn('[bienvenida backup]', e); }
     try { _incUpdateBadge(); } catch(e) {}
-  }, 120);
+  }, 200);
+  renderTodo();
+  try { irA('bienvenida'); } catch(e) { console.warn('[irA bienvenida]', e); }
   _aiRestoreConfig();
   // Restaurar datos empresa en config
   (function(){
@@ -10655,7 +10654,7 @@ function irA(p) {
   if (p==='ingresarCobranza')  renderIngresarCobranza();
   if (p==='cronograma')        renderCronograma();
   if (p==='bienvenida') {
-    renderBienvenida();
+    try { renderBienvenida(); } catch(e) { console.warn('[renderBienvenida]', e); setTimeout(renderBienvenida, 50); }
   }
   // Actualizar nav-links activos
   document.querySelectorAll('#sidebar-nav .nav-link').forEach(l => {
@@ -10752,77 +10751,84 @@ function renderBienvenida() {
   const ectaWrap = document.getElementById('bienvenida-ecta-wrap');
   if (ectaWrap) {
     if (BV_SOCIOS.includes(user)) {
-      const vendedor = BV_USER_TO_VENDEDOR[user];
-      // Intentar restaurar caché si está vacío
-      if (!_ectaCache[vendedor] && typeof _ectaRestoreCache === 'function') _ectaRestoreCache();
-      const clientes = _ectaCache[vendedor] || null;
-      if (clientes) {
-        // Aplicar overlay: descontar facturas ya cobradas en MÜÜK
-        let totalACobrar = 0, clientesConDeuda = 0;
-        clientes.forEach(c => {
-          const cobradasNros = (typeof _ectaGetCobradasNros === 'function') ? _ectaGetCobradasNros(c.nombre) : new Set();
-          const adjPend = (c.pendientes || []).filter(f => {
-            const n = (f.factura || '').replace(/[\s\-\.\/]/g, '').toLowerCase();
-            return !n || !cobradasNros.has(n);
-          }).reduce((s, f) => s + f.monto, 0);
-          totalACobrar += adjPend;
-          if (adjPend > 0) clientesConDeuda++;
-        });
-
-        ectaWrap.style.display = '';
-        ectaWrap.innerHTML = `
-          <div style="background:#fff;border:1.5px solid #e2e8f0;border-radius:12px;padding:20px 24px;box-shadow:0 1px 4px rgba(0,0,0,.06)">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px">
-              <div style="display:flex;align-items:center;gap:8px">
-                <i class="bi bi-graph-up-arrow" style="color:#0369a1;font-size:1.1rem"></i>
-                <span style="font-size:.8rem;font-weight:700;color:#1e293b">Mi Estado de Cuenta</span>
-                <span style="font-size:.72rem;color:#64748b;font-weight:500">— ${vendedor}</span>
-              </div>
-              <button onclick="irA('estadosCuenta')" style="background:none;border:1px solid #cbd5e1;border-radius:8px;padding:4px 12px;font-size:.72rem;color:#475569;cursor:pointer;font-weight:600">
-                Ver detalle →
-              </button>
-            </div>
-            <div style="display:flex;gap:0;flex-wrap:wrap;border:1.5px solid #e2e8f0;border-radius:10px;overflow:hidden">
-              <div style="flex:1;min-width:160px;padding:16px 20px;background:#fef2f2;border-right:1px solid #fecaca">
-                <div style="font-size:.7rem;font-weight:700;color:#7f1d1d;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">
-                  <i class="bi bi-currency-dollar me-1"></i>Total a cobrar
-                </div>
-                <div style="font-size:1.6rem;font-weight:900;color:${totalACobrar > 0 ? '#dc2626' : '#16a34a'};line-height:1;font-variant-numeric:tabular-nums">
-                  $${totalACobrar.toLocaleString('es-AR', {minimumFractionDigits:0, maximumFractionDigits:0})}
-                </div>
-                <div style="font-size:.65rem;color:#94a3b8;margin-top:4px">Pendiente de tus clientes</div>
-              </div>
-              <div style="flex:1;min-width:160px;padding:16px 20px;background:#f8fafc">
-                <div style="font-size:.7rem;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">
-                  <i class="bi bi-people-fill me-1"></i>Clientes con deuda
-                </div>
-                <div style="font-size:1.6rem;font-weight:900;color:${clientesConDeuda > 0 ? '#dc2626' : '#16a34a'};line-height:1">
-                  ${clientesConDeuda}
-                </div>
-                <div style="font-size:.65rem;color:#94a3b8;margin-top:4px">de ${clientes.length} clientes en cartera</div>
-              </div>
-            </div>
-          </div>`;
-      } else {
-        // Sin datos en caché — mostrar placeholder y disparar carga en segundo plano
-        ectaWrap.style.display = '';
-        ectaWrap.innerHTML = `
-          <div style="background:#f8fafc;border:1.5px dashed #cbd5e1;border-radius:12px;padding:14px 20px;color:#94a3b8;font-size:.8rem;display:flex;align-items:center;gap:8px">
-            <i class="bi bi-arrow-repeat" style="animation:spin 1s linear infinite"></i>
-            Cargando estado de cuenta…
-          </div>`;
-        // Intentar cargar datos y actualizar al completar
-        if (typeof _ectaLoadVendedor === 'function') {
-          _ectaLoadVendedor(vendedor).then(() => {
-            // Re-renderizar sólo el wrap si el usuario sigue en bienvenida
-            if (document.getElementById('page-bienvenida')?.classList.contains('active') ||
-                document.getElementById('page-bienvenida')?.style.display !== 'none') {
-              renderBienvenida();
-            }
-          }).catch(()=>{
-            if (ectaWrap) ectaWrap.style.display = 'none';
+      try {
+        const vendedor = BV_USER_TO_VENDEDOR[user];
+        // Guard: _ectaCache puede quedar undefined si Supabase restore asignó ST.ectaCache=undefined
+        if (!_ectaCache || typeof _ectaCache !== 'object') _ectaCache = {};
+        // Intentar restaurar caché si está vacío
+        if (!_ectaCache[vendedor] && typeof _ectaRestoreCache === 'function') _ectaRestoreCache();
+        if (!_ectaCache || typeof _ectaCache !== 'object') _ectaCache = {};
+        const clientes = _ectaCache[vendedor] || null;
+        if (clientes) {
+          // Aplicar overlay: descontar facturas ya cobradas en MÜÜK
+          let totalACobrar = 0, clientesConDeuda = 0;
+          clientes.forEach(c => {
+            const cobradasNros = (typeof _ectaGetCobradasNros === 'function') ? _ectaGetCobradasNros(c.nombre) : new Set();
+            const adjPend = (c.pendientes || []).filter(f => {
+              const n = (f.factura || '').replace(/[\s\-\.\/]/g, '').toLowerCase();
+              return !n || !cobradasNros.has(n);
+            }).reduce((s, f) => s + f.monto, 0);
+            totalACobrar += adjPend;
+            if (adjPend > 0) clientesConDeuda++;
           });
+
+          ectaWrap.style.display = '';
+          ectaWrap.innerHTML = `
+            <div style="background:#fff;border:1.5px solid #e2e8f0;border-radius:12px;padding:20px 24px;box-shadow:0 1px 4px rgba(0,0,0,.06)">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px">
+                <div style="display:flex;align-items:center;gap:8px">
+                  <i class="bi bi-graph-up-arrow" style="color:#0369a1;font-size:1.1rem"></i>
+                  <span style="font-size:.8rem;font-weight:700;color:#1e293b">Mi Estado de Cuenta</span>
+                  <span style="font-size:.72rem;color:#64748b;font-weight:500">— ${vendedor}</span>
+                </div>
+                <button onclick="irA('estadosCuenta')" style="background:none;border:1px solid #cbd5e1;border-radius:8px;padding:4px 12px;font-size:.72rem;color:#475569;cursor:pointer;font-weight:600">
+                  Ver detalle →
+                </button>
+              </div>
+              <div style="display:flex;gap:0;flex-wrap:wrap;border:1.5px solid #e2e8f0;border-radius:10px;overflow:hidden">
+                <div style="flex:1;min-width:160px;padding:16px 20px;background:#fef2f2;border-right:1px solid #fecaca">
+                  <div style="font-size:.7rem;font-weight:700;color:#7f1d1d;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">
+                    <i class="bi bi-currency-dollar me-1"></i>Total a cobrar
+                  </div>
+                  <div style="font-size:1.6rem;font-weight:900;color:${totalACobrar > 0 ? '#dc2626' : '#16a34a'};line-height:1;font-variant-numeric:tabular-nums">
+                    $${totalACobrar.toLocaleString('es-AR', {minimumFractionDigits:0, maximumFractionDigits:0})}
+                  </div>
+                  <div style="font-size:.65rem;color:#94a3b8;margin-top:4px">Pendiente de tus clientes</div>
+                </div>
+                <div style="flex:1;min-width:160px;padding:16px 20px;background:#f8fafc">
+                  <div style="font-size:.7rem;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">
+                    <i class="bi bi-people-fill me-1"></i>Clientes con deuda
+                  </div>
+                  <div style="font-size:1.6rem;font-weight:900;color:${clientesConDeuda > 0 ? '#dc2626' : '#16a34a'};line-height:1">
+                    ${clientesConDeuda}
+                  </div>
+                  <div style="font-size:.65rem;color:#94a3b8;margin-top:4px">de ${clientes.length} clientes en cartera</div>
+                </div>
+              </div>
+            </div>`;
+        } else {
+          // Sin datos en caché — mostrar placeholder y disparar carga en segundo plano
+          ectaWrap.style.display = '';
+          ectaWrap.innerHTML = `
+            <div style="background:#f8fafc;border:1.5px dashed #cbd5e1;border-radius:12px;padding:14px 20px;color:#94a3b8;font-size:.8rem;display:flex;align-items:center;gap:8px">
+              <i class="bi bi-arrow-repeat" style="animation:spin 1s linear infinite"></i>
+              Cargando estado de cuenta…
+            </div>`;
+          // Intentar cargar datos y actualizar al completar
+          if (typeof _ectaLoadVendedor === 'function') {
+            _ectaLoadVendedor(vendedor).then(() => {
+              // Re-renderizar sólo si el usuario sigue en bienvenida
+              if (document.getElementById('page-bienvenida')?.classList.contains('active')) {
+                renderBienvenida();
+              }
+            }).catch(() => {
+              if (ectaWrap) ectaWrap.style.display = 'none';
+            });
+          }
         }
+      } catch(e) {
+        console.warn('[BV] ECTA render error:', e);
+        ectaWrap.style.display = 'none';
       }
     } else {
       ectaWrap.style.display = 'none';
