@@ -9,9 +9,23 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="MUUK Flujo">
+  <meta name="apple-mobile-web-app-title" content="MÜÜK">
+  <meta name="mobile-web-app-capable" content="yes">
   <meta name="theme-color" content="#0f172a">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💰</text></svg>">
+  <link rel="manifest" id="muuk-manifest">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='16' fill='%230f172a'/%3E%3Crect x='5' y='5' width='41' height='41' rx='8' fill='%23ef4444'/%3E%3Crect x='54' y='5' width='41' height='41' rx='8' fill='%23f97316'/%3E%3Crect x='5' y='54' width='41' height='41' rx='8' fill='%23eab308'/%3E%3Crect x='54' y='54' width='41' height='41' rx='8' fill='%23ef4444'/%3E%3C/svg%3E">
+  <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='32' fill='%230f172a'/%3E%3Crect x='14' y='14' width='74' height='74' rx='13' fill='%23ef4444'/%3E%3Crect x='104' y='14' width='74' height='74' rx='13' fill='%23f97316'/%3E%3Crect x='14' y='104' width='74' height='74' rx='13' fill='%23eab308'/%3E%3Crect x='104' y='104' width='74' height='74' rx='13' fill='%23ef4444'/%3E%3C/svg%3E">
+  <script>
+  (function(){
+    try {
+      const icon = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192"><rect width="192" height="192" rx="32" fill="#0f172a"/><rect x="14" y="14" width="74" height="74" rx="13" fill="#ef4444"/><rect x="104" y="14" width="74" height="74" rx="13" fill="#f97316"/><rect x="14" y="104" width="74" height="74" rx="13" fill="#eab308"/><rect x="104" y="104" width="74" height="74" rx="13" fill="#ef4444"/></svg>');
+      const manifest = { name:'MÜÜK S.R.L.', short_name:'MÜÜK', description:'Sistema de gestión de flujo de caja', start_url:'./', scope:'./', display:'standalone', background_color:'#0f172a', theme_color:'#0f172a', orientation:'any', icons:[{src:icon,sizes:'192x192',type:'image/svg+xml',purpose:'any maskable'}] };
+      const blob = new Blob([JSON.stringify(manifest)], {type:'application/manifest+json'});
+      const el = document.getElementById('muuk-manifest');
+      if (el) el.href = URL.createObjectURL(blob);
+    } catch(e) {}
+  })();
+  </script>
   <title>MÜÜK</title>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
@@ -10511,11 +10525,13 @@ async function _arPollAll() {
 
     if (changes.length > 0) {
       toast('Datos actualizados: ' + changes.join(', '), 'success');
-      // Refresh the active page
+      // Siempre actualizar saldos generales del dashboard
+      try { renderDashboard(); } catch(e) {}
+      // Actualizar también la página activa si no es dashboard
       const activePage = document.querySelector('.page.active');
       if (activePage) {
         const pageId = activePage.id.replace('page-','');
-        if (typeof irA === 'function') irA(pageId);
+        if (typeof irA === 'function' && pageId !== 'dashboard') irA(pageId);
       }
     }
 
@@ -11633,6 +11649,15 @@ function _comParseSheetData(rows) {
       type: isFull ? 'full' : 'simple'
     });
   }
+  // Trim trailing rows that have no real transaction content (solo saldo fórmula, sin fca/cliente/importe/comision/pagos)
+  let lastMeaningful = details.length - 1;
+  while (lastMeaningful >= 0) {
+    const d = details[lastMeaningful];
+    if (d.fca || d.importe || d.comision || d.pagos || d.cliente) break;
+    lastMeaningful--;
+  }
+  if (lastMeaningful < details.length - 1) details.splice(lastMeaningful + 1);
+
   return { headers, details, iFecha, iCliente, iFca, iImporte, iSinIVA, iComision, iEstado, iPagos, iSaldo, iObs, iPagoTipo, isFull, hasSaldo };
 }
 
