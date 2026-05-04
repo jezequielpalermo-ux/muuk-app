@@ -75,6 +75,7 @@
 
     /* SYNC STATUS */
     @keyframes sync-spin { to { transform: rotate(360deg); } }
+    @keyframes cloudLoadBar { 0%{width:0;margin-left:0} 50%{width:60%;margin-left:20%} 100%{width:0;margin-left:100%} }
     .sync-spin { display: inline-block; animation: sync-spin 1s linear infinite; }
     #sync-status { font-size: .7rem; margin-bottom: 6px; }
     .sync-status-ok      { color: #4ade80 !important; }
@@ -815,6 +816,22 @@
 <body>
 
 <!-- ══════════════════ LOGIN OVERLAY ══════════════════ -->
+<!-- Cloud sync loading overlay — cubre la app mientras se hace el pull inicial de Supabase -->
+<div id="cloud-loading-overlay" style="display:none;position:fixed;inset:0;z-index:9998;background:#0f172a;flex-direction:column;align-items:center;justify-content:center;gap:20px">
+  <svg width="64" height="64" viewBox="0 0 100 100">
+    <rect x="2"  y="2"  width="44" height="44" rx="9" fill="#ef4444"/>
+    <rect x="54" y="2"  width="44" height="44" rx="9" fill="#f97316"/>
+    <rect x="2"  y="54" width="44" height="44" rx="9" fill="#eab308"/>
+    <rect x="54" y="54" width="44" height="44" rx="9" fill="#ef4444"/>
+  </svg>
+  <div style="color:#fff;font-size:1.25rem;font-weight:800;letter-spacing:-.5px">MÜÜK</div>
+  <div id="cloud-loading-msg" style="color:#94a3b8;font-size:.85rem;font-weight:500">Sincronizando datos...</div>
+  <div style="position:relative;width:220px;height:3px;background:#1e293b;border-radius:2px;overflow:hidden">
+    <div id="cloud-loading-bar" style="position:absolute;height:100%;background:#3b82f6;border-radius:2px;animation:cloudLoadBar 1.4s ease-in-out infinite"></div>
+  </div>
+  <button onclick="document.getElementById('cloud-loading-overlay').style.display='none'" style="margin-top:8px;background:none;border:1px solid #334155;color:#64748b;border-radius:8px;padding:5px 16px;font-size:.72rem;cursor:pointer">Continuar sin esperar</button>
+</div>
+
 <div id="login-overlay">
   <div class="login-card">
     <!-- Logo -->
@@ -8607,7 +8624,8 @@ async function _restaurarDesdeBackup(backupId, backupDate) {
   }
 }
 
-async function pullRemoto(silent) {
+// forceLoad=true → aplica datos de Supabase siempre, sin comparar timestamps (usado al inicio)
+async function pullRemoto(silent, forceLoad = false) {
   if (!sbReady()) { setSyncStatus('none'); return; }
   if (!_online) return;
   if (!silent) setSyncStatus('syncing', 'Verificando actualizaciones...');
@@ -8625,33 +8643,43 @@ async function pullRemoto(silent) {
     const remote = rows[0];
     const remoteTs = (remote.data && remote.data._syncTs) || 0;
     const localTs  = ST._syncTs || 0;
-    if (remoteTs > localTs) {
-      // Supabase tiene datos más recientes — cargar
+    if (remoteTs > localTs || forceLoad) {
+      // Supabase tiene datos más recientes (o forzamos carga al inicio) — cargar
       Object.assign(ST, remote.data);
       if (!ST.socios || !ST.socios.length) ST.socios = SOCIOS_DEFAULT.map(s=>({...s}));
       if (ST.conceptos) CONCEPTOS_DEFAULT.forEach(c => { if (!ST.conceptos.find(x=>x===c)) ST.conceptos.push(c); });
       if (!Array.isArray(ST.kilometraje)) ST.kilometraje = [];
       if (!Array.isArray(ST.kmTarifas) || !ST.kmTarifas.length) ST.kmTarifas = [{ id:'kmt_base', desde:'2025-04-01', valor:1200, motivo:'Tarifa inicial acordada' }];
       if (typeof ST.metaCobranza === 'undefined') ST.metaCobranza = 0;
+      if (!Array.isArray(ST.facturasACobrar)) ST.facturasACobrar = [];
+      if (!Array.isArray(ST.facturasPagar))   ST.facturasPagar   = [];
+      if (!Array.isArray(ST.chequesFisicos))  ST.chequesFisicos  = [];
+      if (!Array.isArray(ST.eCheques))        ST.eCheques        = [];
+      if (!Array.isArray(ST.chequesPagar))    ST.chequesPagar    = [];
+      if (!Array.isArray(ST.cajaBancos))      ST.cajaBancos      = [];
+      if (!Array.isArray(ST.cajaEfectivo))    ST.cajaEfectivo    = [];
       // Restaurar ectaCache en memoria si vino de la nube (se guarda por separado)
       if (ST.ectaCache && Object.keys(ST.ectaCache).length) {
         _ectaCache = ST.ectaCache;
         try { localStorage.setItem('ectaCache2026', JSON.stringify(_ectaCache)); } catch(e) { console.warn('[PULL] ectaCache2026 write failed:', e); }
       }
-      // Guardar en flujoCajaV3 SIN ectaCache ni comisiones (igual que save())
+      // Guardar en localStorage SIN ectaCache ni comisiones (cache local del estado cloud)
       const {comisionesResumen: _pcr, comisionesTotal: _pct, comisionesTimestamp: _pcts, ectaCache: _pec, ectaCacheAt: _peca, ...pullPersistData} = ST;
       try { localStorage.setItem('flujoCajaV3', JSON.stringify(pullPersistData)); } catch(e) { console.error('[PULL] localStorage write failed:', e); }
-      reRenderActivo();
-      if (!silent) {
-        const quien = remote.updated_by ? ' — ' + remote.updated_by : '';
-        toast('🔄 Datos sincronizados' + quien, 'info');
+      if (!forceLoad) {
+        // Solo re-renderizar durante polling (forceLoad lo hace initApp después)
+        reRenderActivo();
+        if (!silent) {
+          const quien = remote.updated_by ? ' — ' + remote.updated_by : '';
+          toast('🔄 Datos sincronizados' + quien, 'info');
+        }
       }
-    } else if (localTs > remoteTs && localTs > 0) {
+    } else if (localTs > remoteTs && localTs > 0 && !forceLoad) {
       // Datos locales más recientes (ej: cambios pendientes de subir) — empujar a Supabase
       if (!silent) toast('↑ Subiendo cambios locales pendientes...', 'info');
       pushRemoto();
     }
-    _sbPushErrors = 0; // reset error count on successful pull
+    _sbPushErrors = 0;
     setSyncStatus('ok', 'Sincronizado');
   } catch(e) {
     let msg = 'Sin conexión con la base de datos';
@@ -8667,6 +8695,7 @@ async function pullRemoto(silent) {
       }
     }
     setSyncStatus('error', msg);
+    throw e; // re-lanzar para que initApp pueda detectar fallo
   }
 }
 
@@ -8712,16 +8741,12 @@ async function forceRestoreFromSupabase() {
 
 function iniciarAutoSync() {
   if (!sbReady()) { setSyncStatus('none'); return; }
-  setSyncStatus('syncing', 'Conectando con la base de datos...');
-  pullRemoto(false);
+  // El pull inicial ya se hizo en initApp() — aquí solo iniciamos el polling periódico
   if (_syncInterval) clearInterval(_syncInterval);
-  // Polling cada 8 segundos (más conservador para evitar saturar proyecto pausado)
   _syncInterval = setInterval(() => {
-    // Si hay errores acumulados, reducir frecuencia de polling
-    if (_sbPushErrors >= 3) return; // dejar de intentar hasta que el usuario reintente manualmente
-    pullRemoto(true);
+    if (_sbPushErrors >= 3) return;
+    pullRemoto(true).catch(() => {}); // polling silencioso — errores ya logueados por pullRemoto
   }, 8000);
-  // Intentar backup diario al iniciar (solo actúa si no se hizo hoy)
   setTimeout(() => _supabaseDailyBackup(false), 5000);
 }
 
@@ -10230,8 +10255,34 @@ function doLogout() {
   location.reload();
 }
 
-function initApp() {
+async function initApp() {
+  // ── 1. Cargar datos locales (snapshot rápido como fallback) ──
   load();
+
+  // ── 2. Mostrar overlay de sincronización cloud ──
+  const _clOverlay = document.getElementById('cloud-loading-overlay');
+  const _clMsg     = document.getElementById('cloud-loading-msg');
+  if (_clOverlay) _clOverlay.style.display = 'flex';
+
+  // ── 3. Pull desde Supabase ANTES de renderizar (cloud-first) ──
+  if (sbReady() && _online) {
+    if (_clMsg) _clMsg.textContent = 'Cargando datos actualizados desde la nube…';
+    try {
+      await pullRemoto(true, true); // silent=true, forceLoad=true — siempre aplica Supabase
+      if (_clMsg) _clMsg.textContent = '¡Listo! Abriendo aplicación…';
+    } catch(e) {
+      // Supabase no disponible — continuar con datos locales
+      if (_clMsg) _clMsg.textContent = 'Sin conexión — usando datos locales';
+      await new Promise(r => setTimeout(r, 800)); // breve pausa para que el usuario vea el mensaje
+    }
+  } else if (!sbReady()) {
+    if (_clMsg) _clMsg.textContent = 'Base de datos no configurada — datos locales';
+    await new Promise(r => setTimeout(r, 600));
+  }
+
+  // ── 4. Ocultar overlay y continuar con inicialización ──
+  if (_clOverlay) _clOverlay.style.display = 'none';
+
   cargarTipoCambio();
   cargarRatesSidebar();
   if (window._ratesInterval) clearInterval(window._ratesInterval);
@@ -10239,48 +10290,40 @@ function initApp() {
   initDarkMode();
   document.getElementById('fecha-hoy').textContent =
     new Date().toLocaleDateString('es-AR',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
-  iniciarAutoSync();
-  // ── Auto-sync Gestión + Comisiones al iniciar ──
-  // 1) Cargar caché inmediato para render rápido
+  iniciarAutoSync(); // inicia polling periódico (el pull inicial ya ocurrió arriba)
+
+  // ── Auto-sync Gestión + Comisiones ──
   _loadGestionData();
-  // 2) Sincronizar en background en paralelo (no bloquea la UI)
   setTimeout(() => {
-    Promise.allSettled([
-      _gestionAutoSync(),
-      cargarComisionesSheet()
-    ]).then(() => {
-      // Re-render dashboard con todos los datos disponibles
+    Promise.allSettled([_gestionAutoSync(), cargarComisionesSheet()]).then(() => {
       try { renderDashboard(); } catch(e) {}
     });
   }, 1800);
-  initAutoRefresh(); // Auto-detectar cambios en las bases
+
+  initAutoRefresh();
   document.querySelectorAll('#sidebar-nav .nav-link[data-page]').forEach(a => {
-    a.addEventListener('click', e => {
-      e.preventDefault();
-      irA(a.dataset.page); // irA() ya gestiona active class y expandSBGroupForPage
-    });
+    a.addEventListener('click', e => { e.preventDefault(); irA(a.dataset.page); });
   });
   initSBGroups();
   setTimeout(_sbScrollCheck, 400);
   updateBreadcrumb('bienvenida');
-  // Backup render: registrado ANTES de renderTodo/irA para que siempre se ejecute
+
+  // Backup render de bienvenida
   setTimeout(() => {
     try { renderBienvenida(); } catch(e) { console.warn('[bienvenida backup]', e); }
     try { _incUpdateBadge(); } catch(e) {}
   }, 200);
+
   renderTodo();
   try { irA('bienvenida'); } catch(e) { console.warn('[irA bienvenida]', e); }
   _aiRestoreConfig();
-  // Restaurar datos empresa en config
   (function(){
     const cuitEl = document.getElementById('cfg-cuit-empresa');
     const dirEl  = document.getElementById('cfg-dir-empresa');
     if (cuitEl && ST.config && ST.config.cuitEmpresa) cuitEl.value = ST.config.cuitEmpresa;
     if (dirEl  && ST.config && ST.config.dirEmpresa)  dirEl.value  = ST.config.dirEmpresa;
   })();
-  // Service Worker para modo offline
   if(typeof _registerServiceWorker==='function') _registerServiceWorker();
-  // Aplicar restricciones de acceso según usuario logueado
   _applyAccessToSidebar();
 }
 
