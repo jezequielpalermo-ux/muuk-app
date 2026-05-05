@@ -8300,6 +8300,13 @@ function save() {
   });
   persistData.facturasACobrar = _stripPreviews(persistData.facturasACobrar);
   persistData.facturasPagar   = _stripPreviews(persistData.facturasPagar);
+  // Strip recibos de sueldo PDF base64 del localStorage — el contenido real vive en Supabase
+  if (persistData.rrhh?.recibos?.length) {
+    persistData.rrhh = {
+      ...persistData.rrhh,
+      recibos: persistData.rrhh.recibos.map(r => r.data ? { ...r, data: '' } : r)
+    };
+  }
   // Pruning: strip chequesPagar pagado entries older than 6 months to prevent localStorage quota overflow
   if (persistData.chequesPagar) {
     const _cutoff6m = new Date(); _cutoff6m.setMonth(_cutoff6m.getMonth() - 6);
@@ -13128,7 +13135,7 @@ function renderCheques(cat){
       ${isPagar?'<th>Instrumento</th><th>Proveedor</th><th>Factura</th>':''}
       <th>${isPagar?'Banco origen':'Banco Emisor'}</th>
       ${isECh?'<th>Custodia</th><th>Cliente</th><th>Factura</th>':''}
-      ${isFisico?'<th>Tipo</th>':''}
+      ${isFisico?'<th>Custodia</th><th>Tipo</th>':''}
       <th>${isPagar?'Nro. / Ref.':'Nro.'}</th><th>Monto</th><th>Estado</th><th>Acciones</th></tr></thead>
     <tbody>${s.map(c=>{
       const d=c.fechaVenc?dHasta(c.fechaVenc):null;
@@ -13160,6 +13167,11 @@ function renderCheques(cat){
              <i class="bi bi-bank2 me-1"></i>Depositar
            </button>`
         : '';
+      const cobrarBtn = isFisico && (c.estado==='en_cartera'||c.estado==='pendiente')
+        ? `<button class="btn btn-sm btn-success btn-a me-1" onclick="cobrarChequeRapido('${c.id}')" title="Cobrar y acreditar en ${c.bancoCustodia||'Cuenta Corriente'}">
+             <i class="bi bi-bank2 me-1"></i>Cobrar
+           </button>`
+        : '';
       const pagarBtn = isPagar && c.estado==='pendiente'
         ? `<button class="btn btn-sm btn-success btn-a me-1" onclick="pagarChequeRapido('${c.id}')" title="Marcar como pagado y debitar del banco">
              <i class="bi bi-check2-circle me-1"></i>Pagar
@@ -13179,12 +13191,16 @@ function renderCheques(cat){
           <td><small>${c.cliente||'–'}</small></td>
           <td><small class="text-muted">${c.factura||'–'}</small></td>
         `:''}
-        ${isFisico?`<td>${c.tipo?`<span class="badge bg-secondary">${c.tipo}</span>`:'<span class="text-muted">–</span>'}</td>`:''}
+        ${isFisico?`
+          <td><small class="text-primary fw-semibold">${c.bancoCustodia||'–'}</small></td>
+          <td>${c.tipo?`<span class="badge bg-secondary">${c.tipo}</span>`:'<span class="text-muted">–</span>'}</td>
+        `:''}
         <td><small>${c.numero||'–'}</small></td>
         <td class="fw-bold">${fmt(c.monto)}</td>
         <td>${bdgEstado(c.estado)}</td>
         <td class="text-nowrap">
           ${depositarBtn}
+          ${cobrarBtn}
           ${pagarBtn}
           <button class="btn btn-outline-primary btn-a me-1" onclick="editarCheque('${cat}','${c.id}')"><i class="bi bi-pencil"></i></button>
           <button class="btn btn-outline-danger btn-a" onclick="eliminarCheque('${cat}','${c.id}')"><i class="bi bi-trash"></i></button>
@@ -13401,10 +13417,40 @@ function pagarChequeRapido(id) {
   );
 }
 
+function cobrarChequeRapido(id) {
+  const c = (ST.chequesFisicos||[]).find(x => x.id === id);
+  if (!c) return;
+  const banco = c.bancoCustodia || 'Cuenta Corriente';
+  const ref = c.numero ? ` Nro. ${c.numero}` : '';
+  const cliente = c.cliente ? ` — ${c.cliente}` : '';
+  const facRef  = c.factura ? ` | Fac: ${c.factura}` : '';
+  _confirmar(
+    `¿Marcar Cheque Físico${ref} como COBRADO?\n\nSe acreditará ${fmt(c.monto)} en "${banco}" en Caja Bancos.`,
+    () => {
+      c.estado = 'cobrado';
+      const concepto = 'Depósito de Cheque';
+      if (!ST.conceptos.includes(concepto)) ST.conceptos.push(concepto);
+      if (!ST.cajaBancos) ST.cajaBancos = [];
+      ST.cajaBancos.push({
+        id: uid(), fecha: hoy(), socioId: c.socioId||'', banco,
+        tipo: 'ingreso', concepto, monto: c.monto,
+        desc: `Cheque Físico${ref}${cliente}${facRef} — Banco ${c.banco||''}`.trim()
+      });
+      save();
+      renderCheques('chequesFisicos');
+      try { renderMovimientos('cajaBancos'); } catch(e) {}
+      try { renderSaldosBancos(); } catch(e) {}
+      try { renderDashboard(); } catch(e) {}
+      toast(`✓ Cheque Físico${ref} cobrado — ${fmt(c.monto)} acreditado en ${banco}`, 'success');
+    },
+    { title:'Cobrar cheque', btnLabel:'Confirmar cobro', btnIcon:'check2-circle', danger:false }
+  );
+}
+
 function eliminarCheque(cat,id){
   _confirmar('¿Eliminar este cheque? Esta acción no se puede deshacer.', ()=>{
     ST[cat]=ST[cat].filter(x=>x.id!==id);
-    save();renderCheques(cat);renderDashboard();toast('Cheque eliminado','warning');
+    save();renderCheques(cat);try{renderDashboard();}catch(e){}toast('Cheque eliminado','warning');
   }, { title:'Eliminar cheque', btnLabel:'Eliminar' });
 }
 
