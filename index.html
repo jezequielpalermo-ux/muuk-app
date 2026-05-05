@@ -5491,14 +5491,14 @@ CREATE POLICY "acceso total" ON muuk_daily_backups FOR ALL USING (true) WITH CHE
                   <label class="form-label small fw-semibold">Importe Facturado (con IVA) <span class="text-danger">*</span></label>
                   <div class="input-group input-group-sm">
                     <span class="input-group-text">$</span>
-                    <input type="text" inputmode="numeric" class="form-control" id="ic-importe-fac" placeholder="0" oninput="_icAutoSIVA()" onblur="_icFmtAmt(this)" onfocus="_icUnfmtAmt(this)">
+                    <input type="text" inputmode="numeric" class="form-control" id="ic-importe-fac" placeholder="0" oninput="_icFmtTyping(this);_icAutoSIVA()" onblur="_icFmtAmt(this)" onfocus="_icUnfmtAmt(this)">
                   </div>
                 </div>
                 <div class="col-md-6">
                   <label class="form-label small fw-semibold">Importe S/IVA <span class="text-danger">*</span></label>
                   <div class="input-group input-group-sm">
                     <span class="input-group-text">$</span>
-                    <input type="text" inputmode="numeric" class="form-control" id="ic-importe-siva" placeholder="0" oninput="_icAutoComision()" onblur="_icFmtAmt(this)" onfocus="_icUnfmtAmt(this)">
+                    <input type="text" inputmode="numeric" class="form-control" id="ic-importe-siva" placeholder="0" oninput="_icFmtTyping(this);_icAutoComision()" onblur="_icFmtAmt(this)" onfocus="_icUnfmtAmt(this)">
                   </div>
                 </div>
                 <div class="col-md-6">
@@ -13394,7 +13394,7 @@ function pagarChequeRapido(id) {
       renderCheques('chequesPagar');
       try { renderMovimientos('cajaBancos'); } catch(e) {}
       try { renderSaldosBancos(); } catch(e) {}
-      renderDashboard();
+      try { renderDashboard(); } catch(e) {}
       toast(`✓ ${instrLabel}${ref} pagado — ${fmt(c.monto)} debitado de ${banco}`, 'success');
     },
     { title: 'Pagar cheque', btnLabel: 'Confirmar pago', btnIcon: 'check2-circle', danger: false }
@@ -13840,7 +13840,8 @@ function guardarMov(){
   };
   const idx=ST[cat].findIndex(x=>x.id===obj.id);
   if(idx>=0)ST[cat][idx]=obj;else ST[cat].push(obj);
-  save();renderMovimientos(cat);renderDashboard();
+  save();renderMovimientos(cat);
+  try { renderDashboard(); } catch(e) {}
   bootstrap.Modal.getOrCreateInstance(document.getElementById('modalMov')).hide();
   toast('Movimiento guardado');
 }
@@ -25282,6 +25283,11 @@ function _ectaParseDate(s) {
   if (m5) return new Date(_yr2(m5[3]), +m5[2]-1, +m5[1]);
   return null;
 }
+function _ectaFmtDate(s) {
+  const d = _ectaParseDate(s);
+  if (!d || isNaN(d)) return s || '—';
+  return String(d.getDate()).padStart(2,'0') + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + d.getFullYear();
+}
 function _ectaDiasPendiente(fechaStr) {
   const d = _ectaParseDate(fechaStr);
   if (!d || isNaN(d)) return null;
@@ -25539,10 +25545,10 @@ function _ectaRenderData(vendedor) {
         const tdStyle = isNC ? 'font-weight:600;color:#7c3aed' : 'font-weight:700;color:#b91c1c';
         html += `<tr style="background:${rowBg}">
           <td style="font-weight:600;padding:6px 8px">${f.empresa}</td>
-          <td style="padding:6px 8px">${f.fecha}</td>
+          <td style="padding:6px 8px">${_ectaFmtDate(f.fecha)}</td>
           <td style="padding:6px 8px">${f.factura}${isNC ? ' <span style="font-size:.7rem;background:#ede9fe;color:#6d28d9;padding:2px 5px;border-radius:4px;font-weight:700">NC</span>' : ''}</td>
           <td class="text-end" style="${tdStyle};padding:6px 8px">${f.importe}</td>
-          <td style="padding:6px 8px;font-weight:500">${f.fechaPago || '—'}</td>
+          <td style="padding:6px 8px;font-weight:500">${f.fechaPago ? _ectaFmtDate(f.fechaPago) : '—'}</td>
           <td style="padding:6px 8px">${_ectaAntiguedadBadge(fechaRef)}</td>
         </tr>`;
       }
@@ -25574,7 +25580,7 @@ function _ectaRenderData(vendedor) {
       if (hidden.length > 0) {
         for (const f of hidden) {
           const isNC = /\bNC\b/i.test(f.factura);
-          html += `<tr class="ecta-old-row" style="display:none"><td style="padding:6px 8px">${f.empresa}</td><td style="padding:6px 8px">${f.fecha}</td><td style="padding:6px 8px">${f.factura}${isNC ? ' <span style="font-size:.7rem;background:#ede9fe;color:#6d28d9;padding:2px 5px;border-radius:4px;font-weight:700">NC</span>' : ''}</td><td class="text-end" style="padding:6px 8px">${f.importe}</td></tr>`;
+          html += `<tr class="ecta-old-row" style="display:none"><td style="padding:6px 8px">${f.empresa}</td><td style="padding:6px 8px">${_ectaFmtDate(f.fecha)}</td><td style="padding:6px 8px">${f.factura}${isNC ? ' <span style="font-size:.7rem;background:#ede9fe;color:#6d28d9;padding:2px 5px;border-radius:4px;font-weight:700">NC</span>' : ''}</td><td class="text-end" style="padding:6px 8px">${f.importe}</td></tr>`;
         }
         html += `<tr class="ecta-show-more-row"><td colspan="4" style="text-align:center;padding:7px">
           <button class="btn btn-sm btn-link" style="font-size:.8rem"
@@ -25592,14 +25598,14 @@ function _ectaRenderData(vendedor) {
         const f = visible[j];
         const isNC  = /\bNC\b/i.test(f.factura);
         const rowBg = j % 2 === 0 ? '#fff' : '#f0fdf4';
-        html += `<tr style="background:${rowBg}"><td style="padding:6px 8px">${f.empresa}</td><td style="padding:6px 8px">${f.fecha}</td><td style="padding:6px 8px">${f.factura}${isNC ? ' <span style="font-size:.7rem;background:#ede9fe;color:#6d28d9;padding:2px 5px;border-radius:4px;font-weight:700">NC</span>' : ''}</td><td class="text-end" style="padding:6px 8px;color:#15803d;font-weight:600">${f.importe}</td></tr>`;
+        html += `<tr style="background:${rowBg}"><td style="padding:6px 8px">${f.empresa}</td><td style="padding:6px 8px">${_ectaFmtDate(f.fecha)}</td><td style="padding:6px 8px">${f.factura}${isNC ? ' <span style="font-size:.7rem;background:#ede9fe;color:#6d28d9;padding:2px 5px;border-radius:4px;font-weight:700">NC</span>' : ''}</td><td class="text-end" style="padding:6px 8px;color:#15803d;font-weight:600">${f.importe}</td></tr>`;
       }
       // Cobradas localmente en MÜÜK (pendientes en Sheets pero ya registradas en el sistema)
       for (const f of _cobLocales) {
         const isNC = /\bNC\b/i.test(f.factura);
         html += `<tr style="background:#ecfdf5;border-left:3px solid #16a34a">
           <td style="padding:6px 8px;color:#166534">${f.empresa}</td>
-          <td style="padding:6px 8px;color:#166534">${f.fecha}</td>
+          <td style="padding:6px 8px;color:#166534">${_ectaFmtDate(f.fecha)}</td>
           <td style="padding:6px 8px;color:#166534">${f.factura}${isNC ? ' <span style="font-size:.7rem;background:#ede9fe;color:#6d28d9;padding:2px 5px;border-radius:4px;font-weight:700">NC</span>' : ''} <span style="font-size:.68rem;background:#dcfce7;color:#15803d;padding:2px 6px;border-radius:4px;font-weight:700;border:1px solid #86efac"><i class="bi bi-check-circle-fill me-1"></i>En MÜÜK</span></td>
           <td class="text-end" style="padding:6px 8px;color:#15803d;font-weight:600">${f.importe}</td>
         </tr>`;
@@ -25627,7 +25633,7 @@ function _ectaRenderData(vendedor) {
         const isNC = /\bNC\b/i.test(f.factura);
         html += `<tr style="background:#ecfdf5;border-left:3px solid #16a34a">
           <td style="padding:6px 8px;color:#166534">${f.empresa}</td>
-          <td style="padding:6px 8px;color:#166534">${f.fecha}</td>
+          <td style="padding:6px 8px;color:#166534">${_ectaFmtDate(f.fecha)}</td>
           <td style="padding:6px 8px;color:#166534">${f.factura}${isNC ? ' <span style="font-size:.7rem;background:#ede9fe;color:#6d28d9;padding:2px 5px;border-radius:4px;font-weight:700">NC</span>' : ''} <span style="font-size:.68rem;background:#dcfce7;color:#15803d;padding:2px 6px;border-radius:4px;font-weight:700;border:1px solid #86efac"><i class="bi bi-check-circle-fill me-1"></i>En MÜÜK</span></td>
           <td class="text-end" style="padding:6px 8px;color:#15803d;font-weight:600">${f.importe}</td>
         </tr>`;
@@ -29683,12 +29689,21 @@ function _icUnfmtAmt(el) {
   const n = parseFloat((el.value||'').replace(/\./g,'').replace(',','.'));
   el.value = n > 0 ? n : '';
 }
+function _icFmtTyping(el) {
+  const digits = el.value.replace(/[^\d]/g, '');
+  if (!digits) { el.value = ''; return; }
+  const n = parseInt(digits, 10);
+  if (isNaN(n)) return;
+  const formatted = n.toLocaleString('es-AR');
+  el.value = formatted;
+  el.setSelectionRange(formatted.length, formatted.length);
+}
 
 function _icAutoSIVA() {
   const fac = _icParseAmt('ic-importe-fac');
   if (!fac) return;
   const siva = document.getElementById('ic-importe-siva');
-  if (siva && !siva.value) siva.value = Math.round(fac / 1.21);
+  if (siva && !siva.value) siva.value = Math.round(fac / 1.21).toLocaleString('es-AR');
   _icAutoComision();
 }
 function _icAutoComision() {
