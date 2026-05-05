@@ -11681,6 +11681,11 @@ function _comParseSheetData(rows) {
     const obs     = iObs      >= 0 ? (r[iObs]     ||'').trim() : '';
     // Only skip rows that have literally nothing in any recognized column
     if (!cliente && !fca && !importe && !comision && !pagos && !saldo && !obs) continue;
+    // Skip summary/total rows injected by the spreadsheet (e.g. "TOTALES", "Subtotal", etc.)
+    // These rows have no invoice number and their numeric values are sums of all rows above,
+    // which would cause double-counting in totImporte / totComision calculations.
+    const clienteLow = cliente.toLowerCase();
+    if (!fca && (clienteLow.startsWith('total') || clienteLow.startsWith('subtotal') || clienteLow === 'totales')) continue;
     details.push({
       fecha:        iFecha    >= 0 ? (r[iFecha]   ||'').trim() : '–',
       cliente, fca, importe,
@@ -12239,11 +12244,13 @@ async function cargarComisionDetalle(sheetTab, empresaName) {
           ? `<tr style="background:#f0fdf4"><td class="ps-3" style="color:#166534">${d.fecha}</td>`
           : `<tr ${ri%2===0?'':'style="background:rgba(0,0,0,.015)"'}><td class="ps-3">${d.fecha}</td>`;
         if (esPago) {
-          const cs = 1 + (iSinIVA>=0?1:0) + (iEstado>=0?1:0) + (iPagoTipo>=0?1:0) + (iObs>=0?1:0);
+          // Span covers: Cliente + FCA + Importe + [SinIVA] + Comision + [Estado]
+          const cs = 4 + (iSinIVA>=0?1:0) + (iEstado>=0?1:0);
           tr += `<td colspan="${cs}" style="color:#166534;font-style:italic"><span style="background:#16a34a;color:#fff;font-size:.67rem;padding:1px 6px;border-radius:3px;font-weight:700">PAGO</span> ${d.cliente||'Pago recibido'}</td>`;
-          tr += `<td></td>`; // importe
-          tr += `<td class="text-end" style="color:#16a34a;font-weight:700">– ${fmt(d.pagos)}</td>`;
+          if (iPagos >= 0) tr += `<td class="text-end" style="color:#16a34a;font-weight:700">– ${fmt(d.pagos)}</td>`;
           tr += `<td class="text-end" style="color:${saldoColor};font-weight:700">${fmt(d.saldo)}</td>`;
+          if (iPagoTipo >= 0) tr += `<td></td>`;
+          if (iObs >= 0) tr += `<td></td>`;
         } else {
           tr += `<td style="font-weight:600">${d.cliente||'–'}</td>`;
           tr += `<td>${d.fca||'–'}${isNC?'<span style="background:#dbeafe;color:#1e40af;font-size:.65rem;padding:1px 4px;border-radius:3px;font-weight:700;margin-left:3px">NC</span>':''}</td>`;
