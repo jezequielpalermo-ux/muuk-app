@@ -25583,7 +25583,7 @@ function _ectaRenderData(vendedor) {
       for (let j = 0; j < _pendReales.length; j++) {
         const f = _pendReales[j];
         const isNC  = /\bNC\b/i.test(f.factura);
-        const fechaRef = f.fechaPago || f.fecha;
+        const fechaRef = f.fecha;
         const dias  = _ectaDiasPendiente(fechaRef);
         const rowBg = dias !== null && dias > 90 ? '#fff5f5'
                     : dias !== null && dias > 60 ? '#fff8f0'
