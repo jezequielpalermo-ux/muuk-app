@@ -993,7 +993,7 @@
         <li><a class="nav-link" data-page="cuentasBancarias"><i class="bi bi-bank2"></i>Cuentas Bancarias</a></li>
         <li><a class="nav-link" data-page="historialCobranzas"><i class="bi bi-receipt"></i>Historial de Cobranzas</a></li>
         <li><a class="nav-link" data-page="ingresarCobranza"><i class="bi bi-journal-plus"></i>Ingresar Cobranza</a></li>
-        <li><a class="nav-link" data-page="cronograma"><i class="bi bi-truck"></i>Cronograma Camiones</a></li>
+        <li><a class="nav-link" data-page="cronograma"><i class="bi bi-truck"></i>Entregas Harina</a></li>
         <li><a class="nav-link" data-page="manual"><i class="bi bi-book-fill"></i>Manual de Usuario</a></li>
       </div>
     </div>
@@ -5541,7 +5541,7 @@ CREATE POLICY "acceso total" ON muuk_daily_backups FOR ALL USING (true) WITH CHE
   <!-- ══════════════════ CRONOGRAMA DE CAMIONES ══════════════════ -->
   <div id="page-cronograma" class="page">
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:16px">
-      <h4 style="margin:0;font-weight:700;font-size:1.1rem"><i class="bi bi-truck me-2" style="color:#4f46e5"></i>Cronograma de Camiones</h4>
+      <h4 style="margin:0;font-weight:700;font-size:1.1rem"><i class="bi bi-truck me-2" style="color:#4f46e5"></i>Entregas Harina</h4>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <button onclick="_cronShowRentabilidad()" style="font-size:.75rem;background:#f5f3ff;color:#7c3aed;border:1px solid #ddd6fe;border-radius:7px;padding:5px 12px;cursor:pointer;font-weight:600"><i class="bi bi-graph-up me-1"></i>Rentabilidad</button>
         <button onclick="_cronToggleVista()" id="btn-cron-vista" style="font-size:.75rem;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:7px;padding:5px 12px;cursor:pointer;font-weight:600"><i class="bi bi-list-ul me-1"></i>Vista Lista</button>
@@ -6424,7 +6424,7 @@ CREATE POLICY "acceso total" ON muuk_daily_backups FOR ALL USING (true) WITH CHE
                 <option value="Recursos Humanos">Recursos Humanos</option>
                 <option value="Contabilidad">Contabilidad</option>
                 <option value="BCRA">BCRA</option>
-                <option value="Cronograma">Cronograma</option>
+                <option value="Cronograma">Entregas Harina</option>
                 <option value="Tesorería">Tesorería</option>
                 <option value="Reportes">Reportes</option>
                 <option value="Otro">Otro</option>
@@ -8264,21 +8264,15 @@ function save() {
   _syncSet('saving');
   // Excluir datos voluminosos/live del localStorage (se guardan por separado o se cargan frescos)
   const {comisionesResumen, comisionesTotal, comisionesTimestamp, ectaCache, ectaCacheAt, ...persistData} = ST;
-  // Strip base64 file data from listas de precios to avoid localStorage quota overflow
+  // Strip ALL base64 file data from listas de precios — viven en Supabase, no en localStorage
   if (persistData.listasPrecios) {
     persistData.listasPrecios = persistData.listasPrecios.map(l => {
-      let changed = false;
       let archivo = l.archivo;
-      if (archivo?.dataB64 && archivo.dataB64.length > 500000) {
-        archivo = { ...archivo, dataB64: '', _stripped: true };
-        changed = true;
-      }
       let archivos = l.archivos;
+      let changed = false;
+      if (archivo?.dataB64) { archivo = { ...archivo, dataB64: '', _stripped: true }; changed = true; }
       if (Array.isArray(archivos)) {
-        const stripped = archivos.map(a => {
-          if (a?.dataB64 && a.dataB64.length > 500000) { changed = true; return { ...a, dataB64: '', _stripped: true }; }
-          return a;
-        });
+        const stripped = archivos.map(a => a?.dataB64 ? (changed=true,{...a,dataB64:'',_stripped:true}) : a);
         if (changed) archivos = stripped;
       }
       return changed ? { ...l, archivo, archivos } : l;
@@ -8293,11 +8287,9 @@ function save() {
       return r;
     });
   }
-  // Strip large invoice PDF thumbnails (> 150 KB) — se regeneran al subir el PDF
-  const _stripPreviews = arr => (arr||[]).map(f => {
-    if (f.pdfPreview && f.pdfPreview.length > 150000) return { ...f, pdfPreview: '' };
-    return f;
-  });
+  // Strip ALL invoice PDF thumbnails from localStorage — se regeneran al subir el PDF
+  // (el PDF original vive en Supabase, no en localStorage)
+  const _stripPreviews = arr => (arr||[]).map(f => f.pdfPreview ? { ...f, pdfPreview: '' } : f);
   persistData.facturasACobrar = _stripPreviews(persistData.facturasACobrar);
   persistData.facturasPagar   = _stripPreviews(persistData.facturasPagar);
   // Strip recibos de sueldo PDF base64 del localStorage — el contenido real vive en Supabase
@@ -8349,11 +8341,11 @@ function save() {
         _seen.add(key); return true;
       });
     }
-    // Pruning: cronogramaHarina — remove date keys older than 6 months (full history in Supabase)
+    // Pruning: cronogramaHarina — keep only last 3 months in localStorage (full history in Supabase)
     if (persistData.cronogramaHarina && typeof persistData.cronogramaHarina === 'object') {
-      const _cutoff6mStr = (() => { const d = new Date(); d.setMonth(d.getMonth()-6); return d.toISOString().split('T')[0]; })();
+      const _cutoff3mStr = (() => { const d = new Date(); d.setMonth(d.getMonth()-3); return d.toISOString().split('T')[0]; })();
       for (const dateKey of Object.keys(persistData.cronogramaHarina)) {
-        if (dateKey < _cutoff6mStr) delete persistData.cronogramaHarina[dateKey];
+        if (dateKey < _cutoff3mStr) delete persistData.cronogramaHarina[dateKey];
       }
     }
     // Pruning: cobranzasIngresadas — keep 18 months
@@ -10340,6 +10332,8 @@ async function initApp() {
     if (_clMsg) _clMsg.textContent = 'Cargando datos actualizados desde la nube…';
     try {
       await pullRemoto(true, true); // silent=true, forceLoad=true — siempre aplica Supabase
+      if (_clMsg) _clMsg.textContent = 'Optimizando almacenamiento local…';
+      try { save(); } catch(saveErr) { console.warn('[initApp] cleanup save failed:', saveErr); }
       if (_clMsg) _clMsg.textContent = '¡Listo! Abriendo aplicación…';
     } catch(e) {
       // Supabase no disponible — continuar con datos locales
@@ -10857,7 +10851,7 @@ function renderBienvenida() {
     { icon:'bi-wallet2',          label:'Caja Efectivo',      page:'cajaEfectivo',      color:'#7c3aed', bg:'#f5f3ff' },
     { icon:'bi-receipt-cutoff',   label:'Facturas a Cobrar',  page:'facturasACobrar',   color:'#15803d', bg:'#f0fdf4' },
     { icon:'bi-file-earmark-minus',label:'Facturas a Pagar', page:'facturasPagar',      color:'#dc2626', bg:'#fef2f2' },
-    { icon:'bi-truck',            label:'Cronograma',         page:'cronograma',        color:'#4f46e5', bg:'#ede9fe' },
+    { icon:'bi-truck',            label:'Entregas Harina',    page:'cronograma',        color:'#4f46e5', bg:'#ede9fe' },
     { icon:'bi-percent',          label:'Comisiones',         page:'comisiones',        color:'#d97706', bg:'#fffbeb' },
     { icon:'bi-boxes',            label:'Stock',              page:'stock',             color:'#0891b2', bg:'#ecfeff' },
     { icon:'bi-tags-fill',        label:'Listas de Precios',  page:'listasPrecios',     color:'#0ea5e9', bg:'#f0f9ff' },
