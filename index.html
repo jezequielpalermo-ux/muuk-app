@@ -1491,7 +1491,7 @@
             <label class="form-label small mb-0 fw-bold" style="font-size:.7rem">Estado</label>
             <select class="form-select form-select-sm" id="filtro-estado-chequesFisicos" onchange="renderCheques('chequesFisicos')">
               <option value="">Todos</option>
-              <option value="en_cartera">En Cartera</option><option value="cobrado">Cobrado</option><option value="rechazado">Rechazado</option>
+              <option value="en_cartera">En Cartera</option><option value="en_cartera_custodia">En Cartera: Custodia</option><option value="cobrado">Cobrado</option><option value="rechazado">Rechazado</option>
             </select>
           </div>
           <div class="col-6 col-sm-2">
@@ -8349,6 +8349,32 @@ function save() {
         _seen.add(key); return true;
       });
     }
+    // Pruning: cronogramaHarina — remove date keys older than 6 months (full history in Supabase)
+    if (persistData.cronogramaHarina && typeof persistData.cronogramaHarina === 'object') {
+      const _cutoff6mStr = (() => { const d = new Date(); d.setMonth(d.getMonth()-6); return d.toISOString().split('T')[0]; })();
+      for (const dateKey of Object.keys(persistData.cronogramaHarina)) {
+        if (dateKey < _cutoff6mStr) delete persistData.cronogramaHarina[dateKey];
+      }
+    }
+    // Pruning: cobranzasIngresadas — keep 18 months
+    if (Array.isArray(persistData.cobranzasIngresadas)) {
+      const _cutoff18mStr = _cutoffStr18m;
+      persistData.cobranzasIngresadas = persistData.cobranzasIngresadas.filter(c =>
+        !c.createdAt || c.createdAt.slice(0,10) >= _cutoff18mStr
+      );
+    }
+    // Pruning: stockRemitos metadata — keep 18 months (base64 already stripped above)
+    if (Array.isArray(persistData.stockRemitos)) {
+      persistData.stockRemitos = persistData.stockRemitos.filter(r =>
+        !r.fecha || r.fecha >= _cutoffStr18m
+      );
+    }
+    // Pruning: kilometraje — keep 18 months
+    if (Array.isArray(persistData.kilometraje)) {
+      persistData.kilometraje = persistData.kilometraje.filter(k =>
+        !k.fecha || k.fecha >= _cutoffStr18m
+      );
+    }
   }
   try {
     persistData._extraUsers   = JSON.parse(localStorage.getItem('muuk_extra_users')||'{}');
@@ -9056,7 +9082,7 @@ function renderProyeccion() {
   const pagos = [];
   const today = new Date(hoy()+'T00:00:00');
   
-  const chqCobrar = [...ST.chequesFisicos.filter(c=>c.estado==='en_cartera'||c.estado==='pendiente'),
+  const chqCobrar = [...ST.chequesFisicos.filter(c=>c.estado==='en_cartera'||c.estado==='pendiente'||c.estado==='en_cartera_custodia'),
                       ...ST.eCheques.filter(c=>c.estado==='pendiente')];
   const chqPagar = ST.chequesPagar.filter(c=>c.estado==='pendiente');
   
@@ -10995,14 +11021,14 @@ function _renderTop3Deudores() {
 }
 
 function renderDashboard() {
-  const cartera = [...ST.chequesFisicos.filter(c=>c.estado==='en_cartera'||c.estado==='pendiente'),...ST.eCheques.filter(c=>c.estado==='pendiente')];
+  const cartera = [...ST.chequesFisicos.filter(c=>c.estado==='en_cartera'||c.estado==='pendiente'||c.estado==='en_cartera_custodia'),...ST.eCheques.filter(c=>c.estado==='pendiente')];
   const totCartera = cartera.reduce((s,c)=>s+ +c.monto,0);
   const _elCartera = document.getElementById('stat-cartera');
   if(_elCartera) _elCartera.textContent = fmt(totCartera);
   const _elCarteraN = document.getElementById('stat-cartera-n');
   if(_elCarteraN) _elCarteraN.textContent = `${cartera.length} cheque${cartera.length!==1?'s':''} activo${cartera.length!==1?'s':''}`;
 
-  const v7Cobrar=[...ST.chequesFisicos.filter(c=>c.estado==='en_cartera'||c.estado==='pendiente'),...ST.eCheques.filter(c=>c.estado==='pendiente')].filter(c=>{const d=dHasta(c.fechaVenc);return d>=0&&d<=7;});
+  const v7Cobrar=[...ST.chequesFisicos.filter(c=>c.estado==='en_cartera'||c.estado==='pendiente'||c.estado==='en_cartera_custodia'),...ST.eCheques.filter(c=>c.estado==='pendiente')].filter(c=>{const d=dHasta(c.fechaVenc);return d>=0&&d<=7;});
   const v7Pagar=ST.chequesPagar.filter(c=>c.estado==='pendiente').filter(c=>{const d=dHasta(c.fechaVenc);return d>=0&&d<=7;});
   const v7=[...v7Cobrar,...v7Pagar];
   const v7MonCobrar=v7Cobrar.reduce((s,c)=>s+ +c.monto,0);
@@ -11298,8 +11324,8 @@ function renderDashboard() {
 }
 
 function bdgEstado(e) {
-  const clr={pendiente:'warning text-dark',en_cartera:'primary',cobrado:'success',depositado:'info text-dark',rechazado:'danger',pagado:'success'};
-  const lbl={pendiente:'Pendiente',en_cartera:'En Cartera',cobrado:'Cobrado',depositado:'Depositado',rechazado:'Rechazado',pagado:'Pagado'};
+  const clr={pendiente:'warning text-dark',en_cartera:'primary',en_cartera_custodia:'info text-dark',cobrado:'success',depositado:'info text-dark',rechazado:'danger',pagado:'success'};
+  const lbl={pendiente:'Pendiente',en_cartera:'En Cartera',en_cartera_custodia:'En Cartera: Custodia',cobrado:'Cobrado',depositado:'Depositado',rechazado:'Rechazado',pagado:'Pagado'};
   return `<span class="badge bg-${clr[e]||'secondary'}">${lbl[e]||e}</span>`;
 }
 
@@ -11401,7 +11427,7 @@ function setFlujoDays(d) {
   });
   // Re-renderizar solo el gráfico de flujo
   const sB=calcSaldo(ST.cajaBancos||[]), sE=calcSaldo(ST.cajaEfectivo||[]);
-  const cartera=[...ST.chequesFisicos.filter(c=>c.estado==='en_cartera'||c.estado==='pendiente'),...ST.eCheques.filter(c=>c.estado==='pendiente')];
+  const cartera=[...ST.chequesFisicos.filter(c=>c.estado==='en_cartera'||c.estado==='pendiente'||c.estado==='en_cartera_custodia'),...ST.eCheques.filter(c=>c.estado==='pendiente')];
   renderDashCharts(sB, sE, cartera.reduce((s,c)=>s+ +c.monto,0));
 }
 
@@ -13053,7 +13079,7 @@ function renderCheques(cat){
     return;
   }
   // Pendientes primero, luego por fecha de vencimiento ascendente
-  const _pendOrder = e => (e==='pendiente'||e==='en_cartera') ? 0 : 1;
+  const _pendOrder = e => (e==='pendiente'||e==='en_cartera'||e==='en_cartera_custodia') ? 0 : 1;
   const s=[...filtered].sort((a,b)=>{
     const po = _pendOrder(a.estado) - _pendOrder(b.estado);
     if (po !== 0) return po;
@@ -13074,7 +13100,7 @@ function renderCheques(cat){
     </div>`;
   }
   if(isFisico){
-    const enCartera=s.filter(c=>c.estado==='en_cartera'||c.estado==='pendiente');
+    const enCartera=s.filter(c=>c.estado==='en_cartera'||c.estado==='pendiente'||c.estado==='en_cartera_custodia'||c.estado==='en_cartera_custodia');
     const totCartera=enCartera.reduce((sum,c)=>sum+ +c.monto,0);
     const proximos7=enCartera.filter(c=>{const d=dHasta(c.fechaVenc);return d>=0&&d<=7;});
     const vencidos=enCartera.filter(c=>dHasta(c.fechaVenc)<0);
@@ -13159,15 +13185,15 @@ function renderCheques(cat){
       else if(c.estado==='rechazado') trClass='table-danger';
       else if(isPagar && c.estado==='pendiente' && d!==null && d<0) trClass='table-danger bg-opacity-10';
       else if(isPagar && c.estado==='pendiente' && d!==null && d<=7) trClass='table-warning bg-opacity-10';
-      else if(!isPagar && (c.estado==='en_cartera'||c.estado==='pendiente') && d!==null && d<0) trClass='table-danger bg-opacity-10';
-      else if(!isPagar && (c.estado==='en_cartera'||c.estado==='pendiente') && d!==null && d<=5) trClass='table-warning bg-opacity-10';
+      else if(!isPagar && (c.estado==='en_cartera'||c.estado==='pendiente'||c.estado==='en_cartera_custodia'||c.estado==='en_cartera_custodia') && d!==null && d<0) trClass='table-danger bg-opacity-10';
+      else if(!isPagar && (c.estado==='en_cartera'||c.estado==='pendiente'||c.estado==='en_cartera_custodia'||c.estado==='en_cartera_custodia') && d!==null && d<=5) trClass='table-warning bg-opacity-10';
 
       const depositarBtn = isECh && c.estado==='pendiente'
         ? `<button class="btn btn-sm btn-success btn-a me-1" onclick="depositarECheque('${c.id}')" title="Depositar en ${c.bancoCustodia||'Banco Galicia'}">
              <i class="bi bi-bank2 me-1"></i>Depositar
            </button>`
         : '';
-      const cobrarBtn = isFisico && (c.estado==='en_cartera'||c.estado==='pendiente')
+      const cobrarBtn = isFisico && (c.estado==='en_cartera'||c.estado==='pendiente'||c.estado==='en_cartera_custodia'||c.estado==='en_cartera_custodia')
         ? `<button class="btn btn-sm btn-success btn-a me-1" onclick="cobrarChequeRapido('${c.id}')" title="Cobrar y acreditar en ${c.bancoCustodia||'Cuenta Corriente'}">
              <i class="bi bi-bank2 me-1"></i>Cobrar
            </button>`
@@ -13211,7 +13237,7 @@ function renderCheques(cat){
 
 function poblarEstados(cat){
   const opts={
-    fisico: [{v:'en_cartera',l:'En Cartera'},{v:'cobrado',l:'Cobrado'},{v:'rechazado',l:'Rechazado'}],
+    fisico: [{v:'en_cartera',l:'En Cartera'},{v:'en_cartera_custodia',l:'En Cartera: Custodia'},{v:'cobrado',l:'Cobrado'},{v:'rechazado',l:'Rechazado'}],
     echeque:[{v:'pendiente',l:'Pendiente'},{v:'depositado',l:'Depositado'},{v:'rechazado',l:'Rechazado'}],
     pagar:  [{v:'pendiente',l:'Pendiente'},{v:'pagado',l:'Pagado'},{v:'rechazado',l:'Rechazado'}]
   };
@@ -14162,7 +14188,7 @@ function generarReportePDF() {
   const sB = calcSaldo(ST.cajaBancos||[]), sE = calcSaldo(ST.cajaEfectivo||[]);
 
   // Cheques físicos en cartera
-  const fisEnCartera = ST.chequesFisicos.filter(c=>c.estado==='en_cartera'||c.estado==='pendiente');
+  const fisEnCartera = ST.chequesFisicos.filter(c=>c.estado==='en_cartera'||c.estado==='pendiente'||c.estado==='en_cartera_custodia');
   const totFis = fisEnCartera.reduce((s,c)=>s+ +c.monto,0);
 
   // E-Cheques pendientes
@@ -21797,7 +21823,7 @@ function renderFlujoProyectado() {
   const sE = calcSaldo(ST.cajaEfectivo);
   let saldo = sB + sE;
 
-  const chqCobrar = [...(ST.chequesFisicos||[]).filter(c=>c.estado==='en_cartera'||c.estado==='pendiente'),...(ST.eCheques||[]).filter(c=>c.estado==='pendiente')];
+  const chqCobrar = [...(ST.chequesFisicos||[]).filter(c=>c.estado==='en_cartera'||c.estado==='pendiente'||c.estado==='en_cartera_custodia'),...(ST.eCheques||[]).filter(c=>c.estado==='pendiente')];
   const chqPagar = (ST.chequesPagar||[]).filter(c=>c.estado==='pendiente');
   const facCobrar = (ST.facturasACobrar||[]).filter(f=>f.estado==='pendiente');
   const facPagar = (ST.facturasPagar||[]).filter(f=>f.estado==='pendiente');
@@ -24257,7 +24283,7 @@ function renderPanelVencimientos() {
   const items=[];
 
   // Cheques a cobrar
-  [...(ST.chequesFisicos||[]).filter(c=>c.estado==='en_cartera'||c.estado==='pendiente'),...(ST.eCheques||[]).filter(c=>c.estado==='pendiente')].forEach(c=>{
+  [...(ST.chequesFisicos||[]).filter(c=>c.estado==='en_cartera'||c.estado==='pendiente'||c.estado==='en_cartera_custodia'),...(ST.eCheques||[]).filter(c=>c.estado==='pendiente')].forEach(c=>{
     const fv=c.fechaVenc||c.fechaVto;if(!fv)return;
     const d=Math.round((new Date(fv+'T00:00:00')-today)/86400000);
     if(d>dias)return;
@@ -26833,7 +26859,7 @@ function _assistVencimientos() {
     if (arca.length > 10) html += `<tr><td colspan="3" style="text-align:center;color:#64748b">...y ${arca.length-10} más</td></tr>`;
     html += '</tbody></table>';
   } else html += '<div style="color:#16a34a">Sin vencimientos ARCA en 30 días.</div>';
-  const chqC = [...(ST.chequesFisicos||[]).filter(c=>(c.estado==='en_cartera'||c.estado==='pendiente')&&c.fechaVenc&&dHasta(c.fechaVenc)>=0&&dHasta(c.fechaVenc)<=30),...(ST.eCheques||[]).filter(c=>c.estado==='pendiente'&&c.fechaVenc&&dHasta(c.fechaVenc)>=0&&dHasta(c.fechaVenc)<=30)];
+  const chqC = [...(ST.chequesFisicos||[]).filter(c=>(c.estado==='en_cartera'||c.estado==='pendiente'||c.estado==='en_cartera_custodia')&&c.fechaVenc&&dHasta(c.fechaVenc)>=0&&dHasta(c.fechaVenc)<=30),...(ST.eCheques||[]).filter(c=>c.estado==='pendiente'&&c.fechaVenc&&dHasta(c.fechaVenc)>=0&&dHasta(c.fechaVenc)<=30)];
   if (chqC.length) html += `<div style="margin:6px 0"><b style="color:#3b82f6">Cheques a cobrar:</b> ${chqC.length} · ${fmt(chqC.reduce((s,c)=>s+ +c.monto,0))}</div>`;
   const chqP = (ST.chequesPagar||[]).filter(c=>c.estado==='pendiente'&&c.fechaVenc&&dHasta(c.fechaVenc)>=0&&dHasta(c.fechaVenc)<=30);
   if (chqP.length) html += `<div style="margin:6px 0"><b style="color:#dc2626">Cheques a pagar:</b> ${chqP.length} · ${fmt(chqP.reduce((s,c)=>s+ +c.monto,0))}</div>`;
@@ -26925,7 +26951,7 @@ function _assistSocios() {
 }
 
 function _assistCheques() {
-  const fisicos=(ST.chequesFisicos||[]).filter(c=>c.estado==='en_cartera'||c.estado==='pendiente');
+  const fisicos=(ST.chequesFisicos||[]).filter(c=>c.estado==='en_cartera'||c.estado==='pendiente'||c.estado==='en_cartera_custodia');
   const echeques=(ST.eCheques||[]).filter(c=>c.estado==='pendiente');
   const pagar=(ST.chequesPagar||[]).filter(c=>c.estado==='pendiente');
   const tC=[...fisicos,...echeques].reduce((s,c)=>s+ +c.monto,0);const tP=pagar.reduce((s,c)=>s+ +c.monto,0);
@@ -31268,7 +31294,7 @@ function _checkUmbralSaldo() {
   if (!cfg.umbralSaldoActivo || !cfg.umbralSaldo) { el.style.display = 'none'; return; }
   const sB = calcSaldo(ST.cajaBancos || []);
   const sE = calcSaldo(ST.cajaEfectivo || []);
-  const cartera = [...(ST.chequesFisicos||[]).filter(c=>c.estado==='en_cartera'||c.estado==='pendiente'),
+  const cartera = [...(ST.chequesFisicos||[]).filter(c=>c.estado==='en_cartera'||c.estado==='pendiente'||c.estado==='en_cartera_custodia'),
                    ...(ST.eCheques||[]).filter(c=>c.estado==='pendiente')];
   const totCartera = cartera.reduce((s,c)=>s+(+c.monto),0);
   const total = sB + sE + totCartera;
@@ -31290,7 +31316,7 @@ function _renderProyeccionFlujo() {
 
   const sB = calcSaldo(ST.cajaBancos || []);
   const sE = calcSaldo(ST.cajaEfectivo || []);
-  const cartera = [...(ST.chequesFisicos||[]).filter(c=>c.estado==='en_cartera'||c.estado==='pendiente'),
+  const cartera = [...(ST.chequesFisicos||[]).filter(c=>c.estado==='en_cartera'||c.estado==='pendiente'||c.estado==='en_cartera_custodia'),
                    ...(ST.eCheques||[]).filter(c=>c.estado==='pendiente')];
   const totCartera = cartera.reduce((s,c)=>s+(+c.monto),0);
   const saldoActual = sB + sE + totCartera;
@@ -31568,7 +31594,7 @@ function _renderCalendarioVencimientos(year, month) {
     eventos[dia].push(item);
   };
 
-  (ST.chequesFisicos||[]).filter(c=>c.estado==='en_cartera'||c.estado==='pendiente').forEach(c =>
+  (ST.chequesFisicos||[]).filter(c=>c.estado==='en_cartera'||c.estado==='pendiente'||c.estado==='en_cartera_custodia').forEach(c =>
     addEv(c.fechaVenc, {tipo:'cheque-cobrar', label:`Cobrar: ${fmt(+c.monto)}`, color:'#2563eb', icon:'bi-file-earmark-check'}));
   (ST.eCheques||[]).filter(c=>c.estado==='pendiente').forEach(c =>
     addEv(c.fechaVenc, {tipo:'cheque-cobrar', label:`E-Cheque: ${fmt(+c.monto)}`, color:'#2563eb', icon:'bi-credit-card'}));
@@ -31641,7 +31667,7 @@ function _calVencNavMes(dir) {
 function _calVencDiaClick(dia, year, month) {
   const prefijo = `${year}-${String(month+1).padStart(2,'0')}-${String(dia).padStart(2,'0')}`;
   const eventos = [];
-  (ST.chequesFisicos||[]).filter(c=>(c.estado==='en_cartera'||c.estado==='pendiente')&&c.fechaVenc===prefijo)
+  (ST.chequesFisicos||[]).filter(c=>(c.estado==='en_cartera'||c.estado==='pendiente'||c.estado==='en_cartera_custodia')&&c.fechaVenc===prefijo)
     .forEach(c=>eventos.push({label:`Cheque a cobrar: ${c.librador||c.banco||''}`, monto:+c.monto, color:'#2563eb', icon:'bi-file-earmark-check-fill'}));
   (ST.eCheques||[]).filter(c=>c.estado==='pendiente'&&c.fechaVenc===prefijo)
     .forEach(c=>eventos.push({label:`E-Cheque a cobrar: ${c.librador||''}`, monto:+c.monto, color:'#2563eb', icon:'bi-credit-card-fill'}));
