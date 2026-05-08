@@ -989,6 +989,7 @@
         <li><a class="nav-link" data-page="stock"><i class="bi bi-box-seam-fill"></i>Stock</a></li>
         <li><a class="nav-link" data-page="listasPrecios"><i class="bi bi-tags-fill"></i>Listas de Precios</a></li>
         <li><a class="nav-link" data-page="empresas"><i class="bi bi-diagram-3-fill"></i>CRM</a></li>
+        <li><a class="nav-link" data-page="propuestasComerciales"><i class="bi bi-file-earmark-text-fill" style="color:#10b981"></i>Propuestas Comerciales</a></li>
         <li><a class="nav-link" data-page="documentos"><i class="bi bi-folder2-open"></i>Documentos</a></li>
         <li><a class="nav-link" data-page="cuentasBancarias"><i class="bi bi-bank2"></i>Cuentas Bancarias</a></li>
         <li><a class="nav-link" data-page="historialCobranzas"><i class="bi bi-receipt"></i>Historial de Cobranzas</a></li>
@@ -6509,7 +6510,212 @@ CREATE POLICY "acceso total" ON muuk_daily_backups FOR ALL USING (true) WITH CHE
   </div>
   <!-- ══════════════════ FIN USUARIOS ══════════════════ -->
 
+  <!-- ══════════════════════════════════════════════════
+       PROPUESTAS COMERCIALES
+  ══════════════════════════════════════════════════ -->
+  <div id="page-propuestasComerciales" class="page">
+
+    <!-- Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:14px">
+      <div>
+        <h4 style="font-weight:800;margin:0;font-size:1.05rem;color:#0f172a">
+          <i class="bi bi-file-earmark-text-fill me-2" style="color:#10b981"></i>Propuestas Comerciales
+        </h4>
+        <div style="font-size:.7rem;color:#94a3b8;margin-top:2px">Prospectos · Seguimiento · Pipeline comercial</div>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn btn-sm" style="background:#10b981;color:#fff;font-size:.72rem;font-weight:600;border-radius:8px" onclick="abrirModalPropuesta()">
+          <i class="bi bi-plus-lg me-1"></i>Nueva Propuesta
+        </button>
+        <button class="btn btn-sm btn-outline-secondary" style="font-size:.72rem;border-radius:8px" onclick="exportarPropuestasCsv()">
+          <i class="bi bi-download me-1"></i>Exportar CSV
+        </button>
+      </div>
+    </div>
+
+    <!-- Resumen de estados -->
+    <div id="prop-resumen-cards" class="row g-2 mb-3"></div>
+
+    <!-- Filtros -->
+    <div class="card mb-3 p-2" style="border-radius:10px;border:1px solid #e2e8f0">
+      <div class="row g-2 align-items-center">
+        <div class="col-sm-4">
+          <input type="text" id="prop-fil-buscar" class="form-control form-control-sm" placeholder="🔍 Buscar empresa, contacto..." oninput="renderPropuestasComerciales()">
+        </div>
+        <div class="col-sm-3">
+          <select id="prop-fil-estado" class="form-select form-select-sm" onchange="renderPropuestasComerciales()">
+            <option value="">Todos los estados</option>
+            <option value="prospecto">Prospecto</option>
+            <option value="en_contacto">En Contacto</option>
+            <option value="negociacion">Negociación</option>
+            <option value="compro">Compró</option>
+            <option value="cliente_activo">Cliente Activo</option>
+            <option value="perdido">Perdido</option>
+          </select>
+        </div>
+        <div class="col-sm-3">
+          <select id="prop-fil-rubro" class="form-select form-select-sm" onchange="renderPropuestasComerciales()">
+            <option value="">Todos los rubros</option>
+          </select>
+        </div>
+        <div class="col-sm-2">
+          <button class="btn btn-sm btn-outline-secondary w-100" style="font-size:.7rem" onclick="document.getElementById('prop-fil-buscar').value='';document.getElementById('prop-fil-estado').value='';document.getElementById('prop-fil-rubro').value='';renderPropuestasComerciales()">
+            <i class="bi bi-x-circle me-1"></i>Limpiar
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Próximos seguimientos (alertas) -->
+    <div id="prop-alertas-box"></div>
+
+    <!-- Tabla -->
+    <div class="card p-0" style="border-radius:10px;overflow:hidden;border:1px solid #e2e8f0">
+      <div style="overflow-x:auto">
+        <table class="table table-hover mb-0" id="prop-tabla">
+          <thead style="background:linear-gradient(135deg,#0f172a,#1e293b);color:#fff;font-size:.7rem;text-transform:uppercase;letter-spacing:.5px">
+            <tr>
+              <th style="padding:10px 12px;font-weight:700">Empresa / Rubro</th>
+              <th style="padding:10px 12px;font-weight:700">Contacto</th>
+              <th style="padding:10px 12px;font-weight:700">Propuesta</th>
+              <th style="padding:10px 12px;font-weight:700;text-align:center">Estado</th>
+              <th style="padding:10px 12px;font-weight:700">Última Observación</th>
+              <th style="padding:10px 12px;font-weight:700;text-align:center">Próximo Follow-up</th>
+              <th style="padding:10px 12px;font-weight:700;text-align:right">Monto Est.</th>
+              <th style="padding:10px 12px;font-weight:700;text-align:center">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="prop-tbody">
+            <tr><td colspan="8" class="text-center text-muted py-4" style="font-size:.8rem">No hay propuestas. ¡Agregá la primera!</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div><!-- /page-propuestasComerciales -->
+
 </main>
+
+<!-- ══════════ MODAL: PROPUESTA COMERCIAL ══════════ -->
+<div class="modal fade" id="modalPropuesta" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content" style="border-radius:14px;border:none;box-shadow:0 20px 60px rgba(0,0,0,.2)">
+      <div class="modal-header" style="background:linear-gradient(135deg,#0f172a,#1e293b);color:#fff;border-radius:14px 14px 0 0;padding:16px 20px">
+        <h5 class="modal-title" id="prop-modal-titulo" style="font-weight:800;font-size:.95rem"><i class="bi bi-file-earmark-text-fill me-2" style="color:#10b981"></i>Nueva Propuesta</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-3">
+        <input type="hidden" id="prop-id">
+
+        <!-- Fila 1: Empresa + Rubro -->
+        <div class="row g-2 mb-2">
+          <div class="col-sm-6">
+            <label class="form-label small fw-bold mb-1" style="font-size:.7rem"><i class="bi bi-building me-1" style="color:#0ea5e9"></i>Empresa *</label>
+            <input type="text" id="prop-empresa" class="form-control form-control-sm" placeholder="Nombre de la empresa">
+          </div>
+          <div class="col-sm-6">
+            <label class="form-label small fw-bold mb-1" style="font-size:.7rem"><i class="bi bi-tags me-1" style="color:#8b5cf6"></i>Rubro</label>
+            <input type="text" id="prop-rubro" class="form-control form-control-sm" placeholder="Alimentos, Logística, Industria...">
+          </div>
+        </div>
+
+        <!-- Fila 2: Contacto + Cargo -->
+        <div class="row g-2 mb-2">
+          <div class="col-sm-6">
+            <label class="form-label small fw-bold mb-1" style="font-size:.7rem"><i class="bi bi-person me-1" style="color:#f59e0b"></i>Contacto</label>
+            <input type="text" id="prop-contacto" class="form-control form-control-sm" placeholder="Nombre del contacto">
+          </div>
+          <div class="col-sm-6">
+            <label class="form-label small fw-bold mb-1" style="font-size:.7rem"><i class="bi bi-briefcase me-1" style="color:#6b7280"></i>Cargo</label>
+            <input type="text" id="prop-cargo" class="form-control form-control-sm" placeholder="Comprador, Gerente, Dueño...">
+          </div>
+        </div>
+
+        <!-- Fila 3: Teléfono + Email -->
+        <div class="row g-2 mb-2">
+          <div class="col-sm-6">
+            <label class="form-label small fw-bold mb-1" style="font-size:.7rem"><i class="bi bi-telephone me-1" style="color:#10b981"></i>Teléfono</label>
+            <input type="text" id="prop-telefono" class="form-control form-control-sm" placeholder="+54 9 11 ...">
+          </div>
+          <div class="col-sm-6">
+            <label class="form-label small fw-bold mb-1" style="font-size:.7rem"><i class="bi bi-envelope me-1" style="color:#0ea5e9"></i>Email</label>
+            <input type="email" id="prop-email" class="form-control form-control-sm" placeholder="contacto@empresa.com">
+          </div>
+        </div>
+
+        <hr class="my-2" style="border-color:#f1f5f9">
+
+        <!-- Fila 4: Nombre propuesta + Estado + Monto -->
+        <div class="row g-2 mb-2">
+          <div class="col-sm-5">
+            <label class="form-label small fw-bold mb-1" style="font-size:.7rem"><i class="bi bi-file-earmark-text me-1" style="color:#10b981"></i>Propuesta *</label>
+            <input type="text" id="prop-nombre" class="form-control form-control-sm" placeholder="Ej: Harina 000 — 50 bolsas/sem">
+          </div>
+          <div class="col-sm-4">
+            <label class="form-label small fw-bold mb-1" style="font-size:.7rem"><i class="bi bi-flag me-1" style="color:#ef4444"></i>Estado</label>
+            <select id="prop-estado" class="form-select form-select-sm">
+              <option value="prospecto">Prospecto</option>
+              <option value="en_contacto">En Contacto</option>
+              <option value="negociacion">Negociación</option>
+              <option value="compro">Compró</option>
+              <option value="cliente_activo">Cliente Activo</option>
+              <option value="perdido">Perdido</option>
+            </select>
+          </div>
+          <div class="col-sm-3">
+            <label class="form-label small fw-bold mb-1" style="font-size:.7rem"><i class="bi bi-currency-dollar me-1" style="color:#f59e0b"></i>Monto Est. $</label>
+            <input type="text" id="prop-monto" class="form-control form-control-sm" placeholder="0" oninput="_icFmtTyping(this)">
+          </div>
+        </div>
+
+        <!-- Fila 5: Fecha propuesta + Próxima acción + Fecha -->
+        <div class="row g-2 mb-2">
+          <div class="col-sm-3">
+            <label class="form-label small fw-bold mb-1" style="font-size:.7rem"><i class="bi bi-calendar me-1" style="color:#6366f1"></i>Fecha Propuesta</label>
+            <input type="date" id="prop-fecha" class="form-control form-control-sm">
+          </div>
+          <div class="col-sm-6">
+            <label class="form-label small fw-bold mb-1" style="font-size:.7rem"><i class="bi bi-arrow-right-circle me-1" style="color:#f97316"></i>Próxima Acción</label>
+            <input type="text" id="prop-proxima-accion" class="form-control form-control-sm" placeholder="Llamar para seguimiento, enviar muestra...">
+          </div>
+          <div class="col-sm-3">
+            <label class="form-label small fw-bold mb-1" style="font-size:.7rem"><i class="bi bi-alarm me-1" style="color:#ef4444"></i>Follow-up</label>
+            <input type="date" id="prop-fecha-proxima" class="form-control form-control-sm">
+          </div>
+        </div>
+
+        <!-- PDF -->
+        <div class="mb-2">
+          <label class="form-label small fw-bold mb-1" style="font-size:.7rem"><i class="bi bi-file-pdf me-1" style="color:#ef4444"></i>PDF de la Propuesta</label>
+          <input type="file" id="prop-pdf-input" class="form-control form-control-sm" accept=".pdf" onchange="_propLoadPdf(this)">
+          <div id="prop-pdf-status" style="font-size:.65rem;color:#6b7280;margin-top:3px"></div>
+        </div>
+
+        <hr class="my-2" style="border-color:#f1f5f9">
+
+        <!-- Observación nueva -->
+        <div>
+          <label class="form-label small fw-bold mb-1" style="font-size:.7rem"><i class="bi bi-chat-dots me-1" style="color:#0ea5e9"></i>Observación / Novedad</label>
+          <textarea id="prop-obs" class="form-control form-control-sm" rows="2" placeholder="Reunión realizada, resultado, próximo paso..."></textarea>
+          <div style="font-size:.63rem;color:#94a3b8;margin-top:3px">Se agregará al historial con la fecha de hoy si completás este campo</div>
+        </div>
+
+        <!-- Historial de observaciones (solo en edición) -->
+        <div id="prop-historial-box" style="display:none;margin-top:10px">
+          <div style="font-size:.7rem;font-weight:700;color:#475569;margin-bottom:6px"><i class="bi bi-clock-history me-1"></i>Historial de observaciones</div>
+          <div id="prop-historial-lista" style="max-height:160px;overflow-y:auto"></div>
+        </div>
+
+      </div>
+      <div class="modal-footer" style="border-top:1px solid #f1f5f9;padding:10px 16px">
+        <button class="btn btn-sm btn-light" data-bs-dismiss="modal" style="font-size:.75rem">Cancelar</button>
+        <button class="btn btn-sm" style="background:#10b981;color:#fff;font-size:.75rem;font-weight:600" onclick="guardarPropuesta()">
+          <i class="bi bi-check-lg me-1"></i>Guardar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- ══════════ MODAL: NUEVO / EDITAR USUARIO ══════════ -->
 <div class="modal fade" id="modalNuevoUsuario" tabindex="-1">
@@ -7657,7 +7863,8 @@ let ST = {
   empresasCRM: [],
   emailjsConfig: { serviceId: '', templateId: '', userId: '', email: '' },
   alertasConfig: { chequesVenc: true, arcaOblig: true, resumenDiario: false },
-  cronogramaHarina: {}
+  cronogramaHarina: {},
+  propuestasComerciales: []
 };
 
 let CHARTS = {};
@@ -8186,6 +8393,7 @@ function reRenderActivo() {
     case 'documentos': _initDocumentosPage(); break;
     case 'cuentasBancarias': break; /* static page, no init needed */
     case 'empresas': renderEmpresas(); break;
+    case 'propuestasComerciales': renderPropuestasComerciales(); break;
     case 'historialCobranzas': renderHistorialCobranzas(); break;
     case 'ingresarCobranza': renderIngresarCobranza(); break;
   }
@@ -8723,6 +8931,7 @@ async function pullRemoto(silent, forceLoad = false) {
       if (!Array.isArray(ST.chequesPagar))    ST.chequesPagar    = [];
       if (!Array.isArray(ST.cajaBancos))      ST.cajaBancos      = [];
       if (!Array.isArray(ST.cajaEfectivo))    ST.cajaEfectivo    = [];
+      if (!Array.isArray(ST.propuestasComerciales)) ST.propuestasComerciales = [];
       // Restaurar ectaCache en memoria si vino de la nube (se guarda por separado)
       if (ST.ectaCache && Object.keys(ST.ectaCache).length) {
         _ectaCache = ST.ectaCache;
@@ -9780,11 +9989,11 @@ const MUUK_ACCESS_BASE = {
   'AlbertoPalermo':  null,
   'PaulaSpinelli':   ['bienvenida','incidencias','comisiones','bcra','calendarioARCA','contabilidad',
                       'facturasACobrar','facturasPagar','estadosCuenta','stock',
-                      'listasPrecios','empresas','documentos','cuentasBancarias','historialCobranzas','ingresarCobranza',
+                      'listasPrecios','empresas','propuestasComerciales','documentos','cuentasBancarias','historialCobranzas','ingresarCobranza',
                       'rrhh','manual'],
   'AgustinGalie':    ['bienvenida','incidencias','comisiones','bcra','calendarioARCA','contabilidad',
                       'facturasACobrar','facturasPagar','estadosCuenta','stock',
-                      'listasPrecios','empresas','documentos','cuentasBancarias','historialCobranzas','ingresarCobranza',
+                      'listasPrecios','empresas','propuestasComerciales','documentos','cuentasBancarias','historialCobranzas','ingresarCobranza',
                       'cronograma','rrhh','manual'],
 };
 const MUUK_ADMINS = ['JonathanPalermo'];
@@ -10402,7 +10611,7 @@ const _SB_GROUPS = {
   rrhh:     ['rrhh'],
   incidencias: ['incidencias'],
   caja:     ['cajaBancos','cajaEfectivo','chequesFisicos','eCheques','chequesPagar','kilometraje'],
-  gestion:  ['comisiones','bcra','calendarioARCA','contabilidad','facturasACobrar','facturasPagar','estadosCuenta','stock','listasPrecios','empresas','documentos','cuentasBancarias','historialCobranzas','ingresarCobranza'],
+  gestion:  ['comisiones','bcra','calendarioARCA','contabilidad','facturasACobrar','facturasPagar','estadosCuenta','stock','listasPrecios','empresas','propuestasComerciales','documentos','cuentasBancarias','historialCobranzas','ingresarCobranza'],
   analisis: ['tesoreria','flujoProyectado','panelVencimientos','rentabilidad','gestion','reportes','historial','estrategicos','calculadora'],
   archivos: ['config'],
 };
@@ -10779,6 +10988,7 @@ function irA(p) {
   if (p==='kinto')             renderKinto();
   if (p==='rrhh')              renderRRHH();
   if (p==='empresas')          renderEmpresas();
+  if (p==='propuestasComerciales') renderPropuestasComerciales();
   if (p==='usuarios')          renderUsuarios();
   if (p==='manual')            renderManual();
   if (p==='historialCobranzas') renderHistorialCobranzas();
@@ -10862,6 +11072,7 @@ function renderBienvenida() {
     { icon:'bi-percent',          label:'Comisiones',         page:'comisiones',        color:'#d97706', bg:'#fffbeb' },
     { icon:'bi-boxes',            label:'Stock',              page:'stock',             color:'#0891b2', bg:'#ecfeff' },
     { icon:'bi-tags-fill',        label:'Listas de Precios',  page:'listasPrecios',     color:'#0ea5e9', bg:'#f0f9ff' },
+    { icon:'bi-file-earmark-text-fill', label:'Propuestas',    page:'propuestasComerciales', color:'#10b981', bg:'#f0fdf4' },
     { icon:'bi-people-fill',      label:'Gestión / CRM',      page:'gestion',           color:'#7c3aed', bg:'#faf5ff' },
     { icon:'bi-calendar-check',   label:'Vencimientos',        page:'panelVencimientos', color:'#f59e0b', bg:'#fffbeb' },
   ];
@@ -29008,6 +29219,343 @@ function _crmNuevoActivo() {
   document.getElementById('crm-f-nombre').placeholder = placeholders[tipo];
   ['nombre','cuit','contacto','apellido','tel','tel2','email','horarios','dir','dirAlt','notas'].forEach(f => { const el=document.getElementById('crm-f-'+f); if(el) el.value=''; });
   new bootstrap.Modal(document.getElementById('modal-crm-empresa')).show();
+}
+
+/* ══════════════════════════════════════════════════════════
+   PROPUESTAS COMERCIALES
+══════════════════════════════════════════════════════════ */
+
+const _PROP_ESTADOS = {
+  prospecto:      { lbl:'Prospecto',      cls:'secondary',  bg:'#64748b', icon:'bi-circle' },
+  en_contacto:    { lbl:'En Contacto',    cls:'primary',    bg:'#3b82f6', icon:'bi-telephone' },
+  negociacion:    { lbl:'Negociación',    cls:'warning',    bg:'#f59e0b', icon:'bi-chat-dots' },
+  compro:         { lbl:'Compró',         cls:'success',    bg:'#10b981', icon:'bi-check-circle' },
+  cliente_activo: { lbl:'Cliente Activo', cls:'',           bg:'#059669', icon:'bi-star-fill' },
+  perdido:        { lbl:'Perdido',        cls:'danger',     bg:'#ef4444', icon:'bi-x-circle' }
+};
+
+let _propPdfTemp = null; // { nombre, dataB64 }
+
+function _propLoadPdf(input) {
+  const file = input.files[0];
+  if (!file) { _propPdfTemp = null; document.getElementById('prop-pdf-status').textContent = ''; return; }
+  if (file.size > 5 * 1024 * 1024) { toast('El PDF no puede superar 5 MB', 'warning'); input.value = ''; return; }
+  const reader = new FileReader();
+  reader.onload = e => {
+    _propPdfTemp = { nombre: file.name, dataB64: e.target.result };
+    document.getElementById('prop-pdf-status').innerHTML = `<i class="bi bi-file-pdf text-danger me-1"></i>${file.name} (${(file.size/1024).toFixed(0)} KB) cargado ✓`;
+  };
+  reader.readAsDataURL(file);
+}
+
+function abrirModalPropuesta(id) {
+  _propPdfTemp = null;
+  document.getElementById('prop-pdf-input').value = '';
+  document.getElementById('prop-pdf-status').textContent = '';
+  document.getElementById('prop-historial-box').style.display = 'none';
+  document.getElementById('prop-historial-lista').innerHTML = '';
+  ['prop-id','prop-empresa','prop-rubro','prop-contacto','prop-cargo','prop-telefono',
+   'prop-email','prop-nombre','prop-monto','prop-proxima-accion','prop-obs'].forEach(f => {
+    const el = document.getElementById(f); if (el) el.value = '';
+  });
+  document.getElementById('prop-fecha').value = hoy();
+  document.getElementById('prop-fecha-proxima').value = '';
+  document.getElementById('prop-estado').value = 'prospecto';
+
+  if (id) {
+    const p = (ST.propuestasComerciales||[]).find(x => x.id === id);
+    if (!p) return;
+    document.getElementById('prop-modal-titulo').innerHTML = '<i class="bi bi-pencil-fill me-2" style="color:#10b981"></i>Editar Propuesta';
+    document.getElementById('prop-id').value = p.id;
+    document.getElementById('prop-empresa').value = p.empresa || '';
+    document.getElementById('prop-rubro').value = p.rubro || '';
+    document.getElementById('prop-contacto').value = p.contacto || '';
+    document.getElementById('prop-cargo').value = p.cargo || '';
+    document.getElementById('prop-telefono').value = p.telefono || '';
+    document.getElementById('prop-email').value = p.email || '';
+    document.getElementById('prop-nombre').value = p.propuesta || '';
+    document.getElementById('prop-estado').value = p.estado || 'prospecto';
+    document.getElementById('prop-fecha').value = p.fechaPropuesta || hoy();
+    document.getElementById('prop-monto').value = p.monto ? p.monto.toLocaleString('es-AR') : '';
+    document.getElementById('prop-proxima-accion').value = p.proximaAccion || '';
+    document.getElementById('prop-fecha-proxima').value = p.fechaProxima || '';
+    // PDF existente
+    if (p.pdfNombre) {
+      document.getElementById('prop-pdf-status').innerHTML = `<i class="bi bi-file-pdf text-danger me-1"></i>${p.pdfNombre} (guardado) — <button class="btn btn-link btn-sm p-0" style="font-size:.65rem" onclick="verPdfPropuesta('${p.id}')">Ver PDF</button>`;
+    }
+    // Historial
+    if (p.observaciones && p.observaciones.length) {
+      document.getElementById('prop-historial-box').style.display = 'block';
+      document.getElementById('prop-historial-lista').innerHTML = [...p.observaciones].reverse().map(o =>
+        `<div style="border-left:3px solid #e2e8f0;padding:5px 10px;margin-bottom:5px;background:#f8fafc;border-radius:0 6px 6px 0">
+          <div style="font-size:.63rem;color:#94a3b8;margin-bottom:2px"><i class="bi bi-calendar me-1"></i>${_ectaFmtDate(o.fecha)} ${o.autor ? '· ' + o.autor : ''}</div>
+          <div style="font-size:.75rem;color:#334155">${o.texto}</div>
+        </div>`
+      ).join('');
+    }
+  } else {
+    document.getElementById('prop-modal-titulo').innerHTML = '<i class="bi bi-file-earmark-text-fill me-2" style="color:#10b981"></i>Nueva Propuesta';
+  }
+  new bootstrap.Modal(document.getElementById('modalPropuesta')).show();
+}
+
+function guardarPropuesta() {
+  const empresa = document.getElementById('prop-empresa').value.trim();
+  const propuestaNombre = document.getElementById('prop-nombre').value.trim();
+  if (!empresa) { toast('Ingresá el nombre de la empresa', 'warning'); return; }
+  if (!propuestaNombre) { toast('Ingresá el nombre de la propuesta', 'warning'); return; }
+
+  const montoRaw = (document.getElementById('prop-monto').value||'').replace(/\./g,'').replace(',','.');
+  const monto = parseFloat(montoRaw) || 0;
+
+  const obsTexto = document.getElementById('prop-obs').value.trim();
+  const currentUser = sessionStorage.getItem('muukAuth') || 'sistema';
+
+  const id = document.getElementById('prop-id').value;
+  if (!Array.isArray(ST.propuestasComerciales)) ST.propuestasComerciales = [];
+
+  if (id) {
+    // Editar existente
+    const p = ST.propuestasComerciales.find(x => x.id === id);
+    if (!p) return;
+    p.empresa     = empresa;
+    p.rubro       = document.getElementById('prop-rubro').value.trim();
+    p.contacto    = document.getElementById('prop-contacto').value.trim();
+    p.cargo       = document.getElementById('prop-cargo').value.trim();
+    p.telefono    = document.getElementById('prop-telefono').value.trim();
+    p.email       = document.getElementById('prop-email').value.trim();
+    p.propuesta   = propuestaNombre;
+    p.estado      = document.getElementById('prop-estado').value;
+    p.fechaPropuesta = document.getElementById('prop-fecha').value;
+    p.monto       = monto;
+    p.proximaAccion = document.getElementById('prop-proxima-accion').value.trim();
+    p.fechaProxima  = document.getElementById('prop-fecha-proxima').value;
+    p.updatedAt   = new Date().toISOString();
+    if (_propPdfTemp) { p.pdfDataB64 = _propPdfTemp.dataB64; p.pdfNombre = _propPdfTemp.nombre; }
+    if (obsTexto) {
+      if (!Array.isArray(p.observaciones)) p.observaciones = [];
+      p.observaciones.push({ fecha: hoy(), texto: obsTexto, autor: currentUser });
+    }
+  } else {
+    // Nueva
+    const nueva = {
+      id: uid(),
+      empresa,
+      rubro:      document.getElementById('prop-rubro').value.trim(),
+      contacto:   document.getElementById('prop-contacto').value.trim(),
+      cargo:      document.getElementById('prop-cargo').value.trim(),
+      telefono:   document.getElementById('prop-telefono').value.trim(),
+      email:      document.getElementById('prop-email').value.trim(),
+      propuesta:  propuestaNombre,
+      estado:     document.getElementById('prop-estado').value,
+      fechaPropuesta: document.getElementById('prop-fecha').value,
+      monto,
+      proximaAccion: document.getElementById('prop-proxima-accion').value.trim(),
+      fechaProxima:  document.getElementById('prop-fecha-proxima').value,
+      observaciones: obsTexto ? [{ fecha: hoy(), texto: obsTexto, autor: currentUser }] : [],
+      pdfDataB64: _propPdfTemp?.dataB64 || null,
+      pdfNombre:  _propPdfTemp?.nombre  || null,
+      createdAt:  new Date().toISOString(),
+      updatedAt:  new Date().toISOString()
+    };
+    ST.propuestasComerciales.push(nueva);
+  }
+
+  save();
+  bootstrap.Modal.getInstance(document.getElementById('modalPropuesta'))?.hide();
+  renderPropuestasComerciales();
+  toast('Propuesta guardada ✓');
+}
+
+function eliminarPropuesta(id) {
+  const p = (ST.propuestasComerciales||[]).find(x => x.id === id);
+  const nombre = p ? `"${p.empresa} — ${p.propuesta}"` : 'esta propuesta';
+  _confirmar(`¿Eliminar ${nombre}? Esta acción no se puede deshacer.`, () => {
+    ST.propuestasComerciales = (ST.propuestasComerciales||[]).filter(x => x.id !== id);
+    save(); renderPropuestasComerciales(); toast('Propuesta eliminada', 'warning');
+  }, { title:'Eliminar propuesta', btnLabel:'Eliminar' });
+}
+
+function verPdfPropuesta(id) {
+  const p = (ST.propuestasComerciales||[]).find(x => x.id === id);
+  if (!p || !p.pdfDataB64) { toast('Esta propuesta no tiene PDF adjunto', 'warning'); return; }
+  try {
+    const byteStr = atob(p.pdfDataB64.split(',')[1]);
+    const ab = new ArrayBuffer(byteStr.length);
+    const ia = new Uint8Array(ab);
+    for (let i = 0; i < byteStr.length; i++) ia[i] = byteStr.charCodeAt(i);
+    const blob = new Blob([ab], { type: 'application/pdf' });
+    const url = URL.createObjectURL(blob);
+    const w = window.open(url, '_blank');
+    if (!w) { const a = document.createElement('a'); a.href = url; a.download = p.pdfNombre || 'propuesta.pdf'; document.body.appendChild(a); a.click(); document.body.removeChild(a); }
+  } catch(e) { toast('No se pudo abrir el PDF: ' + e.message, 'danger'); }
+}
+
+function exportarPropuestasCsv() {
+  const arr = ST.propuestasComerciales || [];
+  if (!arr.length) { toast('No hay propuestas para exportar', 'warning'); return; }
+  const cols = ['Empresa','Rubro','Contacto','Cargo','Teléfono','Email','Propuesta','Estado','Fecha','Monto','Próxima Acción','Follow-up','Última Obs.'];
+  const rows = arr.map(p => {
+    const ultimaObs = p.observaciones?.length ? p.observaciones[p.observaciones.length-1].texto : '';
+    return [p.empresa,p.rubro,p.contacto,p.cargo,p.telefono,p.email,p.propuesta,
+      _PROP_ESTADOS[p.estado]?.lbl||p.estado, p.fechaPropuesta||'', p.monto||0,
+      p.proximaAccion||'', p.fechaProxima||'', ultimaObs
+    ].map(v => `"${String(v||'').replace(/"/g,'""')}"`).join(',');
+  });
+  const csv = '﻿' + [cols.join(','), ...rows].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = 'propuestas-comerciales.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
+
+function renderPropuestasComerciales() {
+  if (!Array.isArray(ST.propuestasComerciales)) ST.propuestasComerciales = [];
+
+  const buscar  = (document.getElementById('prop-fil-buscar')?.value  || '').toLowerCase();
+  const filEst  = document.getElementById('prop-fil-estado')?.value  || '';
+  const filRub  = document.getElementById('prop-fil-rubro')?.value   || '';
+
+  // Poblar rubros únicos
+  const selRub = document.getElementById('prop-fil-rubro');
+  if (selRub) {
+    const rubros = [...new Set(ST.propuestasComerciales.map(p => p.rubro).filter(Boolean))].sort();
+    const curVal = selRub.value;
+    selRub.innerHTML = '<option value="">Todos los rubros</option>' + rubros.map(r => `<option value="${r}" ${r===curVal?'selected':''}>${r}</option>`).join('');
+  }
+
+  // Filtrar
+  const filtradas = ST.propuestasComerciales.filter(p => {
+    if (filEst && p.estado !== filEst) return false;
+    if (filRub && p.rubro !== filRub) return false;
+    if (buscar) {
+      const haystack = `${p.empresa} ${p.contacto} ${p.propuesta} ${p.rubro} ${p.email}`.toLowerCase();
+      if (!haystack.includes(buscar)) return false;
+    }
+    return true;
+  });
+
+  // Ordenar: primero por fecha follow-up próxima (asc), luego sin fecha al final
+  filtradas.sort((a,b) => {
+    const fa = a.fechaProxima || '9999-12-31';
+    const fb = b.fechaProxima || '9999-12-31';
+    return fa.localeCompare(fb);
+  });
+
+  // Resumen por estado
+  const resumenEl = document.getElementById('prop-resumen-cards');
+  if (resumenEl) {
+    const counts = {};
+    const montos = {};
+    Object.keys(_PROP_ESTADOS).forEach(e => { counts[e] = 0; montos[e] = 0; });
+    ST.propuestasComerciales.forEach(p => {
+      counts[p.estado] = (counts[p.estado]||0) + 1;
+      montos[p.estado] = (montos[p.estado]||0) + (p.monto||0);
+    });
+    resumenEl.innerHTML = Object.entries(_PROP_ESTADOS).map(([key, st]) => `
+      <div class="col-6 col-sm-4 col-lg-2">
+        <div class="card p-2 text-center" style="border-radius:10px;border:none;background:${st.bg}15;cursor:pointer;transition:.15s"
+             onclick="document.getElementById('prop-fil-estado').value='${key}';renderPropuestasComerciales()">
+          <div style="font-size:1.3rem;color:${st.bg}"><i class="bi ${st.icon}"></i></div>
+          <div style="font-size:.62rem;font-weight:700;color:${st.bg};text-transform:uppercase;letter-spacing:.4px">${st.lbl}</div>
+          <div style="font-size:1.1rem;font-weight:800;color:${st.bg}">${counts[key]||0}</div>
+          ${montos[key] > 0 ? `<div style="font-size:.58rem;color:#64748b">${fmt(montos[key])}</div>` : ''}
+        </div>
+      </div>`).join('');
+  }
+
+  // Alertas de follow-up vencidas o próximas (7 días)
+  const alertasEl = document.getElementById('prop-alertas-box');
+  if (alertasEl) {
+    const hoyStr = hoy();
+    const enSemana = new Date(); enSemana.setDate(enSemana.getDate() + 7);
+    const enSemanaStr = enSemana.toISOString().split('T')[0];
+    const vencidas = ST.propuestasComerciales.filter(p =>
+      p.fechaProxima && p.fechaProxima < hoyStr &&
+      p.estado !== 'compro' && p.estado !== 'cliente_activo' && p.estado !== 'perdido'
+    );
+    const proximas = ST.propuestasComerciales.filter(p =>
+      p.fechaProxima && p.fechaProxima >= hoyStr && p.fechaProxima <= enSemanaStr &&
+      p.estado !== 'compro' && p.estado !== 'cliente_activo' && p.estado !== 'perdido'
+    );
+    let html = '';
+    if (vencidas.length) {
+      html += `<div class="alert alert-danger py-2 mb-2" style="font-size:.75rem;border-radius:8px">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i><strong>${vencidas.length} follow-up${vencidas.length>1?'s':''} vencido${vencidas.length>1?'s':''}</strong>:
+        ${vencidas.map(p => `<span class="badge" style="background:#ef4444;cursor:pointer" onclick="abrirModalPropuesta('${p.id}')">${p.empresa}</span>`).join(' ')}
+      </div>`;
+    }
+    if (proximas.length) {
+      html += `<div class="alert alert-warning py-2 mb-2" style="font-size:.75rem;border-radius:8px">
+        <i class="bi bi-alarm me-2"></i><strong>${proximas.length} follow-up${proximas.length>1?'s':''} esta semana</strong>:
+        ${proximas.map(p => `<span class="badge" style="background:#f59e0b;cursor:pointer" onclick="abrirModalPropuesta('${p.id}')">${p.empresa}</span>`).join(' ')}
+      </div>`;
+    }
+    alertasEl.innerHTML = html;
+  }
+
+  // Tabla
+  const tbody = document.getElementById('prop-tbody');
+  if (!tbody) return;
+  if (!filtradas.length) {
+    tbody.innerHTML = `<tr><td colspan="8" class="text-center text-muted py-4" style="font-size:.8rem">
+      ${buscar||filEst||filRub ? 'Sin resultados para los filtros aplicados.' : 'No hay propuestas. ¡Agregá la primera!'}
+    </td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = filtradas.map(p => {
+    const est = _PROP_ESTADOS[p.estado] || _PROP_ESTADOS.prospecto;
+    const ultimaObs = p.observaciones?.length ? p.observaciones[p.observaciones.length-1] : null;
+    const obsHtml = ultimaObs
+      ? `<div style="font-size:.72rem;color:#334155;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${ultimaObs.texto}">${ultimaObs.texto}</div>
+         <div style="font-size:.6rem;color:#94a3b8">${_ectaFmtDate(ultimaObs.fecha)}</div>`
+      : `<span style="font-size:.7rem;color:#cbd5e1">Sin observaciones</span>`;
+
+    const hoyStr2 = hoy();
+    let followHtml = '—';
+    if (p.fechaProxima) {
+      const diff = Math.round((new Date(p.fechaProxima+'T00:00:00') - new Date(hoyStr2+'T00:00:00')) / 86400000);
+      const color = diff < 0 ? '#ef4444' : diff <= 3 ? '#f59e0b' : '#10b981';
+      const label = diff < 0 ? `Vencido hace ${Math.abs(diff)}d` : diff === 0 ? 'Hoy' : `en ${diff}d`;
+      followHtml = `<div style="font-size:.68rem;color:${color};font-weight:600">${label}</div>
+        <div style="font-size:.6rem;color:#94a3b8">${_ectaFmtDate(p.fechaProxima)}</div>`;
+    }
+
+    const montoHtml = p.monto > 0 ? `<span style="font-size:.75rem;font-weight:700;color:#0f172a">${fmt(p.monto)}</span>` : '—';
+    const pdfBtn = p.pdfNombre
+      ? `<button class="btn btn-link btn-sm p-0 me-1" title="Ver PDF" onclick="verPdfPropuesta('${p.id}')"><i class="bi bi-file-pdf text-danger" style="font-size:.9rem"></i></button>`
+      : '';
+
+    return `<tr style="font-size:.75rem">
+      <td style="padding:10px 12px">
+        <div style="font-weight:700;color:#0f172a">${p.empresa}</div>
+        ${p.rubro ? `<div style="font-size:.62rem;color:#64748b"><i class="bi bi-tags me-1"></i>${p.rubro}</div>` : ''}
+      </td>
+      <td style="padding:10px 12px">
+        ${p.contacto ? `<div style="font-weight:600;color:#334155">${p.contacto}</div>` : ''}
+        ${p.cargo ? `<div style="font-size:.62rem;color:#94a3b8">${p.cargo}</div>` : ''}
+        ${p.telefono ? `<div style="font-size:.62rem;color:#0ea5e9"><i class="bi bi-telephone me-1"></i>${p.telefono}</div>` : ''}
+      </td>
+      <td style="padding:10px 12px">
+        <div style="font-weight:600;color:#334155;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${p.propuesta||''}">${p.propuesta||'—'}</div>
+        ${p.fechaPropuesta ? `<div style="font-size:.6rem;color:#94a3b8">${_ectaFmtDate(p.fechaPropuesta)}</div>` : ''}
+      </td>
+      <td style="padding:10px 12px;text-align:center">
+        <span class="badge" style="background:${est.bg};font-size:.62rem;padding:4px 8px;border-radius:20px">
+          <i class="bi ${est.icon} me-1"></i>${est.lbl}
+        </span>
+      </td>
+      <td style="padding:10px 12px">${obsHtml}</td>
+      <td style="padding:10px 12px;text-align:center">${followHtml}</td>
+      <td style="padding:10px 12px;text-align:right">${montoHtml}</td>
+      <td style="padding:10px 12px;text-align:center;white-space:nowrap">
+        ${pdfBtn}
+        <button class="btn btn-link btn-sm p-0 me-1" title="Editar" onclick="abrirModalPropuesta('${p.id}')"><i class="bi bi-pencil text-primary" style="font-size:.9rem"></i></button>
+        <button class="btn btn-link btn-sm p-0" title="Eliminar" onclick="eliminarPropuesta('${p.id}')"><i class="bi bi-trash text-danger" style="font-size:.9rem"></i></button>
+      </td>
+    </tr>`;
+  }).join('');
 }
 
 function renderEmpresas() {
