@@ -8507,7 +8507,7 @@ let _syncInterval = null;
 let _pendingSave  = false;
 let _online       = true; // Asumir online; el evento 'offline' actualizará si es necesario
 
-window.addEventListener('online',  () => { _online = true;  setSyncStatus('syncing', 'Reconectando...'); if (_pendingSave) pushRemoto(); });
+window.addEventListener('online',  () => { _online = true; _sbPushErrors = 0; setSyncStatus('syncing', 'Reconectando...'); if (_pendingSave) pushRemoto(); });
 window.addEventListener('offline', () => { _online = false; setSyncStatus('offline', 'Sin internet — guardado local'); });
 
 function sbHdrs() {
@@ -8545,6 +8545,7 @@ function setSyncStatus(status, msg) {
 }
 
 let _sbPushErrors = 0;
+let _pendingSaveTimer = null;
 
 async function pushRemoto() {
   if (!sbReady()) { setSyncStatus('none'); return; }
@@ -8574,7 +8575,8 @@ async function pushRemoto() {
     const delay = Math.min(60000, 8000 * Math.pow(2, Math.min(_sbPushErrors - 1, 3)));
     setSyncStatus('error', 'Error al guardar: ' + (e.message||'sin conexión'));
     _pendingSave = true;
-    setTimeout(() => { if (_pendingSave) pushRemoto(); }, delay);
+    if (_pendingSaveTimer) clearTimeout(_pendingSaveTimer);
+    _pendingSaveTimer = setTimeout(() => { _pendingSaveTimer = null; if (_pendingSave) pushRemoto(); }, delay);
   }
 }
 
@@ -8807,7 +8809,7 @@ function iniciarAutoSync() {
   // El pull inicial ya se hizo en initApp() — aquí solo iniciamos el polling periódico
   if (_syncInterval) clearInterval(_syncInterval);
   _syncInterval = setInterval(() => {
-    if (_sbPushErrors >= 3) return;
+    if (_sbPushErrors >= 10) return; // solo detener polling tras muchos errores consecutivos
     pullRemoto(true).catch(() => {}); // polling silencioso — errores ya logueados por pullRemoto
   }, 8000);
   setTimeout(() => _supabaseDailyBackup(false), 5000);
@@ -10683,10 +10685,15 @@ function initAutoRefresh() {
   if (window._arPollInterval) clearInterval(window._arPollInterval);
   window._arPollInterval = setInterval(_arPollAll, AUTO_REFRESH_INTERVAL);
 
-  // También chequear cuando el usuario vuelve a la pestaña
+  // También chequear cuando el usuario vuelve a la pestaña (debounce: máx 1 vez por minuto)
+  let _arLastVisibPoll = 0;
   document.addEventListener('visibilitychange', () => {
     if (!document.hidden) {
-      setTimeout(_arPollAll, 2000); // Chequear 2s después de volver
+      const now = Date.now();
+      if (now - _arLastVisibPoll > 60000) {
+        _arLastVisibPoll = now;
+        setTimeout(_arPollAll, 2000); // Chequear 2s después de volver
+      }
     }
   });
 }
@@ -11479,11 +11486,11 @@ function renderDashCharts(sB,sE,sC) {
    CUENTA SOCIOS
 ═══════════════════════════════════════════ */
 function renderCuentaSocios() {
-  const allMov = [...ST.cajaBancos, ...ST.cajaEfectivo];
+  const allMov = [...(ST.cajaBancos||[]), ...(ST.cajaEfectivo||[])];
 
   // Calcular retiros por socio
   const retirosBySocio = {};
-  ST.socios.forEach(s => { retirosBySocio[s.id] = 0; });
+  (ST.socios||[]).forEach(s => { retirosBySocio[s.id] = 0; });
 
   // Movimientos de tipo egreso con concepto "Retiro X"
   const movRetiros = allMov.filter(m => {
@@ -12250,7 +12257,7 @@ async function cargarComisionDetalle(sheetTab, empresaName) {
     const grid      = document.getElementById('com-resumen-grid');
 
     if (empresaEl) empresaEl.textContent = empresaName;
-    const resumenItem = ST.comisionesResumen.find(r => r.empresa === empresaName);
+    const resumenItem = (ST.comisionesResumen||[]).find(r => r.empresa === empresaName);
     if (saldoEl) saldoEl.textContent = resumenItem ? `Saldo: ${fmt(resumenItem.saldo)}` : 'Saldo: —';
 
     // Save for printing
@@ -12865,7 +12872,7 @@ function guardarSocio(){
   if(id){const s=ST.socios.find(x=>x.id===id);if(s)s.nombre=nombre;}
   else ST.socios.push({id:uid(),nombre});
   save();renderSocios();actualizarSelects();
-  bootstrap.Modal.getInstance(document.getElementById('modalSocio')).hide();
+  bootstrap.Modal.getInstance(document.getElementById('modalSocio'))?.hide();
   toast('Socio guardado');
 }
 function eliminarSocio(id){
@@ -13379,8 +13386,8 @@ function guardarCheque(){
     try { renderSaldosBancos(); } catch(e) {}
   }
 
-  save();renderCheques(cat);renderDashboard();
-  bootstrap.Modal.getInstance(document.getElementById('modalCheque')).hide();
+  save();renderCheques(cat);try{renderDashboard();}catch(e){}
+  bootstrap.Modal.getInstance(document.getElementById('modalCheque'))?.hide();
   if (!(cat === 'chequesPagar' && obj.estado === 'pagado' && prevObj?.estado !== 'pagado')) toast('Cheque guardado');
 }
 
@@ -13403,7 +13410,7 @@ function depositarECheque(id){
     monto:c.monto,
     desc:`E-Cheque Nro. ${c.numero} — Banco ${c.banco}${cliente}${factura}`
   });
-  save();renderCheques('eCheques');renderMovimientos('cajaBancos');renderDashboard();
+  save();renderCheques('eCheques');renderMovimientos('cajaBancos');try{renderDashboard();}catch(e){}
   toast(`✓ E-Cheque Nro. ${c.numero} depositado en ${banco}`);
 }
 function pagarChequeRapido(id) {
@@ -13760,7 +13767,7 @@ function ejecutarTraspaso() {
     monto, desc: `Traspaso desde ${origen}${desc ? ' — '+desc : ''} [ref:${refId}]`
   });
   save();
-  bootstrap.Modal.getInstance(document.getElementById('modalTraspaso')).hide();
+  bootstrap.Modal.getInstance(document.getElementById('modalTraspaso'))?.hide();
   renderMovimientos('cajaBancos');
   try { renderDashboard(); } catch(e) {}
   toast(`✓ Traspaso de ${fmt(monto)} de ${origen} a ${destino}`, 'success');
@@ -13848,7 +13855,7 @@ function ejecutarAjuste() {
     desc: `${desc} — Saldo anterior: ${fmt(saldoActual)}, Saldo real: ${fmt(saldoReal)}`
   });
   save();
-  bootstrap.Modal.getInstance(document.getElementById('modalAjuste')).hide();
+  bootstrap.Modal.getInstance(document.getElementById('modalAjuste'))?.hide();
   renderMovimientos('cajaBancos');
   try { renderDashboard(); } catch(e) {}
   toast(`✓ Ajuste aplicado en ${banco}: ${diff>0?'+':''}${fmt(diff)}`, 'success');
@@ -13914,7 +13921,7 @@ function guardarMov(){
 function eliminarMov(cat,id){
   _confirmar('¿Eliminar este movimiento? Esta acción no se puede deshacer.', ()=>{
     ST[cat]=ST[cat].filter(x=>x.id!==id);
-    save();renderMovimientos(cat);renderDashboard();toast('Movimiento eliminado','warning');
+    save();renderMovimientos(cat);try{renderDashboard();}catch(e){}toast('Movimiento eliminado','warning');
   }, { title:'Eliminar movimiento', btnLabel:'Eliminar' });
 }
 
@@ -16682,7 +16689,7 @@ function guardarFactura() {
   const _genDocMonto = parseFloat(document.getElementById('mf-pagoMonto')?.value) || obj.total;
   const _debeGenDoc = _genDocCb && _genDocCb.checked && (obj.estado === 'cobrada' || obj.estado === 'pagada');
 
-  bootstrap.Modal.getInstance(document.getElementById('modalFactura')).hide();
+  bootstrap.Modal.getInstance(document.getElementById('modalFactura'))?.hide();
   if (cat === 'cobrar') renderFacturasACobrar(); else renderFacturasPagar();
   // Refresh related sections
   try { renderMovimientos('cajaBancos'); } catch(e) {}
@@ -17415,7 +17422,7 @@ function guardarStockProd() {
   const idx = ST.stockProductos.findIndex(p=>p.id===id);
   if (idx >= 0) ST.stockProductos[idx] = obj; else ST.stockProductos.push(obj);
   save();
-  bootstrap.Modal.getInstance(document.getElementById('modalStockProd')).hide();
+  bootstrap.Modal.getInstance(document.getElementById('modalStockProd'))?.hide();
   renderStock();
   toast('Producto guardado ✓');
 }
@@ -17511,7 +17518,7 @@ function guardarStockMov() {
   };
   ST.stockMovimientos.push(mov);
   save();
-  bootstrap.Modal.getInstance(document.getElementById('modalStockMov')).hide();
+  bootstrap.Modal.getInstance(document.getElementById('modalStockMov'))?.hide();
   renderStock();
 
   // Alert if below minimum
@@ -17626,7 +17633,7 @@ function guardarRemito() {
   });
 
   save();
-  bootstrap.Modal.getInstance(document.getElementById('modalRemito')).hide();
+  bootstrap.Modal.getInstance(document.getElementById('modalRemito'))?.hide();
   _renderRemitos();
   toast(`Remito de ${tipo} guardado ✓`);
 }
@@ -18122,7 +18129,7 @@ function guardarListaPrecio() {
   _lpArchivosTemp = [];
   _lpProductos    = [];
   save();
-  bootstrap.Modal.getInstance(document.getElementById('modalListaPrecio')).hide();
+  bootstrap.Modal.getInstance(document.getElementById('modalListaPrecio'))?.hide();
   renderListasPrecios();
   toast('Lista de precios guardada ✓');
 }
@@ -21486,7 +21493,7 @@ function kmGuardar() {
 
   save();
   kmRender();
-  bootstrap.Modal.getInstance(document.getElementById('modalKm')).hide();
+  bootstrap.Modal.getInstance(document.getElementById('modalKm'))?.hide();
   toast('Registro de KM guardado');
 }
 
@@ -21514,7 +21521,7 @@ function kmPagarRegistro(id) {
   save();
   kmRender();
   renderMovimientos('cajaEfectivo');
-  renderDashboard();
+  try { renderDashboard(); } catch(e) {}
   toast('Pago registrado: ' + fmt(totalConPeajes), 'success');
 }
 
@@ -21572,7 +21579,7 @@ function kmPagarMes() {
   save();
   kmRender();
   renderMovimientos('cajaEfectivo');
-  renderDashboard();
+  try { renderDashboard(); } catch(e) {}
   toast('Pago registrado en Caja Efectivo: ' + fmt(totalMonto), 'success');
 }
 
@@ -21634,9 +21641,9 @@ function kmGuardarPagoParcial() {
   ST.kmPagosParciales.push({ id: uid(), fecha, monto, caja, cajaId, concepto });
 
   save();
-  bootstrap.Modal.getInstance(document.getElementById('modalKmPago')).hide();
+  bootstrap.Modal.getInstance(document.getElementById('modalKmPago'))?.hide();
   kmRender();
-  renderDashboard();
+  try { renderDashboard(); } catch(e) {}
   toast(`Pago parcial registrado: ${fmt(monto)}`, 'success');
 }
 
@@ -21651,7 +21658,7 @@ function kmEliminarPagoParcial(id) {
     ST.kmPagosParciales = ST.kmPagosParciales.filter(p => p.id !== id);
     save();
     kmRender();
-    renderDashboard();
+    try { renderDashboard(); } catch(e) {}
     toast('Pago parcial eliminado', 'warning');
   }, { title:'Eliminar pago parcial', btnLabel:'Eliminar' });
 }
@@ -21685,7 +21692,7 @@ function kmGuardarTarifa() {
 
   save();
   kmRender();
-  bootstrap.Modal.getInstance(document.getElementById('modalKmTarifa')).hide();
+  bootstrap.Modal.getInstance(document.getElementById('modalKmTarifa'))?.hide();
   toast('Tarifa actualizada');
 }
 
