@@ -676,6 +676,33 @@
     body.dark-mode .dash-alert-warning { background: rgba(245,158,11,.15); color: #fcd34d; }
     body.dark-mode .dash-alert-info { background: rgba(59,130,246,.15); color: #93c5fd; }
     /* CRM cards inline styles */
+    /* ── Propuestas Comerciales: Kanban ── */
+    .kanban-board { display:flex; gap:10px; overflow-x:auto; padding-bottom:12px; min-height:420px; }
+    .kanban-col { flex:0 0 210px; min-width:210px; background:#f8fafc; border-radius:12px; border:1px solid #e2e8f0; display:flex; flex-direction:column; }
+    .kanban-col-header { padding:8px 12px; border-radius:12px 12px 0 0; color:#fff; font-size:.68rem; font-weight:700; text-transform:uppercase; letter-spacing:.5px; display:flex; align-items:center; gap:4px; }
+    .kanban-col-total { font-size:.6rem; text-align:center; padding:2px 8px 4px; font-weight:600; }
+    .kanban-cards { flex:1; padding:8px; display:flex; flex-direction:column; gap:6px; min-height:80px; }
+    .kanban-card { background:#fff; border-radius:9px; padding:9px 10px; border:1px solid #e2e8f0; cursor:pointer; transition:all .15s; box-shadow:0 1px 3px rgba(0,0,0,.06); }
+    .kanban-card:hover { transform:translateY(-2px); box-shadow:0 4px 12px rgba(0,0,0,.12); border-color:#c7d2fe; }
+    .kanban-drop-target { background:#f0fdf4; border-color:#10b981; border-style:dashed; }
+    .kanban-drop-target .kanban-cards { background:rgba(16,185,129,.04); border-radius:0 0 12px 12px; }
+    .prop-score-bar { height:4px; border-radius:4px; background:#e2e8f0; overflow:hidden; margin-top:5px; }
+    .prop-score-bar-fill { height:100%; border-radius:4px; transition:width .4s ease; }
+    .prop-view-btn { font-size:.7rem; padding:4px 10px; border-radius:20px; border:1.5px solid #e2e8f0; background:#fff; cursor:pointer; font-weight:600; color:#475569; transition:.15s; }
+    .prop-view-btn.active { background:#0f172a; color:#fff; border-color:#0f172a; }
+    .prop-act-pill { display:inline-flex; align-items:center; gap:4px; font-size:.6rem; padding:2px 7px; border-radius:20px; font-weight:600; cursor:pointer; transition:.1s; }
+    /* ── Print: Propuesta PDF ── */
+    @media print {
+      body > *:not(#prop-pdf-print-area) { display:none !important; }
+      #prop-pdf-print-area { display:block !important; position:static; }
+    }
+    #prop-pdf-print-area { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:#fff; z-index:9999; overflow:auto; padding:30px 40px; box-sizing:border-box; }
+    body.dark-mode #page-propuestasComerciales .kanban-col { background:#1e293b; border-color:#334155; }
+    body.dark-mode #page-propuestasComerciales .kanban-card { background:#0f172a; border-color:#334155; }
+    body.dark-mode #page-propuestasComerciales .kanban-drop-target { background:#0f2011; border-color:#10b981; }
+    body.dark-mode #page-propuestasComerciales .prop-view-btn { background:#1e293b; border-color:#334155; color:#94a3b8; }
+    body.dark-mode #page-propuestasComerciales .prop-view-btn.active { background:#fff; color:#0f172a; }
+
     body.dark-mode #page-empresas [style*="color:#0f172a"],
     body.dark-mode #page-empresas [style*="color:#1e293b"] { color: var(--text) !important; }
     body.dark-mode #page-empresas [style*="color:#475569"],
@@ -6523,12 +6550,20 @@ CREATE POLICY "acceso total" ON muuk_daily_backups FOR ALL USING (true) WITH CHE
         </h4>
         <div style="font-size:.7rem;color:#94a3b8;margin-top:2px">Prospectos · Seguimiento · Pipeline comercial</div>
       </div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap">
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+        <!-- View toggle -->
+        <div style="display:flex;gap:4px;background:#f1f5f9;padding:3px;border-radius:24px">
+          <button id="prop-btn-tabla"   class="prop-view-btn active" onclick="_propSetView('tabla')"><i class="bi bi-table me-1"></i>Tabla</button>
+          <button id="prop-btn-kanban"  class="prop-view-btn"        onclick="_propSetView('kanban')"><i class="bi bi-kanban me-1"></i>Kanban</button>
+        </div>
+        <button class="btn btn-sm" style="background:#6366f1;color:#fff;font-size:.72rem;font-weight:600;border-radius:8px" onclick="abrirModalGenerarPropuestaPDF()">
+          <i class="bi bi-file-earmark-pdf me-1"></i>Generar PDF
+        </button>
         <button class="btn btn-sm" style="background:#10b981;color:#fff;font-size:.72rem;font-weight:600;border-radius:8px" onclick="abrirModalPropuesta()">
           <i class="bi bi-plus-lg me-1"></i>Nueva Propuesta
         </button>
         <button class="btn btn-sm btn-outline-secondary" style="font-size:.72rem;border-radius:8px" onclick="exportarPropuestasCsv()">
-          <i class="bi bi-download me-1"></i>Exportar CSV
+          <i class="bi bi-download me-1"></i>CSV
         </button>
       </div>
     </div>
@@ -6539,7 +6574,7 @@ CREATE POLICY "acceso total" ON muuk_daily_backups FOR ALL USING (true) WITH CHE
     <!-- Filtros -->
     <div class="card mb-3 p-2" style="border-radius:10px;border:1px solid #e2e8f0">
       <div class="row g-2 align-items-center">
-        <div class="col-sm-4">
+        <div class="col-sm-3">
           <input type="text" id="prop-fil-buscar" class="form-control form-control-sm" placeholder="🔍 Buscar empresa, contacto..." oninput="renderPropuestasComerciales()">
         </div>
         <div class="col-sm-3">
@@ -6553,9 +6588,17 @@ CREATE POLICY "acceso total" ON muuk_daily_backups FOR ALL USING (true) WITH CHE
             <option value="perdido">Perdido</option>
           </select>
         </div>
-        <div class="col-sm-3">
+        <div class="col-sm-2">
           <select id="prop-fil-rubro" class="form-select form-select-sm" onchange="renderPropuestasComerciales()">
             <option value="">Todos los rubros</option>
+          </select>
+        </div>
+        <div class="col-sm-2">
+          <select id="prop-fil-sort" class="form-select form-select-sm" onchange="renderPropuestasComerciales()">
+            <option value="followup">Ordenar: Follow-up</option>
+            <option value="score">Ordenar: Score ↓</option>
+            <option value="monto">Ordenar: Monto ↓</option>
+            <option value="empresa">Ordenar: Empresa A-Z</option>
           </select>
         </div>
         <div class="col-sm-2">
@@ -6566,30 +6609,38 @@ CREATE POLICY "acceso total" ON muuk_daily_backups FOR ALL USING (true) WITH CHE
       </div>
     </div>
 
-    <!-- Próximos seguimientos (alertas) -->
+    <!-- Alertas de seguimiento -->
     <div id="prop-alertas-box"></div>
 
-    <!-- Tabla -->
-    <div class="card p-0" style="border-radius:10px;overflow:hidden;border:1px solid #e2e8f0">
-      <div style="overflow-x:auto">
-        <table class="table table-hover mb-0" id="prop-tabla">
-          <thead style="background:linear-gradient(135deg,#0f172a,#1e293b);color:#fff;font-size:.7rem;text-transform:uppercase;letter-spacing:.5px">
-            <tr>
-              <th style="padding:10px 12px;font-weight:700">Empresa / Rubro</th>
-              <th style="padding:10px 12px;font-weight:700">Contacto</th>
-              <th style="padding:10px 12px;font-weight:700">Propuesta</th>
-              <th style="padding:10px 12px;font-weight:700;text-align:center">Estado</th>
-              <th style="padding:10px 12px;font-weight:700">Última Observación</th>
-              <th style="padding:10px 12px;font-weight:700;text-align:center">Próximo Follow-up</th>
-              <th style="padding:10px 12px;font-weight:700;text-align:right">Monto Est.</th>
-              <th style="padding:10px 12px;font-weight:700;text-align:center">Acciones</th>
-            </tr>
-          </thead>
-          <tbody id="prop-tbody">
-            <tr><td colspan="8" class="text-center text-muted py-4" style="font-size:.8rem">No hay propuestas. ¡Agregá la primera!</td></tr>
-          </tbody>
-        </table>
+    <!-- Vista Tabla -->
+    <div id="prop-view-tabla">
+      <div class="card p-0" style="border-radius:10px;overflow:hidden;border:1px solid #e2e8f0">
+        <div style="overflow-x:auto">
+          <table class="table table-hover mb-0">
+            <thead style="background:linear-gradient(135deg,#0f172a,#1e293b);color:#fff;font-size:.68rem;text-transform:uppercase;letter-spacing:.5px">
+              <tr>
+                <th style="padding:10px 12px;font-weight:700">Empresa / Rubro</th>
+                <th style="padding:10px 12px;font-weight:700">Contacto</th>
+                <th style="padding:10px 12px;font-weight:700">Propuesta</th>
+                <th style="padding:10px 12px;font-weight:700;text-align:center">Estado</th>
+                <th style="padding:10px 12px;font-weight:700;text-align:center">Score</th>
+                <th style="padding:10px 12px;font-weight:700">Última Actividad</th>
+                <th style="padding:10px 12px;font-weight:700;text-align:center">Follow-up</th>
+                <th style="padding:10px 12px;font-weight:700;text-align:right">Monto</th>
+                <th style="padding:10px 12px;font-weight:700;text-align:center">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="prop-tbody">
+              <tr><td colspan="9" class="text-center text-muted py-4" style="font-size:.8rem">No hay propuestas. ¡Agregá la primera!</td></tr>
+            </tbody>
+          </table>
+        </div>
       </div>
+    </div>
+
+    <!-- Vista Kanban -->
+    <div id="prop-view-kanban" style="display:none">
+      <div id="prop-kanban" class="kanban-board"></div>
     </div>
 
   </div><!-- /page-propuestasComerciales -->
@@ -6598,113 +6649,174 @@ CREATE POLICY "acceso total" ON muuk_daily_backups FOR ALL USING (true) WITH CHE
 
 <!-- ══════════ MODAL: PROPUESTA COMERCIAL ══════════ -->
 <div class="modal fade" id="modalPropuesta" tabindex="-1">
-  <div class="modal-dialog modal-lg">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
     <div class="modal-content" style="border-radius:14px;border:none;box-shadow:0 20px 60px rgba(0,0,0,.2)">
-      <div class="modal-header" style="background:linear-gradient(135deg,#0f172a,#1e293b);color:#fff;border-radius:14px 14px 0 0;padding:16px 20px">
+      <div class="modal-header" style="background:linear-gradient(135deg,#0f172a,#1e293b);color:#fff;border-radius:14px 14px 0 0;padding:14px 20px">
         <h5 class="modal-title" id="prop-modal-titulo" style="font-weight:800;font-size:.95rem"><i class="bi bi-file-earmark-text-fill me-2" style="color:#10b981"></i>Nueva Propuesta</h5>
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <!-- Tabs -->
+      <div style="background:#f8fafc;border-bottom:1px solid #e2e8f0;padding:0 16px">
+        <ul class="nav" id="prop-modal-tabs" style="gap:0">
+          <li class="nav-item"><a class="nav-link active py-2" id="prop-tab-datos" href="#" onclick="_propModalTab('datos',event)" style="font-size:.73rem;font-weight:600;color:#0f172a;border-bottom:2px solid #10b981;border-radius:0"><i class="bi bi-person-lines-fill me-1"></i>Datos</a></li>
+          <li class="nav-item"><a class="nav-link py-2" id="prop-tab-actividades" href="#" onclick="_propModalTab('actividades',event)" style="font-size:.73rem;font-weight:600;color:#64748b;border-bottom:2px solid transparent;border-radius:0"><i class="bi bi-clock-history me-1"></i>Actividades</a></li>
+          <li class="nav-item"><a class="nav-link py-2" id="prop-tab-obs" href="#" onclick="_propModalTab('obs',event)" style="font-size:.73rem;font-weight:600;color:#64748b;border-bottom:2px solid transparent;border-radius:0"><i class="bi bi-chat-dots me-1"></i>Observaciones</a></li>
+        </ul>
       </div>
       <div class="modal-body p-3">
         <input type="hidden" id="prop-id">
 
-        <!-- Fila 1: Empresa + Rubro -->
-        <div class="row g-2 mb-2">
-          <div class="col-sm-6">
-            <label class="form-label small fw-bold mb-1" style="font-size:.7rem"><i class="bi bi-building me-1" style="color:#0ea5e9"></i>Empresa *</label>
-            <input type="text" id="prop-empresa" class="form-control form-control-sm" placeholder="Nombre de la empresa">
-          </div>
-          <div class="col-sm-6">
-            <label class="form-label small fw-bold mb-1" style="font-size:.7rem"><i class="bi bi-tags me-1" style="color:#8b5cf6"></i>Rubro</label>
-            <input type="text" id="prop-rubro" class="form-control form-control-sm" placeholder="Alimentos, Logística, Industria...">
-          </div>
-        </div>
+        <!-- TAB: DATOS -->
+        <div id="prop-tab-panel-datos">
 
-        <!-- Fila 2: Contacto + Cargo -->
-        <div class="row g-2 mb-2">
-          <div class="col-sm-6">
-            <label class="form-label small fw-bold mb-1" style="font-size:.7rem"><i class="bi bi-person me-1" style="color:#f59e0b"></i>Contacto</label>
-            <input type="text" id="prop-contacto" class="form-control form-control-sm" placeholder="Nombre del contacto">
-          </div>
-          <div class="col-sm-6">
-            <label class="form-label small fw-bold mb-1" style="font-size:.7rem"><i class="bi bi-briefcase me-1" style="color:#6b7280"></i>Cargo</label>
-            <input type="text" id="prop-cargo" class="form-control form-control-sm" placeholder="Comprador, Gerente, Dueño...">
-          </div>
-        </div>
-
-        <!-- Fila 3: Teléfono + Email -->
-        <div class="row g-2 mb-2">
-          <div class="col-sm-6">
-            <label class="form-label small fw-bold mb-1" style="font-size:.7rem"><i class="bi bi-telephone me-1" style="color:#10b981"></i>Teléfono</label>
-            <input type="text" id="prop-telefono" class="form-control form-control-sm" placeholder="+54 9 11 ...">
-          </div>
-          <div class="col-sm-6">
-            <label class="form-label small fw-bold mb-1" style="font-size:.7rem"><i class="bi bi-envelope me-1" style="color:#0ea5e9"></i>Email</label>
-            <input type="email" id="prop-email" class="form-control form-control-sm" placeholder="contacto@empresa.com">
-          </div>
-        </div>
-
-        <hr class="my-2" style="border-color:#f1f5f9">
-
-        <!-- Fila 4: Nombre propuesta + Estado + Monto -->
-        <div class="row g-2 mb-2">
-          <div class="col-sm-5">
-            <label class="form-label small fw-bold mb-1" style="font-size:.7rem"><i class="bi bi-file-earmark-text me-1" style="color:#10b981"></i>Propuesta *</label>
-            <input type="text" id="prop-nombre" class="form-control form-control-sm" placeholder="Ej: Harina 000 — 50 bolsas/sem">
-          </div>
-          <div class="col-sm-4">
-            <label class="form-label small fw-bold mb-1" style="font-size:.7rem"><i class="bi bi-flag me-1" style="color:#ef4444"></i>Estado</label>
-            <select id="prop-estado" class="form-select form-select-sm">
-              <option value="prospecto">Prospecto</option>
-              <option value="en_contacto">En Contacto</option>
-              <option value="negociacion">Negociación</option>
-              <option value="compro">Compró</option>
-              <option value="cliente_activo">Cliente Activo</option>
-              <option value="perdido">Perdido</option>
+          <!-- Plantilla rápida -->
+          <div id="prop-plantilla-box" class="mb-2">
+            <label class="form-label small fw-bold mb-1" style="font-size:.7rem"><i class="bi bi-lightning-fill me-1" style="color:#f59e0b"></i>Plantilla rápida por rubro</label>
+            <select id="prop-plantilla-sel" class="form-select form-select-sm" onchange="_propAplicarPlantilla(this.value)">
+              <option value="">— Seleccionar plantilla (opcional) —</option>
+              <option value="panaderia">🥐 Panadería / Confitería</option>
+              <option value="restaurante">🍽️ Restaurant / Gastronomía</option>
+              <option value="hotel">🏨 Hotel / Catering</option>
+              <option value="distribuidora">🚚 Distribuidora / Mayorista</option>
+              <option value="supermercado">🛒 Supermercado / Almacén</option>
+              <option value="industria">🏭 Industria / Fábrica</option>
             </select>
           </div>
-          <div class="col-sm-3">
-            <label class="form-label small fw-bold mb-1" style="font-size:.7rem"><i class="bi bi-currency-dollar me-1" style="color:#f59e0b"></i>Monto Est. $</label>
-            <input type="text" id="prop-monto" class="form-control form-control-sm" placeholder="0" oninput="_icFmtTyping(this)">
+
+          <!-- Empresa + Rubro -->
+          <div class="row g-2 mb-2">
+            <div class="col-sm-6">
+              <label class="form-label small fw-bold mb-1" style="font-size:.7rem"><i class="bi bi-building me-1" style="color:#0ea5e9"></i>Empresa *</label>
+              <input type="text" id="prop-empresa" class="form-control form-control-sm" placeholder="Nombre de la empresa">
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label small fw-bold mb-1" style="font-size:.7rem"><i class="bi bi-tags me-1" style="color:#8b5cf6"></i>Rubro</label>
+              <input type="text" id="prop-rubro" class="form-control form-control-sm" placeholder="Panadería, Hotel, Distribuidora...">
+            </div>
           </div>
-        </div>
 
-        <!-- Fila 5: Fecha propuesta + Próxima acción + Fecha -->
-        <div class="row g-2 mb-2">
-          <div class="col-sm-3">
-            <label class="form-label small fw-bold mb-1" style="font-size:.7rem"><i class="bi bi-calendar me-1" style="color:#6366f1"></i>Fecha Propuesta</label>
-            <input type="date" id="prop-fecha" class="form-control form-control-sm">
+          <!-- Contacto + Cargo -->
+          <div class="row g-2 mb-2">
+            <div class="col-sm-6">
+              <label class="form-label small fw-bold mb-1" style="font-size:.7rem"><i class="bi bi-person me-1" style="color:#f59e0b"></i>Contacto</label>
+              <input type="text" id="prop-contacto" class="form-control form-control-sm" placeholder="Nombre del contacto">
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label small fw-bold mb-1" style="font-size:.7rem"><i class="bi bi-briefcase me-1" style="color:#6b7280"></i>Cargo</label>
+              <input type="text" id="prop-cargo" class="form-control form-control-sm" placeholder="Comprador, Gerente, Dueño...">
+            </div>
           </div>
-          <div class="col-sm-6">
-            <label class="form-label small fw-bold mb-1" style="font-size:.7rem"><i class="bi bi-arrow-right-circle me-1" style="color:#f97316"></i>Próxima Acción</label>
-            <input type="text" id="prop-proxima-accion" class="form-control form-control-sm" placeholder="Llamar para seguimiento, enviar muestra...">
+
+          <!-- Teléfono + Email -->
+          <div class="row g-2 mb-2">
+            <div class="col-sm-6">
+              <label class="form-label small fw-bold mb-1" style="font-size:.7rem"><i class="bi bi-telephone me-1" style="color:#10b981"></i>Teléfono</label>
+              <input type="text" id="prop-telefono" class="form-control form-control-sm" placeholder="+54 9 11 ...">
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label small fw-bold mb-1" style="font-size:.7rem"><i class="bi bi-envelope me-1" style="color:#0ea5e9"></i>Email</label>
+              <input type="email" id="prop-email" class="form-control form-control-sm" placeholder="contacto@empresa.com">
+            </div>
           </div>
-          <div class="col-sm-3">
-            <label class="form-label small fw-bold mb-1" style="font-size:.7rem"><i class="bi bi-alarm me-1" style="color:#ef4444"></i>Follow-up</label>
-            <input type="date" id="prop-fecha-proxima" class="form-control form-control-sm">
+
+          <hr class="my-2" style="border-color:#f1f5f9">
+
+          <!-- Propuesta + Estado + Monto -->
+          <div class="row g-2 mb-2">
+            <div class="col-sm-5">
+              <label class="form-label small fw-bold mb-1" style="font-size:.7rem"><i class="bi bi-file-earmark-text me-1" style="color:#10b981"></i>Propuesta *</label>
+              <input type="text" id="prop-nombre" class="form-control form-control-sm" placeholder="Ej: Harina 000 — 50 bolsas/sem">
+            </div>
+            <div class="col-sm-4">
+              <label class="form-label small fw-bold mb-1" style="font-size:.7rem"><i class="bi bi-flag me-1" style="color:#ef4444"></i>Estado</label>
+              <select id="prop-estado" class="form-select form-select-sm">
+                <option value="prospecto">Prospecto</option>
+                <option value="en_contacto">En Contacto</option>
+                <option value="negociacion">Negociación</option>
+                <option value="compro">Compró</option>
+                <option value="cliente_activo">Cliente Activo</option>
+                <option value="perdido">Perdido</option>
+              </select>
+            </div>
+            <div class="col-sm-3">
+              <label class="form-label small fw-bold mb-1" style="font-size:.7rem"><i class="bi bi-currency-dollar me-1" style="color:#f59e0b"></i>Monto Est. $</label>
+              <input type="text" id="prop-monto" class="form-control form-control-sm" placeholder="0" oninput="_icFmtTyping(this)">
+            </div>
           </div>
-        </div>
 
-        <!-- PDF -->
-        <div class="mb-2">
-          <label class="form-label small fw-bold mb-1" style="font-size:.7rem"><i class="bi bi-file-pdf me-1" style="color:#ef4444"></i>PDF de la Propuesta</label>
-          <input type="file" id="prop-pdf-input" class="form-control form-control-sm" accept=".pdf" onchange="_propLoadPdf(this)">
-          <div id="prop-pdf-status" style="font-size:.65rem;color:#6b7280;margin-top:3px"></div>
-        </div>
+          <!-- Fecha + Próxima acción + Follow-up -->
+          <div class="row g-2 mb-2">
+            <div class="col-sm-3">
+              <label class="form-label small fw-bold mb-1" style="font-size:.7rem"><i class="bi bi-calendar me-1" style="color:#6366f1"></i>Fecha Propuesta</label>
+              <input type="date" id="prop-fecha" class="form-control form-control-sm">
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label small fw-bold mb-1" style="font-size:.7rem"><i class="bi bi-arrow-right-circle me-1" style="color:#f97316"></i>Próxima Acción</label>
+              <input type="text" id="prop-proxima-accion" class="form-control form-control-sm" placeholder="Llamar, enviar muestra, reunión...">
+            </div>
+            <div class="col-sm-3">
+              <label class="form-label small fw-bold mb-1" style="font-size:.7rem"><i class="bi bi-alarm me-1" style="color:#ef4444"></i>Follow-up</label>
+              <input type="date" id="prop-fecha-proxima" class="form-control form-control-sm" onchange="_propCheckARCAFecha()">
+            </div>
+          </div>
 
-        <hr class="my-2" style="border-color:#f1f5f9">
+          <!-- PDF + ARCA -->
+          <div class="row g-2 mb-2">
+            <div class="col-sm-8">
+              <label class="form-label small fw-bold mb-1" style="font-size:.7rem"><i class="bi bi-file-pdf me-1" style="color:#ef4444"></i>PDF adjunto (propuesta enviada)</label>
+              <input type="file" id="prop-pdf-input" class="form-control form-control-sm" accept=".pdf" onchange="_propLoadPdf(this)">
+              <div id="prop-pdf-status" style="font-size:.65rem;color:#6b7280;margin-top:3px"></div>
+            </div>
+            <div class="col-sm-4 d-flex align-items-end">
+              <div id="prop-arca-check-box" style="display:none;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:7px 10px;width:100%">
+                <div class="form-check mb-0">
+                  <input class="form-check-input" type="checkbox" id="prop-arca-check" style="margin-top:3px">
+                  <label class="form-check-label" for="prop-arca-check" style="font-size:.65rem;font-weight:600;color:#15803d;line-height:1.3">
+                    <i class="bi bi-calendar-check me-1"></i>Agregar al Calendario ARCA
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
 
-        <!-- Observación nueva -->
-        <div>
-          <label class="form-label small fw-bold mb-1" style="font-size:.7rem"><i class="bi bi-chat-dots me-1" style="color:#0ea5e9"></i>Observación / Novedad</label>
-          <textarea id="prop-obs" class="form-control form-control-sm" rows="2" placeholder="Reunión realizada, resultado, próximo paso..."></textarea>
-          <div style="font-size:.63rem;color:#94a3b8;margin-top:3px">Se agregará al historial con la fecha de hoy si completás este campo</div>
-        </div>
+          <!-- Notas internas -->
+          <div>
+            <label class="form-label small fw-bold mb-1" style="font-size:.7rem"><i class="bi bi-sticky me-1" style="color:#8b5cf6"></i>Notas internas</label>
+            <textarea id="prop-notas" class="form-control form-control-sm" rows="2" placeholder="Información relevante: preferencias, historia, acuerdos..."></textarea>
+          </div>
+        </div><!-- /tab-datos -->
 
-        <!-- Historial de observaciones (solo en edición) -->
-        <div id="prop-historial-box" style="display:none;margin-top:10px">
-          <div style="font-size:.7rem;font-weight:700;color:#475569;margin-bottom:6px"><i class="bi bi-clock-history me-1"></i>Historial de observaciones</div>
-          <div id="prop-historial-lista" style="max-height:160px;overflow-y:auto"></div>
-        </div>
+        <!-- TAB: ACTIVIDADES -->
+        <div id="prop-tab-panel-actividades" style="display:none">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+            <div style="font-size:.75rem;font-weight:700;color:#0f172a">Historial de actividades</div>
+            <div style="display:flex;gap:4px;flex-wrap:wrap">
+              <button class="prop-act-pill" style="background:#dbeafe;color:#1d4ed8" onclick="_propAddActFromModal('llamada')"><i class="bi bi-telephone me-1"></i>Llamada</button>
+              <button class="prop-act-pill" style="background:#ede9fe;color:#6d28d9" onclick="_propAddActFromModal('email')"><i class="bi bi-envelope me-1"></i>Email</button>
+              <button class="prop-act-pill" style="background:#dcfce7;color:#15803d" onclick="_propAddActFromModal('reunion')"><i class="bi bi-people me-1"></i>Reunión</button>
+              <button class="prop-act-pill" style="background:#d1fae5;color:#065f46" onclick="_propAddActFromModal('whatsapp')"><i class="bi bi-whatsapp me-1"></i>WhatsApp</button>
+              <button class="prop-act-pill" style="background:#f1f5f9;color:#475569" onclick="_propAddActFromModal('otro')"><i class="bi bi-plus me-1"></i>Otro</button>
+            </div>
+          </div>
+          <div id="prop-act-timeline" style="max-height:320px;overflow-y:auto">
+            <div class="text-center text-muted py-4" style="font-size:.78rem"><i class="bi bi-clock-history d-block mb-1" style="font-size:1.3rem"></i>Sin actividades registradas</div>
+          </div>
+        </div><!-- /tab-actividades -->
+
+        <!-- TAB: OBSERVACIONES -->
+        <div id="prop-tab-panel-obs" style="display:none">
+          <!-- Nueva observación -->
+          <div class="mb-3">
+            <label class="form-label small fw-bold mb-1" style="font-size:.7rem"><i class="bi bi-chat-dots me-1" style="color:#0ea5e9"></i>Nueva observación</label>
+            <textarea id="prop-obs" class="form-control form-control-sm" rows="3" placeholder="Resultado de reunión, novedad del cliente, acuerdo alcanzado..."></textarea>
+            <div style="font-size:.63rem;color:#94a3b8;margin-top:3px">Se guardará con la fecha de hoy</div>
+          </div>
+          <!-- Historial -->
+          <div id="prop-historial-box">
+            <div style="font-size:.7rem;font-weight:700;color:#475569;margin-bottom:6px"><i class="bi bi-clock-history me-1"></i>Historial</div>
+            <div id="prop-historial-lista" style="max-height:240px;overflow-y:auto"></div>
+          </div>
+        </div><!-- /tab-obs -->
 
       </div>
       <div class="modal-footer" style="border-top:1px solid #f1f5f9;padding:10px 16px">
@@ -6716,6 +6828,162 @@ CREATE POLICY "acceso total" ON muuk_daily_backups FOR ALL USING (true) WITH CHE
     </div>
   </div>
 </div>
+
+<!-- ══════════ MODAL: REGISTRAR ACTIVIDAD ══════════ -->
+<div class="modal fade" id="modalPropActividad" tabindex="-1">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content" style="border-radius:12px;border:none;box-shadow:0 10px 40px rgba(0,0,0,.2)">
+      <div class="modal-header" style="background:linear-gradient(135deg,#1e293b,#334155);color:#fff;border-radius:12px 12px 0 0;padding:12px 16px">
+        <h5 class="modal-title" id="prop-act-titulo" style="font-weight:700;font-size:.88rem"><i class="bi bi-clock me-2" style="color:#f59e0b"></i>Registrar Actividad</h5>
+        <button type="button" class="btn-close btn-close-white btn-sm" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-3">
+        <input type="hidden" id="prop-act-prop-id">
+        <input type="hidden" id="prop-act-tipo">
+        <div class="mb-2">
+          <label class="form-label small fw-bold mb-1" style="font-size:.7rem">Tipo</label>
+          <div id="prop-act-tipo-display" style="font-size:.78rem;font-weight:700;color:#334155"></div>
+        </div>
+        <div class="mb-2">
+          <label class="form-label small fw-bold mb-1" style="font-size:.7rem">Fecha</label>
+          <input type="date" id="prop-act-fecha" class="form-control form-control-sm">
+        </div>
+        <div class="mb-2">
+          <label class="form-label small fw-bold mb-1" style="font-size:.7rem">Duración (min)</label>
+          <input type="number" id="prop-act-duracion" class="form-control form-control-sm" placeholder="Opcional" min="1">
+        </div>
+        <div class="mb-2">
+          <label class="form-label small fw-bold mb-1" style="font-size:.7rem">Resultado</label>
+          <select id="prop-act-resultado" class="form-select form-select-sm">
+            <option value="positivo">✅ Positivo</option>
+            <option value="neutro">➖ Neutro</option>
+            <option value="sin_respuesta">📵 Sin respuesta</option>
+            <option value="negativo">❌ Negativo</option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label small fw-bold mb-1" style="font-size:.7rem">Notas</label>
+          <textarea id="prop-act-notas" class="form-control form-control-sm" rows="3" placeholder="Detalles de la interacción..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer" style="padding:8px 14px;border-top:1px solid #f1f5f9">
+        <button class="btn btn-sm btn-light" data-bs-dismiss="modal" style="font-size:.72rem">Cancelar</button>
+        <button class="btn btn-sm" style="background:#0f172a;color:#fff;font-size:.72rem;font-weight:600" onclick="guardarActividad()">
+          <i class="bi bi-check-lg me-1"></i>Guardar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ MODAL: GENERAR PROPUESTA PDF ══════════ -->
+<div class="modal fade" id="modalGenerarPropuestaPDF" tabindex="-1">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <div class="modal-content" style="border-radius:14px;border:none;box-shadow:0 20px 60px rgba(0,0,0,.2)">
+      <div class="modal-header" style="background:linear-gradient(135deg,#4f46e5,#6366f1);color:#fff;border-radius:14px 14px 0 0;padding:14px 20px">
+        <h5 class="modal-title" style="font-weight:800;font-size:.95rem"><i class="bi bi-file-earmark-pdf-fill me-2"></i>Generar Propuesta Comercial — PDF</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-3">
+        <div class="row g-3">
+          <!-- Columna izquierda: datos -->
+          <div class="col-md-6">
+            <div class="card p-3 mb-2" style="border-radius:10px;border:1px dashed #e2e8f0;background:#fafafa">
+              <div style="font-size:.72rem;font-weight:700;color:#475569;margin-bottom:8px"><i class="bi bi-building me-1"></i>DATOS DEL CLIENTE</div>
+              <div class="row g-2">
+                <div class="col-sm-6">
+                  <label class="form-label small mb-1" style="font-size:.65rem;font-weight:600">Empresa *</label>
+                  <input type="text" id="gpdf-empresa" class="form-control form-control-sm" oninput="previewPropPDF()">
+                </div>
+                <div class="col-sm-6">
+                  <label class="form-label small mb-1" style="font-size:.65rem;font-weight:600">Contacto</label>
+                  <input type="text" id="gpdf-contacto" class="form-control form-control-sm" oninput="previewPropPDF()">
+                </div>
+                <div class="col-sm-6">
+                  <label class="form-label small mb-1" style="font-size:.65rem;font-weight:600">Ciudad</label>
+                  <input type="text" id="gpdf-ciudad" class="form-control form-control-sm" placeholder="Ej: Buenos Aires" oninput="previewPropPDF()">
+                </div>
+                <div class="col-sm-6">
+                  <label class="form-label small mb-1" style="font-size:.65rem;font-weight:600">Fecha</label>
+                  <input type="date" id="gpdf-fecha" class="form-control form-control-sm" oninput="previewPropPDF()">
+                </div>
+              </div>
+            </div>
+
+            <div class="card p-3 mb-2" style="border-radius:10px;border:1px dashed #e2e8f0;background:#fafafa">
+              <div style="font-size:.72rem;font-weight:700;color:#475569;margin-bottom:8px"><i class="bi bi-box-seam me-1"></i>PRODUCTOS</div>
+              <div id="gpdf-productos-lista"></div>
+              <button class="btn btn-sm btn-outline-secondary mt-2" style="font-size:.68rem" onclick="_gpdfAddProducto()">
+                <i class="bi bi-plus-circle me-1"></i>Agregar producto
+              </button>
+            </div>
+
+            <div class="card p-3" style="border-radius:10px;border:1px dashed #e2e8f0;background:#fafafa">
+              <div style="font-size:.72rem;font-weight:700;color:#475569;margin-bottom:8px"><i class="bi bi-info-circle me-1"></i>CONDICIONES</div>
+              <div class="row g-2">
+                <div class="col-sm-6">
+                  <label class="form-label small mb-1" style="font-size:.65rem;font-weight:600">Forma de pago</label>
+                  <select id="gpdf-pago" class="form-select form-select-sm" onchange="previewPropPDF()">
+                    <option>Contado</option>
+                    <option>30 días</option>
+                    <option>Cheque 30/60 días</option>
+                    <option>E-Cheque</option>
+                    <option>A convenir</option>
+                  </select>
+                </div>
+                <div class="col-sm-6">
+                  <label class="form-label small mb-1" style="font-size:.65rem;font-weight:600">Entrega</label>
+                  <select id="gpdf-entrega" class="form-select form-select-sm" onchange="previewPropPDF()">
+                    <option>A coordinar</option>
+                    <option>Semanal</option>
+                    <option>Quincenal</option>
+                    <option>Mensual</option>
+                    <option>Según pedido</option>
+                  </select>
+                </div>
+                <div class="col-sm-12">
+                  <label class="form-label small mb-1" style="font-size:.65rem;font-weight:600">Observaciones adicionales</label>
+                  <textarea id="gpdf-obs" class="form-control form-control-sm" rows="2" placeholder="Vigencia de precios, condiciones especiales..." oninput="previewPropPDF()"></textarea>
+                </div>
+                <div class="col-sm-6">
+                  <label class="form-label small mb-1" style="font-size:.65rem;font-weight:600">Vigencia de precios</label>
+                  <select id="gpdf-vigencia" class="form-select form-select-sm" onchange="previewPropPDF()">
+                    <option value="7 días">7 días</option>
+                    <option value="15 días" selected>15 días</option>
+                    <option value="30 días">30 días</option>
+                    <option value="Sujeto a variación">Sujeto a variación</option>
+                  </select>
+                </div>
+                <div class="col-sm-6">
+                  <label class="form-label small mb-1" style="font-size:.65rem;font-weight:600">Vendedor</label>
+                  <input type="text" id="gpdf-vendedor" class="form-control form-control-sm" placeholder="Nombre del vendedor" oninput="previewPropPDF()">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Columna derecha: preview -->
+          <div class="col-md-6">
+            <div style="font-size:.72rem;font-weight:700;color:#475569;margin-bottom:6px"><i class="bi bi-eye me-1"></i>PREVISUALIZACIÓN</div>
+            <div id="gpdf-preview" style="border:1px solid #e2e8f0;border-radius:10px;overflow:auto;max-height:520px;background:#fff;padding:20px;font-family:'Segoe UI',sans-serif;font-size:.75rem;line-height:1.5"></div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer" style="border-top:1px solid #f1f5f9;padding:10px 16px">
+        <button class="btn btn-sm btn-light" data-bs-dismiss="modal" style="font-size:.75rem">Cancelar</button>
+        <button class="btn btn-sm btn-outline-secondary" style="font-size:.75rem" onclick="previewPropPDF()">
+          <i class="bi bi-eye me-1"></i>Actualizar preview
+        </button>
+        <button class="btn btn-sm" style="background:#4f46e5;color:#fff;font-size:.75rem;font-weight:600" onclick="imprimirPropuestaPDF()">
+          <i class="bi bi-printer me-1"></i>Imprimir / Guardar PDF
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Contenedor de impresión (siempre en DOM, oculto hasta imprimir) -->
+<div id="prop-pdf-print-area"></div>
 
 <!-- ══════════ MODAL: NUEVO / EDITAR USUARIO ══════════ -->
 <div class="modal fade" id="modalNuevoUsuario" tabindex="-1">
@@ -8573,6 +8841,12 @@ function save() {
     if (Array.isArray(persistData.kilometraje)) {
       persistData.kilometraje = persistData.kilometraje.filter(k =>
         !k.fecha || k.fecha >= _cutoffStr18m
+      );
+    }
+    // Strip PDF base64 from propuestasComerciales — can be large; accessed via Supabase or re-attach
+    if (Array.isArray(persistData.propuestasComerciales)) {
+      persistData.propuestasComerciales = persistData.propuestasComerciales.map(p =>
+        p.pdfDataB64 ? { ...p, pdfDataB64: null } : p
       );
     }
   }
@@ -23624,8 +23898,9 @@ function renderCalendarioARCA() {
   const manualRaw  = ST.arcaVencimientos || [];
   const manualEvents = manualRaw.map(v => ({
     fecha: v.fecha, concepto: v.concepto, detalle: v.detalle || '',
-    color: v.pagado ? '#22c55e' : '#E31E24', icon: 'bi-pencil-square',
-    importe: v.importe || 0, pagado: v.pagado, id: v.id, isManual: true
+    color: v.tipo === 'followup' ? '#10b981' : (v.pagado ? '#22c55e' : '#E31E24'),
+    icon: v.tipo === 'followup' ? 'bi-person-check-fill' : 'bi-pencil-square',
+    importe: v.importe || 0, pagado: v.pagado, id: v.id, isManual: true, tipo: v.tipo
   }));
   const allEvents = [...calcEvents, ...manualEvents].sort((a,b)=>a.fecha.localeCompare(b.fecha));
 
@@ -23669,8 +23944,10 @@ function renderCalendarioARCA() {
         </tr></thead><tbody>` +
         sorted.map(v => {
           const dias = Math.round((new Date(v.fecha+'T00:00:00')-todayDate)/86400000);
+          const isFollowup = v.tipo === 'followup';
           let estadoBadge = '';
           if (v.pagado) estadoBadge = '<span class="badge bg-success" style="font-size:.6rem">Pagado</span>';
+          else if (isFollowup) estadoBadge = '<span class="badge ms-1" style="background:#d1fae5;color:#065f46;font-size:.6rem"><i class="bi bi-person-check-fill me-1"></i>Follow-up</span>';
           else if (dias < 0) estadoBadge = '<span class="badge bg-danger" style="font-size:.6rem">Vencido</span>';
           else if (dias <= 7) estadoBadge = `<span class="badge bg-warning text-dark" style="font-size:.6rem">${dias}d</span>`;
           else estadoBadge = `<span class="badge bg-light text-secondary" style="font-size:.6rem">${dias}d</span>`;
@@ -23678,6 +23955,9 @@ function renderCalendarioARCA() {
           if (v.pagado) {
             rowStyle = 'background:#f0fdf4;opacity:.7;';
             importeColor = '#22c55e';
+          } else if (isFollowup) {
+            rowStyle = dias < 0 ? 'background:#fef2f2;border-left:3px solid #ef4444;' : 'background:#f0fdf4;border-left:3px solid #10b981;';
+            importeColor = '#10b981';
           } else if (dias < 0) {
             rowStyle = 'background:#fef2f2;border-left:3px solid #ef4444;';
             importeColor = '#dc2626';
@@ -23688,13 +23968,15 @@ function renderCalendarioARCA() {
             rowStyle = '';
             importeColor = '#e11d48';
           }
+          const propNavBtn = isFollowup ? `<button class="btn btn-xs btn-outline-success me-1" onclick="irA('propuestasComerciales')" title="Ver Propuestas" style="padding:1px 5px;font-size:.65rem;border-radius:5px"><i class="bi bi-file-earmark-text"></i></button>` : '';
           return `<tr style="${rowStyle}">
-            <td class="ps-2 fw-semibold">${v.concepto}</td>
+            <td class="ps-2 fw-semibold">${isFollowup?'<i class="bi bi-person-check-fill me-1" style="color:#10b981"></i>':''}${v.concepto}</td>
             <td class="text-muted">${v.detalle||'–'}</td>
             <td style="white-space:nowrap">${fmtF(v.fecha)}</td>
             <td class="text-end fw-bold" style="color:${importeColor}">${v.importe?fmt(v.importe):'–'}</td>
             <td class="text-center">${estadoBadge}</td>
             <td class="text-nowrap text-end pe-2">
+              ${propNavBtn}
               <button class="btn btn-xs btn-outline-success me-1" onclick="togglePagadoARCA('${v.id}')" title="${v.pagado?'Marcar pendiente':'Marcar pagado'}" style="padding:1px 5px;font-size:.65rem;border-radius:5px">
                 <i class="bi ${v.pagado?'bi-arrow-counterclockwise':'bi-check2'}"></i>
               </button>
@@ -23728,7 +24010,10 @@ function renderCalendarioARCA() {
         else if (dias <= 7)  { urgStyle = 'background:#fffbeb;border-left:3px solid #f59e0b'; urgBadge = `<span class="badge bg-warning text-dark ms-1" style="font-size:.6rem">${dias}d</span>`; }
         else if (dias <= 15) { urgStyle = 'background:#f0fdf4;border-left:3px solid #22c55e'; urgBadge = `<span class="badge bg-success ms-1" style="font-size:.6rem">${dias}d</span>`; }
         else                 { urgStyle = 'background:#f8fafc;border-left:3px solid #cbd5e1'; urgBadge = `<span class="ms-1" style="font-size:.68rem;color:#94a3b8">${dias}d</span>`; }
-        const manualBadge = e.isManual ? '<span class="badge ms-1" style="background:#fce7f3;color:#9d174d;font-size:.58rem">manual</span>' : '';
+        const isFollowupEv = e.tipo === 'followup';
+        const manualBadge = isFollowupEv
+          ? '<span class="badge ms-1" style="background:#d1fae5;color:#065f46;font-size:.58rem"><i class="bi bi-person-check-fill me-1"></i>Follow-up</span>'
+          : (e.isManual ? '<span class="badge ms-1" style="background:#fce7f3;color:#9d174d;font-size:.58rem">manual</span>' : '');
         const importeStr  = e.isManual && e.importe ? `<span style="font-size:.75rem;font-weight:700;color:#e11d48">${fmt(e.importe)}</span>` : '';
         return `<div class="mb-2 p-2 rounded" style="${urgStyle};padding-left:12px!important">
           <div class="d-flex align-items-center justify-content-between flex-wrap gap-1">
@@ -29225,337 +29510,807 @@ function _crmNuevoActivo() {
    PROPUESTAS COMERCIALES
 ══════════════════════════════════════════════════════════ */
 
+/* ══════════════════════════════════════════════════════════
+   PROPUESTAS COMERCIALES — MOTOR COMPLETO
+══════════════════════════════════════════════════════════ */
 const _PROP_ESTADOS = {
-  prospecto:      { lbl:'Prospecto',      cls:'secondary',  bg:'#64748b', icon:'bi-circle' },
-  en_contacto:    { lbl:'En Contacto',    cls:'primary',    bg:'#3b82f6', icon:'bi-telephone' },
-  negociacion:    { lbl:'Negociación',    cls:'warning',    bg:'#f59e0b', icon:'bi-chat-dots' },
-  compro:         { lbl:'Compró',         cls:'success',    bg:'#10b981', icon:'bi-check-circle' },
-  cliente_activo: { lbl:'Cliente Activo', cls:'',           bg:'#059669', icon:'bi-star-fill' },
-  perdido:        { lbl:'Perdido',        cls:'danger',     bg:'#ef4444', icon:'bi-x-circle' }
+  prospecto:      { lbl:'Prospecto',      bg:'#64748b', icon:'bi-circle' },
+  en_contacto:    { lbl:'En Contacto',    bg:'#3b82f6', icon:'bi-telephone-fill' },
+  negociacion:    { lbl:'Negociación',    bg:'#f59e0b', icon:'bi-chat-dots-fill' },
+  compro:         { lbl:'Compró',         bg:'#10b981', icon:'bi-check-circle-fill' },
+  cliente_activo: { lbl:'Cliente Activo', bg:'#059669', icon:'bi-star-fill' },
+  perdido:        { lbl:'Perdido',        bg:'#ef4444', icon:'bi-x-circle-fill' }
 };
 
-let _propPdfTemp = null; // { nombre, dataB64 }
+const _PROP_ACT_TIPOS = {
+  llamada:      { lbl:'Llamada',   icon:'bi-telephone-fill',  bg:'#dbeafe', color:'#1d4ed8' },
+  email:        { lbl:'Email',     icon:'bi-envelope-fill',   bg:'#ede9fe', color:'#6d28d9' },
+  reunion:      { lbl:'Reunión',   icon:'bi-people-fill',     bg:'#dcfce7', color:'#15803d' },
+  whatsapp:     { lbl:'WhatsApp',  icon:'bi-whatsapp',        bg:'#d1fae5', color:'#065f46' },
+  otro:         { lbl:'Otro',      icon:'bi-dot',             bg:'#f1f5f9', color:'#475569' }
+};
 
+const _PROP_PLANTILLAS = {
+  panaderia: {
+    rubro: 'Panadería / Confitería',
+    propuesta: 'Provisión de harinas — Harina 000, 0000, Leudante',
+    proximaAccion: 'Presentar muestras y tabla de precios con frecuencia de entrega',
+    notas: 'Foco en harina 000 y 0000. Frecuencia típica: semanal o quincenal. Valorar puntualidad de entrega y calidad constante.',
+    productos: [
+      { nombre:'Harina 000 (Harina común)', unidad:'bolsa x 25kg', precio:'' },
+      { nombre:'Harina 0000 (Harina fina)', unidad:'bolsa x 25kg', precio:'' },
+      { nombre:'Harina Leudante',           unidad:'bolsa x 25kg', precio:'' }
+    ]
+  },
+  restaurante: {
+    rubro: 'Gastronomía / Restaurante',
+    propuesta: 'Provisión de harinas para cocina y pastas',
+    proximaAccion: 'Agendar degustación con chef / responsable de compras',
+    notas: 'Poner énfasis en calidad constante y cumplimiento de entregas. Interés en harina para pasta fresca y pizzas.',
+    productos: [
+      { nombre:'Harina 0000 (pastas / pizzas)', unidad:'bolsa x 25kg', precio:'' },
+      { nombre:'Harina Integral',               unidad:'bolsa x 25kg', precio:'' },
+      { nombre:'Semolín',                        unidad:'bolsa x 25kg', precio:'' }
+    ]
+  },
+  hotel: {
+    rubro: 'Hotel / Catering',
+    propuesta: 'Provisión de harinas para servicio de cocina y eventos',
+    proximaAccion: 'Contactar responsable de abastecimiento para volumen mensual',
+    notas: 'Volumen alto, posibilidad de contrato mensual fijo. Destacar servicio de entrega en destino y facturación mensual.',
+    productos: [
+      { nombre:'Harina 000',    unidad:'bolsa x 25kg', precio:'' },
+      { nombre:'Harina 0000',   unidad:'bolsa x 25kg', precio:'' },
+      { nombre:'Harina Leudante', unidad:'bolsa x 25kg', precio:'' }
+    ]
+  },
+  distribuidora: {
+    rubro: 'Distribuidora / Mayorista',
+    propuesta: 'Acuerdo de distribución — lote mínimo x camión',
+    proximaAccion: 'Enviar condiciones comerciales y tabla de precios por volumen',
+    notas: 'Negociar precio por volumen. Entrega en depósito del distribuidor. Interés en exclusividad de zona.',
+    productos: [
+      { nombre:'Harina 000 (bolsa 25kg)',  unidad:'bolsa x 25kg', precio:'' },
+      { nombre:'Harina 0000 (bolsa 25kg)', unidad:'bolsa x 25kg', precio:'' }
+    ]
+  },
+  supermercado: {
+    rubro: 'Supermercado / Almacén',
+    propuesta: 'Provisión de harinas envasadas para venta minorista',
+    proximaAccion: 'Presentar pack de muestras y propuesta de exhibición',
+    notas: 'Presentación de 1kg y 500g. Analizar góndola y rotación. Condiciones de devolución de mercadería vencida.',
+    productos: [
+      { nombre:'Harina 000 x 1kg',    unidad:'bolsa x 1kg',  precio:'' },
+      { nombre:'Harina 0000 x 1kg',   unidad:'bolsa x 1kg',  precio:'' },
+      { nombre:'Harina Leudante x 1kg', unidad:'bolsa x 1kg', precio:'' }
+    ]
+  },
+  industria: {
+    rubro: 'Industria / Fábrica',
+    propuesta: 'Provisión de harinas a granel o en big bag — uso industrial',
+    proximaAccion: 'Solicitar especificaciones técnicas del proceso para adecuar el producto',
+    notas: 'Analizar si necesitan big bag o bolsas estándar. Frecuencia alta, posible acuerdo de precio fijo trimestral.',
+    productos: [
+      { nombre:'Harina 000 (big bag 1000kg)', unidad:'big bag', precio:'' },
+      { nombre:'Harina 000 (bolsa 25kg)',     unidad:'bolsa x 25kg', precio:'' }
+    ]
+  }
+};
+
+let _propPdfTemp   = null;   // PDF adjunto cargado en el modal de propuesta
+let _gpdfProductos = [];     // Productos en el generador de PDF
+let _propViewMode  = 'tabla';// 'tabla' | 'kanban'
+let _propDragId    = null;   // ID del card que se está arrastrando
+
+/* ── Helpers ── */
+function _propScore(p) {
+  const base = { prospecto:10, en_contacto:25, negociacion:60, compro:100, cliente_activo:100, perdido:0 };
+  let score = base[p.estado] ?? 10;
+  const acts = (p.actividades||[]).length;
+  score += Math.min(acts * 5, 20);
+  score += Math.min((p.observaciones||[]).length * 5, 10);
+  if (p.monto > 0)   score += 5;
+  if (p.pdfNombre)   score += 3;
+  if (p.fechaProxima) score += 2;
+  // Penalizar inactividad
+  const allDates = [
+    ...(p.observaciones||[]).map(o=>o.fecha),
+    ...(p.actividades||[]).map(a=>a.fecha),
+    p.fechaPropuesta
+  ].filter(Boolean).sort().reverse();
+  if (allDates.length) {
+    const days = Math.round((new Date(hoy()+'T00:00:00') - new Date(allDates[0]+'T00:00:00')) / 86400000);
+    if (days > 30) score -= 15; else if (days > 14) score -= 7;
+  }
+  return Math.max(0, Math.min(100, score));
+}
+
+function _propScoreColor(s) {
+  return s >= 70 ? '#10b981' : s >= 40 ? '#f59e0b' : '#ef4444';
+}
+
+function _propFollowDiff(fechaProxima) {
+  if (!fechaProxima) return null;
+  return Math.round((new Date(fechaProxima+'T00:00:00') - new Date(hoy()+'T00:00:00')) / 86400000);
+}
+
+/* ── View toggle ── */
+function _propSetView(v) {
+  _propViewMode = v;
+  document.getElementById('prop-view-tabla').style.display  = v==='tabla'  ? '' : 'none';
+  document.getElementById('prop-view-kanban').style.display = v==='kanban' ? '' : 'none';
+  document.getElementById('prop-btn-tabla').classList.toggle('active',  v==='tabla');
+  document.getElementById('prop-btn-kanban').classList.toggle('active', v==='kanban');
+  if (v==='kanban') renderKanbanPropuestas();
+}
+
+/* ── Modal tabs ── */
+function _propModalTab(tab, e) {
+  if (e) e.preventDefault();
+  ['datos','actividades','obs'].forEach(t => {
+    const link = document.getElementById('prop-tab-'+t);
+    const panel = document.getElementById('prop-tab-panel-'+t);
+    const active = (t===tab);
+    if (link)  { link.style.color = active?'#0f172a':'#64748b'; link.style.borderBottomColor = active?'#10b981':'transparent'; }
+    if (panel) panel.style.display = active ? '' : 'none';
+  });
+}
+
+/* ── PDF adjunto ── */
 function _propLoadPdf(input) {
   const file = input.files[0];
-  if (!file) { _propPdfTemp = null; document.getElementById('prop-pdf-status').textContent = ''; return; }
-  if (file.size > 5 * 1024 * 1024) { toast('El PDF no puede superar 5 MB', 'warning'); input.value = ''; return; }
+  if (!file) { _propPdfTemp = null; document.getElementById('prop-pdf-status').textContent=''; return; }
+  if (file.size > 5*1024*1024) { toast('El PDF no puede superar 5 MB','warning'); input.value=''; return; }
   const reader = new FileReader();
   reader.onload = e => {
-    _propPdfTemp = { nombre: file.name, dataB64: e.target.result };
+    _propPdfTemp = { nombre:file.name, dataB64:e.target.result };
     document.getElementById('prop-pdf-status').innerHTML = `<i class="bi bi-file-pdf text-danger me-1"></i>${file.name} (${(file.size/1024).toFixed(0)} KB) cargado ✓`;
   };
   reader.readAsDataURL(file);
 }
 
+/* ── ARCA integration check ── */
+function _propCheckARCAFecha() {
+  const f = document.getElementById('prop-fecha-proxima')?.value;
+  const box = document.getElementById('prop-arca-check-box');
+  if (box) box.style.display = f ? '' : 'none';
+}
+
+function _propCrearEventoARCA(p) {
+  if (!ST.arcaVencimientos) ST.arcaVencimientos = [];
+  const concepto = `Follow-up: ${p.empresa}${p.proximaAccion ? ' — ' + p.proximaAccion : ''}`;
+  // Evitar duplicados: no crear si ya hay uno con mismo concepto y fecha
+  const ya = ST.arcaVencimientos.find(v => v.concepto === concepto && v.fecha === p.fechaProxima);
+  if (ya) return;
+  ST.arcaVencimientos.push({
+    id: uid(),
+    concepto,
+    fecha: p.fechaProxima,
+    importe: 0,
+    detalle: `Propuesta: ${p.propuesta || ''} | Contacto: ${p.contacto || ''} | Estado: ${_PROP_ESTADOS[p.estado]?.lbl||p.estado}`,
+    pagado: false,
+    tipo: 'followup'
+  });
+}
+
+/* ── Plantillas ── */
+function _propAplicarPlantilla(key) {
+  if (!key) return;
+  const t = _PROP_PLANTILLAS[key];
+  if (!t) return;
+  if (document.getElementById('prop-rubro').value === '')
+    document.getElementById('prop-rubro').value = t.rubro;
+  if (document.getElementById('prop-nombre').value === '')
+    document.getElementById('prop-nombre').value = t.propuesta;
+  if (document.getElementById('prop-proxima-accion').value === '')
+    document.getElementById('prop-proxima-accion').value = t.proximaAccion;
+  if (document.getElementById('prop-notas').value === '')
+    document.getElementById('prop-notas').value = t.notas;
+  // Resetear selector para que se pueda aplicar de nuevo
+  document.getElementById('prop-plantilla-sel').value = '';
+  toast(`Plantilla "${t.rubro}" aplicada ✓`);
+}
+
+/* ── Abrir modal de propuesta ── */
 function abrirModalPropuesta(id) {
   _propPdfTemp = null;
-  document.getElementById('prop-pdf-input').value = '';
-  document.getElementById('prop-pdf-status').textContent = '';
-  document.getElementById('prop-historial-box').style.display = 'none';
-  document.getElementById('prop-historial-lista').innerHTML = '';
-  ['prop-id','prop-empresa','prop-rubro','prop-contacto','prop-cargo','prop-telefono',
-   'prop-email','prop-nombre','prop-monto','prop-proxima-accion','prop-obs'].forEach(f => {
-    const el = document.getElementById(f); if (el) el.value = '';
-  });
+  const fields = ['prop-id','prop-empresa','prop-rubro','prop-contacto','prop-cargo',
+                  'prop-telefono','prop-email','prop-nombre','prop-monto','prop-proxima-accion',
+                  'prop-obs','prop-notas'];
+  fields.forEach(f => { const el=document.getElementById(f); if(el) el.value=''; });
+  document.getElementById('prop-pdf-input').value='';
+  document.getElementById('prop-pdf-status').textContent='';
+  document.getElementById('prop-arca-check-box').style.display='none';
+  const arcaChk = document.getElementById('prop-arca-check');
+  if (arcaChk) arcaChk.checked=false;
   document.getElementById('prop-fecha').value = hoy();
   document.getElementById('prop-fecha-proxima').value = '';
   document.getElementById('prop-estado').value = 'prospecto';
+  document.getElementById('prop-plantilla-sel').value = '';
+  document.getElementById('prop-historial-lista').innerHTML='';
+  document.getElementById('prop-act-timeline').innerHTML=`<div class="text-center text-muted py-4" style="font-size:.78rem"><i class="bi bi-clock-history d-block mb-1" style="font-size:1.3rem"></i>Sin actividades registradas</div>`;
+  _propModalTab('datos');
 
   if (id) {
-    const p = (ST.propuestasComerciales||[]).find(x => x.id === id);
+    const p = (ST.propuestasComerciales||[]).find(x=>x.id===id);
     if (!p) return;
-    document.getElementById('prop-modal-titulo').innerHTML = '<i class="bi bi-pencil-fill me-2" style="color:#10b981"></i>Editar Propuesta';
-    document.getElementById('prop-id').value = p.id;
-    document.getElementById('prop-empresa').value = p.empresa || '';
-    document.getElementById('prop-rubro').value = p.rubro || '';
-    document.getElementById('prop-contacto').value = p.contacto || '';
-    document.getElementById('prop-cargo').value = p.cargo || '';
-    document.getElementById('prop-telefono').value = p.telefono || '';
-    document.getElementById('prop-email').value = p.email || '';
-    document.getElementById('prop-nombre').value = p.propuesta || '';
-    document.getElementById('prop-estado').value = p.estado || 'prospecto';
-    document.getElementById('prop-fecha').value = p.fechaPropuesta || hoy();
-    document.getElementById('prop-monto').value = p.monto ? p.monto.toLocaleString('es-AR') : '';
-    document.getElementById('prop-proxima-accion').value = p.proximaAccion || '';
-    document.getElementById('prop-fecha-proxima').value = p.fechaProxima || '';
-    // PDF existente
+    document.getElementById('prop-modal-titulo').innerHTML='<i class="bi bi-pencil-fill me-2" style="color:#10b981"></i>Editar Propuesta';
+    document.getElementById('prop-id').value          = p.id;
+    document.getElementById('prop-empresa').value     = p.empresa||'';
+    document.getElementById('prop-rubro').value       = p.rubro||'';
+    document.getElementById('prop-contacto').value    = p.contacto||'';
+    document.getElementById('prop-cargo').value       = p.cargo||'';
+    document.getElementById('prop-telefono').value    = p.telefono||'';
+    document.getElementById('prop-email').value       = p.email||'';
+    document.getElementById('prop-nombre').value      = p.propuesta||'';
+    document.getElementById('prop-estado').value      = p.estado||'prospecto';
+    document.getElementById('prop-fecha').value       = p.fechaPropuesta||hoy();
+    document.getElementById('prop-monto').value       = p.monto ? p.monto.toLocaleString('es-AR') : '';
+    document.getElementById('prop-proxima-accion').value = p.proximaAccion||'';
+    document.getElementById('prop-fecha-proxima').value  = p.fechaProxima||'';
+    document.getElementById('prop-notas').value       = p.notas||'';
     if (p.pdfNombre) {
-      document.getElementById('prop-pdf-status').innerHTML = `<i class="bi bi-file-pdf text-danger me-1"></i>${p.pdfNombre} (guardado) — <button class="btn btn-link btn-sm p-0" style="font-size:.65rem" onclick="verPdfPropuesta('${p.id}')">Ver PDF</button>`;
+      document.getElementById('prop-pdf-status').innerHTML=`<i class="bi bi-file-pdf text-danger me-1"></i>${p.pdfNombre} — <button class="btn btn-link btn-sm p-0" style="font-size:.65rem" onclick="verPdfPropuesta('${p.id}')">Ver</button>`;
     }
-    // Historial
-    if (p.observaciones && p.observaciones.length) {
-      document.getElementById('prop-historial-box').style.display = 'block';
-      document.getElementById('prop-historial-lista').innerHTML = [...p.observaciones].reverse().map(o =>
+    if (p.fechaProxima) document.getElementById('prop-arca-check-box').style.display='';
+    // Historial observaciones
+    if (p.observaciones?.length) {
+      document.getElementById('prop-historial-lista').innerHTML=[...p.observaciones].reverse().map(o=>
         `<div style="border-left:3px solid #e2e8f0;padding:5px 10px;margin-bottom:5px;background:#f8fafc;border-radius:0 6px 6px 0">
-          <div style="font-size:.63rem;color:#94a3b8;margin-bottom:2px"><i class="bi bi-calendar me-1"></i>${_ectaFmtDate(o.fecha)} ${o.autor ? '· ' + o.autor : ''}</div>
+          <div style="font-size:.63rem;color:#94a3b8"><i class="bi bi-calendar me-1"></i>${_ectaFmtDate(o.fecha)} ${o.autor?'· '+o.autor:''}</div>
           <div style="font-size:.75rem;color:#334155">${o.texto}</div>
-        </div>`
-      ).join('');
+        </div>`).join('');
     }
+    // Actividades
+    _propRenderActTimeline(p);
   } else {
-    document.getElementById('prop-modal-titulo').innerHTML = '<i class="bi bi-file-earmark-text-fill me-2" style="color:#10b981"></i>Nueva Propuesta';
+    document.getElementById('prop-modal-titulo').innerHTML='<i class="bi bi-file-earmark-text-fill me-2" style="color:#10b981"></i>Nueva Propuesta';
   }
   new bootstrap.Modal(document.getElementById('modalPropuesta')).show();
 }
 
+/* ── Guardar propuesta ── */
 function guardarPropuesta() {
   const empresa = document.getElementById('prop-empresa').value.trim();
   const propuestaNombre = document.getElementById('prop-nombre').value.trim();
-  if (!empresa) { toast('Ingresá el nombre de la empresa', 'warning'); return; }
-  if (!propuestaNombre) { toast('Ingresá el nombre de la propuesta', 'warning'); return; }
+  if (!empresa)        { toast('Ingresá el nombre de la empresa','warning'); return; }
+  if (!propuestaNombre){ toast('Ingresá el nombre de la propuesta','warning'); return; }
 
   const montoRaw = (document.getElementById('prop-monto').value||'').replace(/\./g,'').replace(',','.');
-  const monto = parseFloat(montoRaw) || 0;
-
+  const monto = parseFloat(montoRaw)||0;
   const obsTexto = document.getElementById('prop-obs').value.trim();
-  const currentUser = sessionStorage.getItem('muukAuth') || 'sistema';
-
+  const currentUser = sessionStorage.getItem('muukAuth')||'sistema';
   const id = document.getElementById('prop-id').value;
-  if (!Array.isArray(ST.propuestasComerciales)) ST.propuestasComerciales = [];
+  const crearARCA = document.getElementById('prop-arca-check')?.checked;
+  if (!Array.isArray(ST.propuestasComerciales)) ST.propuestasComerciales=[];
 
+  let propObj;
   if (id) {
-    // Editar existente
-    const p = ST.propuestasComerciales.find(x => x.id === id);
-    if (!p) return;
-    p.empresa     = empresa;
-    p.rubro       = document.getElementById('prop-rubro').value.trim();
-    p.contacto    = document.getElementById('prop-contacto').value.trim();
-    p.cargo       = document.getElementById('prop-cargo').value.trim();
-    p.telefono    = document.getElementById('prop-telefono').value.trim();
-    p.email       = document.getElementById('prop-email').value.trim();
-    p.propuesta   = propuestaNombre;
-    p.estado      = document.getElementById('prop-estado').value;
-    p.fechaPropuesta = document.getElementById('prop-fecha').value;
-    p.monto       = monto;
-    p.proximaAccion = document.getElementById('prop-proxima-accion').value.trim();
-    p.fechaProxima  = document.getElementById('prop-fecha-proxima').value;
-    p.updatedAt   = new Date().toISOString();
-    if (_propPdfTemp) { p.pdfDataB64 = _propPdfTemp.dataB64; p.pdfNombre = _propPdfTemp.nombre; }
+    propObj = ST.propuestasComerciales.find(x=>x.id===id);
+    if (!propObj) return;
+    Object.assign(propObj, {
+      empresa, rubro: document.getElementById('prop-rubro').value.trim(),
+      contacto: document.getElementById('prop-contacto').value.trim(),
+      cargo: document.getElementById('prop-cargo').value.trim(),
+      telefono: document.getElementById('prop-telefono').value.trim(),
+      email: document.getElementById('prop-email').value.trim(),
+      propuesta: propuestaNombre, estado: document.getElementById('prop-estado').value,
+      fechaPropuesta: document.getElementById('prop-fecha').value,
+      monto, proximaAccion: document.getElementById('prop-proxima-accion').value.trim(),
+      fechaProxima: document.getElementById('prop-fecha-proxima').value,
+      notas: document.getElementById('prop-notas').value.trim(),
+      updatedAt: new Date().toISOString()
+    });
+    if (_propPdfTemp) { propObj.pdfDataB64=_propPdfTemp.dataB64; propObj.pdfNombre=_propPdfTemp.nombre; }
     if (obsTexto) {
-      if (!Array.isArray(p.observaciones)) p.observaciones = [];
-      p.observaciones.push({ fecha: hoy(), texto: obsTexto, autor: currentUser });
+      if (!Array.isArray(propObj.observaciones)) propObj.observaciones=[];
+      propObj.observaciones.push({ fecha:hoy(), texto:obsTexto, autor:currentUser });
     }
   } else {
-    // Nueva
-    const nueva = {
-      id: uid(),
-      empresa,
-      rubro:      document.getElementById('prop-rubro').value.trim(),
-      contacto:   document.getElementById('prop-contacto').value.trim(),
-      cargo:      document.getElementById('prop-cargo').value.trim(),
-      telefono:   document.getElementById('prop-telefono').value.trim(),
-      email:      document.getElementById('prop-email').value.trim(),
-      propuesta:  propuestaNombre,
-      estado:     document.getElementById('prop-estado').value,
-      fechaPropuesta: document.getElementById('prop-fecha').value,
-      monto,
-      proximaAccion: document.getElementById('prop-proxima-accion').value.trim(),
-      fechaProxima:  document.getElementById('prop-fecha-proxima').value,
-      observaciones: obsTexto ? [{ fecha: hoy(), texto: obsTexto, autor: currentUser }] : [],
-      pdfDataB64: _propPdfTemp?.dataB64 || null,
-      pdfNombre:  _propPdfTemp?.nombre  || null,
-      createdAt:  new Date().toISOString(),
-      updatedAt:  new Date().toISOString()
+    propObj = {
+      id:uid(), empresa, rubro:document.getElementById('prop-rubro').value.trim(),
+      contacto:document.getElementById('prop-contacto').value.trim(),
+      cargo:document.getElementById('prop-cargo').value.trim(),
+      telefono:document.getElementById('prop-telefono').value.trim(),
+      email:document.getElementById('prop-email').value.trim(),
+      propuesta:propuestaNombre, estado:document.getElementById('prop-estado').value,
+      fechaPropuesta:document.getElementById('prop-fecha').value,
+      monto, proximaAccion:document.getElementById('prop-proxima-accion').value.trim(),
+      fechaProxima:document.getElementById('prop-fecha-proxima').value,
+      notas:document.getElementById('prop-notas').value.trim(),
+      observaciones: obsTexto?[{fecha:hoy(),texto:obsTexto,autor:currentUser}]:[],
+      actividades:[], pdfDataB64:_propPdfTemp?.dataB64||null, pdfNombre:_propPdfTemp?.nombre||null,
+      createdAt:new Date().toISOString(), updatedAt:new Date().toISOString()
     };
-    ST.propuestasComerciales.push(nueva);
+    ST.propuestasComerciales.push(propObj);
   }
 
+  if (crearARCA && propObj.fechaProxima) _propCrearEventoARCA(propObj);
   save();
   bootstrap.Modal.getInstance(document.getElementById('modalPropuesta'))?.hide();
   renderPropuestasComerciales();
-  toast('Propuesta guardada ✓');
+  toast('Propuesta guardada ✓' + (crearARCA&&propObj.fechaProxima ? ' · Follow-up agregado al calendario ARCA' : ''));
 }
 
+/* ── Eliminar ── */
 function eliminarPropuesta(id) {
-  const p = (ST.propuestasComerciales||[]).find(x => x.id === id);
-  const nombre = p ? `"${p.empresa} — ${p.propuesta}"` : 'esta propuesta';
-  _confirmar(`¿Eliminar ${nombre}? Esta acción no se puede deshacer.`, () => {
-    ST.propuestasComerciales = (ST.propuestasComerciales||[]).filter(x => x.id !== id);
-    save(); renderPropuestasComerciales(); toast('Propuesta eliminada', 'warning');
-  }, { title:'Eliminar propuesta', btnLabel:'Eliminar' });
+  const p=(ST.propuestasComerciales||[]).find(x=>x.id===id);
+  const nombre=p?`"${p.empresa} — ${p.propuesta}"`:'esta propuesta';
+  _confirmar(`¿Eliminar ${nombre}? Esta acción no se puede deshacer.`,()=>{
+    ST.propuestasComerciales=(ST.propuestasComerciales||[]).filter(x=>x.id!==id);
+    save();renderPropuestasComerciales();toast('Propuesta eliminada','warning');
+  },{title:'Eliminar propuesta',btnLabel:'Eliminar'});
 }
 
+/* ── Ver PDF adjunto ── */
 function verPdfPropuesta(id) {
-  const p = (ST.propuestasComerciales||[]).find(x => x.id === id);
-  if (!p || !p.pdfDataB64) { toast('Esta propuesta no tiene PDF adjunto', 'warning'); return; }
+  const p=(ST.propuestasComerciales||[]).find(x=>x.id===id);
+  if (!p||!p.pdfDataB64){toast('Esta propuesta no tiene PDF adjunto','warning');return;}
   try {
-    const byteStr = atob(p.pdfDataB64.split(',')[1]);
-    const ab = new ArrayBuffer(byteStr.length);
-    const ia = new Uint8Array(ab);
-    for (let i = 0; i < byteStr.length; i++) ia[i] = byteStr.charCodeAt(i);
-    const blob = new Blob([ab], { type: 'application/pdf' });
-    const url = URL.createObjectURL(blob);
-    const w = window.open(url, '_blank');
-    if (!w) { const a = document.createElement('a'); a.href = url; a.download = p.pdfNombre || 'propuesta.pdf'; document.body.appendChild(a); a.click(); document.body.removeChild(a); }
-  } catch(e) { toast('No se pudo abrir el PDF: ' + e.message, 'danger'); }
+    const byteStr=atob(p.pdfDataB64.split(',')[1]);
+    const ab=new ArrayBuffer(byteStr.length);const ia=new Uint8Array(ab);
+    for(let i=0;i<byteStr.length;i++) ia[i]=byteStr.charCodeAt(i);
+    const blob=new Blob([ab],{type:'application/pdf'});
+    const url=URL.createObjectURL(blob);
+    const w=window.open(url,'_blank');
+    if(!w){const a=document.createElement('a');a.href=url;a.download=p.pdfNombre||'propuesta.pdf';document.body.appendChild(a);a.click();document.body.removeChild(a);}
+  } catch(e){toast('No se pudo abrir el PDF: '+e.message,'danger');}
 }
 
+/* ── Exportar CSV ── */
 function exportarPropuestasCsv() {
-  const arr = ST.propuestasComerciales || [];
-  if (!arr.length) { toast('No hay propuestas para exportar', 'warning'); return; }
-  const cols = ['Empresa','Rubro','Contacto','Cargo','Teléfono','Email','Propuesta','Estado','Fecha','Monto','Próxima Acción','Follow-up','Última Obs.'];
-  const rows = arr.map(p => {
-    const ultimaObs = p.observaciones?.length ? p.observaciones[p.observaciones.length-1].texto : '';
+  const arr=ST.propuestasComerciales||[];
+  if(!arr.length){toast('No hay propuestas para exportar','warning');return;}
+  const cols=['Empresa','Rubro','Contacto','Cargo','Teléfono','Email','Propuesta','Estado','Score','Fecha','Monto','Próxima Acción','Follow-up','Actividades','Última Obs.'];
+  const rows=arr.map(p=>{
+    const ultimaObs=p.observaciones?.length?p.observaciones[p.observaciones.length-1].texto:'';
     return [p.empresa,p.rubro,p.contacto,p.cargo,p.telefono,p.email,p.propuesta,
-      _PROP_ESTADOS[p.estado]?.lbl||p.estado, p.fechaPropuesta||'', p.monto||0,
-      p.proximaAccion||'', p.fechaProxima||'', ultimaObs
-    ].map(v => `"${String(v||'').replace(/"/g,'""')}"`).join(',');
+      _PROP_ESTADOS[p.estado]?.lbl||p.estado, _propScore(p)+'%', p.fechaPropuesta||'', p.monto||0,
+      p.proximaAccion||'', p.fechaProxima||'', (p.actividades||[]).length, ultimaObs
+    ].map(v=>`"${String(v||'').replace(/"/g,'""')}"`).join(',');
   });
-  const csv = '﻿' + [cols.join(','), ...rows].join('\n');
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a'); a.href = url; a.download = 'propuestas-comerciales.csv';
-  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  const csv='﻿'+[cols.join(','),...rows].join('\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download='propuestas-comerciales.csv';
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
 }
 
+/* ══ ACTIVIDADES ══ */
+function _propRenderActTimeline(p) {
+  const el=document.getElementById('prop-act-timeline');
+  if (!el) return;
+  const acts=[...(p.actividades||[])].sort((a,b)=>b.fecha.localeCompare(a.fecha));
+  if (!acts.length){
+    el.innerHTML=`<div class="text-center text-muted py-4" style="font-size:.78rem"><i class="bi bi-clock-history d-block mb-1" style="font-size:1.3rem"></i>Sin actividades registradas</div>`;
+    return;
+  }
+  const resIcons={positivo:'✅',neutro:'➖',sin_respuesta:'📵',negativo:'❌'};
+  el.innerHTML=acts.map(a=>{
+    const t=_PROP_ACT_TIPOS[a.tipo]||_PROP_ACT_TIPOS.otro;
+    return `<div style="display:flex;gap:10px;margin-bottom:10px">
+      <div style="width:32px;height:32px;border-radius:50%;background:${t.bg};color:${t.color};display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <i class="bi ${t.icon}" style="font-size:.85rem"></i>
+      </div>
+      <div style="flex:1">
+        <div style="display:flex;align-items:center;gap:6px">
+          <span style="font-size:.72rem;font-weight:700;color:${t.color}">${t.lbl}</span>
+          ${a.resultado?`<span style="font-size:.65rem">${resIcons[a.resultado]||''}</span>`:''}
+          ${a.duracion?`<span style="font-size:.6rem;color:#94a3b8">${a.duracion}min</span>`:''}
+          <span style="font-size:.6rem;color:#94a3b8;margin-left:auto">${_ectaFmtDate(a.fecha)} · ${a.autor||''}</span>
+        </div>
+        ${a.notas?`<div style="font-size:.72rem;color:#334155;margin-top:2px">${a.notas}</div>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function _propAddActFromModal(tipo) {
+  const propId=document.getElementById('prop-id').value;
+  if (!propId){toast('Primero guardá la propuesta','warning');return;}
+  abrirModalActividad(propId, tipo);
+}
+
+function abrirModalActividad(propId, tipo='otro') {
+  const t=_PROP_ACT_TIPOS[tipo]||_PROP_ACT_TIPOS.otro;
+  document.getElementById('prop-act-prop-id').value=propId;
+  document.getElementById('prop-act-tipo').value=tipo;
+  document.getElementById('prop-act-titulo').innerHTML=`<i class="bi ${t.icon} me-2" style="color:${t.color}"></i>Registrar ${t.lbl}`;
+  document.getElementById('prop-act-tipo-display').innerHTML=`<span style="background:${t.bg};color:${t.color};padding:3px 10px;border-radius:20px;font-size:.72rem;font-weight:700"><i class="bi ${t.icon} me-1"></i>${t.lbl}</span>`;
+  document.getElementById('prop-act-fecha').value=hoy();
+  document.getElementById('prop-act-duracion').value='';
+  document.getElementById('prop-act-resultado').value='neutro';
+  document.getElementById('prop-act-notas').value='';
+  new bootstrap.Modal(document.getElementById('modalPropActividad')).show();
+}
+
+function guardarActividad() {
+  const propId=document.getElementById('prop-act-prop-id').value;
+  const tipo=document.getElementById('prop-act-tipo').value;
+  const fecha=document.getElementById('prop-act-fecha').value;
+  if (!propId||!fecha){toast('Datos incompletos','warning');return;}
+  if (!Array.isArray(ST.propuestasComerciales)) ST.propuestasComerciales=[];
+  const p=ST.propuestasComerciales.find(x=>x.id===propId);
+  if (!p){toast('Propuesta no encontrada','warning');return;}
+  if (!Array.isArray(p.actividades)) p.actividades=[];
+  p.actividades.push({
+    id:uid(), tipo, fecha,
+    duracion:parseInt(document.getElementById('prop-act-duracion').value)||0,
+    resultado:document.getElementById('prop-act-resultado').value,
+    notas:document.getElementById('prop-act-notas').value.trim(),
+    autor:sessionStorage.getItem('muukAuth')||'sistema'
+  });
+  p.updatedAt=new Date().toISOString();
+  save();
+  bootstrap.Modal.getInstance(document.getElementById('modalPropActividad'))?.hide();
+  // Si el modal de propuesta sigue abierto, refrescar el timeline
+  const t=document.getElementById('prop-act-timeline');
+  if (t) _propRenderActTimeline(p);
+  renderPropuestasComerciales();
+  toast(`${_PROP_ACT_TIPOS[tipo]?.lbl||'Actividad'} registrada ✓`);
+}
+
+/* ══ KANBAN ══ */
+function renderKanbanPropuestas() {
+  const kanban=document.getElementById('prop-kanban');
+  if (!kanban) return;
+  const arr=ST.propuestasComerciales||[];
+  const buscar=(document.getElementById('prop-fil-buscar')?.value||'').toLowerCase();
+  const filEst=document.getElementById('prop-fil-estado')?.value||'';
+  const filRub=document.getElementById('prop-fil-rubro')?.value||'';
+  const visible=arr.filter(p=>{
+    if(filEst&&p.estado!==filEst)return false;
+    if(filRub&&p.rubro!==filRub)return false;
+    if(buscar&&!`${p.empresa} ${p.contacto} ${p.propuesta}`.toLowerCase().includes(buscar))return false;
+    return true;
+  });
+  kanban.innerHTML=Object.entries(_PROP_ESTADOS).map(([key,est])=>{
+    const cards=visible.filter(p=>p.estado===key);
+    const total=cards.reduce((s,p)=>s+(p.monto||0),0);
+    return `<div class="kanban-col" data-estado="${key}"
+         ondragover="event.preventDefault();this.classList.add('kanban-drop-target')"
+         ondragleave="this.classList.remove('kanban-drop-target')"
+         ondrop="_propKanbanDrop(event,'${key}');this.classList.remove('kanban-drop-target')">
+      <div class="kanban-col-header" style="background:${est.bg}">
+        <i class="bi ${est.icon} me-1"></i>${est.lbl}
+        <span class="badge ms-auto" style="background:rgba(255,255,255,.25);font-size:.6rem">${cards.length}</span>
+      </div>
+      ${total>0?`<div class="kanban-col-total" style="color:${est.bg}">${fmt(total)}</div>`:''}
+      <div class="kanban-cards">
+        ${cards.map(p=>{
+          const score=_propScore(p);
+          const diff=_propFollowDiff(p.fechaProxima);
+          const actN=(p.actividades||[]).length;
+          return `<div class="kanban-card" draggable="true"
+            ondragstart="_propKanbanDragStart(event,'${p.id}')"
+            ondragend="document.querySelectorAll('.kanban-drop-target').forEach(el=>el.classList.remove('kanban-drop-target'))"
+            onclick="abrirModalPropuesta('${p.id}')">
+            <div style="font-weight:700;font-size:.73rem;color:#0f172a;margin-bottom:2px">${p.empresa}</div>
+            ${p.propuesta?`<div style="font-size:.62rem;color:#64748b;margin-bottom:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.propuesta}</div>`:''}
+            ${p.contacto?`<div style="font-size:.6rem;color:#94a3b8"><i class="bi bi-person me-1"></i>${p.contacto}${p.cargo?' · '+p.cargo:''}</div>`:''}
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:5px">
+              ${p.monto>0?`<span style="font-size:.65rem;font-weight:700;color:#0f172a">${fmt(p.monto)}</span>`:'<span></span>'}
+              <span style="font-size:.62rem;font-weight:700;color:${_propScoreColor(score)}">${score}%</span>
+            </div>
+            <div class="prop-score-bar"><div class="prop-score-bar-fill" style="width:${score}%;background:${_propScoreColor(score)}"></div></div>
+            <div style="display:flex;gap:5px;margin-top:5px;align-items:center">
+              ${diff!==null?`<span style="font-size:.58rem;color:${diff<0?'#ef4444':diff<=3?'#f59e0b':'#64748b'}"><i class="bi bi-alarm me-1"></i>${diff<0?'Vencido':diff===0?'Hoy':'en '+diff+'d'}</span>`:''}
+              ${actN>0?`<span style="font-size:.58rem;color:#64748b;margin-left:auto"><i class="bi bi-clock-history me-1"></i>${actN}</span>`:''}
+            </div>
+          </div>`;
+        }).join('')}
+        ${cards.length===0?`<div style="text-align:center;padding:16px 8px;font-size:.65rem;color:#cbd5e1;border:1.5px dashed #e2e8f0;border-radius:8px">Sin prospectos</div>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function _propKanbanDragStart(e,id) {
+  _propDragId=id;
+  e.dataTransfer.effectAllowed='move';
+}
+function _propKanbanDrop(e,newEstado) {
+  e.preventDefault();
+  if (!_propDragId) return;
+  const p=(ST.propuestasComerciales||[]).find(x=>x.id===_propDragId);
+  if (p&&p.estado!==newEstado) {
+    const old=p.estado;
+    p.estado=newEstado; p.updatedAt=new Date().toISOString();
+    if (!Array.isArray(p.observaciones)) p.observaciones=[];
+    p.observaciones.push({fecha:hoy(),texto:`Estado cambiado de "${_PROP_ESTADOS[old]?.lbl}" a "${_PROP_ESTADOS[newEstado]?.lbl}"`,autor:'sistema'});
+    save(); renderPropuestasComerciales();
+    toast(`Movido a "${_PROP_ESTADOS[newEstado]?.lbl}"`, 'success');
+  }
+  _propDragId=null;
+}
+
+/* ══ RENDER PRINCIPAL ══ */
 function renderPropuestasComerciales() {
-  if (!Array.isArray(ST.propuestasComerciales)) ST.propuestasComerciales = [];
+  if (!Array.isArray(ST.propuestasComerciales)) ST.propuestasComerciales=[];
 
-  const buscar  = (document.getElementById('prop-fil-buscar')?.value  || '').toLowerCase();
-  const filEst  = document.getElementById('prop-fil-estado')?.value  || '';
-  const filRub  = document.getElementById('prop-fil-rubro')?.value   || '';
+  const buscar=(document.getElementById('prop-fil-buscar')?.value||'').toLowerCase();
+  const filEst=document.getElementById('prop-fil-estado')?.value||'';
+  const filRub=document.getElementById('prop-fil-rubro')?.value||'';
+  const sortBy=document.getElementById('prop-fil-sort')?.value||'followup';
 
-  // Poblar rubros únicos
-  const selRub = document.getElementById('prop-fil-rubro');
+  // Rubros únicos
+  const selRub=document.getElementById('prop-fil-rubro');
   if (selRub) {
-    const rubros = [...new Set(ST.propuestasComerciales.map(p => p.rubro).filter(Boolean))].sort();
-    const curVal = selRub.value;
-    selRub.innerHTML = '<option value="">Todos los rubros</option>' + rubros.map(r => `<option value="${r}" ${r===curVal?'selected':''}>${r}</option>`).join('');
+    const rubros=[...new Set(ST.propuestasComerciales.map(p=>p.rubro).filter(Boolean))].sort();
+    const curVal=selRub.value;
+    selRub.innerHTML='<option value="">Todos los rubros</option>'+rubros.map(r=>`<option value="${r}"${r===curVal?' selected':''}>${r}</option>`).join('');
   }
 
   // Filtrar
-  const filtradas = ST.propuestasComerciales.filter(p => {
-    if (filEst && p.estado !== filEst) return false;
-    if (filRub && p.rubro !== filRub) return false;
-    if (buscar) {
-      const haystack = `${p.empresa} ${p.contacto} ${p.propuesta} ${p.rubro} ${p.email}`.toLowerCase();
-      if (!haystack.includes(buscar)) return false;
-    }
+  const filtradas=ST.propuestasComerciales.filter(p=>{
+    if(filEst&&p.estado!==filEst)return false;
+    if(filRub&&p.rubro!==filRub)return false;
+    if(buscar&&!`${p.empresa} ${p.contacto} ${p.propuesta} ${p.rubro} ${p.email}`.toLowerCase().includes(buscar))return false;
     return true;
   });
 
-  // Ordenar: primero por fecha follow-up próxima (asc), luego sin fecha al final
-  filtradas.sort((a,b) => {
-    const fa = a.fechaProxima || '9999-12-31';
-    const fb = b.fechaProxima || '9999-12-31';
-    return fa.localeCompare(fb);
+  // Ordenar
+  filtradas.sort((a,b)=>{
+    if (sortBy==='followup') return (a.fechaProxima||'9999-12-31').localeCompare(b.fechaProxima||'9999-12-31');
+    if (sortBy==='score')    return _propScore(b)-_propScore(a);
+    if (sortBy==='monto')    return (b.monto||0)-(a.monto||0);
+    if (sortBy==='empresa')  return (a.empresa||'').localeCompare(b.empresa||'');
+    return 0;
   });
 
-  // Resumen por estado
-  const resumenEl = document.getElementById('prop-resumen-cards');
+  // Cards de resumen
+  const resumenEl=document.getElementById('prop-resumen-cards');
   if (resumenEl) {
-    const counts = {};
-    const montos = {};
-    Object.keys(_PROP_ESTADOS).forEach(e => { counts[e] = 0; montos[e] = 0; });
-    ST.propuestasComerciales.forEach(p => {
-      counts[p.estado] = (counts[p.estado]||0) + 1;
-      montos[p.estado] = (montos[p.estado]||0) + (p.monto||0);
+    const counts={};const montos={};
+    Object.keys(_PROP_ESTADOS).forEach(e=>{counts[e]=0;montos[e]=0;});
+    ST.propuestasComerciales.forEach(p=>{
+      counts[p.estado]=(counts[p.estado]||0)+1;
+      montos[p.estado]=(montos[p.estado]||0)+(p.monto||0);
     });
-    resumenEl.innerHTML = Object.entries(_PROP_ESTADOS).map(([key, st]) => `
+    resumenEl.innerHTML=Object.entries(_PROP_ESTADOS).map(([key,st])=>`
       <div class="col-6 col-sm-4 col-lg-2">
         <div class="card p-2 text-center" style="border-radius:10px;border:none;background:${st.bg}15;cursor:pointer;transition:.15s"
              onclick="document.getElementById('prop-fil-estado').value='${key}';renderPropuestasComerciales()">
-          <div style="font-size:1.3rem;color:${st.bg}"><i class="bi ${st.icon}"></i></div>
-          <div style="font-size:.62rem;font-weight:700;color:${st.bg};text-transform:uppercase;letter-spacing:.4px">${st.lbl}</div>
+          <div style="font-size:1.2rem;color:${st.bg}"><i class="bi ${st.icon}"></i></div>
+          <div style="font-size:.6rem;font-weight:700;color:${st.bg};text-transform:uppercase;letter-spacing:.4px">${st.lbl}</div>
           <div style="font-size:1.1rem;font-weight:800;color:${st.bg}">${counts[key]||0}</div>
-          ${montos[key] > 0 ? `<div style="font-size:.58rem;color:#64748b">${fmt(montos[key])}</div>` : ''}
+          ${montos[key]>0?`<div style="font-size:.58rem;color:#64748b">${fmt(montos[key])}</div>`:''}
         </div>
       </div>`).join('');
   }
 
-  // Alertas de follow-up vencidas o próximas (7 días)
-  const alertasEl = document.getElementById('prop-alertas-box');
+  // Alertas
+  const alertasEl=document.getElementById('prop-alertas-box');
   if (alertasEl) {
-    const hoyStr = hoy();
-    const enSemana = new Date(); enSemana.setDate(enSemana.getDate() + 7);
-    const enSemanaStr = enSemana.toISOString().split('T')[0];
-    const vencidas = ST.propuestasComerciales.filter(p =>
-      p.fechaProxima && p.fechaProxima < hoyStr &&
-      p.estado !== 'compro' && p.estado !== 'cliente_activo' && p.estado !== 'perdido'
-    );
-    const proximas = ST.propuestasComerciales.filter(p =>
-      p.fechaProxima && p.fechaProxima >= hoyStr && p.fechaProxima <= enSemanaStr &&
-      p.estado !== 'compro' && p.estado !== 'cliente_activo' && p.estado !== 'perdido'
-    );
-    let html = '';
-    if (vencidas.length) {
-      html += `<div class="alert alert-danger py-2 mb-2" style="font-size:.75rem;border-radius:8px">
-        <i class="bi bi-exclamation-triangle-fill me-2"></i><strong>${vencidas.length} follow-up${vencidas.length>1?'s':''} vencido${vencidas.length>1?'s':''}</strong>:
-        ${vencidas.map(p => `<span class="badge" style="background:#ef4444;cursor:pointer" onclick="abrirModalPropuesta('${p.id}')">${p.empresa}</span>`).join(' ')}
-      </div>`;
-    }
-    if (proximas.length) {
-      html += `<div class="alert alert-warning py-2 mb-2" style="font-size:.75rem;border-radius:8px">
-        <i class="bi bi-alarm me-2"></i><strong>${proximas.length} follow-up${proximas.length>1?'s':''} esta semana</strong>:
-        ${proximas.map(p => `<span class="badge" style="background:#f59e0b;cursor:pointer" onclick="abrirModalPropuesta('${p.id}')">${p.empresa}</span>`).join(' ')}
-      </div>`;
-    }
-    alertasEl.innerHTML = html;
+    const hS=hoy();
+    const sem=new Date();sem.setDate(sem.getDate()+7);const semStr=sem.toISOString().split('T')[0];
+    const activos=['prospecto','en_contacto','negociacion'];
+    const venc=ST.propuestasComerciales.filter(p=>p.fechaProxima&&p.fechaProxima<hS&&activos.includes(p.estado));
+    const prox=ST.propuestasComerciales.filter(p=>p.fechaProxima&&p.fechaProxima>=hS&&p.fechaProxima<=semStr&&activos.includes(p.estado));
+    let html='';
+    if(venc.length) html+=`<div class="alert alert-danger py-2 mb-2" style="font-size:.75rem;border-radius:8px"><i class="bi bi-exclamation-triangle-fill me-2"></i><strong>${venc.length} follow-up${venc.length>1?'s':''} vencido${venc.length>1?'s':''}</strong>: ${venc.map(p=>`<span class="badge" style="background:#ef4444;cursor:pointer" onclick="abrirModalPropuesta('${p.id}')">${p.empresa}</span>`).join(' ')}</div>`;
+    if(prox.length) html+=`<div class="alert alert-warning py-2 mb-2" style="font-size:.75rem;border-radius:8px"><i class="bi bi-alarm me-2"></i><strong>${prox.length} follow-up${prox.length>1?'s':''} esta semana</strong>: ${prox.map(p=>`<span class="badge" style="background:#f59e0b;cursor:pointer" onclick="abrirModalPropuesta('${p.id}')">${p.empresa}</span>`).join(' ')}</div>`;
+    alertasEl.innerHTML=html;
   }
 
-  // Tabla
-  const tbody = document.getElementById('prop-tbody');
+  // Render según modo de vista
+  if (_propViewMode==='kanban') { renderKanbanPropuestas(); return; }
+
+  // ── Vista Tabla ──
+  const tbody=document.getElementById('prop-tbody');
   if (!tbody) return;
   if (!filtradas.length) {
-    tbody.innerHTML = `<tr><td colspan="8" class="text-center text-muted py-4" style="font-size:.8rem">
-      ${buscar||filEst||filRub ? 'Sin resultados para los filtros aplicados.' : 'No hay propuestas. ¡Agregá la primera!'}
-    </td></tr>`;
+    tbody.innerHTML=`<tr><td colspan="9" class="text-center text-muted py-4" style="font-size:.8rem">${buscar||filEst||filRub?'Sin resultados para los filtros aplicados.':'No hay propuestas. ¡Agregá la primera!'}</td></tr>`;
     return;
   }
+  const hS2=hoy();
+  tbody.innerHTML=filtradas.map(p=>{
+    const est=_PROP_ESTADOS[p.estado]||_PROP_ESTADOS.prospecto;
+    const score=_propScore(p);
+    const scColor=_propScoreColor(score);
+    const acts=p.actividades||[];
+    const lastAct=acts.length?acts[acts.length-1]:null;
+    const lastObs=p.observaciones?.length?p.observaciones[p.observaciones.length-1]:null;
+    const lastItem=lastAct&&(!lastObs||lastAct.fecha>=lastObs.fecha)?lastAct:lastObs;
+    const lastHtml=lastItem
+      ? (lastItem.tipo
+        ? `<span class="prop-act-pill" style="background:${_PROP_ACT_TIPOS[lastItem.tipo]?.bg};color:${_PROP_ACT_TIPOS[lastItem.tipo]?.color}"><i class="bi ${_PROP_ACT_TIPOS[lastItem.tipo]?.icon}"></i>${_PROP_ACT_TIPOS[lastItem.tipo]?.lbl}</span> <div style="font-size:.6rem;color:#94a3b8;margin-top:2px">${_ectaFmtDate(lastItem.fecha)}</div>`
+        : `<div style="font-size:.7rem;color:#334155;max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${lastItem.texto}</div><div style="font-size:.6rem;color:#94a3b8">${_ectaFmtDate(lastItem.fecha)}</div>`)
+      : `<span style="font-size:.68rem;color:#cbd5e1">—</span>`;
+    const diff=_propFollowDiff(p.fechaProxima);
+    const fColor=diff===null?'#94a3b8':diff<0?'#ef4444':diff<=3?'#f59e0b':'#10b981';
+    const fLabel=diff===null?'—':diff<0?`Hace ${Math.abs(diff)}d`:diff===0?'Hoy':`en ${diff}d`;
+    const followHtml=p.fechaProxima
+      ?`<div style="font-size:.68rem;color:${fColor};font-weight:600">${fLabel}</div><div style="font-size:.6rem;color:#94a3b8">${_ectaFmtDate(p.fechaProxima)}</div>`
+      :'—';
+    const pdfBtn=p.pdfNombre?`<button class="btn btn-link btn-sm p-0" title="Ver PDF" onclick="verPdfPropuesta('${p.id}')"><i class="bi bi-file-pdf text-danger" style="font-size:.85rem"></i></button>`:'';
+    const actBtn=`<button class="btn btn-link btn-sm p-0" title="Actividad rápida" onclick="abrirModalActividad('${p.id}')"><i class="bi bi-clock-history text-secondary" style="font-size:.85rem"></i></button>`;
+    const pdfGenBtn=`<button class="btn btn-link btn-sm p-0" title="Generar PDF" onclick="abrirModalGenerarPropuestaPDF('${p.id}')"><i class="bi bi-file-earmark-pdf" style="font-size:.85rem;color:#4f46e5"></i></button>`;
 
-  tbody.innerHTML = filtradas.map(p => {
-    const est = _PROP_ESTADOS[p.estado] || _PROP_ESTADOS.prospecto;
-    const ultimaObs = p.observaciones?.length ? p.observaciones[p.observaciones.length-1] : null;
-    const obsHtml = ultimaObs
-      ? `<div style="font-size:.72rem;color:#334155;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${ultimaObs.texto}">${ultimaObs.texto}</div>
-         <div style="font-size:.6rem;color:#94a3b8">${_ectaFmtDate(ultimaObs.fecha)}</div>`
-      : `<span style="font-size:.7rem;color:#cbd5e1">Sin observaciones</span>`;
-
-    const hoyStr2 = hoy();
-    let followHtml = '—';
-    if (p.fechaProxima) {
-      const diff = Math.round((new Date(p.fechaProxima+'T00:00:00') - new Date(hoyStr2+'T00:00:00')) / 86400000);
-      const color = diff < 0 ? '#ef4444' : diff <= 3 ? '#f59e0b' : '#10b981';
-      const label = diff < 0 ? `Vencido hace ${Math.abs(diff)}d` : diff === 0 ? 'Hoy' : `en ${diff}d`;
-      followHtml = `<div style="font-size:.68rem;color:${color};font-weight:600">${label}</div>
-        <div style="font-size:.6rem;color:#94a3b8">${_ectaFmtDate(p.fechaProxima)}</div>`;
-    }
-
-    const montoHtml = p.monto > 0 ? `<span style="font-size:.75rem;font-weight:700;color:#0f172a">${fmt(p.monto)}</span>` : '—';
-    const pdfBtn = p.pdfNombre
-      ? `<button class="btn btn-link btn-sm p-0 me-1" title="Ver PDF" onclick="verPdfPropuesta('${p.id}')"><i class="bi bi-file-pdf text-danger" style="font-size:.9rem"></i></button>`
-      : '';
-
-    return `<tr style="font-size:.75rem">
-      <td style="padding:10px 12px">
+    return `<tr style="font-size:.73rem">
+      <td style="padding:9px 12px">
         <div style="font-weight:700;color:#0f172a">${p.empresa}</div>
-        ${p.rubro ? `<div style="font-size:.62rem;color:#64748b"><i class="bi bi-tags me-1"></i>${p.rubro}</div>` : ''}
+        ${p.rubro?`<div style="font-size:.6rem;color:#64748b"><i class="bi bi-tags me-1"></i>${p.rubro}</div>`:''}
       </td>
-      <td style="padding:10px 12px">
-        ${p.contacto ? `<div style="font-weight:600;color:#334155">${p.contacto}</div>` : ''}
-        ${p.cargo ? `<div style="font-size:.62rem;color:#94a3b8">${p.cargo}</div>` : ''}
-        ${p.telefono ? `<div style="font-size:.62rem;color:#0ea5e9"><i class="bi bi-telephone me-1"></i>${p.telefono}</div>` : ''}
+      <td style="padding:9px 12px">
+        ${p.contacto?`<div style="font-weight:600;color:#334155">${p.contacto}</div>`:''}
+        ${p.cargo?`<div style="font-size:.6rem;color:#94a3b8">${p.cargo}</div>`:''}
+        ${p.telefono?`<div style="font-size:.6rem;color:#0ea5e9"><i class="bi bi-telephone me-1"></i>${p.telefono}</div>`:''}
       </td>
-      <td style="padding:10px 12px">
-        <div style="font-weight:600;color:#334155;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${p.propuesta||''}">${p.propuesta||'—'}</div>
-        ${p.fechaPropuesta ? `<div style="font-size:.6rem;color:#94a3b8">${_ectaFmtDate(p.fechaPropuesta)}</div>` : ''}
+      <td style="padding:9px 12px">
+        <div style="font-weight:600;color:#334155;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${p.propuesta||''}">${p.propuesta||'—'}</div>
+        ${p.fechaPropuesta?`<div style="font-size:.58rem;color:#94a3b8">${_ectaFmtDate(p.fechaPropuesta)}</div>`:''}
       </td>
-      <td style="padding:10px 12px;text-align:center">
-        <span class="badge" style="background:${est.bg};font-size:.62rem;padding:4px 8px;border-radius:20px">
+      <td style="padding:9px 12px;text-align:center">
+        <span class="badge" style="background:${est.bg};font-size:.6rem;padding:3px 8px;border-radius:20px;cursor:pointer" onclick="abrirModalPropuesta('${p.id}')">
           <i class="bi ${est.icon} me-1"></i>${est.lbl}
         </span>
       </td>
-      <td style="padding:10px 12px">${obsHtml}</td>
-      <td style="padding:10px 12px;text-align:center">${followHtml}</td>
-      <td style="padding:10px 12px;text-align:right">${montoHtml}</td>
-      <td style="padding:10px 12px;text-align:center;white-space:nowrap">
-        ${pdfBtn}
-        <button class="btn btn-link btn-sm p-0 me-1" title="Editar" onclick="abrirModalPropuesta('${p.id}')"><i class="bi bi-pencil text-primary" style="font-size:.9rem"></i></button>
-        <button class="btn btn-link btn-sm p-0" title="Eliminar" onclick="eliminarPropuesta('${p.id}')"><i class="bi bi-trash text-danger" style="font-size:.9rem"></i></button>
+      <td style="padding:9px 12px;text-align:center">
+        <div style="font-size:.72rem;font-weight:700;color:${scColor}">${score}%</div>
+        <div class="prop-score-bar" style="width:56px;margin:3px auto 0">
+          <div class="prop-score-bar-fill" style="width:${score}%;background:${scColor}"></div>
+        </div>
+      </td>
+      <td style="padding:9px 12px">${lastHtml}</td>
+      <td style="padding:9px 12px;text-align:center">${followHtml}</td>
+      <td style="padding:9px 12px;text-align:right">${p.monto>0?`<span style="font-weight:700;color:#0f172a">${fmt(p.monto)}</span>`:'—'}</td>
+      <td style="padding:9px 12px;text-align:center;white-space:nowrap">
+        ${pdfBtn}${actBtn}${pdfGenBtn}
+        <button class="btn btn-link btn-sm p-0" title="Editar" onclick="abrirModalPropuesta('${p.id}')"><i class="bi bi-pencil text-primary" style="font-size:.85rem"></i></button>
+        <button class="btn btn-link btn-sm p-0" title="Eliminar" onclick="eliminarPropuesta('${p.id}')"><i class="bi bi-trash text-danger" style="font-size:.85rem"></i></button>
       </td>
     </tr>`;
   }).join('');
+}
+
+/* ══ GENERADOR DE PROPUESTA PDF ══ */
+let _gpdfLineId=0;
+function abrirModalGenerarPropuestaPDF(propId) {
+  _gpdfProductos=[];_gpdfLineId=0;
+  ['gpdf-empresa','gpdf-contacto','gpdf-ciudad','gpdf-obs','gpdf-vendedor'].forEach(f=>{const el=document.getElementById(f);if(el)el.value='';});
+  document.getElementById('gpdf-fecha').value=hoy();
+  document.getElementById('gpdf-pago').value='Contado';
+  document.getElementById('gpdf-entrega').value='A coordinar';
+  document.getElementById('gpdf-vigencia').value='15 días';
+  if (propId) {
+    const p=(ST.propuestasComerciales||[]).find(x=>x.id===propId);
+    if(p){
+      document.getElementById('gpdf-empresa').value=p.empresa||'';
+      document.getElementById('gpdf-contacto').value=p.contacto||'';
+      document.getElementById('gpdf-vendedor').value=sessionStorage.getItem('muukAuth')||'';
+      // Pre-cargar productos del rubro si hay plantilla
+      const tmpl=Object.values(_PROP_PLANTILLAS).find(t=>t.rubro===p.rubro);
+      if(tmpl) tmpl.productos.forEach(pr=>_gpdfAddProducto(pr.nombre,pr.unidad));
+    }
+  }
+  if(!_gpdfProductos.length){_gpdfAddProducto();_gpdfAddProducto();}
+  _gpdfRenderProductos();
+  previewPropPDF();
+  new bootstrap.Modal(document.getElementById('modalGenerarPropuestaPDF')).show();
+}
+
+function _gpdfAddProducto(nombre='',unidad='bolsa x 25kg') {
+  _gpdfLineId++;
+  _gpdfProductos.push({id:_gpdfLineId,nombre,unidad,precio:''});
+  _gpdfRenderProductos();
+  previewPropPDF();
+}
+
+function _gpdfRenderProductos() {
+  const el=document.getElementById('gpdf-productos-lista');
+  if(!el)return;
+  el.innerHTML=_gpdfProductos.map(pr=>`
+    <div class="row g-1 mb-1 align-items-center" id="gpdf-row-${pr.id}">
+      <div class="col-5">
+        <input type="text" class="form-control form-control-sm" placeholder="Producto" value="${pr.nombre}" style="font-size:.68rem"
+          oninput="_gpdfUpdateProd(${pr.id},'nombre',this.value)">
+      </div>
+      <div class="col-3">
+        <input type="text" class="form-control form-control-sm" placeholder="Unidad" value="${pr.unidad}" style="font-size:.68rem"
+          oninput="_gpdfUpdateProd(${pr.id},'unidad',this.value)">
+      </div>
+      <div class="col-3">
+        <input type="text" class="form-control form-control-sm" placeholder="Precio $" value="${pr.precio}" style="font-size:.68rem"
+          oninput="_gpdfUpdateProd(${pr.id},'precio',this.value);previewPropPDF()">
+      </div>
+      <div class="col-1 text-end">
+        <button class="btn btn-link btn-sm p-0" onclick="_gpdfRemoveProd(${pr.id})"><i class="bi bi-x text-danger" style="font-size:.9rem"></i></button>
+      </div>
+    </div>`).join('');
+}
+function _gpdfUpdateProd(id,field,val){const p=_gpdfProductos.find(x=>x.id===id);if(p)p[field]=val;}
+function _gpdfRemoveProd(id){_gpdfProductos=_gpdfProductos.filter(x=>x.id!==id);_gpdfRenderProductos();previewPropPDF();}
+
+function previewPropPDF() {
+  const empresa=document.getElementById('gpdf-empresa')?.value||'—';
+  const contacto=document.getElementById('gpdf-contacto')?.value||'';
+  const ciudad=document.getElementById('gpdf-ciudad')?.value||'';
+  const fecha=document.getElementById('gpdf-fecha')?.value||hoy();
+  const pago=document.getElementById('gpdf-pago')?.value||'Contado';
+  const entrega=document.getElementById('gpdf-entrega')?.value||'A coordinar';
+  const obs=document.getElementById('gpdf-obs')?.value||'';
+  const vigencia=document.getElementById('gpdf-vigencia')?.value||'15 días';
+  const vendedor=document.getElementById('gpdf-vendedor')?.value||'';
+  const fechaFmt=_ectaFmtDate(fecha);
+
+  const productosRows=_gpdfProductos.filter(p=>p.nombre).map(p=>`
+    <tr>
+      <td style="padding:7px 10px;border-bottom:1px solid #f1f5f9">${p.nombre}</td>
+      <td style="padding:7px 10px;border-bottom:1px solid #f1f5f9;text-align:center">${p.unidad}</td>
+      <td style="padding:7px 10px;border-bottom:1px solid #f1f5f9;text-align:right;font-weight:600">${p.precio?'$ '+p.precio:'A convenir'}</td>
+    </tr>`).join('');
+
+  const html=`
+    <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:680px;margin:0 auto">
+      <!-- Header MÜÜK -->
+      <div style="background:linear-gradient(135deg,#0f172a,#1e293b);color:#fff;padding:24px 28px;border-radius:10px 10px 0 0;margin-bottom:0">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start">
+          <div>
+            <div style="font-size:1.8rem;font-weight:900;letter-spacing:-1px;color:#10b981">MÜÜK</div>
+            <div style="font-size:.68rem;color:#94a3b8;letter-spacing:1px;text-transform:uppercase">Propuesta Comercial</div>
+          </div>
+          <div style="text-align:right;font-size:.68rem;color:#94a3b8">
+            <div>${fechaFmt}</div>
+            ${ciudad?`<div>${ciudad}</div>`:''}
+          </div>
+        </div>
+      </div>
+      <!-- Destinatario -->
+      <div style="background:#f8fafc;padding:14px 28px;border-left:4px solid #10b981;margin-bottom:16px">
+        <div style="font-size:.65rem;text-transform:uppercase;letter-spacing:.8px;color:#94a3b8;margin-bottom:4px">DIRIGIDO A</div>
+        <div style="font-size:1.05rem;font-weight:800;color:#0f172a">${empresa}</div>
+        ${contacto?`<div style="font-size:.78rem;color:#475569">Attn.: ${contacto}</div>`:''}
+      </div>
+      <!-- Intro -->
+      <p style="font-size:.8rem;color:#475569;margin:0 0 14px;line-height:1.6">
+        Nos complace presentar la siguiente propuesta comercial para la provisión de productos de molienda de alta calidad.
+      </p>
+      <!-- Tabla productos -->
+      <table style="width:100%;border-collapse:collapse;margin-bottom:16px;font-size:.78rem">
+        <thead>
+          <tr style="background:#0f172a;color:#fff">
+            <th style="padding:9px 10px;text-align:left;font-weight:700;font-size:.68rem;text-transform:uppercase;letter-spacing:.5px">Producto</th>
+            <th style="padding:9px 10px;text-align:center;font-weight:700;font-size:.68rem;text-transform:uppercase;letter-spacing:.5px">Presentación</th>
+            <th style="padding:9px 10px;text-align:right;font-weight:700;font-size:.68rem;text-transform:uppercase;letter-spacing:.5px">Precio Unit.</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${productosRows||'<tr><td colspan="3" style="padding:12px;text-align:center;color:#94a3b8;font-size:.75rem">Agregar productos...</td></tr>'}
+        </tbody>
+      </table>
+      <!-- Condiciones -->
+      <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:14px 18px;margin-bottom:14px;font-size:.75rem">
+        <div style="font-weight:700;color:#15803d;margin-bottom:8px;font-size:.7rem;text-transform:uppercase;letter-spacing:.5px"><i>Condiciones Comerciales</i></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+          <div><strong>Forma de pago:</strong> ${pago}</div>
+          <div><strong>Entrega:</strong> ${entrega}</div>
+          <div><strong>Vigencia de precios:</strong> ${vigencia}</div>
+          ${vendedor?`<div><strong>Vendedor:</strong> ${vendedor}</div>`:''}
+        </div>
+        ${obs?`<div style="margin-top:8px;padding-top:8px;border-top:1px solid #bbf7d0;color:#475569">${obs}</div>`:''}
+      </div>
+      <!-- Footer -->
+      <div style="text-align:center;font-size:.65rem;color:#94a3b8;padding-top:12px;border-top:1px solid #f1f5f9">
+        Esta propuesta es válida por ${vigencia} desde la fecha de emisión. Los precios son en pesos argentinos + IVA según corresponda.
+        <br>Ante cualquier consulta estamos a disposición.
+      </div>
+    </div>`;
+  const prev=document.getElementById('gpdf-preview');
+  if (prev) prev.innerHTML=html;
+}
+
+function imprimirPropuestaPDF() {
+  previewPropPDF();
+  const html=document.getElementById('gpdf-preview')?.innerHTML||'';
+  const printEl=document.getElementById('prop-pdf-print-area');
+  if (!printEl) return;
+  printEl.innerHTML=html;
+  printEl.style.display='block';
+  setTimeout(()=>{
+    window.print();
+    setTimeout(()=>{ printEl.style.display='none'; printEl.innerHTML=''; }, 500);
+  }, 150);
 }
 
 function renderEmpresas() {
