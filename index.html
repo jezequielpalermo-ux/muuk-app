@@ -8997,6 +8997,22 @@ function sbHdrs() {
 }
 function sbReady() { return SB_URL && SB_KEY && !SB_URL.includes('TU-PROYECTO'); }
 
+// Helper: fetch con timeout de 12 s para todas las llamadas a Supabase.
+// Sin esto, si el proyecto está pausado (free tier) el fetch cuelga ~40 s.
+async function _sbFetch(url, opts = {}) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 12000);
+  try {
+    const res = await fetch(url, { ...opts, signal: ctrl.signal });
+    clearTimeout(timer);
+    return res;
+  } catch(e) {
+    clearTimeout(timer);
+    if (e.name === 'AbortError') throw new Error('Timeout — proyecto Supabase pausado o sin respuesta (supabase.com)');
+    throw e;
+  }
+}
+
 function _updateSbStatusCard() {
   const el = document.getElementById('sb-status-card');
   if (!el) return;
@@ -9039,7 +9055,7 @@ async function pushRemoto() {
   const { comisionesResumen, comisionesTotal, comisionesTimestamp, ...pushData } = ST;
   const body = JSON.stringify({ id: SB_ROW_ID, data: pushData, updated_by: currentUser, updated_at: new Date().toISOString() });
   try {
-    const res = await fetch(SB_URL + '/rest/v1/' + SB_TABLE, { method: 'POST', headers: sbHdrs(), body });
+    const res = await _sbFetch(SB_URL + '/rest/v1/' + SB_TABLE, { method: 'POST', headers: sbHdrs(), body });
     if (!res.ok) {
       let detail = '';
       if (res.status === 401 || res.status === 403) detail = ' (permisos — revisá RLS en Supabase)';
@@ -9066,7 +9082,7 @@ async function _guardarVersion(user) {
   // Guarda una copia inmutable en la tabla de versiones (para historial / recuperación)
   if (!sbReady()) return;
   try {
-    await fetch(SB_URL + '/rest/v1/' + SB_VER_TABLE, {
+    await _sbFetch(SB_URL + '/rest/v1/' + SB_VER_TABLE, {
       method: 'POST',
       headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY, 'Content-Type': 'application/json' },
       body: JSON.stringify({ data: ST, saved_by: user })
@@ -9088,7 +9104,7 @@ async function _supabaseDailyBackup(force) {
     const jsonStr = JSON.stringify(backupData);
     const sizeKb  = Math.round(jsonStr.length / 1024);
     const user     = sessionStorage.getItem('muukAuth') || 'sistema';
-    const res = await fetch(SB_URL + '/rest/v1/muuk_daily_backups', {
+    const res = await _sbFetch(SB_URL + '/rest/v1/muuk_daily_backups', {
       method: 'POST',
       headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY, 'Content-Type': 'application/json' },
       body: JSON.stringify({ backup_date: today, data: backupData, saved_by: user, size_kb: sizeKb })
@@ -9120,7 +9136,7 @@ async function _renderBackupsList() {
   }
   el.innerHTML = '<div style="text-align:center;padding:12px;color:#94a3b8;font-size:.78rem"><i class="bi bi-hourglass-split me-1"></i>Cargando backups...</div>';
   try {
-    const res = await fetch(
+    const res = await _sbFetch(
       SB_URL + '/rest/v1/muuk_daily_backups?select=id,backup_date,saved_at,saved_by,size_kb&order=backup_date.desc&limit=30',
       { headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY }, cache: 'no-store' }
     );
@@ -9154,7 +9170,7 @@ async function _restaurarDesdeBackup(backupId, backupDate) {
   if (!confirm('¿Restaurar backup del ' + backupDate + '?\n\nLos datos actuales se sobreescribirán. Esta acción no se puede deshacer.')) return;
   try {
     toast('⏳ Restaurando backup...', 'info');
-    const res = await fetch(
+    const res = await _sbFetch(
       SB_URL + '/rest/v1/muuk_daily_backups?id=eq.' + backupId + '&select=data,backup_date',
       { headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY }, cache: 'no-store' }
     );
@@ -9177,7 +9193,7 @@ async function pullRemoto(silent, forceLoad = false) {
   if (!_online) return;
   if (!silent) setSyncStatus('syncing', 'Verificando actualizaciones...');
   try {
-    const res = await fetch(
+    const res = await _sbFetch(
       SB_URL + '/rest/v1/' + SB_TABLE + '?id=eq.' + SB_ROW_ID + '&select=data,updated_at,updated_by',
       { headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY }, cache: 'no-store' }
     );
@@ -9252,7 +9268,7 @@ async function forceRestoreFromSupabase() {
   if (!sbReady()) { toast('Supabase no configurado', 'warning'); return; }
   setSyncStatus('syncing', 'Restaurando desde Supabase...');
   try {
-    const res = await fetch(
+    const res = await _sbFetch(
       SB_URL + '/rest/v1/' + SB_TABLE + '?id=eq.' + SB_ROW_ID + '&select=data,updated_at,updated_by',
       { headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY }, cache: 'no-store' }
     );
@@ -9302,7 +9318,7 @@ async function testConexionSupabase() {
   if (!sbReady()) { toast('Supabase no configurado', 'warning'); return; }
   setSyncStatus('syncing', 'Probando conexión...');
   try {
-    const res = await fetch(
+    const res = await _sbFetch(
       SB_URL + '/rest/v1/' + SB_TABLE + '?id=eq.' + SB_ROW_ID + '&select=id,updated_at',
       { headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY }, cache: 'no-store' }
     );
@@ -12710,7 +12726,7 @@ async function comPdfSaldos() {
     <div><div class="lbl">TOTAL PENDIENTE DE COBRO</div><div style="font-size:10px;opacity:.7">${empresaDetails.length} empresas · ${totalFacturas} facturas</div></div>
     <div class="val">$${_f(grandTotal)}</div>
   </div>
-  <div class="footer">MUUK SRL — Reporte generado el ${hoyStr} · Solo incluye facturas con saldo pendiente</div>
+  <div class="footer">Reporte generado el ${hoyStr} · Solo incluye facturas con saldo pendiente</div>
 </body></html>`;
 
   const w = window.open('', '_blank');
@@ -13143,7 +13159,7 @@ function _comBuildPDFSaldoEmpresa(empresaName, saldoResumen, details, isFull, ha
 
 <div class="doc-header">
   <div>
-    <div style="font-size:7px;opacity:.7;text-transform:uppercase;letter-spacing:.1em;margin-bottom:1px">MÜÜK SRL — Comisiones a Cobrar</div>
+    <div style="font-size:7px;opacity:.7;text-transform:uppercase;letter-spacing:.1em;margin-bottom:1px">Comisiones a Cobrar</div>
     <div style="font-size:15px;font-weight:800;letter-spacing:-.5px">Estado de Cuenta — Saldo Pendiente</div>
   </div>
   <div style="text-align:right">
@@ -13231,7 +13247,7 @@ ${ultimoPagoHTML}
   <div style="font-size:26px;font-weight:900">$${_f(saldoMostrar)}</div>
 </div>
 
-<div class="footer">MÜÜK SRL · Estado de comisiones pendientes · Generado el ${hoyStr}</div>
+<div class="footer">Estado de comisiones pendientes · Generado el ${hoyStr}</div>
 </body></html>`;
 
   const w = window.open('', '_blank', 'width=1100,height=820');
