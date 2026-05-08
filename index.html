@@ -8740,15 +8740,16 @@ function save() {
   _syncSet('saving');
   // Excluir datos voluminosos/live del localStorage (se guardan por separado o se cargan frescos)
   const {comisionesResumen, comisionesTotal, comisionesTimestamp, ectaCache, ectaCacheAt, ...persistData} = ST;
-  // Strip ALL base64 file data from listas de precios — viven en Supabase, no en localStorage
+  // Strip LARGE base64 file data from listas de precios (> 800 KB) — archivos pequeños se guardan en localStorage para "Ver en app"
+  const LP_MAX_B64 = 800000; // ~600 KB de archivo real
   if (persistData.listasPrecios) {
     persistData.listasPrecios = persistData.listasPrecios.map(l => {
       let archivo = l.archivo;
       let archivos = l.archivos;
       let changed = false;
-      if (archivo?.dataB64) { archivo = { ...archivo, dataB64: '', _stripped: true }; changed = true; }
+      if (archivo?.dataB64 && archivo.dataB64.length > LP_MAX_B64) { archivo = { ...archivo, dataB64: '', _stripped: true }; changed = true; }
       if (Array.isArray(archivos)) {
-        const stripped = archivos.map(a => a?.dataB64 ? (changed=true,{...a,dataB64:'',_stripped:true}) : a);
+        const stripped = archivos.map(a => (a?.dataB64 && a.dataB64.length > LP_MAX_B64) ? (changed=true,{...a,dataB64:'',_stripped:true}) : a);
         if (changed) archivos = stripped;
       }
       return changed ? { ...l, archivo, archivos } : l;
@@ -13862,9 +13863,9 @@ function guardarCheque(){
   const idx=ST[cat].findIndex(x=>x.id===obj.id);
   if(idx>=0)ST[cat][idx]=obj;else ST[cat].push(obj);
 
-  // ── Cheques a Pagar: al marcar como "pagado" crear débito en Caja Bancos ──
+  // ── Cheques a Pagar: al marcar como "pagado" crear débito en Caja Bancos — siempre en Cuenta Corriente ──
   if (cat === 'chequesPagar' && obj.estado === 'pagado' && prevObj?.estado !== 'pagado') {
-    const banco = obj.banco || 'Cuenta Corriente';
+    const banco = 'Cuenta Corriente';
     const instrLabel = obj.instrumento === 'transferencia' ? 'Transferencia' : obj.instrumento === 'echeque' ? 'E-Cheque' : 'Cheque';
     const ref = obj.numero ? ` Nro. ${obj.numero}` : '';
     const proveedor = obj.cliente ? ` — ${obj.cliente}` : '';
@@ -13882,7 +13883,7 @@ function guardarCheque(){
       monto: obj.monto,
       desc: `${instrLabel}${ref}${proveedor}${facRef}`
     });
-    toast(`✓ ${instrLabel}${ref} pagado — débito de ${fmt(obj.monto)} registrado en ${banco}`, 'success');
+    toast(`✓ ${instrLabel}${ref} pagado — débito de ${fmt(obj.monto)} registrado en Cuenta Corriente`, 'success');
     try { renderMovimientos('cajaBancos'); } catch(e) {}
     try { renderSaldosBancos(); } catch(e) {}
   }
@@ -13917,11 +13918,11 @@ function depositarECheque(id){
 function pagarChequeRapido(id) {
   const c = (ST.chequesPagar||[]).find(x => x.id === id);
   if (!c) return;
-  const banco = c.banco || 'Cuenta Corriente';
+  const banco = 'Cuenta Corriente'; // siempre Cuenta Corriente para cheques a pagar
   const instrLabel = c.instrumento === 'transferencia' ? 'Transferencia' : c.instrumento === 'echeque' ? 'E-Cheque' : 'Cheque';
   const ref = c.numero ? ` Nro. ${c.numero}` : '';
   _confirmar(
-    `¿Marcar ${instrLabel}${ref} como PAGADO?\n\nSe debitará ${fmt(c.monto)} de "${banco}" en Caja Bancos.`,
+    `¿Marcar ${instrLabel}${ref} como PAGADO?\n\nSe debitará ${fmt(c.monto)} de "Cuenta Corriente" en Caja Bancos.`,
     () => {
       c.estado = 'pagado';
       const concepto = 'Pago de Cheque';
@@ -13939,7 +13940,7 @@ function pagarChequeRapido(id) {
       try { renderMovimientos('cajaBancos'); } catch(e) {}
       try { renderSaldosBancos(); } catch(e) {}
       try { renderDashboard(); } catch(e) {}
-      toast(`✓ ${instrLabel}${ref} pagado — ${fmt(c.monto)} debitado de ${banco}`, 'success');
+      toast(`✓ ${instrLabel}${ref} pagado — ${fmt(c.monto)} debitado de Cuenta Corriente`, 'success');
     },
     { title: 'Pagar cheque', btnLabel: 'Confirmar pago', btnIcon: 'check2-circle', danger: false }
   );
@@ -18396,8 +18397,9 @@ function renderListasPrecios() {
             ${l.fechaVencimiento ? ' — Hasta: '+new Date(l.fechaVencimiento+'T12:00').toLocaleDateString('es-AR') : ''}
           </div>
         </div>
-        <div class="card-footer bg-transparent border-top-0 px-3 pb-2 pt-0 d-flex gap-1 justify-content-end">
-          <button class="btn btn-a btn-outline-info" onclick="lpVerDetalle('${l.id}')" title="Ver detalle"><i class="bi bi-eye"></i></button>
+        <div class="card-footer bg-transparent border-top-0 px-3 pb-2 pt-0 d-flex gap-1 flex-wrap justify-content-end">
+          ${lpArchs.length && (lpArchs[0].dataB64 || lpArchs[0].driveUrl) ? `<button class="btn btn-sm btn-primary" onclick="lpVerDetalle('${l.id}');setTimeout(()=>lpToggleViewer('${l.id}',0),350)" style="font-size:.7rem;border-radius:7px;padding:3px 10px" title="Ver archivo en la app"><i class="bi bi-eye me-1"></i>Ver en app</button>` : ''}
+          <button class="btn btn-a btn-outline-info" onclick="lpVerDetalle('${l.id}')" title="Ver detalle y condiciones"><i class="bi bi-info-circle"></i></button>
           <button class="btn btn-a btn-outline-primary" onclick="abrirModalListaPrecio('${l.id}')" title="Editar"><i class="bi bi-pencil"></i></button>
           <button class="btn btn-a btn-outline-danger" onclick="lpEliminar('${l.id}')" title="Eliminar"><i class="bi bi-trash"></i></button>
         </div>
@@ -18696,7 +18698,12 @@ function lpVerDetalle(id) {
               <div style="font-size:.7rem;color:#64748b">${a.etiqueta?'<span style="background:#dbeafe;color:#1d4ed8;border-radius:4px;padding:0 4px;font-size:.65rem;margin-right:4px">'+a.etiqueta+'</span>':''} ${a.tipo||''} ${a.size?'· '+(a.size/1024).toFixed(0)+' KB':''}</div>
             </div>
             <div style="display:flex;gap:4px;flex-shrink:0">
-              ${aCan ? `<button class="btn btn-sm btn-outline-primary" onclick="lpToggleViewer('${l.id}',${ai})" style="font-size:.68rem;padding:2px 7px"><i class="bi bi-eye me-1"></i>Ver</button>` : ''}
+              ${aCan
+                ? `<button class="btn btn-sm btn-outline-primary" onclick="lpToggleViewer('${l.id}',${ai})" style="font-size:.68rem;padding:2px 7px"><i class="bi bi-eye me-1"></i>Ver en app</button>`
+                : (a._stripped
+                  ? `<button class="btn btn-sm btn-outline-secondary" disabled title="Archivo grande — disponible en Supabase" style="font-size:.68rem;padding:2px 7px"><i class="bi bi-cloud me-1"></i>Solo en nube</button>`
+                  : `<button class="btn btn-sm btn-outline-secondary" disabled title="Sin datos para previsualizar" style="font-size:.68rem;padding:2px 7px"><i class="bi bi-eye-slash me-1"></i>Sin previsualiz.</button>`)
+              }
               ${a.driveUrl ? `<a href="${a.driveUrl}" target="_blank" class="btn btn-sm btn-outline-secondary" style="font-size:.68rem;padding:2px 7px"><i class="bi bi-box-arrow-up-right me-1"></i>Drive</a>` : ''}
               ${a.dataB64 ? `<button class="btn btn-sm btn-outline-success" onclick="lpDescargarArchivo('${l.id}',${ai})" style="font-size:.68rem;padding:2px 7px"><i class="bi bi-download me-1"></i></button>` : ''}
             </div>
