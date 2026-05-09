@@ -6864,20 +6864,21 @@ CREATE POLICY "acceso total" ON muuk_daily_backups FOR ALL USING (true) WITH CHE
 
           <!-- Tabla con scroll vertical propio -->
           <div style="flex:1;overflow:auto;border:1px solid #fde68a;border-radius:8px;min-height:200px">
-            <table class="table table-bordered mb-0" style="font-size:.88rem;min-width:1100px;border-color:#fde68a" id="lv-tabla-items">
-              <thead style="position:sticky;top:0;z-index:2">
-                <tr style="background:linear-gradient(135deg,#f59e0b,#d97706)">
-                  <th style="width:42px;text-align:center;white-space:nowrap;color:#fff;border-color:#e09000;font-size:.78rem;padding:9px 6px">#</th>
-                  <th style="min-width:180px;color:#fff;border-color:#e09000;font-size:.78rem;padding:9px 6px">Producto</th>
-                  <th style="min-width:130px;color:#fff;border-color:#e09000;font-size:.78rem;padding:9px 6px">Envase / Gramaje</th>
-                  <th style="min-width:120px;color:#fff;border-color:#e09000;font-size:.78rem;padding:9px 6px">Marca</th>
-                  <th style="min-width:120px;text-align:right;color:#fff;border-color:#e09000;font-size:.78rem;padding:9px 6px">Precio s/imp.</th>
-                  <th style="min-width:150px;color:#fff;border-color:#e09000;font-size:.78rem;padding:9px 6px">Condición de pago (días)</th>
-                  <th style="min-width:100px;text-align:center;color:#fff;border-color:#e09000;font-size:.78rem;padding:9px 6px">Pelletizado</th>
-                  <th style="min-width:130px;text-align:center;color:#fff;border-color:#e09000;font-size:.78rem;padding:9px 6px">Bultos x unid.</th>
-                  <th style="min-width:190px;color:#fff;border-color:#e09000;font-size:.78rem;padding:9px 6px">Observaciones</th>
-                  <th style="min-width:120px;text-align:center;color:#fff;border-color:#e09000;font-size:.78rem;padding:9px 6px">Comisión incl. %</th>
-                  <th style="width:42px;border-color:#e09000"></th>
+            <table class="table table-bordered mb-0" style="font-size:.9rem;min-width:1300px;border-color:#fde68a" id="lv-tabla-items">
+              <thead>
+                <tr>
+                  <th style="position:sticky;top:0;z-index:3;width:44px;text-align:center;white-space:nowrap;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;border-color:#e09000;font-size:.82rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:10px 6px">#</th>
+                  <th style="position:sticky;top:0;z-index:3;min-width:190px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;border-color:#e09000;font-size:.82rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:10px 8px">Producto</th>
+                  <th style="position:sticky;top:0;z-index:3;min-width:130px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;border-color:#e09000;font-size:.82rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:10px 8px">Envase / Gramaje</th>
+                  <th style="position:sticky;top:0;z-index:3;min-width:120px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;border-color:#e09000;font-size:.82rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:10px 8px">Marca</th>
+                  <th style="position:sticky;top:0;z-index:3;min-width:130px;text-align:right;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;border-color:#e09000;font-size:.82rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:10px 8px">Precio s/imp. ($)</th>
+                  <th style="position:sticky;top:0;z-index:3;min-width:155px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;border-color:#e09000;font-size:.82rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:10px 8px">Cond. de pago (días)</th>
+                  <th style="position:sticky;top:0;z-index:3;min-width:105px;text-align:center;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;border-color:#e09000;font-size:.82rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:10px 8px">Pelletizado</th>
+                  <th style="position:sticky;top:0;z-index:3;min-width:130px;text-align:center;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;border-color:#e09000;font-size:.82rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:10px 8px">Bultos x unid.</th>
+                  <th style="position:sticky;top:0;z-index:3;min-width:190px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;border-color:#e09000;font-size:.82rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:10px 8px">Observaciones</th>
+                  <th style="position:sticky;top:0;z-index:3;min-width:120px;text-align:center;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;border-color:#e09000;font-size:.82rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:10px 8px">Comisión (%)</th>
+                  <th style="position:sticky;top:0;z-index:3;min-width:130px;text-align:center;background:linear-gradient(135deg,#065f46,#047857);color:#fff;border-color:#036a4a;font-size:.82rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:10px 8px">$ Comisión</th>
+                  <th style="position:sticky;top:0;z-index:3;width:44px;background:#475569;border-color:#334155"></th>
                 </tr>
               </thead>
               <tbody id="lv-items-body">
@@ -33760,40 +33761,50 @@ function lvRenderItems() {
   }
   if (emptyEl) emptyEl.style.display = 'none';
 
-  const tdS = 'style="padding:5px 6px;vertical-align:middle;border-color:#fde68a"';
-  const inS = 'style="font-size:.88rem;border-radius:6px"';
+  const tdS = 'style="padding:6px 7px;vertical-align:middle;border-color:#fde68a"';
+  const inS = 'style="font-size:.9rem;border-radius:6px"';
 
   tbody.innerHTML = _lvItems.map((it, i) => {
-    const esPell = it.pelletizado === 'Sí';
+    const esPell   = it.pelletizado === 'Sí';
+    const calcVal  = lvCalcComision(it.precio, it.comision);
     return `
     <tr style="background:${i%2===0?'#fff':'#fffdf5'}">
-      <td ${tdS} style="padding:5px 6px;vertical-align:middle;border-color:#fde68a;text-align:center;font-weight:800;font-size:.95rem;color:#d97706">${i+1}</td>
+      <td ${tdS} style="padding:6px 7px;vertical-align:middle;border-color:#fde68a;text-align:center;font-weight:800;font-size:1rem;color:#d97706">${i+1}</td>
       <td ${tdS}><input type="text" class="form-control" ${inS} placeholder="Nombre del producto" value="${_esc(it.producto)}" oninput="_lvItems[${i}].producto=this.value"></td>
       <td ${tdS}><input type="text" class="form-control" ${inS} placeholder="500g / 25kg…" value="${_esc(it.envase)}" oninput="_lvItems[${i}].envase=this.value"></td>
       <td ${tdS}><input type="text" class="form-control" ${inS} placeholder="Marca" value="${_esc(it.marca)}" oninput="_lvItems[${i}].marca=this.value"></td>
-      <td ${tdS}><input type="number" class="form-control text-end" ${inS} placeholder="0,00" value="${it.precio||''}" step="0.01" min="0" oninput="_lvItems[${i}].precio=this.value"></td>
+      <td ${tdS}>
+        <div class="input-group">
+          <span class="input-group-text fw-bold" style="font-size:.9rem;background:#f0fdf4;color:#15803d;border-color:#86efac">$</span>
+          <input type="number" class="form-control text-end" ${inS} placeholder="0,00" value="${it.precio||''}" step="0.01" min="0"
+            oninput="_lvItems[${i}].precio=this.value; lvUpdateCalc(${i})">
+        </div>
+      </td>
       <td ${tdS}><input type="text" class="form-control" ${inS} placeholder="Contado / 30 días…" value="${_esc(it.condPago)}" oninput="_lvItems[${i}].condPago=this.value"></td>
-      <td ${tdS} style="padding:5px 6px;vertical-align:middle;border-color:#fde68a;text-align:center">
+      <td ${tdS} style="padding:6px 7px;vertical-align:middle;border-color:#fde68a;text-align:center">
         <select class="form-select" ${inS} onchange="_lvItems[${i}].pelletizado=this.value;lvRenderItems()">
           <option value="No"  ${!esPell&&it.pelletizado!=='N/A'?'selected':''}>No</option>
           <option value="Sí"  ${esPell?'selected':''}>Sí</option>
           <option value="N/A" ${it.pelletizado==='N/A'?'selected':''}>N/A</option>
         </select>
       </td>
-      <td ${tdS} style="padding:5px 6px;vertical-align:middle;border-color:#fde68a;text-align:center">
+      <td ${tdS} style="padding:6px 7px;vertical-align:middle;border-color:#fde68a;text-align:center">
         ${esPell
           ? `<input type="text" class="form-control text-center" ${inS} placeholder="Ej: 10 x 500g" value="${_esc(it.bultos)}" oninput="_lvItems[${i}].bultos=this.value">`
-          : `<span style="color:#d1d5db;font-size:.9rem;font-weight:600">—</span>`}
+          : `<span style="color:#d1d5db;font-size:.95rem;font-weight:600">—</span>`}
       </td>
       <td ${tdS}><input type="text" class="form-control" ${inS} placeholder="Observaciones adicionales" value="${_esc(it.observaciones)}" oninput="_lvItems[${i}].observaciones=this.value"></td>
       <td ${tdS}>
         <div class="input-group">
-          <input type="text" class="form-control text-center" ${inS} placeholder="Sí / No / 3" value="${_esc(it.comision)}" oninput="_lvItems[${i}].comision=this.value">
-          <span class="input-group-text fw-bold" style="font-size:.88rem;background:#fef9ee;color:#92400e;border-color:#e5c97a">%</span>
+          <input type="text" class="form-control text-center" ${inS} placeholder="Sí / No / 3" value="${_esc(it.comision)}" oninput="_lvItems[${i}].comision=this.value; lvUpdateCalc(${i})">
+          <span class="input-group-text fw-bold" style="font-size:.9rem;background:#fef9ee;color:#92400e;border-color:#e5c97a">%</span>
         </div>
       </td>
-      <td ${tdS} style="padding:5px 6px;vertical-align:middle;border-color:#fde68a;text-align:center">
-        <button class="btn btn-outline-danger" onclick="lvEliminarItem(${i})" style="padding:4px 9px;font-size:.82rem;border-radius:6px" title="Quitar fila">
+      <td ${tdS} style="padding:6px 7px;vertical-align:middle;border-color:#dcfce7;background:${calcVal?'#f0fdf4':'inherit'};text-align:center;min-width:120px">
+        <span id="lv-res-${i}" style="font-size:.92rem;font-weight:700;color:${calcVal?'#15803d':'#d1d5db'}">${calcVal||'—'}</span>
+      </td>
+      <td ${tdS} style="padding:6px 7px;vertical-align:middle;border-color:#fde68a;text-align:center">
+        <button class="btn btn-outline-danger" onclick="lvEliminarItem(${i})" style="padding:5px 10px;font-size:.85rem;border-radius:6px" title="Quitar fila">
           <i class="bi bi-trash3"></i>
         </button>
       </td>
@@ -33802,6 +33813,26 @@ function lvRenderItems() {
 }
 
 function _esc(s) { return (s||'').replace(/"/g,'&quot;'); }
+
+/* Calcula el monto nominal de comisión: precio × (comision% / 100) */
+function lvCalcComision(precio, comision) {
+  const p = parseFloat(precio);
+  const c = parseFloat(comision);
+  if (isNaN(p) || isNaN(c) || p <= 0 || c <= 0) return '';
+  const res = p * c / 100;
+  return '$ ' + res.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+/* Actualiza en vivo la celda "$ Comisión" de la fila i sin re-renderizar */
+function lvUpdateCalc(i) {
+  const el = document.getElementById('lv-res-' + i);
+  if (!el) return;
+  const val = lvCalcComision(_lvItems[i]?.precio, _lvItems[i]?.comision);
+  el.textContent       = val || '—';
+  el.style.color       = val ? '#15803d' : '#d1d5db';
+  const td = el.closest('td');
+  if (td) td.style.background = val ? '#f0fdf4' : '';
+}
 
 function lvAgregarItem() {
   _lvItems.push(_lvItemVacio());
