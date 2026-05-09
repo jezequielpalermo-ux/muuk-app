@@ -6748,18 +6748,22 @@ CREATE POLICY "acceso total" ON muuk_daily_backups FOR ALL USING (true) WITH CHE
           </div>
           <div class="col-12 col-md-3">
             <label class="form-label fw-bold small">Instrumento</label>
-            <select id="inv-calc-instrumento" class="form-select" onchange="invCalcular()">
+            <select id="inv-calc-instrumento" class="form-select" onchange="invCalcAutoFillTNA();invCalcular()">
               <option value="fci">FCI Money Market</option>
               <option value="caucion1">Caución bursátil 1 día</option>
               <option value="caucion7">Caución bursátil 7 días</option>
               <option value="pf30">Plazo Fijo digital 30d</option>
             </select>
           </div>
-          <div class="col-12 col-md-3">
+          <div class="col-12 col-md-2">
+            <label class="form-label fw-bold small">TNA (%) <span id="inv-tna-origen" style="font-size:.65rem;color:#64748b;font-weight:400"></span></label>
+            <input type="number" id="inv-calc-tna" class="form-control" placeholder="Ej: 35" step="0.1" min="0" oninput="invCalcular()">
+          </div>
+          <div class="col-12 col-md-2">
             <label class="form-label fw-bold small">Plazo (días)</label>
             <input type="number" id="inv-calc-dias" class="form-control" value="30" min="1" max="365" oninput="invCalcular()">
           </div>
-          <div class="col-12 col-md-3">
+          <div class="col-12 col-md-2">
             <button class="btn w-100" onclick="invCalcular()" style="background:#10b981;color:#fff;font-weight:600;border-radius:8px"><i class="bi bi-calculator me-1"></i>Calcular</button>
           </div>
         </div>
@@ -33389,29 +33393,57 @@ function renderInversiones() {
       <strong>Importante:</strong> Los rendimientos calculados usan el disponible neto estimado (${fmt(liq.disponibleNeto)}). Las tasas FCI y Caución son estimativas — varían diariamente. Consultá tu banco/bróker para valores exactos.
     </td></tr>`;
 
-  // Inicializar calculadora
+  // Inicializar calculadora — auto-completar TNA del primer instrumento
+  invCalcAutoFillTNA();
   invCalcular();
 }
 
+function invCalcAutoFillTNA() {
+  const instrKey = document.getElementById('inv-calc-instrumento')?.value || 'fci';
+  const instr    = _invGetInstrumentos().find(i => i.instrKey === instrKey);
+  const tnaEl    = document.getElementById('inv-calc-tna');
+  const origenEl = document.getElementById('inv-tna-origen');
+  if (!tnaEl) return;
+  if (instr?.tna) {
+    tnaEl.value = instr.tna;
+    if (origenEl) origenEl.textContent = '(BCRA)';
+  } else {
+    tnaEl.value = '';
+    if (origenEl) origenEl.textContent = '(ingresar)';
+  }
+}
+
 function invCalcular() {
-  const capital    = +(document.getElementById('inv-calc-monto')?.value||0);
-  const instrKey   = document.getElementById('inv-calc-instrumento')?.value || 'fci';
-  const dias       = +(document.getElementById('inv-calc-dias')?.value||30);
-  const resEl      = document.getElementById('inv-calc-resultado'); if (!resEl) return;
+  const capital  = +(document.getElementById('inv-calc-monto')?.value  || 0);
+  const instrKey = document.getElementById('inv-calc-instrumento')?.value || 'fci';
+  const tnaUsada = +(document.getElementById('inv-calc-tna')?.value    || 0);
+  const dias     = +(document.getElementById('inv-calc-dias')?.value   || 30);
+  const resEl    = document.getElementById('inv-calc-resultado');
+  if (!resEl) return;
 
-  if (!capital || capital <= 0) { resEl.style.display='none'; return; }
+  if (!capital || capital <= 0) { resEl.style.display = 'none'; return; }
 
-  const instr = _invGetInstrumentos().find(i => i.instrKey === instrKey);
-  if (!instr?.tna) { resEl.style.display='none'; return; }
+  if (!tnaUsada || tnaUsada <= 0) {
+    // Mostrar resultado parcial pidiendo TNA
+    resEl.style.display = '';
+    ['inv-res-capital','inv-res-intereses','inv-res-total'].forEach(id => {
+      const e = document.getElementById(id); if (e) e.textContent = '—';
+    });
+    const notaEl = document.getElementById('inv-res-nota');
+    if (notaEl) notaEl.textContent = '⚠️ Ingresá una TNA (%) para calcular — o actualizá las tasas del BCRA arriba.';
+    return;
+  }
 
-  const intereses = _invRendimiento(capital, instr.tna, dias);
+  const instr     = _invGetInstrumentos().find(i => i.instrKey === instrKey);
+  const intereses = _invRendimiento(capital, tnaUsada, dias);
   const total     = capital + intereses;
-  const _s = (id, val) => { const el=document.getElementById(id); if(el) el.textContent=val; };
+  const _s = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
   _s('inv-res-capital',   fmt(capital));
   _s('inv-res-intereses', fmt(intereses));
   _s('inv-res-total',     fmt(total));
   const notaEl = document.getElementById('inv-res-nota');
-  if (notaEl) notaEl.textContent = `${instr.nombre} · TNA ${instr.tna}% · ${dias} días · Rendimiento estimado`;
+  const origenTNA = instr?.tna === tnaUsada ? 'BCRA' : 'manual';
+  if (notaEl) notaEl.textContent = `${instr?.nombre || instrKey} · TNA ${tnaUsada}% (${origenTNA}) · ${dias} días · Rendimiento estimado`;
   resEl.style.display = '';
 }
 
