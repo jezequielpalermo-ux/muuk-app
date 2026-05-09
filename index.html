@@ -6867,6 +6867,7 @@ CREATE POLICY "acceso total" ON muuk_daily_backups FOR ALL USING (true) WITH CHE
             <table class="table table-bordered mb-0" style="font-size:.9rem;min-width:1300px;border-color:#fde68a" id="lv-tabla-items">
               <thead>
                 <tr>
+                  <th style="position:sticky;top:0;z-index:3;width:38px;background:linear-gradient(135deg,#f59e0b,#d97706);border-color:#e09000"></th>
                   <th style="position:sticky;top:0;z-index:3;width:44px;text-align:center;white-space:nowrap;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;border-color:#e09000;font-size:.82rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:10px 6px">#</th>
                   <th style="position:sticky;top:0;z-index:3;min-width:190px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;border-color:#e09000;font-size:.82rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:10px 8px">Producto</th>
                   <th style="position:sticky;top:0;z-index:3;min-width:130px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;border-color:#e09000;font-size:.82rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:10px 8px">Envase / Gramaje</th>
@@ -6878,7 +6879,7 @@ CREATE POLICY "acceso total" ON muuk_daily_backups FOR ALL USING (true) WITH CHE
                   <th style="position:sticky;top:0;z-index:3;min-width:190px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;border-color:#e09000;font-size:.82rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:10px 8px">Observaciones</th>
                   <th style="position:sticky;top:0;z-index:3;min-width:120px;text-align:center;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;border-color:#e09000;font-size:.82rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:10px 8px">Comisión (%)</th>
                   <th style="position:sticky;top:0;z-index:3;min-width:130px;text-align:center;background:linear-gradient(135deg,#065f46,#047857);color:#fff;border-color:#036a4a;font-size:.82rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:10px 8px">$ Comisión</th>
-                  <th style="position:sticky;top:0;z-index:3;width:44px;background:#475569;border-color:#334155"></th>
+                  <th style="position:sticky;top:0;z-index:3;width:50px;background:#475569;border-color:#334155"></th>
                 </tr>
               </thead>
               <tbody id="lv-items-body">
@@ -33767,8 +33768,18 @@ function lvRenderItems() {
   tbody.innerHTML = _lvItems.map((it, i) => {
     const esPell   = it.pelletizado === 'Sí';
     const calcVal  = lvCalcComision(it.precio, it.comision);
+    const isFirst = i === 0;
+    const isLast  = i === _lvItems.length - 1;
     return `
     <tr style="background:${i%2===0?'#fff':'#fffdf5'}">
+      <td ${tdS} style="padding:3px 4px;vertical-align:middle;border-color:#fde68a;text-align:center;white-space:nowrap">
+        <div style="display:flex;flex-direction:column;gap:1px">
+          <button onclick="lvMoverItem(${i},-1)" ${isFirst?'disabled':''} title="Mover arriba"
+            style="border:none;background:${isFirst?'#f1f5f9':'#e2e8f0'};color:${isFirst?'#cbd5e1':'#475569'};border-radius:4px;padding:2px 6px;font-size:.7rem;cursor:${isFirst?'default':'pointer'};line-height:1">▲</button>
+          <button onclick="lvMoverItem(${i},1)"  ${isLast?'disabled':''} title="Mover abajo"
+            style="border:none;background:${isLast?'#f1f5f9':'#e2e8f0'};color:${isLast?'#cbd5e1':'#475569'};border-radius:4px;padding:2px 6px;font-size:.7rem;cursor:${isLast?'default':'pointer'};line-height:1">▼</button>
+        </div>
+      </td>
       <td ${tdS} style="padding:6px 7px;vertical-align:middle;border-color:#fde68a;text-align:center;font-weight:800;font-size:1rem;color:#d97706">${i+1}</td>
       <td ${tdS}><input type="text" class="form-control" ${inS} placeholder="Nombre del producto" value="${_esc(it.producto)}" oninput="_lvItems[${i}].producto=this.value"></td>
       <td ${tdS}><input type="text" class="form-control" ${inS} placeholder="500g / 25kg…" value="${_esc(it.envase)}" oninput="_lvItems[${i}].envase=this.value"></td>
@@ -33832,6 +33843,13 @@ function lvUpdateCalc(i) {
   el.style.color       = val ? '#15803d' : '#d1d5db';
   const td = el.closest('td');
   if (td) td.style.background = val ? '#f0fdf4' : '';
+}
+
+function lvMoverItem(i, dir) {
+  const j = i + dir;
+  if (j < 0 || j >= _lvItems.length) return;
+  [_lvItems[i], _lvItems[j]] = [_lvItems[j], _lvItems[i]];
+  lvRenderItems();
 }
 
 function lvAgregarItem() {
@@ -33915,20 +33933,44 @@ function lvImprimirPDF(id) {
     return isNaN(n) ? v : n + '%';
   };
 
-  const filas = (l.items||[]).map((it, i) => {
-    const esPell = it.pelletizado === 'Sí';
-    return `
-    <tr class="${i%2===0?'fila-par':'fila-impar'}">
+  // Agrupa filas por marca para insertar separadores de sección
+  const items = l.items || [];
+  let lastMarca = null;
+  let filaIdx   = 0; // contador para zebra (independiente de i)
+  const filas = items.map((it, i) => {
+    const esPell    = it.pelletizado === 'Sí';
+    const marcaAct  = (it.marca || '').trim();
+    let separador   = '';
+    if (marcaAct && marcaAct !== lastMarca) {
+      separador = `<tr class="grupo-hdr"><td colspan="11">📦 ${marcaAct}</td></tr>`;
+      lastMarca = marcaAct;
+      filaIdx   = 0; // reinicia zebra por grupo
+    }
+    const fila = filaIdx % 2 === 0 ? 'fila-a' : 'fila-b';
+    filaIdx++;
+
+    // Monto comisión
+    const montoNum = (() => {
+      const p = parseFloat(it.precio); const c = parseFloat(it.comision);
+      return (!isNaN(p) && !isNaN(c) && p > 0 && c > 0) ? p * c / 100 : null;
+    })();
+    const montoTxt = montoNum !== null
+      ? '$ ' + montoNum.toLocaleString('es-AR', { minimumFractionDigits:2, maximumFractionDigits:2 })
+      : '<span style="color:#d1d5db">—</span>';
+
+    return separador + `
+    <tr class="${fila}">
       <td class="c-num">${i+1}</td>
-      <td class="c-prod"><strong>${it.producto||'—'}</strong></td>
+      <td class="c-prod">${it.producto||'—'}</td>
       <td class="c-env">${it.envase||'—'}</td>
       <td class="c-marca">${it.marca||'—'}</td>
       <td class="c-precio">${_fmtPrecio(it.precio)}</td>
       <td class="c-cond">${_fmtCond(it.condPago)}</td>
-      <td class="c-pell" style="text-align:center;font-weight:${esPell?'700':'400'};color:${esPell?'#15803d':'inherit'}">${it.pelletizado||'No'}</td>
-      <td class="c-bultos" style="text-align:center">${esPell ? (it.bultos||'—') : '<span style="color:#cbd5e1">—</span>'}</td>
+      <td class="c-pell" style="text-align:center;${esPell?'font-weight:700;color:#15803d':''}">${it.pelletizado||'No'}</td>
+      <td class="c-bultos">${esPell ? (it.bultos||'—') : '<span style="color:#d1d5db">—</span>'}</td>
       <td class="c-obs">${it.observaciones||''}</td>
-      <td class="c-com" style="text-align:center">${_fmtCom(it.comision)}</td>
+      <td class="c-com">${_fmtCom(it.comision)}</td>
+      <td class="c-monto">${montoTxt}</td>
     </tr>`;
   }).join('');
 
@@ -33940,153 +33982,223 @@ function lvImprimirPDF(id) {
 <meta charset="UTF-8">
 <title>Lista de Precios — ${l.titulo||'Vendedor'}</title>
 <style>
-  @page { size: A4 landscape; margin: 12mm 10mm 14mm 10mm; }
+  @page { size: A4 landscape; margin: 0; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 11px; color: #1e293b; background: #fff; }
+  body { font-family: 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 10.5px; color: #1e293b; background: #fff; }
 
-  /* ── Header ── */
-  .doc-header {
-    display: flex; justify-content: space-between; align-items: flex-start;
-    border-bottom: 3px solid #f59e0b; padding-bottom: 9px; margin-bottom: 11px;
+  /* ══ BARRA SUPERIOR ══ */
+  .top-bar {
+    background: linear-gradient(135deg, #d97706 0%, #f59e0b 60%, #fbbf24 100%);
+    padding: 13px 18px 11px;
+    display: flex; justify-content: space-between; align-items: flex-end;
+    border-bottom: 4px solid #b45309;
   }
-  .brand-logo {
-    width: 36px; height: 36px; border-radius: 8px;
-    background: linear-gradient(135deg,#f59e0b,#d97706);
+  .top-bar-left { display: flex; align-items: center; gap: 12px; }
+  .brand-circle {
+    width: 42px; height: 42px; border-radius: 50%;
+    background: rgba(255,255,255,.22); border: 2px solid rgba(255,255,255,.5);
     display: flex; align-items: center; justify-content: center;
-    font-size: 16px; font-weight: 900; color: #fff; letter-spacing: -1px;
-    margin-right: 11px; flex-shrink: 0;
+    font-size: 20px; font-weight: 900; color: #fff; letter-spacing: -1px;
+    flex-shrink: 0;
   }
-  .doc-title { font-size: 18px; font-weight: 900; color: #1e293b; letter-spacing: -.5px; line-height: 1.1; }
-  .doc-sub   { font-size: 11px; color: #64748b; margin-top: 2px; }
-  .doc-meta  { text-align: right; font-size: 10px; color: #475569; line-height: 1.7; }
-  .doc-meta .meta-dest { font-size: 13px; font-weight: 700; color: #1e293b; }
+  .brand-name   { font-size: 22px; font-weight: 900; color: #fff; letter-spacing: -.5px; line-height: 1; text-shadow: 0 1px 3px rgba(0,0,0,.2); }
+  .brand-sub    { font-size: 9px; color: rgba(255,255,255,.85); margin-top: 1px; letter-spacing: .06em; text-transform: uppercase; }
+  .top-bar-right { text-align: right; color: #fff; }
+  .dest-name    { font-size: 14px; font-weight: 800; color: #fff; line-height: 1.1; }
+  .dest-titulo  { font-size: 9px; opacity: .85; margin-top: 2px; }
+  .dest-fecha   { font-size: 9px; opacity: .8; margin-top: 1px; }
 
-  /* ── Info strip ── */
-  .info-strip {
-    display: flex; gap: 16px; align-items: center;
-    background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px;
-    padding: 6px 13px; margin-bottom: 11px; font-size: 10px; color: #92400e;
+  /* ══ CONTENIDO ══ */
+  .content { padding: 10px 18px 0; }
+
+  /* ── Aviso ── */
+  .aviso {
+    display: flex; align-items: center; gap: 10px;
+    background: #fffbeb; border-left: 4px solid #f59e0b;
+    border-radius: 0 6px 6px 0; padding: 6px 12px; margin-bottom: 10px;
+    font-size: 9.5px; color: #92400e;
   }
-  .info-strip strong { font-size: 11px; }
+  .aviso-icon { font-size: 14px; flex-shrink: 0; }
+  .aviso-sep  { width: 1px; background: #fde68a; align-self: stretch; margin: 0 6px; }
+  .aviso-ars  { margin-left: auto; color: #94a3b8; font-size: 9px; }
 
-  /* ── Table ── */
+  /* ══ TABLA ══ */
   table { width: 100%; border-collapse: collapse; }
-  thead tr { background: linear-gradient(135deg,#f59e0b,#d97706); }
+
+  /* Encabezados */
+  thead tr { background: #1e293b; }
   thead th {
-    color: #fff; font-size: 9px; font-weight: 700; text-transform: uppercase;
-    letter-spacing: .05em; padding: 7px 7px; text-align: left; white-space: nowrap;
-    border: none;
+    color: #f8fafc; font-size: 8px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .07em; padding: 8px 8px; text-align: left; white-space: nowrap;
+    border-right: 1px solid #334155;
   }
+  thead th:last-child { border-right: none; }
   thead th.r { text-align: right; }
   thead th.c { text-align: center; }
 
-  .fila-par  { background: #fff; }
-  .fila-impar { background: #fffbeb; }
-  td { padding: 6px 7px; border-bottom: 1px solid #fde68a; vertical-align: middle; font-size: 11px; }
-  tr:last-child td { border-bottom: 2px solid #f59e0b; }
+  /* Franjas de grupo (marca) */
+  .grupo-hdr td {
+    background: #f1f5f9; color: #475569; font-size: 8.5px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .08em; padding: 4px 8px 3px;
+    border-top: 2px solid #cbd5e1; border-bottom: 1px solid #e2e8f0;
+  }
 
-  .c-num   { width: 26px;  text-align: center; font-weight: 700; color: #92400e; }
-  .c-prod  { width: 16%;  }
-  .c-env   { width: 10%;  }
-  .c-marca { width: 9%;   }
-  .c-precio{ width: 9%;   text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; color: #065f46; }
-  .c-cond  { width: 11%;  }
-  .c-pell  { width: 6%;   text-align: center; }
-  .c-bultos{ width: 8%;   text-align: center; font-weight: 600; color: #065f46; }
-  .c-obs   { width: 18%;  color: #475569; font-size: 10px; }
-  .c-com   { width: 7%;   text-align: center; font-weight: 700; }
+  /* Filas de datos */
+  .fila-a { background: #ffffff; }
+  .fila-b { background: #f8fafc; }
+  td {
+    padding: 7px 8px; border-bottom: 1px solid #e2e8f0;
+    vertical-align: middle; font-size: 10.5px;
+    border-right: 1px solid #f1f5f9;
+  }
+  td:last-child { border-right: none; }
+  tr:hover td   { background: #fffbeb !important; }
 
-  /* ── Sin datos ── */
-  .empty-row td { text-align:center; padding:20px; color:#94a3b8; font-style:italic; }
+  /* Acento izquierdo por fila (alternado) */
+  .fila-a td:first-child { border-left: 3px solid #fbbf24; }
+  .fila-b td:first-child { border-left: 3px solid #e2e8f0; }
 
-  /* ── Footer ── */
+  /* Última fila */
+  tbody tr:last-child td { border-bottom: 2px solid #1e293b; }
+
+  /* Columnas */
+  .c-num   { width: 28px;  text-align: center; font-weight: 800; font-size: 10px; color: #94a3b8; padding-left: 6px !important; }
+  .c-prod  { width: 17%; font-weight: 600; }
+  .c-env   { width: 10%; color: #475569; }
+  .c-marca { width: 9%;  color: #475569; }
+  .c-precio{
+    width: 10%; text-align: right; font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: #065f46; background: #f0fdf4 !important;
+    border-right: 1px solid #bbf7d0 !important;
+  }
+  .c-cond  { width: 10%; }
+  .c-pell  { width: 6%;  text-align: center; }
+  .c-bultos{ width: 8%;  text-align: center; font-weight: 600; color: #0369a1; }
+  .c-obs   { width: 16%; color: #64748b; font-size: 9.5px; font-style: italic; }
+  .c-com   { width: 6%;  text-align: center; font-weight: 700; color: #7c3aed; }
+  .c-monto {
+    width: 9%;  text-align: right; font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: #15803d; background: #dcfce7 !important;
+    border-right: none !important;
+  }
+
+  /* Pill vigencia */
+  .pill-vig {
+    display: inline-block; background: rgba(255,255,255,.25);
+    border: 1px solid rgba(255,255,255,.4); border-radius: 20px;
+    padding: 1px 9px; font-size: 8.5px; color: #fff; margin-top: 2px;
+  }
+
+  /* Sin datos */
+  .empty-row td { text-align:center; padding:24px; color:#94a3b8; font-style:italic; }
+
+  /* ══ FOOTER ══ */
   .doc-footer {
-    display: flex; justify-content: space-between; align-items: flex-end;
-    margin-top: 11px; padding-top: 7px; border-top: 1px solid #fde68a;
-    font-size: 9px; color: #94a3b8;
+    margin: 8px 18px 0;
+    padding: 7px 12px;
+    background: #f8fafc;
+    border-top: 2px solid #1e293b;
+    border-radius: 0 0 6px 6px;
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 8.5px; color: #64748b;
   }
-  .footer-nota { font-size: 8px; color: #cbd5e1; font-style: italic; }
+  .footer-marca { font-weight: 800; color: #1e293b; font-size: 9.5px; letter-spacing: -.2px; }
+  .footer-aviso { font-size: 7.5px; color: #94a3b8; margin-top: 1px; }
+  .footer-mes   { font-size: 11px; font-weight: 700; color: #d97706; }
 
-  /* ── Print button ── */
-  .print-btn {
-    position: fixed; top: 10px; right: 10px;
-    background: #f59e0b; color: #fff; border: none;
-    padding: 7px 15px; border-radius: 7px; font-size: 11px;
-    font-weight: 700; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,.25);
+  /* ── Botones de impresión (solo pantalla) ── */
+  .ctrl-bar {
+    position: fixed; top: 12px; right: 14px;
+    display: flex; gap: 8px; z-index: 999;
   }
-  .back-btn {
-    position: fixed; top: 10px; right: 170px;
+  .btn-print {
+    background: #d97706; color: #fff; border: none;
+    padding: 8px 18px; border-radius: 8px; font-size: 12px;
+    font-weight: 700; cursor: pointer; box-shadow: 0 4px 14px rgba(0,0,0,.25);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .btn-back {
     background: #475569; color: #fff; border: none;
-    padding: 7px 12px; border-radius: 7px; font-size: 11px;
+    padding: 8px 14px; border-radius: 8px; font-size: 12px;
     font-weight: 600; cursor: pointer;
   }
   @media print {
-    .print-btn, .back-btn { display: none !important; }
+    .ctrl-bar { display: none !important; }
     body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   }
 </style>
 </head><body>
 
-<button class="print-btn" onclick="window.print()">🖨 Imprimir / PDF</button>
-<button class="back-btn" onclick="window.close()">← Volver</button>
+<!-- Controles (no se imprimen) -->
+<div class="ctrl-bar">
+  <button class="btn-back" onclick="window.close()">← Volver</button>
+  <button class="btn-print" onclick="window.print()">🖨 Imprimir / PDF</button>
+</div>
 
-<!-- HEADER -->
-<div class="doc-header">
-  <div style="display:flex;align-items:center;gap:10px">
-    <div class="brand-logo">M</div>
+<!-- ══ BARRA SUPERIOR ══ -->
+<div class="top-bar">
+  <div class="top-bar-left">
+    <div class="brand-circle">M</div>
     <div>
-      <div class="doc-title">Lista de Precios</div>
-      <div class="doc-sub">${l.titulo ? `<strong>${l.titulo}</strong>` : 'Lista de precios para vendedores'}</div>
+      <div class="brand-name">MÜÜK</div>
+      <div class="brand-sub">Lista de Precios para Vendedores</div>
     </div>
   </div>
-  <div class="doc-meta">
-    ${l.vendedor ? `<div class="meta-dest">${l.vendedor}</div>` : ''}
-    <div>Fecha: <strong>${hoyFmt}</strong></div>
-    ${vigTxt ? `<div style="color:#d97706;font-weight:600">${vigTxt}</div>` : ''}
+  <div class="top-bar-right">
+    ${l.vendedor ? `<div class="dest-name">${l.vendedor}</div>` : ''}
+    ${l.titulo   ? `<div class="dest-titulo">${l.titulo}</div>` : ''}
+    <div class="dest-fecha">📅 ${hoyFmt}</div>
+    ${vigTxt ? `<span class="pill-vig">⏳ ${vigTxt}</span>` : ''}
   </div>
 </div>
 
-<!-- INFO STRIP -->
-<div class="info-strip">
-  <span>📦 <strong>${(l.items||[]).length}</strong> producto${(l.items||[]).length!==1?'s':''}</span>
-  <span style="border-left:1px solid #fde68a;padding-left:12px">
-    ⚠️ <strong>Precios sin impuestos.</strong> Consultá condiciones de pago antes de cerrar operaciones.
-  </span>
-  <span style="border-left:1px solid #fde68a;padding-left:12px;margin-left:auto;color:#64748b">
-    Todos los precios expresados en pesos argentinos (ARS)
-  </span>
+<!-- ══ CONTENIDO ══ -->
+<div class="content">
+
+  <!-- Aviso -->
+  <div class="aviso" style="margin-top:10px">
+    <span class="aviso-icon">⚠️</span>
+    <span><strong>Precios sin impuestos.</strong> Consultá condiciones de pago antes de cerrar operaciones.</span>
+    <div class="aviso-sep"></div>
+    <span>📦 <strong>${(l.items||[]).length}</strong> producto${(l.items||[]).length!==1?'s'||''}</span>
+    <span class="aviso-ars">Precios en $ ARS</span>
+  </div>
+
+  <!-- Tabla -->
+  <table>
+    <thead>
+      <tr>
+        <th class="c-num c">#</th>
+        <th class="c-prod">Producto</th>
+        <th class="c-env">Envase / Gramaje</th>
+        <th class="c-marca">Marca</th>
+        <th class="c-precio r">Precio s/imp.</th>
+        <th class="c-cond">Cond. de pago</th>
+        <th class="c-pell c">Pelletizado</th>
+        <th class="c-bultos c">Bultos x unid.</th>
+        <th class="c-obs">Observaciones</th>
+        <th class="c-com c">Comisión</th>
+        <th class="c-monto r">$ Comisión</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${filas || '<tr class="empty-row"><td colspan="11">Sin productos cargados</td></tr>'}
+    </tbody>
+  </table>
+
 </div>
 
-<!-- TABLE -->
-<table>
-  <thead>
-    <tr>
-      <th class="c-num c">#</th>
-      <th class="c-prod">Producto</th>
-      <th class="c-env">Envase / Gramaje</th>
-      <th class="c-marca">Marca</th>
-      <th class="c-precio r">Precio s/imp.</th>
-      <th class="c-cond">Condición de pago</th>
-      <th class="c-pell c">Pelletizado</th>
-      <th class="c-bultos c">Bultos x unid.</th>
-      <th class="c-obs">Observaciones</th>
-      <th class="c-com c">Comisión incl.</th>
-    </tr>
-  </thead>
-  <tbody>
-    ${filas || '<tr class="empty-row"><td colspan="10">Sin productos cargados</td></tr>'}
-  </tbody>
-</table>
-
-<!-- FOOTER -->
+<!-- ══ FOOTER ══ -->
 <div class="doc-footer">
   <div>
-    <strong>MÜÜK</strong> · Lista de precios para uso comercial exclusivo
-    <div class="footer-nota">Los precios y condiciones son válidos para el período indicado y sujetos a cambio sin previo aviso.</div>
+    <div><span class="footer-marca">MÜÜK</span> · Lista de precios para uso comercial exclusivo</div>
+    <div class="footer-aviso">Los precios y condiciones son válidos para el período indicado y están sujetos a cambio sin previo aviso.</div>
   </div>
   <div style="text-align:right">
-    ${mesTxt.charAt(0).toUpperCase() + mesTxt.slice(1)}
-    <div class="footer-nota">Documento generado el ${hoyFmt}</div>
+    <div class="footer-mes">${mesTxt.charAt(0).toUpperCase() + mesTxt.slice(1)}</div>
+    <div class="footer-aviso">Documento generado el ${hoyFmt}</div>
   </div>
 </div>
 
