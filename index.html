@@ -162,6 +162,7 @@
     .sl[data-group="caja"].sl-active     { border-left: 3px solid #10b981; padding-left: 11px; }
     .sl[data-group="gestion"].sl-active  { border-left: 3px solid #f59e0b; padding-left: 11px; }
     .sl[data-group="analisis"].sl-active { border-left: 3px solid #8b5cf6; padding-left: 11px; }
+    .sl[data-group="links"].sl-active    { border-left: 3px solid #a78bfa; padding-left: 11px; }
     .sl[data-group="archivos"].sl-active { border-left: 3px solid #64748b; padding-left: 11px; }
     .sl[data-group="rrhh"].sl-active    { border-left: 3px solid #ec4899; padding-left: 11px; }
 
@@ -201,6 +202,7 @@
     .sl[data-group="caja"].sl-active > span > i    { color: #10b981; }
     .sl[data-group="gestion"].sl-active > span > i { color: #f59e0b; }
     .sl[data-group="analisis"].sl-active > span > i{ color: #8b5cf6; }
+    .sl[data-group="links"].sl-active > span > i   { color: #a78bfa; }
     .sl[data-group="archivos"].sl-active > span > i{ color: #94a3b8; }
     .sl[data-group="rrhh"].sl-active > span > i   { color: #ec4899; }
     .bcra-rate-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:2px; }
@@ -235,9 +237,9 @@
       position: relative; overflow: hidden;
     }
     .stat-card .bg-icon { position: absolute; right: -6px; top: -6px; font-size: 4.5rem; opacity: .12; line-height: 1; }
-    .stat-card .lbl { font-size: .62rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; opacity: .75; margin-bottom: 4px; }
+    .stat-card .lbl { font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; opacity: .75; margin-bottom: 4px; }
     .stat-card .val { font-size: 1.65rem; font-weight: 800; line-height: 1.1; letter-spacing: -.02em; }
-    .stat-card .sub { font-size: .67rem; opacity: .65; margin-top: 6px; font-weight: 500; }
+    .stat-card .sub { font-size: .72rem; opacity: .65; margin-top: 6px; font-weight: 500; }
 
     /* TABLES */
     .table { font-size: .855rem; }
@@ -295,7 +297,7 @@
     .card { transition: box-shadow .25s ease, transform .25s ease; border: 1px solid rgba(0,0,0,.06); }
     .card:hover { box-shadow: 0 8px 25px rgba(0,0,0,.1); transform: translateY(-1px); }
     .stat-card { transition: transform .25s ease, box-shadow .25s ease; }
-    .stat-card:hover { transform: translateY(-3px); box-shadow: 0 12px 32px rgba(0,0,0,.18); }
+    .stat-card:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(0,0,0,.14); }
     .stat-card::after { content:''; position:absolute; inset:0; border-radius:13px; background:linear-gradient(135deg,rgba(255,255,255,.08) 0%,transparent 60%); pointer-events:none; }
     .sidebar .nav-link:hover { padding-left: 16px; }
     .btn:active { transform: scale(.97); }
@@ -383,12 +385,16 @@
       #com-detalle-tabla .table td { padding: 4px 3px; font-size: .68rem; }
       #page-comisiones .page-hdr { flex-wrap: wrap; gap: 6px; }
       /* Charts */
-      canvas { max-height: 200px !important; }
+      canvas { max-height: 260px !important; }
       /* Touch-friendly targets */
-      .btn-a { padding: 6px 12px; font-size: .78rem; min-height: 34px; }
-      .sb-btn { padding: 8px 10px; font-size: .76rem; min-height: 38px; }
-      .sidebar .nav-link { padding: 10px 14px; font-size: .85rem; min-height: 42px; }
+      .btn-a { padding: 6px 12px; font-size: .78rem; min-height: 44px; }
+      .sb-btn { padding: 8px 10px; font-size: .76rem; min-height: 44px; }
+      .sidebar .nav-link { padding: 10px 14px; font-size: .85rem; min-height: 44px; }
       .sidebar .nav-link:hover, .sidebar .nav-link.active { padding-left: 14px; }
+      .page-hdr .btn { min-height: 44px; }
+      /* Kanban mobile — horizontal scroll */
+      #page-propuestasComerciales .kanban-wrap { scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; }
+      #page-propuestasComerciales .kanban-col { flex: 0 0 85vw; scroll-snap-align: start; }
       /* Filters & inputs */
       .form-control, .form-select { font-size: .85rem !important; min-height: 38px; }
       /* Alerts bigger */
@@ -995,6 +1001,7 @@
         <li><a class="nav-link" data-page="chequesFisicos"><i class="bi bi-file-earmark-check-fill"></i>Cheques Físicos</a></li>
         <li><a class="nav-link" data-page="eCheques"><i class="bi bi-credit-card-fill"></i>E-Cheques</a></li>
         <li><a class="nav-link" data-page="chequesPagar"><i class="bi bi-file-earmark-minus-fill"></i>Cheques a Pagar</a></li>
+        <li><a class="nav-link" data-page="inversiones"><i class="bi bi-graph-up-arrow" style="color:#10b981"></i>Inversiones</a></li>
         <li><a class="nav-link" data-page="kilometraje"><i class="bi bi-speedometer2"></i>Kilometraje</a></li>
       </div>
     </div>
@@ -1022,7 +1029,6 @@
         <li><a class="nav-link" data-page="historialCobranzas"><i class="bi bi-receipt"></i>Historial de Cobranzas</a></li>
         <li><a class="nav-link" data-page="ingresarCobranza"><i class="bi bi-journal-plus"></i>Ingresar Cobranza</a></li>
         <li><a class="nav-link" data-page="cronograma"><i class="bi bi-truck"></i>Entregas Harina</a></li>
-        <li><a class="nav-link" data-page="manual"><i class="bi bi-book-fill"></i>Manual de Usuario</a></li>
       </div>
     </div>
 
@@ -1042,6 +1048,17 @@
         <li><a class="nav-link" data-page="historial"><i class="bi bi-clock-history"></i>Historial</a></li>
         <li><a class="nav-link" data-page="estrategicos"><i class="bi bi-lightbulb-fill"></i>Estratégicos</a></li>
         <li><a class="nav-link" data-page="calculadora"><i class="bi bi-calculator-fill"></i>Calculadora</a></li>
+      </div>
+    </div>
+
+    <!-- ── Links de Interés ── -->
+    <div class="sl" data-group="links" onclick="toggleSBGroup('links')">
+      <span><i class="bi bi-link-45deg me-1" style="font-size:.6rem;opacity:.7"></i>Links de Interés</span>
+      <span style="display:flex;align-items:center;gap:4px"><i class="bi bi-chevron-down sl-chevron"></i></span>
+    </div>
+    <div class="sl-items" id="sg-links">
+      <div class="sl-items-inner">
+        <li><a class="nav-link" data-page="linksInteres"><i class="bi bi-bookmark-star-fill" style="color:#8b5cf6"></i>Mis Links</a></li>
       </div>
     </div>
 
@@ -1071,7 +1088,7 @@
 
   <div class="sidebar-footer">
     <!-- Auto-refresh indicator -->
-    <div id="auto-refresh-indicator" style="font-size:.58rem;color:#64748b;text-align:center;margin-bottom:4px;opacity:.4;transition:opacity .3s" title="Auto-refresh activo">
+    <div id="auto-refresh-indicator" style="font-size:.52rem;color:#64748b;text-align:center;margin-bottom:2px;opacity:.25;transition:opacity .3s;line-height:1.2" title="Auto-refresh activo">
       <i class="bi bi-arrow-repeat me-1"></i>Auto-sync cada 3 min
     </div>
     <!-- Sync status -->
@@ -6645,7 +6662,173 @@ CREATE POLICY "acceso total" ON muuk_daily_backups FOR ALL USING (true) WITH CHE
 
   </div><!-- /page-propuestasComerciales -->
 
+  <!-- ══════════════════ INVERSIONES ══════════════════ -->
+  <div id="page-inversiones" class="page">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px">
+      <h4 style="font-weight:700;margin:0;font-size:.95rem"><i class="bi bi-graph-up-arrow me-2" style="color:#10b981"></i>Inversiones y Liquidez</h4>
+      <div style="display:flex;gap:6px;align-items:center">
+        <span id="inv-last-update" style="font-size:.7rem;color:#94a3b8"></span>
+        <button class="btn btn-sm btn-outline-success" onclick="invRefreshRates()" style="font-size:.72rem;border-radius:8px;padding:3px 10px"><i class="bi bi-arrow-clockwise me-1"></i>Actualizar tasas</button>
+      </div>
+    </div>
+
+    <!-- Liquidez cards -->
+    <div class="row g-3 mb-3" id="inv-liquidez-cards">
+      <div class="col-6 col-md-3"><div class="stat-card" style="background:linear-gradient(135deg,#1d4ed8,#3b82f6)">
+        <div class="bg-icon"><i class="bi bi-bank2"></i></div>
+        <div class="lbl">Saldo Bancos</div>
+        <div class="val" id="inv-saldo-bancos">—</div>
+        <div class="sub">Cuenta Corriente + FIMA</div>
+      </div></div>
+      <div class="col-6 col-md-3"><div class="stat-card" style="background:linear-gradient(135deg,#15803d,#22c55e)">
+        <div class="bg-icon"><i class="bi bi-cash-coin"></i></div>
+        <div class="lbl">Caja Efectivo</div>
+        <div class="val" id="inv-saldo-efectivo">—</div>
+        <div class="sub">Disponible en caja</div>
+      </div></div>
+      <div class="col-6 col-md-3"><div class="stat-card" style="background:linear-gradient(135deg,#b91c1c,#ef4444)">
+        <div class="bg-icon"><i class="bi bi-calendar-minus"></i></div>
+        <div class="lbl">Obligaciones 30d</div>
+        <div class="val" id="inv-obligaciones-30d">—</div>
+        <div class="sub">Facturas + cheques próximos</div>
+      </div></div>
+      <div class="col-6 col-md-3"><div class="stat-card" style="background:linear-gradient(135deg,#0f766e,#14b8a6)">
+        <div class="bg-icon"><i class="bi bi-piggy-bank-fill"></i></div>
+        <div class="lbl">Disponible Neto</div>
+        <div class="val" id="inv-disponible-neto">—</div>
+        <div class="sub">Para invertir (estimado)</div>
+      </div></div>
+    </div>
+
+    <!-- Alert si tasas desactualizadas -->
+    <div id="inv-rates-alert" style="display:none" class="alert alert-warning py-2 mb-3" style="font-size:.78rem;border-radius:8px">
+      <i class="bi bi-exclamation-triangle-fill me-2"></i><strong>Tasas desactualizadas</strong> — Hacé clic en "Actualizar tasas" para obtener los últimos datos del BCRA.
+    </div>
+
+    <!-- Opciones de inversión -->
+    <div class="card mb-3" style="border-radius:12px;overflow:hidden">
+      <div class="card-header py-2 px-3" style="background:#0f172a;color:#fff;font-size:.82rem;font-weight:700">
+        <i class="bi bi-bar-chart-steps me-2"></i>Instrumentos de corto plazo — Tasas de referencia BCRA
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0" style="font-size:.82rem">
+            <thead style="background:#f8fafc;font-size:.72rem;color:#64748b;text-transform:uppercase;letter-spacing:.04em">
+              <tr>
+                <th class="ps-3">Instrumento</th>
+                <th>Liquidez</th>
+                <th class="text-center">TNA estimada</th>
+                <th class="text-center">TEA estimada</th>
+                <th class="text-center">Rend. 7 días</th>
+                <th class="text-center">Rend. 30 días</th>
+                <th class="text-end pe-3">Plataforma</th>
+              </tr>
+            </thead>
+            <tbody id="inv-tabla-instrumentos">
+              <tr><td colspan="7" class="text-center py-3 text-muted"><div class="spinner-border spinner-border-sm me-2"></div>Cargando tasas...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card-footer bg-transparent py-2 px-3" style="font-size:.68rem;color:#94a3b8">
+        <i class="bi bi-info-circle me-1"></i>Tasas estimadas basadas en datos del BCRA. FCI y cauciones pueden variar. Consultá tu banco/bróker para tasas exactas vigentes.
+      </div>
+    </div>
+
+    <!-- Calculadora de retorno -->
+    <div class="card" style="border-radius:12px;border:2px solid #10b981">
+      <div class="card-header py-2 px-3" style="background:#f0fdf4;font-size:.85rem;font-weight:700;color:#065f46">
+        <i class="bi bi-calculator-fill me-2 text-success"></i>Calculadora de Retorno
+      </div>
+      <div class="card-body pb-2">
+        <div class="row g-3 align-items-end">
+          <div class="col-12 col-md-3">
+            <label class="form-label fw-bold small">Monto a invertir ($)</label>
+            <input type="number" id="inv-calc-monto" class="form-control" placeholder="Ej: 1000000" min="0" oninput="invCalcular()">
+          </div>
+          <div class="col-12 col-md-3">
+            <label class="form-label fw-bold small">Instrumento</label>
+            <select id="inv-calc-instrumento" class="form-select" onchange="invCalcular()">
+              <option value="fci">FCI Money Market</option>
+              <option value="caucion1">Caución bursátil 1 día</option>
+              <option value="caucion7">Caución bursátil 7 días</option>
+              <option value="pf30">Plazo Fijo digital 30d</option>
+            </select>
+          </div>
+          <div class="col-12 col-md-3">
+            <label class="form-label fw-bold small">Plazo (días)</label>
+            <input type="number" id="inv-calc-dias" class="form-control" value="30" min="1" max="365" oninput="invCalcular()">
+          </div>
+          <div class="col-12 col-md-3">
+            <button class="btn w-100" onclick="invCalcular()" style="background:#10b981;color:#fff;font-weight:600;border-radius:8px"><i class="bi bi-calculator me-1"></i>Calcular</button>
+          </div>
+        </div>
+        <div id="inv-calc-resultado" class="mt-3" style="display:none">
+          <div class="row g-2">
+            <div class="col-4"><div class="p-2 rounded text-center" style="background:#f0fdf4;border:1px solid #bbf7d0">
+              <div style="font-size:.68rem;color:#15803d;font-weight:600;text-transform:uppercase">Capital</div>
+              <div id="inv-res-capital" style="font-size:1rem;font-weight:800;color:#15803d">—</div>
+            </div></div>
+            <div class="col-4"><div class="p-2 rounded text-center" style="background:#fffbeb;border:1px solid #fde68a">
+              <div style="font-size:.68rem;color:#92400e;font-weight:600;text-transform:uppercase">Intereses</div>
+              <div id="inv-res-intereses" style="font-size:1rem;font-weight:800;color:#d97706">—</div>
+            </div></div>
+            <div class="col-4"><div class="p-2 rounded text-center" style="background:#eff6ff;border:1px solid #93c5fd">
+              <div style="font-size:.68rem;color:#1d4ed8;font-weight:600;text-transform:uppercase">Total</div>
+              <div id="inv-res-total" style="font-size:1rem;font-weight:800;color:#1d4ed8">—</div>
+            </div></div>
+          </div>
+          <div id="inv-res-nota" style="font-size:.7rem;color:#64748b;margin-top:6px;text-align:center"></div>
+        </div>
+      </div>
+    </div>
+  </div><!-- /page-inversiones -->
+
+  <!-- ══════════════════ LINKS DE INTERÉS ══════════════════ -->
+  <div id="page-linksInteres" class="page">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px">
+      <h4 style="font-weight:700;margin:0;font-size:.95rem"><i class="bi bi-bookmark-star-fill me-2" style="color:#8b5cf6"></i>Links de Interés</h4>
+      <button class="btn btn-sm" onclick="abrirModalLink()" style="background:#8b5cf6;color:#fff;font-weight:600;border-radius:8px;font-size:.78rem"><i class="bi bi-plus-lg me-1"></i>Agregar nuevo</button>
+    </div>
+    <div id="wrap-links-interes"></div>
+  </div><!-- /page-linksInteres -->
+
 </main>
+
+<!-- ══════════ MODAL: LINK DE INTERÉS ══════════ -->
+<div class="modal fade" id="modalLink" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered" style="max-width:480px">
+    <div class="modal-content">
+      <div class="modal-header py-2" style="background:linear-gradient(135deg,#5b21b6,#8b5cf6)">
+        <h6 class="modal-title text-white" id="modalLink-title"><i class="bi bi-bookmark-plus me-2"></i>Agregar Link</h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="link-id">
+        <div class="mb-3">
+          <label class="form-label fw-bold small">Nombre del link *</label>
+          <input type="text" id="link-nombre" class="form-control" placeholder="Ej: Afip, Mercado Libre, etc.">
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-bold small">URL *</label>
+          <input type="url" id="link-url" class="form-control" placeholder="https://...">
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-bold small">Descripción (opcional)</label>
+          <input type="text" id="link-descripcion" class="form-control" placeholder="Breve descripción del sitio">
+        </div>
+        <div class="mb-2">
+          <label class="form-label fw-bold small">Categoría (opcional)</label>
+          <input type="text" id="link-categoria" class="form-control" placeholder="Ej: Prospectos, Impuestos, Proveedores...">
+        </div>
+      </div>
+      <div class="modal-footer py-2">
+        <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+        <button class="btn btn-sm text-white fw-bold" onclick="guardarLink()" style="background:#8b5cf6;border-radius:8px"><i class="bi bi-bookmark-check me-1"></i>Guardar</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- ══════════ MODAL: PROPUESTA COMERCIAL ══════════ -->
 <div class="modal fade" id="modalPropuesta" tabindex="-1">
@@ -8132,7 +8315,11 @@ let ST = {
   emailjsConfig: { serviceId: '', templateId: '', userId: '', email: '' },
   alertasConfig: { chequesVenc: true, arcaOblig: true, resumenDiario: false },
   cronogramaHarina: {},
-  propuestasComerciales: []
+  propuestasComerciales: [],
+  invRates: null,
+  linksInteres: [
+    { id:'link-mapa-empresas', nombre:'Mapa Empresas Argentinas', url:'https://mapa-empresas-argentinas.vercel.app/', descripcion:'Directorio visual e interactivo de empresas de Argentina', categoria:'Prospectos', createdAt:'2026-05-09' }
+  ]
 };
 
 let CHARTS = {};
@@ -8662,6 +8849,8 @@ function reRenderActivo() {
     case 'cuentasBancarias': break; /* static page, no init needed */
     case 'empresas': renderEmpresas(); break;
     case 'propuestasComerciales': renderPropuestasComerciales(); break;
+    case 'inversiones': renderInversiones(); break;
+    case 'linksInteres': renderLinksInteres(); break;
     case 'historialCobranzas': renderHistorialCobranzas(); break;
     case 'ingresarCobranza': renderIngresarCobranza(); break;
   }
@@ -10402,7 +10591,7 @@ const _GRUPOS_ACCESO = {
   dashboard: ['dashboard'],
   empresa:   ['socios','cuentaSocios','liquidacion','kinto'],
   rrhh:      ['rrhh'],
-  caja:      ['cajaBancos','cajaEfectivo','chequesFisicos','eCheques','chequesPagar','kilometraje'],
+  caja:      ['cajaBancos','cajaEfectivo','chequesFisicos','eCheques','chequesPagar','inversiones','kilometraje'],
   gestion:   ['comisiones','bcra','calendarioARCA','contabilidad','facturasACobrar','facturasPagar','estadosCuenta','stock','listasPrecios','empresas','documentos','cuentasBancarias','historialCobranzas'],
   analisis:  ['tesoreria','flujoProyectado','panelVencimientos','rentabilidad','gestion','reportes','historial','estrategicos','calculadora'],
   archivos:  ['config'],
@@ -10901,9 +11090,10 @@ const _SB_GROUPS = {
   empresa:  ['socios','cuentaSocios','liquidacion','kinto'],
   rrhh:     ['rrhh'],
   incidencias: ['incidencias'],
-  caja:     ['cajaBancos','cajaEfectivo','chequesFisicos','eCheques','chequesPagar','kilometraje'],
+  caja:     ['cajaBancos','cajaEfectivo','chequesFisicos','eCheques','chequesPagar','inversiones','kilometraje'],
   gestion:  ['comisiones','bcra','calendarioARCA','contabilidad','facturasACobrar','facturasPagar','estadosCuenta','stock','listasPrecios','empresas','propuestasComerciales','documentos','cuentasBancarias','historialCobranzas','ingresarCobranza'],
   analisis: ['tesoreria','flujoProyectado','panelVencimientos','rentabilidad','gestion','reportes','historial','estrategicos','calculadora'],
+  links:    ['linksInteres'],
   archivos: ['config'],
 };
 
@@ -11280,6 +11470,8 @@ function irA(p) {
   if (p==='rrhh')              renderRRHH();
   if (p==='empresas')          renderEmpresas();
   if (p==='propuestasComerciales') renderPropuestasComerciales();
+  if (p==='inversiones')       renderInversiones();
+  if (p==='linksInteres')      renderLinksInteres();
   if (p==='usuarios')          renderUsuarios();
   if (p==='manual')            renderManual();
   if (p==='historialCobranzas') renderHistorialCobranzas();
@@ -14865,7 +15057,7 @@ function generarReportePDF() {
       #page-comisiones .page-hdr h4 { font-size: .92rem; }
       #page-comisiones .card.p-3.mb-3 .fs-4 { font-size: 1.1rem !important; }
       /* Charts */
-      canvas { max-height: 200px !important; }
+      canvas { max-height: 260px !important; }
     }
 
     /* ─── SMALL PHONES ≤480px ─── */
@@ -29870,7 +30062,8 @@ function verPdfPropuesta(id) {
   const p=(ST.propuestasComerciales||[]).find(x=>x.id===id);
   if (!p||!p.pdfDataB64){toast('Esta propuesta no tiene PDF adjunto','warning');return;}
   try {
-    const byteStr=atob(p.pdfDataB64.split(',')[1]);
+    const b64Part=p.pdfDataB64.includes(',')?p.pdfDataB64.split(',')[1]:p.pdfDataB64;
+    const byteStr=atob(b64Part);
     const ab=new ArrayBuffer(byteStr.length);const ia=new Uint8Array(ab);
     for(let i=0;i<byteStr.length;i++) ia[i]=byteStr.charCodeAt(i);
     const blob=new Blob([ab],{type:'application/pdf'});
@@ -33041,6 +33234,288 @@ function _toggleCalVenc(btn) {
     if (tlEl) tlEl.style.display = '';
     if (btn) btn.innerHTML = '<i class="bi bi-calendar3 me-1"></i>Vista Calendario';
   }
+}
+
+/* ═══════════════════════════════════════════════════
+   INVERSIONES Y LIQUIDEZ
+   Tasas de referencia BCRA · Actualización cada 48 h
+═══════════════════════════════════════════════════ */
+
+// --- Helpers ---
+function _invTNA_TEA(tna) {
+  const tea = Math.pow(1 + tna / 36500, 365) - 1;
+  return (tea * 100).toFixed(1);
+}
+function _invRendimiento(capital, tna, dias) {
+  return capital * (tna / 100) / 365 * dias;
+}
+
+// --- Calcular liquidez disponible ---
+function _invGetLiquidez() {
+  const bnk = {};
+  (ST.cajaBancos||[]).forEach(m => {
+    const b = m.banco||'Sin nombre';
+    bnk[b] = (bnk[b]||0) + (m.tipo==='ingreso'?1:-1) * +m.monto;
+  });
+  const totBancos   = Object.values(bnk).reduce((s,v) => s+v, 0);
+  const totEfectivo = (ST.cajaEfectivo||[]).reduce((s,m) => s+(m.tipo==='ingreso'?1:-1)* +m.monto, 0);
+  const hoyStr = hoy();
+  const lim30  = new Date(Date.now()+30*86400000).toISOString().split('T')[0];
+  const factObl = (ST.facturasPagar||[]).filter(f => f.estado!=='pagada' && f.fechaVenc >= hoyStr && f.fechaVenc <= lim30)
+                    .reduce((s,f) => s + (+f.total||+f.monto||0), 0);
+  const chqObl  = (ST.chequesPagar||[]).filter(c => c.estado!=='pagado' && c.fechaVenc >= hoyStr && c.fechaVenc <= lim30)
+                    .reduce((s,c) => s + (+c.monto||0), 0);
+  const totalObligaciones = factObl + chqObl;
+  const disponibleNeto    = totBancos + totEfectivo - totalObligaciones;
+  return { totBancos, totEfectivo, totalObligaciones, disponibleNeto };
+}
+
+// --- Construir instrumentos con tasas ---
+function _invGetInstrumentos() {
+  const r = ST.invRates || {};
+  const badlar    = r.badlar    || null;
+  const pf30      = r.pf30      || null;
+  const politica  = r.politica  || null;
+
+  // FCI Money Market: BADLAR + 2.5% (típico para MM funds), mínimo referencial 30%
+  const tnaFCI      = badlar   ? +(badlar + 2.5).toFixed(1) : null;
+  // Caución 1d: ~política monetaria - 3% (mercado BYMA suele estar por debajo de la tasa de política)
+  const tnaCauc1    = politica ? +(politica - 3).toFixed(1) : null;
+  // Caución 7d: ~política monetaria - 1%
+  const tnaCauc7    = politica ? +(politica - 1).toFixed(1) : null;
+  // Plazo Fijo 30d: directo del BCRA (variable 38)
+  const tnaPF30     = pf30     ? +pf30.toFixed(1) : null;
+
+  const cap = _invGetLiquidez().disponibleNeto;
+  const _row = (nombre, liquidez, tna, dias1, dias2, plataforma, link, instrKey) => ({
+    nombre, liquidez, tna, instrKey,
+    tea: tna ? _invTNA_TEA(tna) : null,
+    rend7:  (tna && cap > 0) ? _invRendimiento(cap, tna, 7)  : null,
+    rend30: (tna && cap > 0) ? _invRendimiento(cap, tna, 30) : null,
+    plataforma, link
+  });
+
+  return [
+    _row('FCI Money Market',        'T+0 (inmediata)',   tnaFCI,   7, 30, 'Galicia/BBVA/Naranja X', 'https://www.galiciamovil.com.ar', 'fci'),
+    _row('Caución bursátil 1 día',  '24 hs',             tnaCauc1, 7, 30, 'Invertir Online / IOL',  'https://www.invertironline.com',  'caucion1'),
+    _row('Caución bursátil 7 días', '7 días',            tnaCauc7, 7, 30, 'Invertir Online / IOL',  'https://www.invertironline.com',  'caucion7'),
+    _row('Plazo Fijo digital 30d',  '30 días',           tnaPF30,  null, 30, 'Banco Galicia / BBVA', 'https://www.galicia.com.ar',      'pf30'),
+  ];
+}
+
+// --- Fetch tasas BCRA ---
+async function invRefreshRates() {
+  const btn = document.getElementById('inv-last-update');
+  if (btn) btn.textContent = '⏳ Actualizando...';
+  try {
+    const today   = new Date().toISOString().split('T')[0];
+    const weekAgo = new Date(Date.now()-10*86400000).toISOString().split('T')[0];
+    const _fetchVar = async id => {
+      const res = await _sbFetch(`https://api.bcra.gob.ar/estadisticas/v1/datosvariable/${id}/${weekAgo}/${today}`, {
+        headers: { Accept: 'application/json' }
+      }).catch(() => null);
+      if (!res || !res.ok) return null;
+      const json = await res.json().catch(() => null);
+      const items = json?.results;
+      return Array.isArray(items) && items.length ? items[items.length-1].valor : null;
+    };
+    const [pf30, badlar, politica] = await Promise.all([
+      _fetchVar(38), _fetchVar(40), _fetchVar(7)
+    ]);
+    ST.invRates = { fetchedAt: new Date().toISOString(), pf30, badlar, politica };
+    save();
+    toast('Tasas actualizadas desde BCRA ✓', 'success');
+  } catch(e) {
+    toast('No se pudieron obtener las tasas del BCRA', 'warning');
+  }
+  renderInversiones();
+}
+
+// --- Check if rates need refresh (48h) ---
+function _invNeedsRefresh() {
+  if (!ST.invRates?.fetchedAt) return true;
+  const diff = (Date.now() - new Date(ST.invRates.fetchedAt).getTime()) / 3600000;
+  return diff >= 48;
+}
+
+// --- Render principal ---
+function renderInversiones() {
+  const pg = document.getElementById('page-inversiones'); if (!pg) return;
+
+  // Auto-refresh silencioso si pasaron 48 horas
+  if (_invNeedsRefresh() && !ST._invFetching) {
+    ST._invFetching = true;
+    invRefreshRates().finally(() => { ST._invFetching = false; });
+    return; // se re-renderiza en invRefreshRates
+  }
+
+  // Liquidez
+  const liq = _invGetLiquidez();
+  const _set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+  _set('inv-saldo-bancos',     fmt(liq.totBancos));
+  _set('inv-saldo-efectivo',   fmt(liq.totEfectivo));
+  _set('inv-obligaciones-30d', fmt(liq.totalObligaciones));
+  _set('inv-disponible-neto',  fmt(liq.disponibleNeto));
+
+  // Last update label
+  const lastUpdEl = document.getElementById('inv-last-update');
+  if (lastUpdEl && ST.invRates?.fetchedAt) {
+    const diff = Math.round((Date.now() - new Date(ST.invRates.fetchedAt).getTime()) / 3600000);
+    lastUpdEl.textContent = `Actualizado hace ${diff < 1 ? 'menos de 1 h' : diff + ' h'}`;
+  }
+
+  // Alert tasas desactualizadas
+  const alertEl = document.getElementById('inv-rates-alert');
+  if (alertEl) alertEl.style.display = _invNeedsRefresh() ? '' : 'none';
+
+  // Tabla instrumentos
+  const tbl = document.getElementById('inv-tabla-instrumentos'); if (!tbl) return;
+  const instr = _invGetInstrumentos();
+  const _fmtTNA = v => v ? `<strong style="color:#10b981">${v}%</strong>` : '<span class="text-muted" style="font-size:.7rem">Sin datos</span>';
+  const _fmtRend = v => v ? `<span style="color:#0369a1;font-weight:600">${fmt(v)}</span>` : '<span class="text-muted">—</span>';
+
+  tbl.innerHTML = instr.map(r => `
+    <tr>
+      <td class="ps-3 fw-semibold">${r.nombre}</td>
+      <td><span class="badge" style="background:${r.instrKey==='fci'?'#dcfce7;color:#15803d':r.instrKey==='pf30'?'#fee2e2;color:#b91c1c':r.instrKey==='caucion1'?'#dbeafe;color:#1d4ed8':'#ede9fe;color:#5b21b6'};font-size:.65rem;padding:3px 8px">${r.liquidez}</span></td>
+      <td class="text-center">${_fmtTNA(r.tna)}</td>
+      <td class="text-center">${r.tea ? `<span style="color:#7c3aed">${r.tea}%</span>` : '—'}</td>
+      <td class="text-center">${r.instrKey==='pf30' ? '<span class="text-muted" style="font-size:.7rem">N/A (30d mín.)</span>' : _fmtRend(r.rend7)}</td>
+      <td class="text-center">${_fmtRend(r.rend30)}</td>
+      <td class="text-end pe-3"><a href="${r.link}" target="_blank" class="btn btn-xs btn-outline-secondary" style="font-size:.65rem;padding:1px 7px;border-radius:5px">${r.plataforma} <i class="bi bi-box-arrow-up-right ms-1"></i></a></td>
+    </tr>`).join('') +
+    `<tr style="background:#fffbeb"><td colspan="7" class="ps-3 py-2" style="font-size:.7rem;color:#92400e">
+      <i class="bi bi-info-circle me-1"></i>
+      <strong>Importante:</strong> Los rendimientos calculados usan el disponible neto estimado (${fmt(liq.disponibleNeto)}). Las tasas FCI y Caución son estimativas — varían diariamente. Consultá tu banco/bróker para valores exactos.
+    </td></tr>`;
+
+  // Inicializar calculadora
+  invCalcular();
+}
+
+function invCalcular() {
+  const capital    = +(document.getElementById('inv-calc-monto')?.value||0);
+  const instrKey   = document.getElementById('inv-calc-instrumento')?.value || 'fci';
+  const dias       = +(document.getElementById('inv-calc-dias')?.value||30);
+  const resEl      = document.getElementById('inv-calc-resultado'); if (!resEl) return;
+
+  if (!capital || capital <= 0) { resEl.style.display='none'; return; }
+
+  const instr = _invGetInstrumentos().find(i => i.instrKey === instrKey);
+  if (!instr?.tna) { resEl.style.display='none'; return; }
+
+  const intereses = _invRendimiento(capital, instr.tna, dias);
+  const total     = capital + intereses;
+  const _s = (id, val) => { const el=document.getElementById(id); if(el) el.textContent=val; };
+  _s('inv-res-capital',   fmt(capital));
+  _s('inv-res-intereses', fmt(intereses));
+  _s('inv-res-total',     fmt(total));
+  const notaEl = document.getElementById('inv-res-nota');
+  if (notaEl) notaEl.textContent = `${instr.nombre} · TNA ${instr.tna}% · ${dias} días · Rendimiento estimado`;
+  resEl.style.display = '';
+}
+
+
+/* ═══════════════════════════════════════════════════
+   LINKS DE INTERÉS
+═══════════════════════════════════════════════════ */
+
+function renderLinksInteres() {
+  const wrap = document.getElementById('wrap-links-interes'); if (!wrap) return;
+  if (!Array.isArray(ST.linksInteres)) ST.linksInteres = [];
+  const links = ST.linksInteres;
+
+  if (!links.length) {
+    wrap.innerHTML = `<div class="text-center py-5" style="color:#94a3b8">
+      <i class="bi bi-bookmark-x d-block mb-2" style="font-size:2.5rem"></i>
+      Sin links guardados. Hacé clic en <strong>Agregar nuevo</strong> para añadir el primero.
+    </div>`;
+    return;
+  }
+
+  // Agrupar por categoría
+  const cats = {};
+  links.forEach(l => { const c = l.categoria||'Sin categoría'; if(!cats[c]) cats[c]=[]; cats[c].push(l); });
+
+  const _catColor = cat => {
+    const map = { 'Prospectos':'#10b981', 'Impuestos':'#ef4444', 'Proveedores':'#f59e0b', 'Clientes':'#3b82f6', 'Herramientas':'#8b5cf6' };
+    return map[cat] || '#64748b';
+  };
+  const _getFavicon = url => {
+    try { return `https://www.google.com/s2/favicons?sz=32&domain_url=${new URL(url).hostname}`; } catch { return ''; }
+  };
+
+  let html = '';
+  for (const [cat, items] of Object.entries(cats)) {
+    const cc = _catColor(cat);
+    html += `<div class="mb-3">
+      <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:${cc};margin-bottom:8px;padding-left:4px;border-left:3px solid ${cc};padding-left:8px">
+        <i class="bi bi-folder-fill me-1"></i>${cat}
+      </div>
+      <div class="row g-2">
+        ${items.map(l => `
+        <div class="col-12 col-md-6 col-lg-4">
+          <div class="card h-100" style="border-radius:10px;border:1.5px solid #e2e8f0;transition:box-shadow .2s">
+            <div class="card-body p-3 d-flex align-items-start gap-2">
+              <img src="${_getFavicon(l.url)}" style="width:28px;height:28px;border-radius:6px;flex-shrink:0;object-fit:contain;background:#f8fafc;border:1px solid #f1f5f9" onerror="this.style.display='none'">
+              <div style="flex:1;min-width:0">
+                <div style="font-weight:700;font-size:.88rem;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${l.nombre}</div>
+                <div style="font-size:.72rem;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${l.url}">${l.url}</div>
+                ${l.descripcion ? `<div style="font-size:.75rem;color:#475569;margin-top:3px">${l.descripcion}</div>` : ''}
+              </div>
+            </div>
+            <div class="card-footer bg-transparent border-top-0 px-3 pb-2 pt-0 d-flex gap-1 justify-content-end">
+              <a href="${l.url}" target="_blank" class="btn btn-sm" style="background:#8b5cf6;color:#fff;font-size:.7rem;border-radius:7px;padding:3px 10px"><i class="bi bi-box-arrow-up-right me-1"></i>Abrir</a>
+              <button class="btn btn-a btn-outline-primary" onclick="abrirModalLink('${l.id}')" title="Editar"><i class="bi bi-pencil"></i></button>
+              <button class="btn btn-a btn-outline-danger" onclick="eliminarLink('${l.id}')" title="Eliminar"><i class="bi bi-trash"></i></button>
+            </div>
+          </div>
+        </div>`).join('')}
+      </div>
+    </div>`;
+  }
+  wrap.innerHTML = html;
+}
+
+function abrirModalLink(id) {
+  const l = id ? (ST.linksInteres||[]).find(x => x.id === id) : null;
+  document.getElementById('link-id').value        = id || '';
+  document.getElementById('link-nombre').value    = l?.nombre      || '';
+  document.getElementById('link-url').value       = l?.url         || '';
+  document.getElementById('link-descripcion').value = l?.descripcion || '';
+  document.getElementById('link-categoria').value = l?.categoria   || '';
+  document.getElementById('modalLink-title').innerHTML = `<i class="bi bi-bookmark-${id?'check':'plus'} me-2"></i>${id?'Editar':'Agregar'} Link`;
+  new bootstrap.Modal(document.getElementById('modalLink')).show();
+}
+
+function guardarLink() {
+  const id     = document.getElementById('link-id').value;
+  const nombre = document.getElementById('link-nombre').value.trim();
+  const url    = document.getElementById('link-url').value.trim();
+  if (!nombre) { toast('Ingresá un nombre para el link', 'warning'); return; }
+  if (!url)    { toast('Ingresá la URL del link', 'warning'); return; }
+  if (!Array.isArray(ST.linksInteres)) ST.linksInteres = [];
+  const obj = {
+    id:          id || uid(),
+    nombre, url,
+    descripcion: document.getElementById('link-descripcion').value.trim(),
+    categoria:   document.getElementById('link-categoria').value.trim() || 'Sin categoría',
+    createdAt:   id ? (ST.linksInteres.find(x=>x.id===id)?.createdAt || hoy()) : hoy()
+  };
+  const idx = ST.linksInteres.findIndex(x => x.id === obj.id);
+  if (idx >= 0) ST.linksInteres[idx] = obj; else ST.linksInteres.push(obj);
+  save();
+  bootstrap.Modal.getInstance(document.getElementById('modalLink'))?.hide();
+  renderLinksInteres();
+  toast(id ? 'Link actualizado ✓' : 'Link agregado ✓');
+}
+
+function eliminarLink(id) {
+  _confirmar('¿Eliminar este link?', () => {
+    ST.linksInteres = (ST.linksInteres||[]).filter(x => x.id !== id);
+    save(); renderLinksInteres();
+    toast('Link eliminado', 'warning');
+  }, { title:'Eliminar link', btnLabel:'Eliminar', danger:true });
 }
 
 </script>
