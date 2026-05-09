@@ -1022,6 +1022,7 @@
         <li><a class="nav-link" data-page="estadosCuenta"><i class="bi bi-person-lines-fill"></i>Estados de Cuenta</a></li>
         <li><a class="nav-link" data-page="stock"><i class="bi bi-box-seam-fill"></i>Stock</a></li>
         <li><a class="nav-link" data-page="listasPrecios"><i class="bi bi-tags-fill"></i>Listas de Precios</a></li>
+        <li><a class="nav-link" data-page="listasVendedores"><i class="bi bi-file-earmark-person-fill" style="color:#f59e0b"></i>Listas a Vendedores</a></li>
         <li><a class="nav-link" data-page="empresas"><i class="bi bi-diagram-3-fill"></i>CRM</a></li>
         <li><a class="nav-link" data-page="propuestasComerciales"><i class="bi bi-file-earmark-text-fill" style="color:#10b981"></i>Propuestas Comerciales</a></li>
         <li><a class="nav-link" data-page="documentos"><i class="bi bi-folder2-open"></i>Documentos</a></li>
@@ -6797,7 +6798,91 @@ CREATE POLICY "acceso total" ON muuk_daily_backups FOR ALL USING (true) WITH CHE
     <div id="wrap-links-interes"></div>
   </div><!-- /page-linksInteres -->
 
+  <!-- ══════════════════ LISTAS A VENDEDORES ══════════════════ -->
+  <div id="page-listasVendedores" class="page">
+    <div class="page-hdr d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+      <h4 style="font-weight:700;margin:0"><i class="bi bi-file-earmark-person-fill me-2" style="color:#f59e0b"></i>Listas a Vendedores</h4>
+      <button class="btn btn-sm" onclick="abrirModalListaVend()" style="background:#f59e0b;color:#fff;font-weight:600;border-radius:8px;font-size:.78rem">
+        <i class="bi bi-plus-lg me-1"></i>Nueva Lista
+      </button>
+    </div>
+    <div id="wrap-listas-vend"></div>
+  </div><!-- /page-listasVendedores -->
+
 </main>
+
+<!-- ══════════ MODAL: LISTA A VENDEDOR ══════════ -->
+<div class="modal fade" id="modalListaVend" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-xl modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header py-2" style="background:linear-gradient(135deg,#d97706,#f59e0b)">
+        <h6 class="modal-title text-white" id="modalListaVend-title"><i class="bi bi-file-earmark-person me-2"></i>Nueva Lista a Vendedor</h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-3">
+        <input type="hidden" id="lv-id">
+
+        <!-- Cabecera de la lista -->
+        <div class="row g-3 mb-3">
+          <div class="col-12 col-md-6">
+            <label class="form-label fw-bold small">Título de la lista <span class="text-muted fw-normal">(uso interno)</span></label>
+            <input type="text" id="lv-titulo" class="form-control" placeholder="Ej: Lista Junio 2026 — Carlos García">
+          </div>
+          <div class="col-12 col-md-4">
+            <label class="form-label fw-bold small">Vendedor / Destinatario</label>
+            <input type="text" id="lv-vendedor" class="form-control" placeholder="Nombre del vendedor">
+          </div>
+          <div class="col-12 col-md-2">
+            <label class="form-label fw-bold small">Vigencia hasta</label>
+            <input type="date" id="lv-vigencia" class="form-control">
+          </div>
+        </div>
+
+        <!-- Tabla de items -->
+        <div class="d-flex align-items-center justify-content-between mb-2">
+          <span class="fw-bold small" style="color:#92400e"><i class="bi bi-list-ol me-1"></i>Productos de la lista</span>
+          <button class="btn btn-sm" onclick="lvAgregarItem()" style="background:#f59e0b;color:#fff;font-size:.72rem;border-radius:7px;padding:3px 12px">
+            <i class="bi bi-plus-lg me-1"></i>Agregar producto
+          </button>
+        </div>
+
+        <div style="overflow-x:auto">
+          <table class="table table-sm table-bordered" style="font-size:.78rem;min-width:900px" id="lv-tabla-items">
+            <thead style="background:#fffbeb">
+              <tr>
+                <th style="width:36px;text-align:center;white-space:nowrap">#</th>
+                <th style="min-width:160px">Producto</th>
+                <th style="min-width:120px">Envase / Gramaje</th>
+                <th style="min-width:110px">Marca</th>
+                <th style="min-width:110px;text-align:right">Precio s/imp.</th>
+                <th style="min-width:130px">Condición de pago</th>
+                <th style="min-width:90px;text-align:center">Pelletizado</th>
+                <th style="min-width:170px">Observaciones</th>
+                <th style="min-width:110px;text-align:center">Comisión incl.</th>
+                <th style="width:36px"></th>
+              </tr>
+            </thead>
+            <tbody id="lv-items-body">
+              <!-- filas generadas por JS -->
+            </tbody>
+          </table>
+        </div>
+        <div id="lv-empty-msg" class="text-center py-3" style="color:#94a3b8;font-size:.8rem;display:none">
+          <i class="bi bi-inbox d-block mb-1" style="font-size:1.5rem"></i>Sin productos — hacé clic en "Agregar producto"
+        </div>
+      </div>
+      <div class="modal-footer py-2" style="background:#fffbeb">
+        <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-sm btn-outline-dark" onclick="lvGuardar(true)" style="border-radius:7px">
+          <i class="bi bi-floppy me-1"></i>Guardar borrador
+        </button>
+        <button type="button" class="btn btn-sm" onclick="lvGuardar(false)" style="background:#f59e0b;color:#fff;font-weight:600;border-radius:7px">
+          <i class="bi bi-check-lg me-1"></i>Guardar lista
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- ══════════ MODAL: LINK DE INTERÉS ══════════ -->
 <div class="modal fade" id="modalLink" tabindex="-1">
@@ -8320,6 +8405,7 @@ let ST = {
   alertasConfig: { chequesVenc: true, arcaOblig: true, resumenDiario: false },
   cronogramaHarina: {},
   propuestasComerciales: [],
+  listasVendedores: [],
   invRates: null,
   linksInteres: [
     { id:'link-mapa-empresas', nombre:'Mapa Empresas Argentinas', url:'https://mapa-empresas-argentinas.vercel.app/', descripcion:'Directorio visual e interactivo de empresas de Argentina', categoria:'Prospectos', createdAt:'2026-05-09' }
@@ -8855,6 +8941,7 @@ function reRenderActivo() {
     case 'propuestasComerciales': renderPropuestasComerciales(); break;
     case 'inversiones': renderInversiones(); break;
     case 'linksInteres': renderLinksInteres(); break;
+    case 'listasVendedores': renderListasVendedores(); break;
     case 'historialCobranzas': renderHistorialCobranzas(); break;
     case 'ingresarCobranza': renderIngresarCobranza(); break;
   }
@@ -11095,7 +11182,7 @@ const _SB_GROUPS = {
   rrhh:     ['rrhh'],
   incidencias: ['incidencias'],
   caja:     ['cajaBancos','cajaEfectivo','chequesFisicos','eCheques','chequesPagar','inversiones','kilometraje'],
-  gestion:  ['comisiones','bcra','calendarioARCA','contabilidad','facturasACobrar','facturasPagar','estadosCuenta','stock','listasPrecios','empresas','propuestasComerciales','documentos','cuentasBancarias','historialCobranzas','ingresarCobranza'],
+  gestion:  ['comisiones','bcra','calendarioARCA','contabilidad','facturasACobrar','facturasPagar','estadosCuenta','stock','listasPrecios','listasVendedores','empresas','propuestasComerciales','documentos','cuentasBancarias','historialCobranzas','ingresarCobranza'],
   analisis: ['tesoreria','flujoProyectado','panelVencimientos','rentabilidad','gestion','reportes','historial','estrategicos','calculadora'],
   links:    ['linksInteres'],
   archivos: ['config'],
@@ -11476,6 +11563,7 @@ function irA(p) {
   if (p==='propuestasComerciales') renderPropuestasComerciales();
   if (p==='inversiones')       renderInversiones();
   if (p==='linksInteres')      renderLinksInteres();
+  if (p==='listasVendedores')  renderListasVendedores();
   if (p==='usuarios')          renderUsuarios();
   if (p==='manual')            renderManual();
   if (p==='historialCobranzas') renderHistorialCobranzas();
@@ -33548,6 +33636,376 @@ function eliminarLink(id) {
     save(); renderLinksInteres();
     toast('Link eliminado', 'warning');
   }, { title:'Eliminar link', btnLabel:'Eliminar', danger:true });
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   LISTAS A VENDEDORES
+═══════════════════════════════════════════════════════════ */
+
+let _lvItems = []; // items en edición
+
+function renderListasVendedores() {
+  const wrap = document.getElementById('wrap-listas-vend');
+  if (!wrap) return;
+  if (!Array.isArray(ST.listasVendedores)) ST.listasVendedores = [];
+  const listas = [...ST.listasVendedores].sort((a,b) => (b.createdAt||'').localeCompare(a.createdAt||''));
+
+  if (!listas.length) {
+    wrap.innerHTML = `<div class="text-center py-5" style="color:#94a3b8">
+      <i class="bi bi-file-earmark-person d-block mb-2" style="font-size:3rem;color:#fcd34d"></i>
+      <div class="fw-bold mb-1" style="color:#78716c">Sin listas creadas</div>
+      <div style="font-size:.8rem">Hacé clic en <strong>Nueva Lista</strong> para armar la primera lista de precios para un vendedor.</div>
+    </div>`;
+    return;
+  }
+
+  const _estadoBadge = l => {
+    if (l.borrador) return `<span class="badge" style="background:#e2e8f0;color:#475569;font-size:.65rem">Borrador</span>`;
+    if (l.vigencia && l.vigencia < new Date().toISOString().split('T')[0])
+      return `<span class="badge" style="background:#fee2e2;color:#b91c1c;font-size:.65rem">Vencida</span>`;
+    return `<span class="badge" style="background:#dcfce7;color:#15803d;font-size:.65rem">Activa</span>`;
+  };
+
+  wrap.innerHTML = `<div class="row g-3">` + listas.map(l => {
+    const nItems = (l.items||[]).length;
+    const fechaCreacion = l.createdAt ? l.createdAt.split('T')[0].split('-').reverse().join('/') : '—';
+    return `<div class="col-12 col-md-6 col-xl-4">
+      <div class="card h-100" style="border-radius:12px;border:1.5px solid #fde68a;transition:box-shadow .2s" onmouseenter="this.style.boxShadow='0 4px 18px rgba(0,0,0,.1)'" onmouseleave="this.style.boxShadow=''">
+        <div class="card-body pb-2">
+          <div class="d-flex align-items-start justify-content-between gap-2 mb-1">
+            <div>
+              <div class="fw-bold" style="font-size:.88rem;color:#1e293b;line-height:1.3">${l.titulo || 'Sin título'}</div>
+              <div style="font-size:.72rem;color:#64748b;margin-top:2px"><i class="bi bi-person me-1"></i>${l.vendedor || '—'}</div>
+            </div>
+            ${_estadoBadge(l)}
+          </div>
+          <div class="d-flex gap-3 mt-2" style="font-size:.72rem;color:#94a3b8">
+            <span><i class="bi bi-list-ol me-1"></i>${nItems} producto${nItems!==1?'s':''}</span>
+            <span><i class="bi bi-calendar3 me-1"></i>${fechaCreacion}</span>
+            ${l.vigencia ? `<span><i class="bi bi-clock me-1"></i>Hasta ${l.vigencia.split('-').reverse().join('/')}</span>` : ''}
+          </div>
+        </div>
+        <div class="card-footer bg-transparent py-2 px-3 d-flex gap-2 flex-wrap">
+          <button class="btn btn-sm btn-success" onclick="lvImprimirPDF('${l.id}')" style="font-size:.7rem;border-radius:7px;padding:3px 10px">
+            <i class="bi bi-file-earmark-pdf me-1"></i>Imprimir PDF
+          </button>
+          <button class="btn btn-sm btn-outline-warning" onclick="abrirModalListaVend('${l.id}')" style="font-size:.7rem;border-radius:7px;padding:3px 10px">
+            <i class="bi bi-pencil me-1"></i>Editar
+          </button>
+          <button class="btn btn-sm btn-outline-danger" onclick="lvEliminar('${l.id}')" style="font-size:.7rem;border-radius:7px;padding:3px 10px">
+            <i class="bi bi-trash me-1"></i>
+          </button>
+        </div>
+      </div>
+    </div>`;
+  }).join('') + `</div>`;
+}
+
+/* ── Abrir modal ── */
+function abrirModalListaVend(id) {
+  const l = id ? (ST.listasVendedores||[]).find(x => x.id === id) : null;
+  document.getElementById('lv-id').value        = l?.id || '';
+  document.getElementById('lv-titulo').value    = l?.titulo || '';
+  document.getElementById('lv-vendedor').value  = l?.vendedor || '';
+  document.getElementById('lv-vigencia').value  = l?.vigencia || '';
+  document.getElementById('modalListaVend-title').innerHTML =
+    `<i class="bi bi-file-earmark-person me-2"></i>${l ? 'Editar Lista' : 'Nueva Lista a Vendedor'}`;
+
+  // Cargar items en edición
+  _lvItems = l?.items ? JSON.parse(JSON.stringify(l.items)) : [];
+  if (!_lvItems.length) _lvItems.push(_lvItemVacio());
+  lvRenderItems();
+
+  new bootstrap.Modal(document.getElementById('modalListaVend')).show();
+}
+
+function _lvItemVacio() {
+  return { producto:'', envase:'', marca:'', precio:'', condPago:'', pelletizado:'No', observaciones:'', comision:'' };
+}
+
+/* ── Render tabla de items en el modal ── */
+function lvRenderItems() {
+  const tbody   = document.getElementById('lv-items-body');
+  const emptyEl = document.getElementById('lv-empty-msg');
+  if (!tbody) return;
+  if (!_lvItems.length) {
+    tbody.innerHTML = '';
+    if (emptyEl) emptyEl.style.display = '';
+    return;
+  }
+  if (emptyEl) emptyEl.style.display = 'none';
+
+  tbody.innerHTML = _lvItems.map((it, i) => `
+    <tr>
+      <td style="text-align:center;font-weight:700;color:#92400e;vertical-align:middle">${i+1}</td>
+      <td><input type="text" class="form-control form-control-sm" placeholder="Producto" value="${_esc(it.producto)}" oninput="_lvItems[${i}].producto=this.value"></td>
+      <td><input type="text" class="form-control form-control-sm" placeholder="500g / 25kg / etc." value="${_esc(it.envase)}" oninput="_lvItems[${i}].envase=this.value"></td>
+      <td><input type="text" class="form-control form-control-sm" placeholder="Marca" value="${_esc(it.marca)}" oninput="_lvItems[${i}].marca=this.value"></td>
+      <td><input type="number" class="form-control form-control-sm text-end" placeholder="0.00" value="${it.precio||''}" step="0.01" min="0" oninput="_lvItems[${i}].precio=this.value" style="min-width:90px"></td>
+      <td><input type="text" class="form-control form-control-sm" placeholder="Contado / 30d / etc." value="${_esc(it.condPago)}" oninput="_lvItems[${i}].condPago=this.value"></td>
+      <td>
+        <select class="form-select form-select-sm" onchange="_lvItems[${i}].pelletizado=this.value" style="min-width:80px">
+          <option value="No" ${it.pelletizado==='No'||!it.pelletizado?'selected':''}>No</option>
+          <option value="Sí" ${it.pelletizado==='Sí'?'selected':''}>Sí</option>
+          <option value="N/A" ${it.pelletizado==='N/A'?'selected':''}>N/A</option>
+        </select>
+      </td>
+      <td><input type="text" class="form-control form-control-sm" placeholder="Observaciones" value="${_esc(it.observaciones)}" oninput="_lvItems[${i}].observaciones=this.value"></td>
+      <td><input type="text" class="form-control form-control-sm text-center" placeholder="Sí / 3% / No" value="${_esc(it.comision)}" oninput="_lvItems[${i}].comision=this.value" style="min-width:80px"></td>
+      <td style="vertical-align:middle;text-align:center">
+        <button class="btn btn-xs btn-outline-danger" onclick="lvEliminarItem(${i})" style="padding:1px 6px;font-size:.7rem;border-radius:5px" title="Quitar fila">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </td>
+    </tr>`).join('');
+}
+
+function _esc(s) { return (s||'').replace(/"/g,'&quot;'); }
+
+function lvAgregarItem() {
+  _lvItems.push(_lvItemVacio());
+  lvRenderItems();
+  // scroll al final de la tabla
+  const tbody = document.getElementById('lv-items-body');
+  if (tbody) setTimeout(() => tbody.lastElementChild?.scrollIntoView({ behavior:'smooth', block:'nearest' }), 50);
+}
+
+function lvEliminarItem(i) {
+  _lvItems.splice(i, 1);
+  lvRenderItems();
+}
+
+/* ── Guardar ── */
+function lvGuardar(borrador = false) {
+  const titulo   = document.getElementById('lv-titulo')?.value.trim();
+  const vendedor = document.getElementById('lv-vendedor')?.value.trim();
+  const vigencia = document.getElementById('lv-vigencia')?.value;
+  const id       = document.getElementById('lv-id')?.value || ('lv-' + Date.now());
+
+  if (!titulo) { toast('Ingresá un título para la lista', 'warning'); document.getElementById('lv-titulo')?.focus(); return; }
+
+  const obj = {
+    id,
+    titulo,
+    vendedor,
+    vigencia,
+    borrador,
+    items:     JSON.parse(JSON.stringify(_lvItems)),
+    createdAt: ((ST.listasVendedores||[]).find(x=>x.id===id)?.createdAt) || new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+
+  if (!Array.isArray(ST.listasVendedores)) ST.listasVendedores = [];
+  const idx = ST.listasVendedores.findIndex(x => x.id === id);
+  if (idx >= 0) ST.listasVendedores[idx] = obj; else ST.listasVendedores.push(obj);
+  save();
+
+  bootstrap.Modal.getInstance(document.getElementById('modalListaVend'))?.hide();
+  renderListasVendedores();
+  toast(borrador ? 'Borrador guardado' : 'Lista guardada ✓', 'success');
+}
+
+/* ── Eliminar ── */
+function lvEliminar(id) {
+  const l = (ST.listasVendedores||[]).find(x => x.id === id);
+  _confirmar(`¿Eliminar la lista "${l?.titulo||id}"? Esta acción no se puede deshacer.`, () => {
+    ST.listasVendedores = (ST.listasVendedores||[]).filter(x => x.id !== id);
+    save(); renderListasVendedores();
+    toast('Lista eliminada', 'warning');
+  }, { title:'Eliminar lista', btnLabel:'Eliminar', danger:true });
+}
+
+/* ── Generar PDF ── */
+function lvImprimirPDF(id) {
+  const l = (ST.listasVendedores||[]).find(x => x.id === id);
+  if (!l) return;
+
+  const ahora  = new Date();
+  const meses  = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  const mesTxt = meses[ahora.getMonth()] + ' de ' + ahora.getFullYear();
+  const hoyFmt = ahora.toLocaleDateString('es-AR', { day:'2-digit', month:'2-digit', year:'numeric' });
+
+  const _fmtPrecio = v => {
+    const n = parseFloat(v);
+    return isNaN(n) ? (v||'—') : '$ ' + n.toLocaleString('es-AR', { minimumFractionDigits:2, maximumFractionDigits:2 });
+  };
+
+  const filas = (l.items||[]).map((it, i) => `
+    <tr class="${i%2===0?'fila-par':'fila-impar'}">
+      <td class="c-num">${i+1}</td>
+      <td class="c-prod"><strong>${it.producto||'—'}</strong></td>
+      <td class="c-env">${it.envase||'—'}</td>
+      <td class="c-marca">${it.marca||'—'}</td>
+      <td class="c-precio">${_fmtPrecio(it.precio)}</td>
+      <td class="c-cond">${it.condPago||'—'}</td>
+      <td class="c-pell" style="text-align:center">${it.pelletizado||'No'}</td>
+      <td class="c-obs">${it.observaciones||''}</td>
+      <td class="c-com" style="text-align:center">${it.comision||'—'}</td>
+    </tr>`).join('');
+
+  const vigTxt = l.vigencia
+    ? `Vigente hasta: ${l.vigencia.split('-').reverse().join('/')}`
+    : '';
+
+  const html = `<!DOCTYPE html><html lang="es"><head>
+<meta charset="UTF-8">
+<title>Lista de Precios — ${l.titulo||'Vendedor'}</title>
+<style>
+  @page { size: A4 landscape; margin: 12mm 10mm 14mm 10mm; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 9px; color: #1e293b; background: #fff; }
+
+  /* ── Header ── */
+  .doc-header {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    border-bottom: 3px solid #f59e0b; padding-bottom: 8px; margin-bottom: 10px;
+  }
+  .brand-logo {
+    width: 32px; height: 32px; border-radius: 8px;
+    background: linear-gradient(135deg,#f59e0b,#d97706);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 900; color: #fff; letter-spacing: -1px;
+    margin-right: 10px; flex-shrink: 0;
+  }
+  .doc-title { font-size: 16px; font-weight: 900; color: #1e293b; letter-spacing: -.5px; line-height: 1.1; }
+  .doc-sub   { font-size: 9px; color: #64748b; margin-top: 2px; }
+  .doc-meta  { text-align: right; font-size: 8.5px; color: #475569; line-height: 1.6; }
+  .doc-meta .meta-dest { font-size: 11px; font-weight: 700; color: #1e293b; }
+
+  /* ── Info strip ── */
+  .info-strip {
+    display: flex; gap: 16px; align-items: center;
+    background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px;
+    padding: 5px 12px; margin-bottom: 10px; font-size: 8.5px; color: #92400e;
+  }
+  .info-strip strong { font-size: 9.5px; }
+
+  /* ── Table ── */
+  table { width: 100%; border-collapse: collapse; }
+  thead tr { background: linear-gradient(135deg,#f59e0b,#d97706); }
+  thead th {
+    color: #fff; font-size: 7.5px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .06em; padding: 6px 6px; text-align: left; white-space: nowrap;
+    border: none;
+  }
+  thead th.r { text-align: right; }
+  thead th.c { text-align: center; }
+
+  .fila-par  { background: #fff; }
+  .fila-impar { background: #fffbeb; }
+  td { padding: 5px 6px; border-bottom: 1px solid #fde68a; vertical-align: middle; font-size: 9px; }
+  tr:last-child td { border-bottom: 2px solid #f59e0b; }
+
+  .c-num   { width: 24px;  text-align: center; font-weight: 700; color: #92400e; }
+  .c-prod  { width: 18%;  }
+  .c-env   { width: 11%;  }
+  .c-marca { width: 10%;  }
+  .c-precio{ width: 10%;  text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; color: #065f46; }
+  .c-cond  { width: 12%;  }
+  .c-pell  { width: 7%;   text-align: center; }
+  .c-obs   { width: 20%;  color: #475569; font-size: 8px; }
+  .c-com   { width: 8%;   text-align: center; font-weight: 700; }
+
+  /* ── Sin datos ── */
+  .empty-row td { text-align:center; padding:20px; color:#94a3b8; font-style:italic; }
+
+  /* ── Footer ── */
+  .doc-footer {
+    display: flex; justify-content: space-between; align-items: flex-end;
+    margin-top: 10px; padding-top: 6px; border-top: 1px solid #fde68a;
+    font-size: 7.5px; color: #94a3b8;
+  }
+  .footer-nota { font-size: 7px; color: #cbd5e1; font-style: italic; }
+
+  /* ── Print button ── */
+  .print-btn {
+    position: fixed; top: 10px; right: 10px;
+    background: #f59e0b; color: #fff; border: none;
+    padding: 7px 15px; border-radius: 7px; font-size: 11px;
+    font-weight: 700; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,.25);
+  }
+  .back-btn {
+    position: fixed; top: 10px; right: 170px;
+    background: #475569; color: #fff; border: none;
+    padding: 7px 12px; border-radius: 7px; font-size: 11px;
+    font-weight: 600; cursor: pointer;
+  }
+  @media print {
+    .print-btn, .back-btn { display: none !important; }
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+</style>
+</head><body>
+
+<button class="print-btn" onclick="window.print()">🖨 Imprimir / PDF</button>
+<button class="back-btn" onclick="window.close()">← Volver</button>
+
+<!-- HEADER -->
+<div class="doc-header">
+  <div style="display:flex;align-items:center;gap:10px">
+    <div class="brand-logo">M</div>
+    <div>
+      <div class="doc-title">Lista de Precios</div>
+      <div class="doc-sub">${l.titulo ? `<strong>${l.titulo}</strong>` : 'Lista de precios para vendedores'}</div>
+    </div>
+  </div>
+  <div class="doc-meta">
+    ${l.vendedor ? `<div class="meta-dest">${l.vendedor}</div>` : ''}
+    <div>Fecha: <strong>${hoyFmt}</strong></div>
+    ${vigTxt ? `<div style="color:#d97706;font-weight:600">${vigTxt}</div>` : ''}
+  </div>
+</div>
+
+<!-- INFO STRIP -->
+<div class="info-strip">
+  <span>📦 <strong>${(l.items||[]).length}</strong> producto${(l.items||[]).length!==1?'s':''}</span>
+  <span style="border-left:1px solid #fde68a;padding-left:12px">
+    ⚠️ <strong>Precios sin impuestos.</strong> Consultá condiciones de pago antes de cerrar operaciones.
+  </span>
+  <span style="border-left:1px solid #fde68a;padding-left:12px;margin-left:auto;color:#64748b">
+    Todos los precios expresados en pesos argentinos (ARS)
+  </span>
+</div>
+
+<!-- TABLE -->
+<table>
+  <thead>
+    <tr>
+      <th class="c-num c">#</th>
+      <th class="c-prod">Producto</th>
+      <th class="c-env">Envase / Gramaje</th>
+      <th class="c-marca">Marca</th>
+      <th class="c-precio r">Precio s/imp.</th>
+      <th class="c-cond">Condición de pago</th>
+      <th class="c-pell c">Pelletizado</th>
+      <th class="c-obs">Observaciones</th>
+      <th class="c-com c">Comisión incl.</th>
+    </tr>
+  </thead>
+  <tbody>
+    ${filas || '<tr class="empty-row"><td colspan="9">Sin productos cargados</td></tr>'}
+  </tbody>
+</table>
+
+<!-- FOOTER -->
+<div class="doc-footer">
+  <div>
+    <strong>MÜÜK</strong> · Lista de precios para uso comercial exclusivo
+    <div class="footer-nota">Los precios y condiciones son válidos para el período indicado y sujetos a cambio sin previo aviso.</div>
+  </div>
+  <div style="text-align:right">
+    ${mesTxt.charAt(0).toUpperCase() + mesTxt.slice(1)}
+    <div class="footer-nota">Documento generado el ${hoyFmt}</div>
+  </div>
+</div>
+
+</body></html>`;
+
+  const w = window.open('', '_blank', 'width=1000,height=700');
+  if (!w) { toast('Bloqueador de pop-ups activo — permitir para imprimir', 'warning'); return; }
+  w.document.write(html);
+  w.document.close();
 }
 
 </script>
