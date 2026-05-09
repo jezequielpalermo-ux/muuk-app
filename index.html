@@ -6855,10 +6855,11 @@ CREATE POLICY "acceso total" ON muuk_daily_backups FOR ALL USING (true) WITH CHE
                 <th style="min-width:120px">Envase / Gramaje</th>
                 <th style="min-width:110px">Marca</th>
                 <th style="min-width:110px;text-align:right">Precio s/imp.</th>
-                <th style="min-width:130px">Condición de pago</th>
+                <th style="min-width:140px">Condición de pago (días)</th>
                 <th style="min-width:90px;text-align:center">Pelletizado</th>
+                <th style="min-width:110px;text-align:center">Bultos x unid.</th>
                 <th style="min-width:170px">Observaciones</th>
-                <th style="min-width:110px;text-align:center">Comisión incl.</th>
+                <th style="min-width:100px;text-align:center">Comisión incl. %</th>
                 <th style="width:36px"></th>
               </tr>
             </thead>
@@ -33721,7 +33722,7 @@ function abrirModalListaVend(id) {
 }
 
 function _lvItemVacio() {
-  return { producto:'', envase:'', marca:'', precio:'', condPago:'', pelletizado:'No', observaciones:'', comision:'' };
+  return { producto:'', envase:'', marca:'', precio:'', condPago:'', pelletizado:'No', bultos:'', observaciones:'', comision:'' };
 }
 
 /* ── Render tabla de items en el modal ── */
@@ -33736,29 +33737,42 @@ function lvRenderItems() {
   }
   if (emptyEl) emptyEl.style.display = 'none';
 
-  tbody.innerHTML = _lvItems.map((it, i) => `
+  tbody.innerHTML = _lvItems.map((it, i) => {
+    const esPell = it.pelletizado === 'Sí';
+    return `
     <tr>
       <td style="text-align:center;font-weight:700;color:#92400e;vertical-align:middle">${i+1}</td>
       <td><input type="text" class="form-control form-control-sm" placeholder="Producto" value="${_esc(it.producto)}" oninput="_lvItems[${i}].producto=this.value"></td>
       <td><input type="text" class="form-control form-control-sm" placeholder="500g / 25kg / etc." value="${_esc(it.envase)}" oninput="_lvItems[${i}].envase=this.value"></td>
       <td><input type="text" class="form-control form-control-sm" placeholder="Marca" value="${_esc(it.marca)}" oninput="_lvItems[${i}].marca=this.value"></td>
       <td><input type="number" class="form-control form-control-sm text-end" placeholder="0.00" value="${it.precio||''}" step="0.01" min="0" oninput="_lvItems[${i}].precio=this.value" style="min-width:90px"></td>
-      <td><input type="text" class="form-control form-control-sm" placeholder="Contado / 30d / etc." value="${_esc(it.condPago)}" oninput="_lvItems[${i}].condPago=this.value"></td>
+      <td><input type="text" class="form-control form-control-sm" placeholder="Ej: Contado / 30 días" value="${_esc(it.condPago)}" oninput="_lvItems[${i}].condPago=this.value"></td>
       <td>
-        <select class="form-select form-select-sm" onchange="_lvItems[${i}].pelletizado=this.value" style="min-width:80px">
-          <option value="No" ${it.pelletizado==='No'||!it.pelletizado?'selected':''}>No</option>
-          <option value="Sí" ${it.pelletizado==='Sí'?'selected':''}>Sí</option>
+        <select class="form-select form-select-sm" onchange="_lvItems[${i}].pelletizado=this.value;lvRenderItems()" style="min-width:80px">
+          <option value="No" ${!esPell&&it.pelletizado!=='N/A'?'selected':''}>No</option>
+          <option value="Sí" ${esPell?'selected':''}>Sí</option>
           <option value="N/A" ${it.pelletizado==='N/A'?'selected':''}>N/A</option>
         </select>
       </td>
+      <td style="text-align:center">
+        ${esPell
+          ? `<input type="text" class="form-control form-control-sm text-center" placeholder="Ej: 10 x 500g" value="${_esc(it.bultos)}" oninput="_lvItems[${i}].bultos=this.value" style="min-width:90px">`
+          : `<span style="color:#cbd5e1;font-size:.75rem">—</span>`}
+      </td>
       <td><input type="text" class="form-control form-control-sm" placeholder="Observaciones" value="${_esc(it.observaciones)}" oninput="_lvItems[${i}].observaciones=this.value"></td>
-      <td><input type="text" class="form-control form-control-sm text-center" placeholder="Sí / 3% / No" value="${_esc(it.comision)}" oninput="_lvItems[${i}].comision=this.value" style="min-width:80px"></td>
+      <td>
+        <div class="input-group input-group-sm">
+          <input type="text" class="form-control form-control-sm text-center" placeholder="Sí / No / 3" value="${_esc(it.comision)}" oninput="_lvItems[${i}].comision=this.value" style="min-width:50px">
+          <span class="input-group-text" style="font-size:.72rem;padding:2px 6px;background:#f8fafc;color:#64748b">%</span>
+        </div>
+      </td>
       <td style="vertical-align:middle;text-align:center">
         <button class="btn btn-xs btn-outline-danger" onclick="lvEliminarItem(${i})" style="padding:1px 6px;font-size:.7rem;border-radius:5px" title="Quitar fila">
           <i class="bi bi-x-lg"></i>
         </button>
       </td>
-    </tr>`).join('');
+    </tr>`;
+  }).join('');
 }
 
 function _esc(s) { return (s||'').replace(/"/g,'&quot;'); }
@@ -33831,18 +33845,35 @@ function lvImprimirPDF(id) {
     return isNaN(n) ? (v||'—') : '$ ' + n.toLocaleString('es-AR', { minimumFractionDigits:2, maximumFractionDigits:2 });
   };
 
-  const filas = (l.items||[]).map((it, i) => `
+  const _fmtCond = v => {
+    if (!v) return '—';
+    const n = parseInt(v.trim());
+    return (!isNaN(n) && String(n) === v.trim()) ? n + ' días' : v;
+  };
+  const _fmtCom = v => {
+    if (!v) return '—';
+    const low = v.trim().toLowerCase();
+    if (low === 'sí' || low === 'si' || low === 'no' || low === 'n/a') return v;
+    const n = parseFloat(v);
+    return isNaN(n) ? v : n + '%';
+  };
+
+  const filas = (l.items||[]).map((it, i) => {
+    const esPell = it.pelletizado === 'Sí';
+    return `
     <tr class="${i%2===0?'fila-par':'fila-impar'}">
       <td class="c-num">${i+1}</td>
       <td class="c-prod"><strong>${it.producto||'—'}</strong></td>
       <td class="c-env">${it.envase||'—'}</td>
       <td class="c-marca">${it.marca||'—'}</td>
       <td class="c-precio">${_fmtPrecio(it.precio)}</td>
-      <td class="c-cond">${it.condPago||'—'}</td>
-      <td class="c-pell" style="text-align:center">${it.pelletizado||'No'}</td>
+      <td class="c-cond">${_fmtCond(it.condPago)}</td>
+      <td class="c-pell" style="text-align:center;font-weight:${esPell?'700':'400'};color:${esPell?'#15803d':'inherit'}">${it.pelletizado||'No'}</td>
+      <td class="c-bultos" style="text-align:center">${esPell ? (it.bultos||'—') : '<span style="color:#cbd5e1">—</span>'}</td>
       <td class="c-obs">${it.observaciones||''}</td>
-      <td class="c-com" style="text-align:center">${it.comision||'—'}</td>
-    </tr>`).join('');
+      <td class="c-com" style="text-align:center">${_fmtCom(it.comision)}</td>
+    </tr>`;
+  }).join('');
 
   const vigTxt = l.vigencia
     ? `Vigente hasta: ${l.vigencia.split('-').reverse().join('/')}`
@@ -33854,39 +33885,39 @@ function lvImprimirPDF(id) {
 <style>
   @page { size: A4 landscape; margin: 12mm 10mm 14mm 10mm; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 9px; color: #1e293b; background: #fff; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 11px; color: #1e293b; background: #fff; }
 
   /* ── Header ── */
   .doc-header {
     display: flex; justify-content: space-between; align-items: flex-start;
-    border-bottom: 3px solid #f59e0b; padding-bottom: 8px; margin-bottom: 10px;
+    border-bottom: 3px solid #f59e0b; padding-bottom: 9px; margin-bottom: 11px;
   }
   .brand-logo {
-    width: 32px; height: 32px; border-radius: 8px;
+    width: 36px; height: 36px; border-radius: 8px;
     background: linear-gradient(135deg,#f59e0b,#d97706);
     display: flex; align-items: center; justify-content: center;
-    font-size: 14px; font-weight: 900; color: #fff; letter-spacing: -1px;
-    margin-right: 10px; flex-shrink: 0;
+    font-size: 16px; font-weight: 900; color: #fff; letter-spacing: -1px;
+    margin-right: 11px; flex-shrink: 0;
   }
-  .doc-title { font-size: 16px; font-weight: 900; color: #1e293b; letter-spacing: -.5px; line-height: 1.1; }
-  .doc-sub   { font-size: 9px; color: #64748b; margin-top: 2px; }
-  .doc-meta  { text-align: right; font-size: 8.5px; color: #475569; line-height: 1.6; }
-  .doc-meta .meta-dest { font-size: 11px; font-weight: 700; color: #1e293b; }
+  .doc-title { font-size: 18px; font-weight: 900; color: #1e293b; letter-spacing: -.5px; line-height: 1.1; }
+  .doc-sub   { font-size: 11px; color: #64748b; margin-top: 2px; }
+  .doc-meta  { text-align: right; font-size: 10px; color: #475569; line-height: 1.7; }
+  .doc-meta .meta-dest { font-size: 13px; font-weight: 700; color: #1e293b; }
 
   /* ── Info strip ── */
   .info-strip {
     display: flex; gap: 16px; align-items: center;
     background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px;
-    padding: 5px 12px; margin-bottom: 10px; font-size: 8.5px; color: #92400e;
+    padding: 6px 13px; margin-bottom: 11px; font-size: 10px; color: #92400e;
   }
-  .info-strip strong { font-size: 9.5px; }
+  .info-strip strong { font-size: 11px; }
 
   /* ── Table ── */
   table { width: 100%; border-collapse: collapse; }
   thead tr { background: linear-gradient(135deg,#f59e0b,#d97706); }
   thead th {
-    color: #fff; font-size: 7.5px; font-weight: 700; text-transform: uppercase;
-    letter-spacing: .06em; padding: 6px 6px; text-align: left; white-space: nowrap;
+    color: #fff; font-size: 9px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .05em; padding: 7px 7px; text-align: left; white-space: nowrap;
     border: none;
   }
   thead th.r { text-align: right; }
@@ -33894,18 +33925,19 @@ function lvImprimirPDF(id) {
 
   .fila-par  { background: #fff; }
   .fila-impar { background: #fffbeb; }
-  td { padding: 5px 6px; border-bottom: 1px solid #fde68a; vertical-align: middle; font-size: 9px; }
+  td { padding: 6px 7px; border-bottom: 1px solid #fde68a; vertical-align: middle; font-size: 11px; }
   tr:last-child td { border-bottom: 2px solid #f59e0b; }
 
-  .c-num   { width: 24px;  text-align: center; font-weight: 700; color: #92400e; }
-  .c-prod  { width: 18%;  }
-  .c-env   { width: 11%;  }
-  .c-marca { width: 10%;  }
-  .c-precio{ width: 10%;  text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; color: #065f46; }
-  .c-cond  { width: 12%;  }
-  .c-pell  { width: 7%;   text-align: center; }
-  .c-obs   { width: 20%;  color: #475569; font-size: 8px; }
-  .c-com   { width: 8%;   text-align: center; font-weight: 700; }
+  .c-num   { width: 26px;  text-align: center; font-weight: 700; color: #92400e; }
+  .c-prod  { width: 16%;  }
+  .c-env   { width: 10%;  }
+  .c-marca { width: 9%;   }
+  .c-precio{ width: 9%;   text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; color: #065f46; }
+  .c-cond  { width: 11%;  }
+  .c-pell  { width: 6%;   text-align: center; }
+  .c-bultos{ width: 8%;   text-align: center; font-weight: 600; color: #065f46; }
+  .c-obs   { width: 18%;  color: #475569; font-size: 10px; }
+  .c-com   { width: 7%;   text-align: center; font-weight: 700; }
 
   /* ── Sin datos ── */
   .empty-row td { text-align:center; padding:20px; color:#94a3b8; font-style:italic; }
@@ -33913,10 +33945,10 @@ function lvImprimirPDF(id) {
   /* ── Footer ── */
   .doc-footer {
     display: flex; justify-content: space-between; align-items: flex-end;
-    margin-top: 10px; padding-top: 6px; border-top: 1px solid #fde68a;
-    font-size: 7.5px; color: #94a3b8;
+    margin-top: 11px; padding-top: 7px; border-top: 1px solid #fde68a;
+    font-size: 9px; color: #94a3b8;
   }
-  .footer-nota { font-size: 7px; color: #cbd5e1; font-style: italic; }
+  .footer-nota { font-size: 8px; color: #cbd5e1; font-style: italic; }
 
   /* ── Print button ── */
   .print-btn {
@@ -33979,12 +34011,13 @@ function lvImprimirPDF(id) {
       <th class="c-precio r">Precio s/imp.</th>
       <th class="c-cond">Condición de pago</th>
       <th class="c-pell c">Pelletizado</th>
+      <th class="c-bultos c">Bultos x unid.</th>
       <th class="c-obs">Observaciones</th>
       <th class="c-com c">Comisión incl.</th>
     </tr>
   </thead>
   <tbody>
-    ${filas || '<tr class="empty-row"><td colspan="9">Sin productos cargados</td></tr>'}
+    ${filas || '<tr class="empty-row"><td colspan="10">Sin productos cargados</td></tr>'}
   </tbody>
 </table>
 
